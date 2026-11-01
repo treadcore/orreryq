@@ -26,6 +26,7 @@ import sys
 import time
 
 TC = os.path.expanduser(os.environ.get("TREADCORE", "~/code/treadcore"))
+QUEUE = ""  # set by main
 RS = "source/treadcore-brain/src/weights.rs"
 GROUPS = [("compass", 88), ("body", 12), ("nav", 6), ("contacts", 18), ("hints", 9), ("shells", 5), ("air", 5)]
 HEADS = [("drive", 10), ("gun", 11), ("lead", 3), ("mortar", 11), ("drone", 5), ("squad", 4), ("signal", 3)]
@@ -58,7 +59,10 @@ def promotions():
 def reads():
     """Every census against its day's defaults, as (dial values, gain over today's defaults)."""
     promos = promotions()
-    order = git("log", "--format=%h", "main").split()
+    # THE LINE TOO. Since generations are carried unproven, most reads stand on commits main does not
+    # hold yet; asking main alone drew an empty terrain after the first one (1 November).
+    order = git("log", "--format=%h", "orrery/accepted").split() or []
+    order += [c for c in git("log", "--format=%h", "main").split() if c not in order]
     place = {c: i for i, c in enumerate(order)}  # 0 is newest
     today = weights_at("HEAD")
     rows = []
@@ -68,10 +72,24 @@ def reads():
         lines = open(os.path.join(TC, "build/ledger/fleet.tsv")).read().splitlines()
     except OSError:
         return [], today
+    # And the queue's whole ledger: fleet.tsv holds only its reads on today's defaults, so each
+    # generation took the last one's reads out of it. A stamp is one census, whichever table says so.
+    try:
+        lines += open(os.path.join(QUEUE, "plan", "ledger-all.tsv")).read().splitlines()[1:]
+    except OSError:
+        pass
     head = lines[0].split("\t")
+    seen = set()
     for l in lines[1:]:
         r = dict(zip(head, l.split("\t")))
+        if r.get("stamp") in seen:
+            continue
+        seen.add(r.get("stamp"))
         c = r.get("commit", "")
+        # A line commit replayed onto a newer main has a new hash, and the old one is still the
+        # commit its reads stood on: placed as newest, with no promotion counted since it.
+        if c and c not in place and subprocess.run(["git", "-C", TC, "cat-file", "-e", c + "^{commit}"], capture_output=True).returncode == 0:
+            place[c] = -1
         if r.get("base", "").replace(" ", "") != "caps=baseline" or "caps" in r.get("trial", "") or c not in place:
             continue
         try:
@@ -301,6 +319,8 @@ def fleet_counts(q):
 
 
 def main(q):
+    global QUEUE
+    QUEUE = q
     t0 = time.time()
     rows, today = reads()
     out = {"at": time.strftime("%H:%M"), "reads": len(rows), "terrain": terrain(rows, today), "dials": dial_history(), "channels": CHANNELS,

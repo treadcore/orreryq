@@ -739,6 +739,14 @@ fn draw_lab(ui: &mut Ui, l: &Layout, m: &Model, lab: &mut Lab) {
         let hot = ui.is_hot(r);
 
         ui.panel(r, t.tile);
+        ui.tip(r, || vec![
+            node.id.clone(),
+            format!("Address {}, role {}", if node.address.is_empty() { "unknown" } else { &node.address }, if node.role.is_empty() { "none" } else { &node.role }),
+            format!("{}, {}. Last seen {}.", if node.announced { "Announced" } else { "Has not announced" }, if node.on_bus { "on the bus" } else { "off the bus" }, if node.last_seen.is_empty() { "never" } else { &node.last_seen }),
+            format!("Running: {}{}", if node.scene.is_empty() { "nothing" } else { &node.scene }, node.temp_c.map(|c| format!(" at {} C", c)).unwrap_or_default()),
+            format!("Tags: {}", if node.tags.is_empty() { "none".to_string() } else { node.tags.join(", ") }),
+            "Click to select; verbs act on the selection.".to_string(),
+        ]);
         if sel {
             ui.outline2(r, t.accent);
         } else {

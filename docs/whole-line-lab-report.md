@@ -80,7 +80,7 @@ Each is a proposer of something the game might use. The verdict at the end of ea
 
 ### E. The transform
 
-**Method.** A residual net over the rules' Move: it reads the senses, the biorhythm and the rules' own answer, and may move the point if it is confident. All zeros is the brain as it was. SPSA moves all 918 numbers by one noisy census a step. **Conditions.** The census with the patch switched on. **Spend.** About half an hour a day. **Result.** Six steps today read between -3.72 and +4.97 with errors near 2: noise, as expected this early. **Report:** [Algorhythm](algorhythm-lab-report.html). **Adds:** nothing yet. *The census reads the slot; the game has no file for it.*
+**Method.** A residual net over the rules' Move: it reads the senses, the biorhythm and the rules' own answer, and may move the point if it is confident. All zeros is the brain as it was. SPSA moves all 942 numbers by one noisy census a step. **Conditions.** The census with the patch switched on. **Spend.** About half an hour a day. **Result.** Six steps today read between -3.72 and +4.97 with errors near 2: noise, as expected this early. **Report:** [Algorhythm](algorhythm-lab-report.html). **Adds:** nothing yet. *The census reads the slot; the game has no file for it.*
 
 ### F. Crucible's GPU islands
 
@@ -249,7 +249,7 @@ The unification is one sentence: **a method's only job is to produce something t
 
 A **check-in** is one proposal entering the road, one record: what it is (a weights file or a slot), its hash, who proposed it (fit, A/B, SPSA, crucible segment), its parent generation, each read, and how it ended. Today those facts are spread across the job, the `results/` directory and the run's state. `plan/pipeline.json`'s `traces` assembles them for the last eight, and the generation record keeps them for what is promoted. The step left is to write one for every trial at its end.
 
-A **netlet** is a small learned part with one job: a slot file and a manifest naming its inputs, outputs, parent and evidence. The transform is the first: 918 numbers, all zeros meaning the brain as it was. The rule that makes netlets safe to keep adding is the transform's own: **a netlet that does nothing costs nothing and changes nothing,** so the census can read it as it reads any dial. One could steer retreats, another aim mortars. Each is promoted or dropped alone.
+A **netlet** is a small learned part with one job: a slot file and a manifest naming its inputs, outputs, parent and evidence. The transform is the first: 942 numbers, all zeros meaning the brain as it was. The rule that makes netlets safe to keep adding is the transform's own: **a netlet that does nothing costs nothing and changes nothing,** so the census can read it as it reads any dial. One could steer retreats, another aim mortars. Each is promoted or dropped alone.
 
 ### C. Mixing brains: computing both
 

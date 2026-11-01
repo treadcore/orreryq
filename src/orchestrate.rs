@@ -379,6 +379,12 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State) -> Option<nav::View> {
             ui.panel(r, t.tile);
             ui.outline(r, t.up);
         }
+        ui.tip(r, || vec![
+            x.name.clone(),
+            format!("{} {}, {} CPUs, load {}. Treadcore build {}.", x.os, x.version, x.cpus, if x.load.is_empty() { "unknown" } else { &x.load }, x.treadcore),
+            format!("Listener: {}. Host certificate: {}.", x.listener, if x.cert_ours { format!("ours, {} days left", x.cert_days) } else { "not ours".to_string() }),
+            "Press to choose it. A verb goes to what is chosen, signed by your certificate.".to_string(),
+        ]);
         let lamp = if x.listener == "yes" { t.up } else if x.listener == "no" || x.listener == "old" { t.warn } else { t.alarm };
         ui.c.disc(r.x + 11, r.y + r.h / 2, 4, lamp);
         let ty = y + 1;

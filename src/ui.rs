@@ -83,6 +83,17 @@ pub struct UiState {
     pub about_open: bool,
     /// A tab inside a page, for the panel's key: the Algorhythm page's.
     pub about_tab: String,
+    /// The inspector (Paul, 1 November: "add inspector mode to just about every data with hover
+    /// information"). ON UNLESS TURNED OFF: a thing you have to know to switch on is a thing
+    /// nobody finds. Off is a key and a button, for a person who has read it all.
+    pub inspect_off: bool,
+    /// What is under the pointer this frame: the thing, and its lines. The last asked wins,
+    /// because what is drawn last is on top.
+    tip: Option<(Rect, Vec<String>)>,
+    /// Every line of text drawn this frame under the pointer's row, for a row nobody wrote a tip for.
+    row: Vec<(i32, String)>,
+    row_hit: bool,
+    row_clipped: bool,
 }
 
 /// One thing typed: a key press, or text.
@@ -243,6 +254,10 @@ fn id_of(r: Rect, salt: &str) -> u64 {
 impl<'c, 'p> Ui<'c, 'p> {
     pub fn begin(c: &'c mut Canvas<'p>, t: Theme, events: &[Input], s: &'c mut UiState) -> Ui<'c, 'p> {
         let f = Frame::gather(events, s);
+        s.tip = None;
+        s.row.clear();
+        s.row_hit = false;
+        s.row_clipped = false;
         Ui { c, t, f, s }
     }
 
@@ -330,15 +345,91 @@ impl<'c, 'p> Ui<'c, 'p> {
     }
 
     pub fn label(&mut self, x: i32, y: i32, s: &str, font: &Font, c: Rgb) -> i32 {
+        self.seen(x, y, font.measure(s) as i32, s, font, false);
         self.c.text(x, y, s, font, c)
     }
 
     pub fn label_in(&mut self, x: i32, y: i32, max_w: i32, s: &str, font: &Font, c: Rgb) -> i32 {
+        let w = font.measure(s) as i32;
+        self.seen(x, y, w.min(max_w), s, font, w > max_w);
         self.c.text_in(x, y, max_w, s, font, c)
     }
 
     pub fn label_right(&mut self, right: i32, y: i32, s: &str, font: &Font, c: Rgb) -> i32 {
+        let w = font.measure(s) as i32;
+        self.seen(right - w, y, w, s, font, false);
         self.c.text_right(right, y, s, font, c)
+    }
+
+    /// Text drawn on the pointer's line goes in the row; the pointer on it makes it the row asked for.
+    fn seen(&mut self, x: i32, y: i32, w: i32, s: &str, font: &Font, clipped: bool) {
+        let (px, py) = self.s.pointer;
+        if self.s.inspect_off || py < y || py >= y + font.height as i32 || s.trim().is_empty() {
+            return;
+        }
+        self.s.row.push((x, s.to_string()));
+        self.s.row_clipped |= clipped;
+        if px >= x && px < x + w.max(1) {
+            self.s.row_hit = true;
+        }
+    }
+
+    /// What this thing is, should the pointer be on it. A closure, because a screen has a thousand
+    /// things and one pointer: only the one under it is ever written out.
+    pub fn tip(&mut self, r: Rect, lines: impl FnOnce() -> Vec<String>) {
+        if !self.s.inspect_off && self.is_hot(r) {
+            self.s.tip = Some((r, lines()));
+        }
+    }
+
+    pub fn inspecting(&self) -> bool {
+        !self.s.inspect_off
+    }
+
+    /// The inspector, drawn last and over everything. Its first line is the thing's name; the rest
+    /// is what it is, where it came from, what it means. A row nobody wrote a tip for still shows
+    /// all its text when any of it was cut: what is hidden is what a person cannot otherwise read.
+    pub fn finish(&mut self) {
+        if self.s.inspect_off {
+            return;
+        }
+        let (r, lines) = match self.s.tip.take() {
+            Some((r, l)) => (Some(r), l),
+            None if self.s.row_hit && self.s.row_clipped => {
+                let mut row = std::mem::take(&mut self.s.row);
+                row.sort_by_key(|x| x.0);
+                (None, row.into_iter().map(|x| x.1).collect())
+            }
+            None => return,
+        };
+        if lines.is_empty() {
+            return;
+        }
+        let t = self.t;
+        if let Some(r) = r {
+            self.c.frame(r.x - 1, r.y - 1, r.w + 2, r.h + 2, t.accent);
+        }
+        let (cw, ch) = (self.c.w as i32, self.c.h as i32);
+        let width = (cw - 40).min(560);
+        let mut out: Vec<(bool, String)> = Vec::new();
+        for (i, l) in lines.iter().enumerate() {
+            for w in crate::line::wrap(l, &F8X13, width - 20) {
+                out.push((i == 0, w));
+            }
+        }
+        out.truncate(((ch - 30) / 15).max(1) as usize);
+        let tw = out.iter().map(|x| F8X13.measure(&x.1) as i32).max().unwrap_or(0) + 20;
+        let th = out.len() as i32 * 15 + 12;
+        let (px, py) = self.s.pointer;
+        // Below and right of the pointer; turned back at the window's edge.
+        let x = if px + 16 + tw > cw - 4 { (px - tw - 8).max(4) } else { px + 16 };
+        let y = if py + 18 + th > ch - 4 { (py - th - 8).max(4) } else { py + 18 };
+        self.c.rect(x + 3, y + 3, tw, th, 0x000000);
+        self.c.rect(x, y, tw, th, 0x101418);
+        self.c.frame(x, y, tw, th, t.accent);
+        for (i, (head, l)) in out.iter().enumerate() {
+            self.c.text(x + 10, y + 6 + i as i32 * 15, l, &F8X13, if *head { 0xffffff } else { 0xc8d0d8 });
+        }
     }
 
     pub fn hrule(&mut self, x: i32, y: i32, len: i32) {
@@ -514,6 +605,66 @@ pub enum Light {
 
 #[cfg(test)]
 mod tests {
+
+    fn inspected(px: (i32, i32), off: bool, draw: impl FnOnce(&mut Ui)) -> (Option<Vec<String>>, usize) {
+        let mut pixels = vec![0u8; 400 * 300 * 4];
+        let mut c = Canvas::new(&mut pixels, 400, 300);
+        let mut s = UiState { pointer: px, inspect_off: off, ..Default::default() };
+        let mut u = Ui::begin(&mut c, crate::draw::METAL, &[], &mut s);
+        draw(&mut u);
+        let tip = u.s.tip.as_ref().map(|t| t.1.clone());
+        let row = u.s.row.len();
+        (tip, row)
+    }
+
+    #[test]
+    fn a_tip_is_written_only_for_what_is_under_the_pointer() {
+        let (tip, _) = inspected((10, 10), false, |u| {
+            u.tip(rect(0, 0, 20, 20), || vec!["here".into()]);
+            u.tip(rect(100, 100, 20, 20), || panic!("nothing under the pointer is ever written out"));
+        });
+        assert_eq!(tip, Some(vec!["here".to_string()]));
+    }
+
+    #[test]
+    fn what_is_drawn_last_is_on_top_and_wins() {
+        let (tip, _) = inspected((10, 10), false, |u| {
+            u.tip(rect(0, 0, 50, 50), || vec!["the plot".into()]);
+            u.tip(rect(5, 5, 10, 10), || vec!["the peak".into()]);
+        });
+        assert_eq!(tip, Some(vec!["the peak".to_string()]));
+    }
+
+    #[test]
+    fn the_inspector_off_writes_nothing_and_draws_nothing() {
+        let (tip, row) = inspected((10, 10), true, |u| {
+            u.tip(rect(0, 0, 50, 50), || panic!("off is off"));
+            u.label(0, 5, "text", &F8X13, 0);
+        });
+        assert_eq!((tip, row), (None, 0));
+    }
+
+    #[test]
+    fn text_on_another_line_is_not_in_the_row() {
+        let (_, row) = inspected((10, 10), false, |u| {
+            u.label(0, 5, "on the pointer's line", &F8X13, 0);
+            u.label(0, 100, "not on it", &F8X13, 0);
+        });
+        assert_eq!(row, 1);
+    }
+
+    #[test]
+    fn finish_keeps_the_tip_inside_the_window_at_every_corner() {
+        for px in [(1, 1), (399, 1), (1, 299), (399, 299)] {
+            let mut pixels = vec![0u8; 400 * 300 * 4];
+            let mut c = Canvas::new(&mut pixels, 400, 300);
+            let mut s = UiState { pointer: px, ..Default::default() };
+            let mut u = Ui::begin(&mut c, crate::draw::METAL, &[], &mut s);
+            u.tip(rect(0, 0, 400, 300), || vec!["a very long line of words that must wrap to stay inside a small window at every corner of it".into(); 60]);
+            u.finish(); // Panics if it draws out of bounds in a debug build, and must not lose the tip's bounds.
+        }
+    }
+
     use super::*;
     use crate::draw;
     use crate::surface::Input;

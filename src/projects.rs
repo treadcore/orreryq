@@ -208,6 +208,12 @@ fn draw_ladder(ui: &mut Ui, at: Rect, m: &Model) {
         ui.panel(b, t.tile);
         ui.outline(b, if l.rungs.contains(id) { t.accent } else { t.line });
         let short = id.split('-').next().unwrap_or(id);
+        ui.tip(b, || vec![
+            format!("Champion {}", id),
+            format!("From {}, generation {}, margin {:.1}", island, gen, margin),
+            if l.rungs.contains(id) { "A rung of the ladder: new champions are examined against it.".to_string() } else { "A milestone: it beat what came before it.".to_string() },
+            "Its arena is crucible's own, not the game.".to_string(),
+        ]);
         ui.label(b.x + 8, b.y + 5, short, &F8X13, t.ink);
         if l.rungs.contains(id) {
             ui.light(b.right() - 12, b.y + 5 + lh / 2, 3, Light::Full, t.up);
@@ -408,6 +414,17 @@ fn draw_roster_matrix(ui: &mut Ui, at: Rect, m: &Model, q: &crate::training::Que
         ui.outline(row, t.line);
         let ty = row.y + (row_h - lh) / 2;
         let (c, lamp) = roster_lamp(ui, r);
+        ui.tip(row, || {
+            let mut v = vec![format!("{}: {}", display(&r.name), r.state)];
+            for (p, on) in &r.on {
+                v.push(format!("{}: {}", p, match on { Some(true) => "on", Some(false) => "off", None => "this machine cannot run it" }));
+            }
+            for (k, title, _) in &r.jobs {
+                v.push(format!("Now: {}: {}", k, title));
+            }
+            v.push("treadcore on CPU lanes can reach the game. crucible on GPU lanes cannot yet: no bridge is built.".to_string());
+            v
+        });
         ui.light(at.x + 10, ty + lh / 2, 4, lamp, c);
         ui.label_in(x_name, ty, x_hw - x_name - 6, &display(&r.name), &F8X13, if r.joined { t.ink } else { t.dim });
         let mc = m.machines.iter().find(|x| x.name == r.name || (x.name == "this Mac" && r.name == "mac"));

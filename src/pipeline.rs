@@ -333,7 +333,29 @@ fn gantt(ui: &mut Ui, at: Rect, m: &Model) {
         if x.essential {
             ui.outline2(rect(bar.x - 3, bar.y - 2, bar.w + 6, bar.h + 4), t.alarm);
         }
+        ui.tip(rect(at.x, y, at.w, row), || task_tip(x));
     }
+}
+
+/// A task, in full: the words a bar or a card has no room for.
+fn task_tip(x: &Task) -> Vec<String> {
+    let mut out = vec![x.title.clone(), format!("State: {}{}", x.state, if x.essential { ". NEXT ESSENTIAL: free this first" } else { "" })];
+    if !x.note.is_empty() {
+        out.push(x.note.clone());
+    }
+    out.push(format!("Machines: {}", if x.machines.is_empty() { "none".to_string() } else { x.machines.join(", ") }));
+    if x.dur > 0.0 {
+        out.push(format!("Takes about {}: the median the fleet measured in the last day. Starts {}, ends {} from now.", took(x.dur), signed(x.start), signed(x.end)));
+    }
+    if !x.deps.is_empty() {
+        out.push(format!("Waits on: {}", x.deps.join(", ")));
+    }
+    out.push(format!("{} later tasks depend on it. Source: plan/pipeline.json, written at each plan.", x.dependents));
+    out
+}
+
+fn signed(min: f64) -> String {
+    if min < 0.0 { format!("{} ago", took(-min)) } else if min == 0.0 { "now".to_string() } else { format!("in {}", took(min)) }
 }
 
 const COLUMNS: [(&str, &[&str]); 4] =
@@ -364,6 +386,7 @@ fn kanban(ui: &mut Ui, at: Rect, m: &Model) {
             ui.label_in(c.x + 10, c.y + 31, c.w - 14, &x.note, &F8X13, t.dim);
             let foot = if x.essential { format!("NEXT ESSENTIAL: {} depend on it", x.dependents) } else { format!("{} depend on it", x.dependents) };
             ui.label_in(c.x + 10, c.y + 45, c.w - 14, &foot, &F8X13, if x.essential { t.alarm } else { t.dim });
+            ui.tip(c, || task_tip(x));
             y += card_h + 5;
         }
         if cards.len() > room {
@@ -492,6 +515,14 @@ fn flow(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
         if ui.button_hit(r) {
             st.node = Some(i);
         }
+        ui.tip(r, || {
+            let mut v = vec![s.title.to_string(), format!("Takes: {}", s.input), format!("Gives: {}", s.output), format!("Simulates: {}", s.simulates), format!("For treadcore: {}", s.adds)];
+            if let Some(f) = f {
+                v.push(format!("Last day: {:.0} jobs, {:.1} machine-hours. Now: {:.0} running, {:.0} waiting.", f.jobs, f.hours, f.running, f.queued));
+            }
+            v.push("Click to pin these words below.".to_string());
+            v
+        });
     }
     // Under it: the box, and one trial.
     let rest = rect(rest.x, rest.y + 6, rest.w, rest.h - 6);
@@ -574,6 +605,12 @@ fn trace(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
                 ui.c.rect(mid - len, y + 3, len, 7, t.alarm);
             }
         }
+        ui.tip(rect(at.x, y, at.w, 14), || vec![
+            format!("{}: {}", line::short(&r.stage), r.job),
+            format!("Read on {}, finished at {}: {:.0} seeds gave {:+.2} +/- {:.2} points a seat, trial less baseline.", r.host, r.ended, r.seeds, r.d, r.se),
+            if r.stage == "held" { format!("z {:+.2} is this read alone, on seeds no search has seen.", r.z) } else { format!("z {:+.2} pools every read so far, by inverse variance.", r.z) },
+            format!("Source: results/{}/.../pooled.txt.", r.job),
+        ]);
         y += 14;
     }
     let end = match tr.status.as_str() {
@@ -635,12 +672,25 @@ fn timeline(ui: &mut Ui, at: Rect, m: &Model) {
         ui.c.hline(plot.x, y + row - 1, plot.w, t.line);
         for b in &l.past {
             let (a, e) = (xof(b.from), xof(b.to));
-            ui.c.rect(a, y + 1, (e - a).max(1), row - 3, if b.ok == 0 { t.alarm } else { line::colour(&b.stage) });
+            let r = rect(a, y + 1, (e - a).max(1), row - 3);
+            ui.c.rect(r.x, r.y, r.w, r.h, if b.ok == 0 { t.alarm } else { line::colour(&b.stage) });
+            ui.tip(r, || vec![
+                format!("{}: {}", l.host, line::short(&b.stage)),
+                format!("From {} to {}{}.", signed(b.from), if b.to >= 0.0 { "now".to_string() } else { signed(b.to) }, match b.ok { 0 => ", failed or sent back", 2 => ", still running", _ => "" }),
+                "Touching jobs of one stage are drawn as one bar.".to_string(),
+                "Source: events.jsonl, as measured.".to_string(),
+            ]);
         }
         for b in &l.next {
             // Hollow: it has not happened.
             let (a, e) = (xof(b.from), xof(b.to));
-            ui.outline(rect(a, y + 2, (e - a - 1).max(2), row - 5), line::colour(&b.stage));
+            let r = rect(a, y + 2, (e - a - 1).max(2), row - 5);
+            ui.outline(r, line::colour(&b.stage));
+            ui.tip(r, || vec![
+                format!("{}: {}, forecast", l.host, line::short(&b.stage)),
+                format!("Would start {} and end {}, at the median of the last day.", signed(b.from), signed(b.to)),
+                "No job is given to a machine until it is free, so this is a guess at the order, not a plan.".to_string(),
+            ]);
         }
     }
     ui.c.vline(now_x, plot.y - 2, plot_h + 4, t.ink);
@@ -655,6 +705,15 @@ fn timeline(ui: &mut Ui, at: Rect, m: &Model) {
         };
         ui.c.vline(x, plot.y - 2, plot_h + 2, c);
         ui.c.rect(x - 2, plot.y - 5, 5, 5, c);
+        ui.tip(rect(x - 3, plot.y - 6, 7, plot_h + 6), || vec![
+            match mk.kind.as_str() {
+                "generation" => format!("A generation: {}", mk.text),
+                "failed" => format!("A passed candidate stopped: {}", mk.text),
+                "eases" => "The bars ease here, if nothing passes first".to_string(),
+                _ => "The next read of the line against main".to_string(),
+            },
+            signed(mk.at),
+        ]);
     }
     // The key: every colour named, and what a mark means.
     let mut x = at.x + 4;
@@ -692,6 +751,12 @@ fn queued(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
         ui.label_in(r.x + 100, r.y + 2, r.w - 100 - right, &q.title, &F8X13, if q.state == "running" { t.up } else { t.ink });
         ui.label_right(r.right() - 8, r.y + 2, &format!("{}{}", if q.high { "first: " } else { "" }, who), &F8X13, t.dim);
         ui.label_in(r.x + 100, r.y + 17, r.w - 110, &q.why, &F8X13, t.dim);
+        ui.tip(r, || vec![
+            q.title.clone(),
+            format!("Stage: {}. {}", line::short(&q.stage), who),
+            q.why.clone(),
+            if q.high { "High priority: it goes ahead of the search, because it decides.".to_string() } else { "Takes its turn in the queue.".to_string() },
+        ]);
     }
 }
 
@@ -744,6 +809,13 @@ fn values(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
         for (i, l) in lines.iter().take(room).enumerate() {
             ui.label_in(x, r.y + 1 + i as i32 * 14, r.right() - x - 8, l, &F8X13, t.dim);
         }
+        ui.tip(r, || vec![
+            format!("{}: {} {}{}", v.label, number(cur, v.step), v.unit, if moved { ", moved by a person" } else { "" }),
+            v.what.to_string(),
+            format!("Raise it: {}.", v.up),
+            format!("Lower it: {}.", v.down),
+            format!("Key: {}. Default {}, from {} to {}, a step of {}. Kept in QUEUE/tuning.json.", v.key, number(v.default, v.step), number(v.min, v.step), number(v.max, v.step), v.step),
+        ]);
         y += row_h;
     }
 }

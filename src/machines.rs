@@ -212,6 +212,12 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State) -> Option<nav::View> {
             format!("{}{}{}", x.fact("pretty"), if gpu.is_empty() { "" } else { " · " }, gpu)
         };
         ui.label_in(r.x + 6, y + lh - 3, lw - 12, &format!("{}{}", sys, if open > 0 { format!(" · {} to apply", open) } else { String::new() }), &F8X13, if x.error.is_empty() { t.dim } else { t.warn });
+        ui.tip(r, || vec![
+            format!("{}: {}", x.name, tag),
+            format!("{} recipes, {} not applied.", x.recipes.len(), open),
+            if x.error.is_empty() { format!("{}, kernel {}", x.fact("pretty"), x.fact("kernel")) } else { x.error.clone() },
+            "Click to see all it reported, and its recipes. A probe reads and changes nothing.".to_string(),
+        ]);
         if st.confirm.is_none() && ui.button_hit(r) {
             st.sel = x.name.clone();
         }

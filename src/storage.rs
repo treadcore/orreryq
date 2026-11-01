@@ -239,6 +239,11 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State) -> Option<nav::View> {
         let role = if x.ceph.starts_with("server by hand") { "by hand".to_string() } else { x.ceph.split(':').next().unwrap_or("").split(' ').next().unwrap_or("").to_string() };
         let sub = if !x.error.is_empty() { x.error.clone() } else { format!("{} disks · {} free · Ceph {}", x.disks.len(), cands, role) };
         ui.label_in(r.x + 6, y + lh - 3, lw - 12, &sub, &F8X13, t.dim);
+        ui.tip(r, || vec![
+            format!("{}: {} GB of memory, link {}", x.name, x.mem_gb, speed(x.mbps)),
+            format!("{} disks, {} could join a pool. Ceph: {}", x.disks.len(), cands, if x.ceph.is_empty() { "none" } else { &x.ceph }),
+            "Click for its disks. Nothing here formats a disk: a change is staged in a Sessions tile for a person to run.".to_string(),
+        ]);
         if chords && ui.button_hit(r) {
             st.sel = x.name.clone();
             st.ceph = false;
@@ -297,6 +302,7 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State) -> Option<nav::View> {
                 "system" | "zfs" | "in use" | "locked" => t.ink,
                 _ => t.dim,
             };
+            ui.tip(rect(rx, y, rw, lh - 3), || vec![format!("Disk {}: {}", d.name, d.role), "Candidate: empty, and could be used. Idle pool: holds an old pool, so look first. System, in use or locked: leave it.".to_string()]);
             ui.label_in(rx, y, 70, &d.name, &F8X13, t.ink);
             ui.label_in(rx + 72, y, 46, &d.kind, &F8X13, t.dim);
             ui.label_in(rx + 120, y, 70, &size(d.size_gib), &F8X13, t.ink);

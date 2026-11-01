@@ -136,6 +136,7 @@ pub const MENU: &[(&str, &str, &str, Cmd)] = &[
     ("Window", "Minimize", "m", Cmd::Minimize),
     ("Window", "Close Window", "w", Cmd::Close),
     // ---- the documents
+    ("Help", "The Double Report: the Whole Line, and the Guide", "", Cmd::Doc("docs/double-lab-report.html")),
     ("Help", "Orrery User Guide", "", Cmd::Doc("docs/user-guide.html")),
     ("Help", "Fleet Training", "", Cmd::Doc("docs/fleet-train.md")),
     ("Help", "Mac Applications (lab report)", "", Cmd::Doc("docs/mac-app-lab-report.md")),

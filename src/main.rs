@@ -524,6 +524,17 @@ fn storage_cmd(queue_ctl: &str) -> String {
     }
 }
 
+/// Where a frame's pointer is: nowhere, or ORRERY_FRAME_HOVER=x,y to take the inspector's picture.
+fn frame_pointer() -> (i32, i32) {
+    std::env::var("ORRERY_FRAME_HOVER")
+        .ok()
+        .and_then(|v| {
+            let (a, b) = v.split_once(',')?;
+            Some((a.parse().ok()?, b.parse().ok()?))
+        })
+        .unwrap_or((-1, -1))
+}
+
 /// fleet-tune.py beside fleet-queue.py: the values, apart, so that moving one restarts no keeper.
 fn tune_cmd(queue_ctl: &str) -> String {
     queue_ctl.replacen("/fleet-queue.py ", "/fleet-tune.py ", 1)
@@ -737,9 +748,10 @@ fn write_frame(
                     media::Media::open(copal)
                 };
                 let mut ui_state = ui::UiState::default();
-                ui_state.pointer = (-1, -1);
+                ui_state.pointer = frame_pointer();
                 let mut u = ui::Ui::begin(&mut c, *theme, &[], &mut ui_state);
                 media::draw(&mut u, &mut m);
+                u.finish();
             }
             Frame::Training { ref doc, view } => {
                 let m = training::Model::parse(doc, "");
@@ -760,13 +772,15 @@ fn write_frame(
                     ..training::State::default()
                 };
                 let mut ui_state = ui::UiState::default();
-                ui_state.pointer = (-1, -1);
+                ui_state.pointer = frame_pointer();
                 let mut u = ui::Ui::begin(&mut c, *theme, &[], &mut ui_state);
                 if view == nav::View::Projects {
                     let mut ps = projects::State { operator: st.operator, ..Default::default() };
                     projects::draw(&mut u, &m, &mut projects::Crucible::new(), &mut ps);
+                    u.finish();
                 } else {
                     training::draw(&mut u, &m, &mut st, view);
+                    u.finish();
                 }
             }
             Frame::Storage { ref doc, ref select } => {
@@ -778,23 +792,25 @@ fn write_frame(
                     None => {}
                 }
                 let mut ui_state = ui::UiState::default();
-                ui_state.pointer = (-1, -1);
+                ui_state.pointer = frame_pointer();
                 let mut u = ui::Ui::begin(&mut c, *theme, &[], &mut ui_state);
                 storage::draw(&mut u, &m, &mut st);
+                u.finish();
             }
             Frame::Fleet { ref doc, ref select } => {
                 let m = orchestrate::Model::parse(doc);
                 let mut st = orchestrate::State::new(std::env::var("ORRERY_FRAME_OPERATOR").is_ok());
                 st.chosen = select.clone();
                 let mut ui_state = ui::UiState::default();
-                ui_state.pointer = (-1, -1);
+                ui_state.pointer = frame_pointer();
                 let mut u = ui::Ui::begin(&mut c, *theme, &[], &mut ui_state);
                 orchestrate::draw(&mut u, &m, &mut st);
+                u.finish();
             }
             Frame::Pipeline { ref doc } => {
                 let m = pipeline::Model::parse(doc);
                 let mut ui_state = ui::UiState::default();
-                ui_state.pointer = (-1, -1);
+                ui_state.pointer = frame_pointer();
                 let mut u = ui::Ui::begin(&mut c, *theme, &[], &mut ui_state);
                 let mut st = pipeline::State {
                     page: std::env::var("ORRERY_FRAME_PAGE").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
@@ -804,13 +820,15 @@ fn write_frame(
                 let keys = pipeline::column_keys(st.page);
                 let (rest, _, _) = nav::header(&mut u, nav::View::Pipeline, false, "one process, one brain", Some(&keys));
                 pipeline::draw(&mut u, rest, &m, &mut st);
+                u.finish();
             }
             Frame::Chat { ref doc } => {
                 let mut st = orchestrate::State::new(true);
                 let mut ui_state = ui::UiState::default();
-                ui_state.pointer = (-1, -1);
+                ui_state.pointer = frame_pointer();
                 let mut u = ui::Ui::begin(&mut c, *theme, &[], &mut ui_state);
                 orchestrate::draw_chat(&mut u, orchestrate::parse_room(doc).as_ref(), &mut st);
+                u.finish();
             }
             Frame::Machines { ref doc, ref select } => {
                 let m = machines::Model::parse(doc);
@@ -825,9 +843,10 @@ fn write_frame(
                     }
                 }
                 let mut ui_state = ui::UiState::default();
-                ui_state.pointer = (-1, -1);
+                ui_state.pointer = frame_pointer();
                 let mut u = ui::Ui::begin(&mut c, *theme, &[], &mut ui_state);
                 machines::draw(&mut u, &m, &mut st);
+                u.finish();
             }
             Frame::Sessions { ref fleet } => {
                 let mut sv = sessions::Sessions::open(fleet);
@@ -835,13 +854,13 @@ fn write_frame(
                 // A first draw tells each session its size; then wait for the screens.
                 {
                     let mut ui_state = ui::UiState::default();
-                    ui_state.pointer = (-1, -1);
+                    ui_state.pointer = frame_pointer();
                     let mut u = ui::Ui::begin(&mut c, *theme, &[], &mut ui_state);
                     sessions::draw(&mut u, &mut sv);
                 }
                 std::thread::sleep(std::time::Duration::from_secs(wait));
                 let mut ui_state = ui::UiState::default();
-                ui_state.pointer = (-1, -1);
+                ui_state.pointer = frame_pointer();
                 let mut u = ui::Ui::begin(&mut c, *theme, &[], &mut ui_state);
                 sessions::draw(&mut u, &mut sv);
             }
@@ -849,7 +868,7 @@ fn write_frame(
                 let here = std::env::current_dir().unwrap_or_else(|_| ".".into());
                 let mut f = files::Files::specimen(nodes.clone(), here);
                 let mut ui_state = ui::UiState::default();
-                ui_state.pointer = (-1, -1);
+                ui_state.pointer = frame_pointer();
                 let mut u = ui::Ui::begin(&mut c, *theme, &[], &mut ui_state);
                 files::draw(&mut u, ui::rect(0, 0, w as i32, h as i32), &mut f);
             }
@@ -884,9 +903,10 @@ fn write_frame(
                 let mut ui_state = ui::UiState::default();
                 // Off the canvas, so nothing is drawn hot. A review frame
                 // should show the interface at rest, not mid-hover.
-                ui_state.pointer = (-1, -1);
+                ui_state.pointer = frame_pointer();
                 let mut u = ui::Ui::begin(&mut c, *theme, &[], &mut ui_state);
                 lab::draw(&mut u, &model, &mut state);
+                u.finish();
             }
         }
     }
@@ -1607,6 +1627,7 @@ fn gui_loop<S: surface::Surface>(
                     }
                 }
             }
+            u.finish();
         }
         // A recipe staged: its command typed into the machine's tile, in front.
         if let Some((name, target, command)) = handoff.lock().unwrap_or_else(|e| e.into_inner()).take() {

@@ -1,0 +1,55 @@
+shot machines machines $T/machines.json
+shot media media ""
+shot storage storage $T/storage.json
+shot projects projects $J
+shot queue-fleet queue $J ORRERY_FRAME_PAGE=0
+shot queue-runs queue $J ORRERY_FRAME_PAGE=1
+shot pipe-board pipeline $P ORRERY_FRAME_PAGE=0
+shot pipe-flow pipeline $P ORRERY_FRAME_PAGE=1
+shot pipe-timeline pipeline $P ORRERY_FRAME_PAGE=2
+shot pipe-queued pipeline $P ORRERY_FRAME_PAGE=3
+shot pipe-values pipeline $P ORRERY_FRAME_PAGE=4
+shot res-candidates results $J ORRERY_FRAME_PAGE=5
+shot res-found results $J ORRERY_FRAME_PAGE=2
+shot res-net results $J ORRERY_FRAME_PAGE=3
+shot res-flags results $J ORRERY_FRAME_PAGE=4
+shot algo-patch results $J ORRERY_FRAME_PAGE=8 ORRERY_FRAME_TAB=0
+shot algo-terrain results $J ORRERY_FRAME_PAGE=8 ORRERY_FRAME_TAB=1
+shot algo-spectrum results $J ORRERY_FRAME_PAGE=8 ORRERY_FRAME_TAB=2
+shot algo-matrices results $J ORRERY_FRAME_PAGE=8 ORRERY_FRAME_TAB=3
+shot algo-senses results $J ORRERY_FRAME_PAGE=8 ORRERY_FRAME_TAB=4
+shot algo-fleet results $J ORRERY_FRAME_PAGE=8 ORRERY_FRAME_TAB=5
+shot lab lab ""
+shot sessions sessions ""
+shot orchestrate fleet $T/fleet.json
+shot chat chat $T/chat.json
+shot set-keeper settings $J ORRERY_FRAME_PAGE=6
+shot set-commits settings $J ORRERY_FRAME_PAGE=7
+# The inspector: the pointer on a thing, at x,y.
+shot hover-flow pipeline $P ORRERY_FRAME_PAGE=1 ORRERY_FRAME_HOVER=690,110
+shot hover-timeline pipeline $P ORRERY_FRAME_PAGE=2 ORRERY_FRAME_HOVER=760,320
+shot hover-board pipeline $P ORRERY_FRAME_PAGE=0 ORRERY_FRAME_HOVER=300,190
+shot hover-queued pipeline $P ORRERY_FRAME_PAGE=3 ORRERY_FRAME_HOVER=500,135
+shot hover-values pipeline $P ORRERY_FRAME_PAGE=4 ORRERY_FRAME_HOVER=900,125
+shot hover-bar queue $J ORRERY_FRAME_PAGE=0 ORRERY_FRAME_HOVER=860,104
+shot hover-roster queue $J ORRERY_FRAME_PAGE=0 ORRERY_FRAME_HOVER=500,300
+shot hover-candidate results $J ORRERY_FRAME_PAGE=5 ORRERY_FRAME_HOVER=700,392
+shot hover-found results $J ORRERY_FRAME_PAGE=2 ORRERY_FRAME_HOVER=650,246
+shot hover-net results $J ORRERY_FRAME_PAGE=3 ORRERY_FRAME_HOVER=600,340
+shot hover-switch results $J ORRERY_FRAME_PAGE=8 ORRERY_FRAME_TAB=0 ORRERY_FRAME_HOVER=682,330
+shot hover-spectrum results $J ORRERY_FRAME_PAGE=8 ORRERY_FRAME_TAB=2 ORRERY_FRAME_HOVER=400,260
+shot hover-matrices results $J ORRERY_FRAME_PAGE=8 ORRERY_FRAME_TAB=3 ORRERY_FRAME_HOVER=1150,500
+shot hover-senses results $J ORRERY_FRAME_PAGE=8 ORRERY_FRAME_TAB=4 ORRERY_FRAME_HOVER=560,400
+shot hover-road results $J ORRERY_FRAME_PAGE=8 ORRERY_FRAME_TAB=5 ORRERY_FRAME_HOVER=480,370
+shot hover-keeper settings $J ORRERY_FRAME_PAGE=6 ORRERY_FRAME_HOVER=500,360
+shot hover-lab lab "" ORRERY_FRAME_HOVER=220,180
+shot hover-machines machines $T/machines.json ORRERY_FRAME_HOVER=300,300
+shot hover-storage storage $T/storage.json ORRERY_FRAME_HOVER=300,225
+shot hover-projects projects $J ORRERY_FRAME_HOVER=300,460
+shot hover-orchestrate fleet $T/fleet.json ORRERY_FRAME_HOVER=400,300
+shot hover-switcher pipeline $P ORRERY_FRAME_PAGE=0 ORRERY_FRAME_HOVER=1330,50
+# The panel open.
+shot about-flow pipeline $P ORRERY_FRAME_PAGE=1 ORRERY_FRAME_ABOUT=1
+shot about-senses results $J ORRERY_FRAME_PAGE=8 ORRERY_FRAME_TAB=4 ORRERY_FRAME_ABOUT=1
+shot about-fleet queue $J ORRERY_FRAME_PAGE=0 ORRERY_FRAME_ABOUT=1
+shot hover-terrain results $J ORRERY_FRAME_PAGE=8 ORRERY_FRAME_TAB=1 ORRERY_FRAME_HOVER=800,500

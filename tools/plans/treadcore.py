@@ -3553,7 +3553,7 @@ class Plan:
             {"id": "main", "title": "Main: the game's brain", "track": "brain", "deps": ["proof"], "state": "waiting" if line else "done", "machines": ["mac"], "dur_min": 1.0,
              "note": "z %.1f past main to go on it" % self.HELD_Z},
             {"id": "transform", "title": "Transform: learned override", "track": "transform", "deps": ["build"], "state": state("transform", True), "machines": machines("transform", cpu),
-             "dur_min": med("transform", 3.0) * 100, "elapsed_min": elapsed("transform"), "note": "SPSA over 918 numbers, a census a step"},
+             "dur_min": med("transform", 3.0) * 100, "elapsed_min": elapsed("transform"), "note": "SPSA over 942 numbers, a census a step"},
             {"id": "slot", "title": "The game reads a transform", "track": "transform", "deps": ["transform", "bridge"], "state": "not built", "machines": [], "dur_min": 0,
              "note": "the game has no file for a slot, so nothing learned can ship"},
             {"id": "islands", "title": "GPU islands: crucible", "track": "gpu", "deps": [], "state": state("islands", True), "machines": sorted(h["name"] for h in self.cuda),

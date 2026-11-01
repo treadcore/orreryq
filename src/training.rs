@@ -1113,6 +1113,22 @@ fn draw_roster(ui: &mut Ui, at: Rect, q: &Queue, m: &Model, st: &mut State) {
         }
         x = box_.x + 20;
         ui.label_in(x, y1 + lh + 3, bx - x - 8, &roster_line(r), &F8X13, c);
+        ui.tip(rect(box_.x, box_.y, bx - box_.x, box_.h), || {
+            let mut v = vec![format!("{}: {}", display(&r.name), r.state)];
+            if let Some(mc) = mc {
+                v.push(format!("{:.1} of {} cores in use{}. Above 90% is amber.", mc.load, mc.cores, mc.gpu.as_ref().map(|g| format!("; GPU {} at {}%", g.name, g.busy_pct)).unwrap_or_default()));
+            }
+            if !r.target.is_empty() && r.target != "-" {
+                v.push(format!("Reached as {}", r.target));
+            }
+            for (k, title, age) in &r.jobs {
+                v.push(format!("{}: {}, for {}", k, title, ago(*age)));
+            }
+            for (p, on) in &r.on {
+                v.push(format!("{}: {}", p, match on { Some(true) => "on", Some(false) => "off, set on Projects", None => "not on this machine" }));
+            }
+            v
+        });
         y += row_h + 4;
     }
     if y + lh < at.bottom() {
@@ -1251,6 +1267,7 @@ fn draw_flags_page(ui: &mut Ui, at: Rect, q: &Queue, st: &mut State) {
         let bw = if st.operator { 110 } else { 0 };
         ui.label(at.x, y, if when.len() >= 16 { &when[11..16] } else { when }, &F8X13, t.dim);
         ui.label(at.x + 52, y, kind, &F8X13, if kind == "breaker" || kind == "push" || kind == "families" { t.alarm } else if kind == "resolve" { t.warn } else { t.up });
+        ui.tip(rect(at.x, y, at.w - bw - 6, lh), || vec![format!("{} flag at {}", kind, when), text.clone()]);
         ui.label_in(at.x + 52 + kw, y, at.w - 52 - kw - bw - 10, text, &F8X13, t.ink);
         if bw > 0 && ui.button(rect(at.right() - bw, y - 3, bw, lh - 2), "Acknowledge", true) {
             st.ctl = Some(format!("ack {} --by operator", id));
@@ -1405,6 +1422,12 @@ fn draw_candidates_page(ui: &mut Ui, at: Rect, q: &Queue, st: &mut State) {
         ui.label(area.x + when_w + head_w, y, tag, &F8X13, if cur { t.up } else { t.dim });
         let mx = area.x + when_w + head_w + state_w;
         ui.label_in(mx, y, area.right() - mx, moved, &F8X13, if cur { t.ink } else { t.dim });
+        ui.tip(rect(area.x, y, area.w, lh), || vec![
+            format!("{}: {}", id, tag),
+            format!("Held-out reads, points a seat: {}", reads),
+            format!("Moves: {}", moved),
+            format!("Passed at {}. Current means every read was on today's defaults, so it may promote itself; older means it was overtaken.", w),
+        ]);
         y += lh;
     }
 }
@@ -1472,6 +1495,11 @@ fn draw_keeper_page(ui: &mut Ui, at: Rect, q: &Queue, st: &mut State) {
         };
         ui.c.disc(at.x + 6, y + lh / 2 - 1, 5, c);
         ui.label(at.x + 18, y, name, &F8X13, t.ink);
+        ui.tip(rect(at.x, y, at.w - side, lh * wrap(text, tw).len().max(1) as i32), || vec![
+            format!("{}: {}", name, match level(lv) { 2 => "wrong now", 1 => "wants a look", _ => "as it should be" }),
+            text.clone(),
+            "Source: fleet-queue.py health.".to_string(),
+        ]);
         for l in wrap(text, tw) {
             ui.label_in(at.x + name_w, y, tw, &l, &F8X13, if level(lv) > 0 { t.ink } else { t.dim });
             y += lh;
@@ -1673,6 +1701,7 @@ fn draw_found_page(ui: &mut Ui, at: Rect, q: &Queue) {
         ui.c.rect(mx + hw, y + 2, b.max(2), lh - 6, t.line);
         ui.c.rect(mx + hw, y + 2, f, lh - 6, t.up);
         ui.label(mx + hw + barw + 6, y, &format!("{} found of {}", found, read), &F8X13, t.dim);
+        ui.tip(rect(mx, y, colw, lh), || vec![format!("{}: {} found of {} reads", name, found, read), "Found means past two errors with no map below, on a first read, so a few are luck. A machine reading far from the others may be reading differently: macmini once read one map of eleven.".to_string()]);
         y += lh;
     }
     if q.lead_hosts.is_empty() {
@@ -1784,9 +1813,16 @@ fn draw_queue(ui: &mut Ui, at: Rect, q: &Queue, st: &mut State) -> i32 {
     // APART, AND NOT RED: 2,124 of the 2,270 stopped never ran. They were queued for a generation
     // that was overtaken, and a retired job is not a failed one (Paul, 1 November, reading the
     // bar: "I'm seeing lots of families fail"; no family job has ever failed).
-    for (n, c) in [(done, t.up), (running, t.accent), (retired, t.dim), (failed, t.alarm)] {
+    let says: [(&str, &str); 4] = [
+        ("Done", "Finished, and its results fetched."),
+        ("Running", "On a machine now."),
+        ("Retired", "Stopped, nearly all before they ran: queued for a generation that a newer one overtook. Not a failure."),
+        ("Failed", "Started and did not finish cleanly, or could not be fetched. Most came while SSH was resetting on an expired certificate."),
+    ];
+    for (i, (n, c)) in [(done, t.up), (running, t.accent), (retired, t.dim), (failed, t.alarm)].into_iter().enumerate() {
         let w = ((bar.w - 2) as i64 * n / total) as i32;
         ui.c.rect(x, bar.y + 1, w, bar.h - 2, c);
+        ui.tip(rect(x, bar.y, w, bar.h), || vec![format!("{}: {} jobs, {:.1}% of all", says[i].0, n, 100.0 * n as f64 / total as f64), says[i].1.to_string(), "Source: the queue's directories, done/, running/, stopped/, failed/.".to_string()]);
         x += w;
     }
     let mut ly = at.y + 16;
@@ -2210,6 +2246,7 @@ fn draw_algorhythm(ui: &mut Ui, at: Rect, m: &Model) {
         let r = rect(x, at.y, bw, bh);
         ui.panel(r, t.tile);
         ui.outline(r, if i == 4 && steps == 0 { t.line } else { t.up });
+        ui.tip(r, || vec![a1.to_string(), b.to_string(), c.to_string(), "A stage of the brain, in the order it runs.".to_string()]);
         ui.label_in(x + 6, at.y + 4, bw - 12, a1, &F8X13, t.ink);
         ui.label_in(x + 6, at.y + 4 + lh, bw - 12, b, &F8X13, t.dim);
         ui.label_in(x + 6, at.y + 4 + lh * 2, bw - 12, c, &F8X13, t.dim);
@@ -2247,6 +2284,11 @@ fn draw_algorhythm(ui: &mut Ui, at: Rect, m: &Model) {
         }
         let label_w = cw - 4;
         let lx = cx - label_w / 2;
+        ui.tip(rect(lx, cy - 26, label_w, 70), || vec![
+            format!("{}: {}", sw.name, sw.versions.get(sw.value).map(|v| v.as_str()).unwrap_or("")),
+            format!("A choice: one whole number picks which function runs. Versions: {}.", sw.versions.join(", ")),
+            "The A/B reads every version each generation, by the same census as any dial.".to_string(),
+        ]);
         ui.label_in(lx, cy + 30, label_w, &sw.name, &F8X13, t.ink);
         ui.label_in(lx, cy + 30 + lh - 2, label_w, sw.versions.get(sw.value).map(|v| v.as_str()).unwrap_or(""), &F8X13, if sw.value > 0 { t.up } else { t.dim });
     }
@@ -2416,6 +2458,11 @@ fn draw_net(ui: &mut Ui, at: Rect, m: &Model) -> Option<usize> {
                 let xg = axis_groups(net, i, true);
                 let yg = axis_groups(net, i, false);
                 let gname = |g: &[(String, i64, i64)], k: i64| g.iter().find(|x| k >= x.1 && k <= x.2).map(|x| format!(" {}", x.0)).unwrap_or_default();
+                ui.tip(rect(px - 1, py - 1, 3, 3), || vec![
+                    format!("Weight {:+.3}", v),
+                    format!("{}: row {} of {}, column {} of {}.", labels.get(i).copied().unwrap_or(""), r + 1, rows, c + 1, cols),
+                    "Positive pushes this output up as this input rises; negative, down. Click to enlarge the matrix.".to_string(),
+                ]);
                 hover = Some(format!("{}: output {}{}, input {}{}: weight {:+.3}", labels.get(i).copied().unwrap_or(""), r, gname(&yg, r as i64), c, gname(&xg, c as i64), v));
                 ui.c.rect(px - 3, py, 7, 1, t.ink);
                 ui.c.rect(px, py - 3, 1, 7, t.ink);

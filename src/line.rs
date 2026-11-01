@@ -52,6 +52,7 @@ pub struct Stage {
     pub simulates: &'static str,
     pub why: &'static str,
     pub adds: &'static str,
+    pub queued: &'static str,
 }
 
 pub fn stages() -> Vec<Stage> {
@@ -68,6 +69,7 @@ pub fn stages() -> Vec<Stage> {
             simulates: word(s, "simulates"),
             why: word(s, "why"),
             adds: word(s, "adds"),
+            queued: word(s, "queued"),
         })
         .collect()
 }
@@ -89,6 +91,8 @@ pub fn edges() -> Vec<(&'static str, &'static str)> {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Value {
+    pub up: &'static str,
+    pub down: &'static str,
     pub key: &'static str,
     pub label: &'static str,
     pub default: f64,
@@ -104,7 +108,7 @@ pub fn values() -> Vec<Value> {
         .iter()
         .map(|v| {
             let n = |k: &str| v.get(k).and_then(|x| x.as_num()).unwrap_or(0.0);
-            Value { key: word(v, "key"), label: word(v, "label"), default: n("default"), min: n("min"), max: n("max"), step: n("step"), unit: word(v, "unit"), what: word(v, "what") }
+            Value { up: word(v, "up"), down: word(v, "down"), key: word(v, "key"), label: word(v, "label"), default: n("default"), min: n("min"), max: n("max"), step: n("step"), unit: word(v, "unit"), what: word(v, "what") }
         })
         .collect()
 }
@@ -182,7 +186,12 @@ pub fn about_bar(ui: &mut Ui, body: Rect, key: &str) -> Rect {
         ui.s.about_open = false;
     }
     let open = ui.s.about_open || FRAME_OPEN.load(Ordering::Relaxed);
-    let bar = rect(body.x, body.y, body.w, 20);
+    // The inspector's switch, at the bar's end, where every screen has it. The chord too.
+    let sw = rect(body.right() - 118, body.y + 1, 116, 18);
+    let bar = rect(body.x, body.y, body.w - 120, 20);
+    if ui.f.chord(crate::surface::Sym::Char('i')) {
+        ui.s.inspect_off = !ui.s.inspect_off;
+    }
     let hot = ui.is_hot(bar);
     ui.c.rect(bar.x, bar.y, bar.w, bar.h, if hot { t.tile } else { t.panel });
     ui.c.hline(bar.x, bar.bottom() - 1, bar.w, t.line);
@@ -192,6 +201,19 @@ pub fn about_bar(ui: &mut Ui, body: Rect, key: &str) -> Rect {
     if ui.button_hit(bar) {
         ui.s.about_open = !ui.s.about_open;
     }
+    ui.c.rect(sw.x - 2, body.y, sw.w + 4, 20, t.panel);
+    ui.c.hline(sw.x - 2, body.y + 19, sw.w + 4, t.line);
+    let on = ui.inspecting();
+    ui.c.rect(sw.x + 4, sw.y + 5, 8, 8, if on { t.up } else { t.dim });
+    ui.label(sw.x + 16, sw.y + 2, if on { "Inspector on" } else { "Inspector off" }, &F8X13, if t.metal { t.ink } else { t.dim });
+    if ui.button_hit(sw) {
+        ui.s.inspect_off = !ui.s.inspect_off;
+    }
+    ui.tip(sw, || vec![
+        "The inspector".to_string(),
+        "Hover over almost any number, bar, cell or row: it says what it is, where it came from and what it means. Cut-off text shows in full.".to_string(),
+        "Press here, or the platform's command key and I, to turn it off or on.".to_string(),
+    ]);
     let below = rect(body.x, bar.bottom(), body.w, body.h - bar.h);
     if !open {
         return below;

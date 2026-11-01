@@ -226,6 +226,12 @@ fn draw_terrain(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
         let g = project(u, v, 0.0, yaw, cx, cy, r);
         ui.c.disc(g.0 as i32, g.1 as i32, 6, t.ink);
         ui.c.disc(g.0 as i32, g.1 as i32, 3, t.base);
+        ui.tip(plot, || vec![
+            format!("The terrain over {} and {}", s(p, "a"), s(p, "b")),
+            "Each read in the ledger is a point in dial space. Height is the smoothed gain nearby, in points a seat; colour fades where there are few reads.".to_string(),
+            "A place to look, never a result: only a census says what is there. Hover a numbered flag for a peak; the ringed dot is today's defaults.".to_string(),
+        ]);
+        ui.tip(rect(g.0 as i32 - 8, g.1 as i32 - 8, 16, 16), || vec!["Today's defaults".to_string(), "Where the brain is now: no doublings on either dial.".to_string()]);
     }
     for (i, q) in peaks.iter().take(5).enumerate() {
         let (ix, iy) = (n(q, "ix") as usize, n(q, "iy") as usize);
@@ -234,6 +240,11 @@ fn draw_terrain(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
         ui.c.rect(g.0 as i32, g.1 as i32 - 24, 1, 24, t.warn);
         ui.c.disc(g.0 as i32, g.1 as i32 - 28, 8, t.warn);
         ui.label(g.0 as i32 - 3, g.1 as i32 - 34, &(i + 1).to_string(), &F8X13, t.base);
+        ui.tip(rect(g.0 as i32 - 9, g.1 as i32 - 37, 18, 18), || vec![
+            format!("Peak {}: {:+.2} points a seat", i + 1, n(q, "z")),
+            format!("{} reads nearby.", n(q, "support")),
+            "Ground higher than its eight neighbours. Worth a trial, and not yet evidence.".to_string(),
+        ]);
     }
     // The corners, so the axes can be read: each dial's range, in real values.
     if let Some(today) = p.get("today").map(nums).filter(|x| x.len() == 2) {
@@ -241,6 +252,35 @@ fn draw_terrain(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
         ui.label_in(plot.x, lab - lh, plot.w, &format!("{}: {:.3} to {:.3}", s(p, "a"), today[0] * 2f64.powf(ax[0]), today[0] * 2f64.powf(ax[1])), &F8X13, t.dim);
         ui.label_in(plot.x, lab, plot.w, &format!("{}: {:.3} to {:.3}", s(p, "b"), today[1] * 2f64.powf(ay[0]), today[1] * 2f64.powf(ay[1])), &F8X13, t.dim);
     }
+}
+
+/// What a heat map's cell under the pointer is: its row and column by name, its number, and what
+/// the number means. The colours say which are large; only this says how large, and of what.
+fn cell_tip(ui: &mut Ui, r: Rect, cells: &[Vec<f64>], title: &str, rows: &[String], cols: &[String], means: &str) {
+    let (nr, nc) = (cells.len() as i32, cells.first().map(|c| c.len()).unwrap_or(0) as i32);
+    if nr == 0 || nc == 0 || !ui.is_hot(r) {
+        return;
+    }
+    let (px, py) = ui.pointer();
+    let (y, x) = (((py - r.y) * nr / r.h.max(1)).clamp(0, nr - 1) as usize, ((px - r.x) * nc / r.w.max(1)).clamp(0, nc - 1) as usize);
+    let v = cells[y][x];
+    let name = |names: &[String], i: usize, word: &str| names.get(i).filter(|s| !s.is_empty()).cloned().unwrap_or_else(|| format!("{} {}", word, i + 1));
+    let (rn, cn) = (name(rows, y, "row"), name(cols, x, "column"));
+    ui.tip(r, || vec![format!("{}: {:.3}", title, v), format!("{}, {}", rn, cn), means.to_string()]);
+}
+
+fn words_of(v: &[Value]) -> Vec<String> {
+    v.iter().map(|x| x.as_str().unwrap_or("").to_string()).collect()
+}
+
+/// The point on a line chart under the pointer.
+fn line_tip(ui: &mut Ui, r: Rect, v: &[f64], title: &str, means: &str) {
+    if v.is_empty() || !ui.is_hot(r) {
+        return;
+    }
+    let (px, _) = ui.pointer();
+    let i = (((px - r.x) * v.len() as i32) / r.w.max(1)).clamp(0, v.len() as i32 - 1) as usize;
+    ui.tip(r, || vec![format!("{}: {:.1}", title, v[i]), format!("Champion {} of the {} shown.", i + 1, v.len()), means.to_string()]);
 }
 
 /// A heat map of `cells`, row 0 at the top.
@@ -304,6 +344,7 @@ fn draw_spectrum(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
             ui.label_in(at.x, y, w, &format!("{} champions, {} shown; strongest direction at the top", n(sp, "champions"), n(sp, "shown")), &F8X13, t.ink);
             let r = rect(at.x, y + lh, w, h - lh);
             heatmap(ui, r, &flip, move |u, v| blend(u.t.tile, u.t.up, (v / max).sqrt()));
+            cell_tip(ui, r, &flip, "Singular value", &[], &[], "How strong this direction of the middle layer is in this champion. Top is the strongest. New bright rows are new directions learned; a flat picture means the island has stopped learning.");
             let rx = r.right() + 14;
             let rw = at.right() - rx;
             let (norm, drift) = (nums(sp.get("norm").unwrap_or(&Value::Null)), nums(sp.get("drift").unwrap_or(&Value::Null)));
@@ -311,11 +352,13 @@ fn draw_spectrum(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
             let c1 = rect(rx, y + lh, rw, (h - lh) / 2 - lh);
             ui.panel(c1, t.tile);
             line(ui, c1, &norm, t.up);
+            line_tip(ui, c1, &norm, "Size of all its weights", "The norm of the whole net. Steady growth can mean confidence or only drift.");
             let y2 = c1.bottom() + 4;
             ui.label_in(rx, y2, rw, &format!("distance from where it began: now {:.0}", drift.last().copied().unwrap_or(0.0)), &F8X13, t.accent);
             let c2 = rect(rx, y2 + lh, rw, r.bottom() - y2 - lh);
             ui.panel(c2, t.tile);
             line(ui, c2, &drift, t.accent);
+            line_tip(ui, c2, &drift, "Distance from where it began", "How far this champion's weights are from the first champion's.");
         }
     }
     y += h + 6;
@@ -330,6 +373,7 @@ fn draw_spectrum(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
         let r = rect(at.x + lw, y, at.w - lw, (at.bottom() - y - lh).max(20));
         let max = cells.iter().flatten().fold(0.1f64, |m, v| m.max(v.abs()));
         heatmap(ui, r, &cells, move |u, v| heat(u, v, max));
+        cell_tip(ui, r, &cells, "Doublings from before the first promotion", &words_of(names), &words_of(commits), "+1 is twice the value, -1 half. Read a row left to right: a dial that keeps moving one way is one the fleet keeps finding.");
         let rows = cells.len().max(1) as i32;
         for (i, nm) in names.iter().enumerate() {
             if r.h / rows >= F8X13.height as i32 {
@@ -380,6 +424,10 @@ fn draw_matrices(ui: &mut Ui, at: Rect, a: &Value) {
     ui.label_in(at.x, y, half, "Singular values by layer: how many directions each uses", &F8X13, t.dim);
     let scree = rect(at.x, y + lh, half, h);
     ui.panel(scree, t.tile);
+    ui.tip(scree, || vec![
+        "Singular values, one line a layer".to_string(),
+        "How many independent directions a layer uses, largest first, on a log scale of three decades. A long flat tail means the layer has room it is not using, so a slot could be smaller.".to_string(),
+    ]);
     let colours = [t.up, t.accent, t.warn];
     for (i, l) in layers.iter().enumerate() {
         let sv = l.get("sv").map(nums).unwrap_or_default();
@@ -408,6 +456,7 @@ fn draw_matrices(ui: &mut Ui, at: Rect, a: &Value) {
     let r = rect(rx + lw, y + lh, half - lw, h - lh);
     let max = cells.iter().flatten().fold(1e-6f64, |m, v| m.max(*v));
     heatmap(ui, r, &cells, move |u, v| blend(u.t.tile, u.t.up, (v / max).sqrt()));
+    cell_tip(ui, r, &cells, "Reach, senses to action", &words_of(outs), &words_of(ins), "The product W3 W2 W1, reduced to groups: what could reach this action from these senses if nothing bent. It ignores the activations, so it is an upper picture and not a measurement.");
     for (i, o) in outs.iter().enumerate() {
         let py = r.y + i as i32 * r.h / outs.len().max(1) as i32 + 3;
         ui.label_in(rx, py, lw - 4, o.as_str().unwrap_or(""), &F8X13, t.dim);
@@ -457,6 +506,25 @@ fn draw_senses(ui: &mut Ui, at: Rect, a: &Value) {
         }
         py += 2;
     }
+    {
+        // The dot under the pointer: which sector, which ring, how much the net listens there.
+        let (ppx, ppy) = ui.pointer();
+        let (dx, dy) = (ppx - cx, ppy - cy);
+        let d = ((dx * dx + dy * dy) as f64).sqrt();
+        if d >= inner && d < rmax {
+            let ring = ((((d - inner) / (rmax - inner)) * rings as f64) as usize).min(10);
+            let ang = (dx as f64).atan2(-(dy as f64));
+            let k = ((ang / (std::f64::consts::TAU / 8.0)).round() as i32).rem_euclid(8) as usize;
+            let v = listen[k * 11 + ring];
+            let bearing = ["ahead", "ahead right", "right", "behind right", "behind", "behind left", "left", "ahead left"][k];
+            let rn = names.get(ring).and_then(|x| x.as_str()).unwrap_or("").to_string();
+            ui.tip(rect(cx - rmax as i32, cy - rmax as i32, 2 * rmax as i32, 2 * rmax as i32), || vec![
+                format!("{}: {}", rn, bearing),
+                format!("Sense number {}. The first layer's weight on it: {:.3}.", k * 11 + ring, v),
+                "Bright means the net listens to this channel from this direction. Dark all round means nobody uses it, and it could go.".to_string(),
+            ]);
+        }
+    }
     // The tank, pointing forward.
     ui.c.disc(cx, cy, 7, t.ink);
     ui.c.rect(cx - 1, cy - 16, 3, 12, t.ink);
@@ -473,6 +541,7 @@ fn draw_senses(ui: &mut Ui, at: Rect, a: &Value) {
         ui.label_in(x, y, 146, &format!("{} {}", c + 1, nm.as_str().unwrap_or("")), &F8X13, t.ink);
         let bw = ((w - 150) as f64 * per[c] / ring_max) as i32;
         ui.c.rect(x + 150, y + 3, bw.max(1), 9, t.up);
+        ui.tip(rect(x, y, w, lh - 3), || vec![format!("Ring {}: {}", c + 1, nm.as_str().unwrap_or("")), format!("The first layer's weight on this channel, over all eight directions: {:.3}.", per[c])]);
         y += lh - 3;
     }
     y += 6;
@@ -486,6 +555,7 @@ fn draw_senses(ui: &mut Ui, at: Rect, a: &Value) {
             let v = listen[from + i as usize];
             let h = (v / max * (lh - 2) as f64).max(1.0) as i32;
             ui.c.rect(x + 96 + i * bw, y + lh - 2 - h, (bw - 1).max(1), h, t.up);
+            ui.tip(rect(x + 96 + i * bw, y, bw, lh), || vec![format!("{}, number {} of {}", nm, i + 1, count), format!("Sense number {}. The first layer's weight on it: {:.3}.", from + i as usize, v)]);
         }
         from += count as usize;
         y += lh + 2;
@@ -504,6 +574,7 @@ fn draw_fleet(ui: &mut Ui, at: Rect, a: &Value) {
         ui.label_in(r.x + 8, r.y + 5, r.w - 16, title, &F8X13, t.ink);
         ui.label_in(r.x + 8, r.y + 5 + lh, r.w - 16, &l1, &F8X13, t.dim);
         ui.label_in(r.x + 8, r.y + 5 + lh * 2, r.w - 16, &l2, &F8X13, t.dim);
+        ui.tip(r, || vec![title.to_string(), l1.clone(), l2.clone(), "Queue, Flow draws this road in full, with what each stage takes and gives.".to_string()]);
     };
     let arrow = |ui: &mut Ui, x0: i32, y0: i32, x1: i32, y1: i32| {
         let steps = (x1 - x0).abs().max((y1 - y0).abs()).max(1);
