@@ -66,9 +66,13 @@ with tempfile.TemporaryDirectory() as q:
 
 # A pass on the defaults a generation replaced is read once more; what passed on older ones, what
 # is current and what was promoted are not; a read finishing later is still caught; never past the cap.
+HOLD_Q = tempfile.mkdtemp()
+
+
 class C(P):
     def __init__(self, ev):
         self.name, self.state, self.ev, self.got, self.flags, self.CARRY_MAX = "grove", {"adopt": []}, ev, [], [], 2
+        self.q = HOLD_Q
 
     def auto(self):
         return True
@@ -125,5 +129,13 @@ c.state["anchor_trials"] = ["w5"]
 assert c.anchor_short("grove/w5", {"held": [[0.38, 0.51], [0.18, 0.58]]}), "w4845's reads do not undo a generation"
 assert not c.anchor_short("grove/w5", {"held": [[2.0, 0.4], [2.0, 0.4]]}), "z 7 does"
 assert not c.anchor_short("grove/w6", {"held": [[0.38, 0.51]]}), "only an anchor is held to it"
+
+# What a person holds does not promote or carry itself, whatever it reads; anything else does.
+c = C({"grove/w1": cand()})
+assert not c.held_by_a_person("w_pos_fortify = 0.4\n"), "no file, no hold"
+open(os.path.join(HOLD_Q, "hold.json"), "w").write('{"w_pos_fortify": 0.4}')
+assert c.held_by_a_person("w_pos_fortify = 0.4\nw_near = 2\n")
+assert not c.held_by_a_person("w_pos_fortify = 1.5\n")
+os.remove(os.path.join(HOLD_Q, "hold.json"))
 
 print("board-check: every check holds")

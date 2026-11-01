@@ -347,9 +347,13 @@ class Plan:
         # machine busy for hours would build each in turn (29 October:
         # calber held three, behind a school run). Moved to stopped/ as the
         # keeper claims a job, by a rename, so one it has begun is left.
+        # BUT NOT ONE A QUEUED JOB WAITS ON (1 November). A census asked by hand is held to its commit and
+        # is not retired with the search's jobs; with its build gone it could never start, and nothing
+        # said so: r0093 and r0094 sat high in the queue for twenty minutes, behind no one.
+        waited = {j.get("after_host", "").rsplit("-", 1)[-1] for j in self.queue_jobs() if j.get("kind") != "prepare" and j.get("after_host")}
         for f in glob.glob(os.path.join(self.q, "queue", "*.json")):
             j = load(f, {})
-            if j.get("kind") == "prepare" and j.get("id", "").startswith("prep-") and not j["id"].endswith("-" + short):
+            if j.get("kind") == "prepare" and j.get("id", "").startswith("prep-") and not j["id"].endswith("-" + short) and j["id"].rsplit("-", 1)[-1] not in waited:
                 try:
                     os.rename(f, os.path.join(self.q, "stopped", os.path.basename(f)))
                 except OSError:
@@ -1147,6 +1151,14 @@ class Plan:
     # generation 5 on +0.38 +/- 0.51 and +0.18 +/- 0.58, and undid two generations on noise. A find may be
     # carried unproven, because the proof stands behind it. A retreat has nothing behind it, so an anchor
     # must clear the proof's own bar, whatever the ease.
+    def held_by_a_person(self, text):
+        """QUEUE/hold.json: {"dial": value}. A trial setting a dial to a held value does not promote or
+        carry itself, whatever it reads: a change that passes the road and fails a rule set before the
+        run waits for a person (1 November: w_pos_fortify 0.4). Its reads go on."""
+        hold = load(os.path.join(self.q, "hold.json"), {}) or {}
+        vals = parse_weights(text)
+        return any(k in vals and abs(vals[k] - float(v)) < 1e-6 for k, v in hold.items())
+
     def anchor_short(self, name, v):
         """True for an anchor trial whose held-out reads have not reached HELD_Z."""
         if name.split("/", 1)[-1] not in self.state.get("anchor_trials", []):
@@ -1670,6 +1682,10 @@ class Plan:
             st = self.rstate(rid)
             if kind not in ("spsa", "tune", "census") or rid in done or st.get("status") != "done":
                 continue
+            # A read to know, not to promote: `adopt=no`.
+            if (r.get("params") or {}).get("adopt") == "no":
+                done[rid] = None
+                continue
             if kind == "census":
                 # A census of a trial (the rotation's @best): adopted when it
                 # passed, so its held-out reads follow.
@@ -1679,6 +1695,11 @@ class Plan:
                     done[rid] = None
                     continue
                 text = open(os.path.join(ds[0], "trial.weights")).read()
+                # A NAMED STYLE IS A PERSON'S CHOICE, whatever it reads: adopted, it would replace
+                # every bot's whole brain at a generation's bar (styles.rs).
+                if "bot_style" in parse_weights(text):
+                    done[rid] = None
+                    continue
             else:
                 f = os.path.join(self.rdir(rid), "theta.weights" if kind == "spsa" else "best.weights")
                 text = open(f).read() if os.path.exists(f) else ""
@@ -1798,7 +1819,8 @@ class Plan:
         # promoted, `patch = k` would stop every game that starts. It waits for a person.
         ev = {k: v for k, v in self.evidence().items()
               if v.get("current") and v["families"] == "holds" and v["held_mean"] is not None and k not in tried
-              and "patch" not in parse_weights(v["weights"]) and not self.anchor_short(k, v)}
+              and "patch" not in parse_weights(v["weights"]) and "bot_style" not in parse_weights(v["weights"])
+              and not self.anchor_short(k, v) and not self.held_by_a_person(v["weights"])}
         if not ev:
             return
         name = max(ev, key=lambda k: ev[k]["held_mean"])
@@ -1867,6 +1889,8 @@ class Plan:
             if len(out) >= room:
                 break
             if not k.startswith(self.name + "/") or v.get("current") or k in promoted or k in carried["names"] or self.anchor_short(k, v):
+                continue
+            if "bot_style" in parse_weights(v["weights"]) or self.held_by_a_person(v["weights"]):
                 continue
             if not v.get("commits") or not all(c and self.same_as(c, parent) for c in v["commits"]):
                 continue
