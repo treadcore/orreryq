@@ -7,11 +7,11 @@ This was not expected, and it is the report's largest finding. **Raider reads +3
 
 Three cautions before anyone acts on it:
 
-- **Most of it is one map.** On `europe` both read about +18 a seat. Without it, Raider averages about +1.6 and Expander about +0.8. So the likely story is a fault in today's defaults on that one map, one those dials happen to avoid, more than a better brain everywhere. **That is itself a lead for the search:** it has been averaging over a failure it cannot see, and nothing yet looks at a single map's outlier.
+- **Most of it is one map.** On `europe` both read about +18 a seat. Without it, Raider averages about +1.6 and Expander about +0.8. **Section VII follows this up, and it corrects the guess made here:** it is one dial, and it matters on nearly every map.
 - **Seven were looked at and the best three were kept,** which is why they were read again on seeds of their own, and these numbers are those reads.
 - **Each also loses somewhere.** Raider is -3.6 on `fidos-airstrip`; Expander is -5.2 on `atlantic`.
 
-**A decision for Paul, not taken here:** either of them can go down the ordinary road as a candidate, through families and tests. Nothing has moved. `bot_style` is not searched, on purpose.
+`bot_style` is not searched, on purpose. Nothing has moved.
 
 ### B. What is not better
 

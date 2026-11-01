@@ -10,7 +10,7 @@ Companions: [the Double Report](double-lab-report.html) (the road this finishes)
 
 ## Abstract
 
-The treadcore brain is a space of about 10^11 programs before a dial is turned, and until today nobody could ask for one by name. This report designs and builds three things at once. **The game now reads a transform**, so a learned override can ship and moving its slider no longer stops a game. **Crucible reaches the game:** a champion from the GPU islands plays in real matches, through an adapter that builds its 35 inputs from what a tank can see and keeps its own confidence gate. **And there are eight named bot styles,** of four kinds, chosen a team at a time on the launch menu or with `--bots`, one style or a mix a seat at a time, each named on the roster. Every kind ends in the same `Command`, which is what makes them comparable, and any new kind needs only to produce one. No default moved: style 0 is the brain as it was, and every family still holds. **The census then gave two surprises:** two hand-written styles beat the fleet's searched brain past the proof's bar on unseen seeds (Raider +3.06 +/- 0.74, Expander +2.35 +/- 0.73), mostly on one map, and the learned styles work and are not yet good (Duelist -17.14, Scholar -56.84). Reading them also found and fixed two faults in the run itself.
+The treadcore brain is a space of about 10^11 programs before a dial is turned, and until today nobody could ask for one by name. This report designs and builds three things at once. **The game now reads a transform**, so a learned override can ship and moving its slider no longer stops a game. **Crucible reaches the game:** a champion from the GPU islands plays in real matches, through an adapter that builds its 35 inputs from what a tank can see and keeps its own confidence gate. **And there are eight named bot styles,** of four kinds, chosen a team at a time on the launch menu or with `--bots`, one style or a mix a seat at a time, each named on the roster. Every kind ends in the same `Command`, which is what makes them comparable, and any new kind needs only to produce one. No default moved: style 0 is the brain as it was, and every family still holds. **The census then gave two surprises:** two hand-written styles beat the fleet's searched brain past the proof's bar on unseen seeds (Raider +3.06 +/- 0.74, Expander +2.35 +/- 0.73), which turned out to be one stale dial, worth +3.65 +/- 0.62 alone on all maps, and the learned styles work and are not yet good (Duelist -17.14, Scholar -56.84). Reading them also found and fixed two faults in the run itself.
 
 **Index Terms:** game AI, hybrid intelligence, residual learning, opponent modelling, programming by optimization.
 
@@ -164,11 +164,11 @@ This was not expected, and it is the report's largest finding. **Raider reads +3
 
 Three cautions before anyone acts on it:
 
-- **Most of it is one map.** On `europe` both read about +18 a seat. Without it, Raider averages about +1.6 and Expander about +0.8. So the likely story is a fault in today's defaults on that one map, one those dials happen to avoid, more than a better brain everywhere. **That is itself a lead for the search:** it has been averaging over a failure it cannot see, and nothing yet looks at a single map's outlier.
+- **Most of it is one map.** On `europe` both read about +18 a seat. Without it, Raider averages about +1.6 and Expander about +0.8. **Section VII follows this up, and it corrects the guess made here:** it is one dial, and it matters on nearly every map.
 - **Seven were looked at and the best three were kept,** which is why they were read again on seeds of their own, and these numbers are those reads.
 - **Each also loses somewhere.** Raider is -3.6 on `fidos-airstrip`; Expander is -5.2 on `atlantic`.
 
-**A decision for Paul, not taken here:** either of them can go down the ordinary road as a candidate, through families and tests. Nothing has moved. `bot_style` is not searched, on purpose.
+`bot_style` is not searched, on purpose. Nothing has moved.
 
 ### B. What is not better
 
@@ -196,7 +196,44 @@ The last read is the one to quote. So a champion from a duel on an empty arena, 
 **An anchor undid three generations on noise.** While these reads ran, `w4845`, the defaults from before `r0069`, passed at a generation's low bar and went on the line as generation 5 on +0.29 +/- 0.38, z 0.76, returning `bio`, `alpha` and the rest to where main has them. A find may be carried unproven because the proof stands behind it. A retreat has nothing behind it. **An anchor must now clear the proof's z 3,** with a test. We did not rewrite the line by hand on a live run: the carry is reading those finds again on the new baseline, which is the road they should come back by. And the commit said "no change" while changing six values: that label is still wrong.
 
 
-## VII. How to add a style, and what comes after eight
+## VII. Amendment: what europe turned out to be
+
+Paul: "look at europe first, find the fault." Section VI-A guessed at a fault on that one map. **The guess was half wrong: the fault is everywhere, and `europe` only shows it loudest.**
+
+**What the gain was made of.** Raider's +17.5 on `europe` is +15.9 rewards, with kills and deaths even. Itemised over 28 seeds, +11.75 of it is tiles advanced, +2.42 advance stages, +1.57 rotations. So a Raider team simply goes forward more, and a big map has the most ground to pay for.
+
+**Which dial.** Raider moves twelve. One at a time, on `europe`, 20 seeds each:
+
+| Trial | On `europe` |
+| --- | --- |
+| Raider, all twelve | +18.68 +/- 4.45 (28 seeds) |
+| its four posture dials | +16.45 +/- 5.54 |
+| `w_pos_fortify` 6.0 to 0.4, alone | **+16.41 +/- 5.90** |
+| `w_pos_expand` 0.4 to 3.0, alone | +5.93 +/- 3.44 |
+
+**The fleet then read that one dial on all eleven maps, 400 seeds:**
+
+| `w_pos_fortify` | Every map | z | `europe` | Maps above zero |
+| --- | --- | --- | --- | --- |
+| 6.0, today | 0 | | 0 | |
+| 1.5 | +1.51 +/- 0.46 | 3.3 | +3.81 +/- 2.02 | 9 of 11 |
+| **0.4** | **+3.65 +/- 0.62** | **5.9** | +14.25 +/- 3.49 | 10 of 11 |
+
+Without `europe`, 0.4 still averages about +2.5. **This is the strongest single read of the search, past the proof's bar by a long way, from one number.** It beats Raider, which was mostly reading this.
+
+**Why it is wrong today.** Fortify's value is `w_pos_fortify x castle_left`. At 6.0 it outbids everything until the castle stands, and Expand can reach only 0.4. On `europe` the castle stands near 240 seconds, a quarter of the match. The value 6.0 was promoted on 28 October (`dc3df01`, from 3.0), under game 1. Games 2 to 4 since then pay massively for going forward, as Paul asked, and made the castle smaller by decree. **The number was right for a game that no longer exists.**
+
+**Why the search never fixed it.** The fit looks within one doubling of today, or two when stalled: 1.5 at the lowest. 0.4 is nearly four doublings away. Its best trials were out of its reach, which is the danger of a search that only looks nearby. The hand-written styles found it because nobody wrote them near today.
+
+### A. A real bug, and not the cause
+
+Tracing a match found a separate fault. **In 9 matches no tank ever fetched or set down a pillbox,** so `slots_left` reads exactly 1.00 from when the castle stands to the end, and the team reports Connect on 63 to 76% of its picks on `europe` and `atlantic`. A slot is filled only from a pillbox that same tank owns, but its team captures them. That looked like the answer, so we tested it: scoring Connect only when there is a pillbox to bring in gives **+2.48 +/- 1.83 on `europe` and -1.42 +/- 1.97 on `atlantic`.** Inside the noise. It is worth mending, since teams are not filling the slots at all, and it is not what `europe` was showing. That test ran in a scratch copy, and nothing of it is in the game.
+
+### B. What this does not say
+
+Fewer castles scoring better is partly what the score is built to pay for: a game that pays a quarter point a tile will favour walking. Held ground, kills and deaths barely moved on `europe`. Whether teams that build less *look* better to a person is a playtest's question, and `w_pos_fortify` at 0.4 is a real change of character. Nothing has been changed: it waits on Paul.
+
+## VIII. How to add a style, and what comes after eight
 
 The roster is one table in `styles.rs`. A new style in an existing kind is one line and a file. A new kind is one more match arm in `make`: anything that says Commands. That is where the future Paul describes goes in:
 
@@ -218,7 +255,7 @@ Past eight, `ROSTER` and the dial's list grow together, and a test proves they m
 
 The two red boxes are gone. The Board's next essential is whatever the run needs next. **"Built" means a road exists, not that what travels it is good.** The learned styles' numbers above are the measure of that.
 
-## VIII. Threats and what is open
+## IX. Threats and what is open
 
 **The numbers are of one champion and one transform.** They say what these files are worth today. **110 seeds is a first look,** with errors near one to two points. **The reads ran on different builds of the line,** as it moved during the afternoon. Different reads stood on different commits: a style's dials are its own, but it is read against that hour's Fleet. **The census plays whole teams** of a style against whole teams of Fleet; a mix on one team has not been read, because the census deals one style to a team. **I saw the styled game run in its log and on its menu, not in play,** because this terminal may not capture the screen; pictures are welcome.
 
@@ -231,7 +268,7 @@ The two red boxes are gone. The Board's next essential is whatever the run needs
 - A network game reads `--bots` on the host alone, as bots are the host's. Its lobby has no such row.
 - The transform is not auto-promoted: a person chooses it.
 
-## IX. Reproducing this
+## X. Reproducing this
 
 ```sh
 cargo test -p treadcore-brain --release styles          # the roster, the bridge, every style playing
