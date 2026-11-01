@@ -231,8 +231,10 @@ be named in the commit.
 ## 7 · What this does not protect against, stated plainly
 
 - **A stolen operator key.** It is an unencrypted Ed25519 key on the operator's
-  Mac, by `cmd_login`'s own design, and the mitigation is that it expires in
-  eight hours. Anyone holding it holds the fleet until it does.
+  Mac, by `cmd_login`'s own design, and the mitigation is that it expires: in
+  thirty days since 1 November 2026, by Paul's decision, eight hours before that
+  (`copal fleet login --hours N`, or a number in the fleet's `cert-hours` file).
+  Anyone holding it holds the fleet until it does.
 - **The CA private half.** Everything here rests on it. It is at
   `~/.copal/ca/<fleet>_ca`, mode 600, on one machine, and nothing in orrery
   reads, copies, or mentions it.

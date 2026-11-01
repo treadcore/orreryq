@@ -117,6 +117,9 @@ class Fleet:
     def survey(self):
         ca_fp = fingerprint(self.ca_pub)
         known = self.known()
+        # As in the chat room's round: an expired certificate is never presented.
+        _, cert_left, _ = cert_info(sel.FDIR + "/operator-cert.pub")
+        expired = cert_left is not None and cert_left <= 0
 
         def one(n):
             name, addr = n
@@ -127,6 +130,8 @@ class Fleet:
             days, ours = presented(addr, ca_fp)
             m.update(cert_days=-1 if days is None else days, cert_ours=ours)
             try:
+                if expired:
+                    raise RuntimeError("the operator certificate has expired: Renew")
                 got = sel.facts(addr)
                 old = got.get("listener_version", "") != CURRENT
                 m.update(listener="old" if old else "yes", facts=got, desktop=got.get("desktop", ""), os=got.get("os", ""), version=got.get("version", ""),
@@ -290,6 +295,13 @@ class Fleet:
                     pos = json.load(f)
             except (OSError, ValueError):
                 pos = {}
+            # NEVER DIAL ON AN EXPIRED CERTIFICATE. Each refused one costs this address a penalty in
+            # OpenSSH 9.8 and later, and sshd then drops connections from it whoever they are for:
+            # this loop, every 4 s from 30 October, is what reset the keeper's ssh on the Copal
+            # machines. No certificate, no round: Renew brings the room back.
+            _, left, _ = cert_info(sel.FDIR + "/operator-cert.pub")
+            if left is not None and left <= 0:
+                return {}
             nodes = sel.machines()
             for _ in range(2):
                 lines = self.room()
