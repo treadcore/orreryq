@@ -126,7 +126,7 @@ def screens():
     open(os.path.join(DOCS, "double", "screens.html"), "w").write("".join(out))
 
 
-GAME = [("game-menu", "<strong>The launch menu.</strong> A fresh shot of the game on this Mac. Every row stands for a command-line flag. The Bots row sets skill only, not style, which is the gap the next report closes."),
+GAME = [("game-menu", "<strong>The launch menu.</strong> A fresh shot of the game on this Mac. Every row stands for a command-line flag. The Bots row set skill only, not style: the gap the next report closes. It is now called Skill, and team rows sit under it."),
         ("game-frame", "<strong>In play.</strong> The tank in the middle is yours. The rings are ranges; the green shows the ground your team holds. Left: the order column. Right: the roster, your tanks, pillboxes and depots. Every bot here runs the weights the fleet carries."),
         ("game-fire", "<strong>Under fire.</strong> What the numbers exist for: <code>rate</code> chose these targets, and the ring shows direct range, 10 tiles."),
         ("game-sixteen", "<strong>Sixteen seats.</strong> What a census plays, three times a seed, thousands of times a day, with no person and no window."),

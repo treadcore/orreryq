@@ -1,80 +1,805 @@
 {
  "about": "ONE TABLE, READ BY ALL THREE. The planner reads the values and the stages from it at each plan, orrery bakes it in for the explanations and the queue's reasons, and the lab report draws its figures from it. A word changed here changes everywhere, so a screen and the report cannot tell two stories. Keep it to characters the console's fonts have (ASCII, and the arrow).",
  "values": [
-  {"key": "ease_now", "attr": null, "label": "Ease now", "default": 2.6, "min": 0.0, "max": 3.0, "step": 0.05, "unit": "errors", "what": "How far every pass bar sits under z 3 right now. Held z = 3 less this. Changing it moves the bar once; each generation then takes the step below off it.", "up": "generations come sooner, more of them truly worse", "down": "generations come later, each worth more"},
-  {"key": "ease_max", "attr": "EASE_MAX", "label": "Ease ceiling", "default": 2.75, "min": 0.0, "max": 3.0, "step": 0.05, "unit": "errors", "what": "The easiest a dry spell may make the bars. Past 2.75 the simulated gain a day falls away and half of what passes is truly worse.", "up": "a dry spell ends sooner, on noise", "down": "a dry spell lasts longer, and passes on evidence"},
-  {"key": "harden", "attr": "HARDEN", "label": "Harder each generation", "default": 0.05, "min": 0.0, "max": 0.5, "step": 0.01, "unit": "errors", "what": "What each generation takes off the ease.", "up": "the bar climbs fast, then a dry spell brings it back", "down": "the bar stays put; 0 is a fixed bar"},
-  {"key": "dry_min", "attr": "DRY_MIN", "label": "Dry before easing", "default": 240, "min": 30, "max": 1440, "step": 30, "unit": "min", "what": "How long with no generation before the bars ease. Paul set four hours.", "up": "the fleet waits longer on a hard bar", "down": "the bar gives up sooner"},
-  {"key": "ease_step", "attr": "EASE_STEP", "label": "Easing step", "default": 0.25, "min": 0.05, "max": 1.0, "step": 0.05, "unit": "errors", "what": "What a dry spell adds to the ease, at once and again each interval below.", "up": "a dry spell ends in fewer steps", "down": "a dry spell ends gently"},
-  {"key": "dry_again_min", "attr": "DRY_AGAIN_MIN", "label": "Easing again every", "default": 60, "min": 10, "max": 480, "step": 10, "unit": "min", "what": "After the first easing, how long before the next.", "up": "slower to reach the ceiling", "down": "quicker to reach the ceiling"},
-  {"key": "keep_ease", "attr": "KEEP_EASE", "label": "Read-on bars eased at most", "default": 0.5, "min": 0.0, "max": 2.0, "step": 0.25, "unit": "errors", "what": "How far the keep-reading bars may fall with the rest. Simulated, more than 0.5 buys no gain a day and spends lanes on what is dropped later.", "up": "more trials read on, fewer new trials", "down": "more new trials, each read less"},
-  {"key": "held_z", "attr": "HELD_Z", "label": "Proof bar", "default": 3.0, "min": 2.0, "max": 5.0, "step": 0.25, "unit": "z", "what": "How far past main the carried line must read to go on main. The ease is taken from this for a generation, and nothing is taken for main. Moving it also moves the generation bar.", "up": "main moves rarely and surely", "down": "main moves often, and a false line can reach players"},
-  {"key": "proof_every_min", "attr": "PROOF_EVERY_MIN", "label": "Line against main every", "default": 60, "min": 15, "max": 720, "step": 15, "unit": "min", "what": "How often the line gets its 800 seeds against main.", "up": "more lanes left for trials", "down": "main catches up sooner, at a cost in lanes"},
-  {"key": "anchor", "attr": "ANCHOR", "label": "Anchor reads back", "default": 3, "min": 1, "max": 12, "step": 1, "unit": "generations", "what": "How many generations back each new generation is read against, to catch slow drift.", "up": "catches slower drift, on an older baseline", "down": "catches only recent drift"},
-  {"key": "queue_per_machine", "attr": "QUEUE_PER_MACHINE", "label": "Queue depth a machine", "default": 4, "min": 1, "max": 12, "step": 1, "unit": "jobs", "what": "How many jobs wait for each CPU machine. The queue is first come, so depth is how long a finding waits.", "up": "no lane starves between plans", "down": "a finding is read sooner"},
-  {"key": "carry_max", "attr": "CARRY_MAX", "label": "Passes carried a generation", "default": 3, "min": 0, "max": 10, "step": 1, "unit": "trials", "what": "How many trials that passed on the old defaults get one more read on the new ones when a generation lands. 0 throws them away, as it was.", "up": "fewer finds are lost, more lanes go to re-reads", "down": "more lanes go to new trials"},
-  {"key": "held_seeds", "attr": null, "label": "Seeds in a held-out read", "default": 400, "min": 100, "max": 1600, "step": 100, "unit": "seeds", "what": "How many starting worlds a held-out read plays. The proof is two of them.", "up": "a read is surer and takes longer", "down": "a read is quicker and noisier"}
+  {
+   "key": "ease_now",
+   "attr": null,
+   "label": "Ease now",
+   "default": 2.6,
+   "min": 0.0,
+   "max": 3.0,
+   "step": 0.05,
+   "unit": "errors",
+   "what": "How far every pass bar sits under z 3 right now. Held z = 3 less this. Changing it moves the bar once; each generation then takes the step below off it.",
+   "up": "generations come sooner, more of them truly worse",
+   "down": "generations come later, each worth more"
+  },
+  {
+   "key": "ease_max",
+   "attr": "EASE_MAX",
+   "label": "Ease ceiling",
+   "default": 2.75,
+   "min": 0.0,
+   "max": 3.0,
+   "step": 0.05,
+   "unit": "errors",
+   "what": "The easiest a dry spell may make the bars. Past 2.75 the simulated gain a day falls away and half of what passes is truly worse.",
+   "up": "a dry spell ends sooner, on noise",
+   "down": "a dry spell lasts longer, and passes on evidence"
+  },
+  {
+   "key": "harden",
+   "attr": "HARDEN",
+   "label": "Harder each generation",
+   "default": 0.05,
+   "min": 0.0,
+   "max": 0.5,
+   "step": 0.01,
+   "unit": "errors",
+   "what": "What each generation takes off the ease.",
+   "up": "the bar climbs fast, then a dry spell brings it back",
+   "down": "the bar stays put; 0 is a fixed bar"
+  },
+  {
+   "key": "dry_min",
+   "attr": "DRY_MIN",
+   "label": "Dry before easing",
+   "default": 240,
+   "min": 30,
+   "max": 1440,
+   "step": 30,
+   "unit": "min",
+   "what": "How long with no generation before the bars ease. Paul set four hours.",
+   "up": "the fleet waits longer on a hard bar",
+   "down": "the bar gives up sooner"
+  },
+  {
+   "key": "ease_step",
+   "attr": "EASE_STEP",
+   "label": "Easing step",
+   "default": 0.25,
+   "min": 0.05,
+   "max": 1.0,
+   "step": 0.05,
+   "unit": "errors",
+   "what": "What a dry spell adds to the ease, at once and again each interval below.",
+   "up": "a dry spell ends in fewer steps",
+   "down": "a dry spell ends gently"
+  },
+  {
+   "key": "dry_again_min",
+   "attr": "DRY_AGAIN_MIN",
+   "label": "Easing again every",
+   "default": 60,
+   "min": 10,
+   "max": 480,
+   "step": 10,
+   "unit": "min",
+   "what": "After the first easing, how long before the next.",
+   "up": "slower to reach the ceiling",
+   "down": "quicker to reach the ceiling"
+  },
+  {
+   "key": "keep_ease",
+   "attr": "KEEP_EASE",
+   "label": "Read-on bars eased at most",
+   "default": 0.5,
+   "min": 0.0,
+   "max": 2.0,
+   "step": 0.25,
+   "unit": "errors",
+   "what": "How far the keep-reading bars may fall with the rest. Simulated, more than 0.5 buys no gain a day and spends lanes on what is dropped later.",
+   "up": "more trials read on, fewer new trials",
+   "down": "more new trials, each read less"
+  },
+  {
+   "key": "held_z",
+   "attr": "HELD_Z",
+   "label": "Proof bar",
+   "default": 3.0,
+   "min": 2.0,
+   "max": 5.0,
+   "step": 0.25,
+   "unit": "z",
+   "what": "How far past main the carried line must read to go on main. The ease is taken from this for a generation, and nothing is taken for main. Moving it also moves the generation bar.",
+   "up": "main moves rarely and surely",
+   "down": "main moves often, and a false line can reach players"
+  },
+  {
+   "key": "proof_every_min",
+   "attr": "PROOF_EVERY_MIN",
+   "label": "Line against main every",
+   "default": 60,
+   "min": 15,
+   "max": 720,
+   "step": 15,
+   "unit": "min",
+   "what": "How often the line gets its 800 seeds against main.",
+   "up": "more lanes left for trials",
+   "down": "main catches up sooner, at a cost in lanes"
+  },
+  {
+   "key": "anchor",
+   "attr": "ANCHOR",
+   "label": "Anchor reads back",
+   "default": 3,
+   "min": 1,
+   "max": 12,
+   "step": 1,
+   "unit": "generations",
+   "what": "How many generations back each new generation is read against, to catch slow drift.",
+   "up": "catches slower drift, on an older baseline",
+   "down": "catches only recent drift"
+  },
+  {
+   "key": "queue_per_machine",
+   "attr": "QUEUE_PER_MACHINE",
+   "label": "Queue depth a machine",
+   "default": 4,
+   "min": 1,
+   "max": 12,
+   "step": 1,
+   "unit": "jobs",
+   "what": "How many jobs wait for each CPU machine. The queue is first come, so depth is how long a finding waits.",
+   "up": "no lane starves between plans",
+   "down": "a finding is read sooner"
+  },
+  {
+   "key": "carry_max",
+   "attr": "CARRY_MAX",
+   "label": "Passes carried a generation",
+   "default": 3,
+   "min": 0,
+   "max": 10,
+   "step": 1,
+   "unit": "trials",
+   "what": "How many trials that passed on the old defaults get one more read on the new ones when a generation lands. 0 throws them away, as it was.",
+   "up": "fewer finds are lost, more lanes go to re-reads",
+   "down": "more lanes go to new trials"
+  },
+  {
+   "key": "held_seeds",
+   "attr": null,
+   "label": "Seeds in a held-out read",
+   "default": 400,
+   "min": 100,
+   "max": 1600,
+   "step": 100,
+   "unit": "seeds",
+   "what": "How many starting worlds a held-out read plays. The proof is two of them.",
+   "up": "a read is surer and takes longer",
+   "down": "a read is quicker and noisier"
+  }
  ],
  "stages": [
-  {"id": "search", "col": 0, "row": 0, "track": "dials", "title": "Propose a trial", "input": "the ledger of every census; RANGES; the defaults", "output": "trial.weights", "simulates": "Nothing: this is arithmetic. suggest.py fits the ledger and draws from what it does not yet know; A/B flips each switch and each choice; wide trials look far from today.", "why": "A trial is a question about one set of dials. Every later step only answers it, so better questions are cheaper than more seeds.", "adds": "The source of every number the game's bots run on.", "queued": "A new question: nothing else makes the search look anywhere new.", "screens": "Results/Found"},
-  {"id": "first", "col": 1, "row": 0, "track": "dials", "title": "First read, 55 seeds", "input": "trial.weights; today's binary", "output": "pooled.txt: d +/- se, each map", "simulates": "Bots only. Each seed is one starting world on one of eleven maps, played three times so that each team takes the trial seat once: 15 minutes of game time and three respawns, the trial brain against the baseline.", "why": "The cheapest honest read. Half of all trials stop here, and that is what pays for the long reads.", "adds": "Nothing yet: it spends lanes so the long reads go to what might be real.", "queued": "First read: drops the hopeless for the price of 55 seeds.", "screens": "Pipeline/Flow"},
-  {"id": "read", "col": 2, "row": 0, "track": "dials", "title": "Read on, stage by stage", "input": "pooled.txt so far", "output": "pooled z at 82, 124, 187, 275, 418 seeds", "simulates": "The same census on fresh seeds. Reads pool by inverse variance, and a trial leaves as soon as its z says keep, drop or pass.", "why": "A sequential test: seeds go where the answer is still open. Simulated, this read 40% more real finds a seed than a fixed count.", "adds": "Nothing yet: it decides which few earn a held-out read.", "queued": "Still undecided: more seeds settle it, and it holds no bar yet.", "screens": "Pipeline/Flow"},
-  {"id": "held", "col": 3, "row": 0, "track": "dials", "title": "Held-out read, 400 seeds", "input": "a trial past the read-on bar", "output": "held d +/- se", "simulates": "The census on seeds no search has seen, from 60,000,000 up. Selection has picked out lucky first reads, and only unseen seeds can say so.", "why": "This is the read that makes a generation. High priority: it decides, and it once waited seven hours behind what did not.", "adds": "The evidence every generation's commit message carries.", "queued": "Decides a generation: unseen seeds are the only fair read of a selected trial.", "screens": "Results/Candidates"},
-  {"id": "families", "col": 4, "row": 0, "track": "dials", "title": "Families hold their floors", "input": "a candidate's weights", "output": "plan/families.json: pass or fail by family", "simulates": "Set pieces, not whole matches: a raid on a guarded base, a dodge, a kite. Each scenario has a floor a brain must keep.", "why": "An average can rise while a skill is lost. The families are what the census cannot see, and they caught it on 5899e8e.", "adds": "Keeps the behaviours a person notices when the score alone would trade them away.", "queued": "A candidate waits on this: it must not lose a skill the average hides.", "screens": "Results/Candidates"},
-  {"id": "promote", "col": 5, "row": 0, "track": "dials", "title": "Tests, then the line", "input": "a candidate that held", "output": "a commit: weights.rs and tactics.rs", "simulates": "No match: the brain's own unit tests on a branch. set-defaults.py rewrites the defaults, and if they pass the commit joins the local line.", "why": "This turns numbers into code, and it is the only step that writes to treadcore. A test that pins a default it does not name stops the line here.", "adds": "The generation itself: new defaults in the brain's source.", "queued": "Writes the generation: tests on a branch, then the commit the fleet builds next.", "screens": "Settings/Commits"},
-  {"id": "build", "col": 6, "row": 0, "track": "dials", "title": "Every machine builds it", "input": "the line's commit", "output": "census-bin at the commit, on each machine", "simulates": "Nothing: a cargo build per machine. A read counts only on today's defaults and today's game, so this resets what is asked next.", "why": "The next generation starts from this one. This is how weights are carried: the search never looks for them again.", "adds": "Makes the new brain the baseline everything is read against.", "queued": "The new generation's baseline: nothing can be read on it until this finishes.", "screens": "Settings/Commits"},
-  {"id": "anchor", "col": 5, "row": 1, "track": "guards", "title": "Anchor: back three", "input": "the defaults of three generations ago", "output": "a trial read as any other", "simulates": "The census with the old values against today's. If the old read better, drift is undone by the same road a find takes.", "why": "Generations pass at a low bar, so some are truly worse. This is the correction for what the ratchet lets through.", "adds": "Undoes slow losses.", "queued": "Catches drift: reads today against three generations back.", "screens": "Results/Candidates"},
-  {"id": "proof", "col": 6, "row": 1, "track": "guards", "title": "The line against main", "input": "main's values; the line's commit", "output": "2 x 400 seeds: z of line over main", "simulates": "The census with main's values against the line, on fresh seeds from 700,000,000 up. All the generations' noise is in one read and cannot pass it by luck.", "why": "Generations are unproven on purpose. This is the single gate between a fast search and what players get.", "adds": "Decides what reaches the game on origin/main.", "queued": "The gate to main: nothing reaches a player until the line reads past it.", "screens": "Pipeline/Board"},
-  {"id": "main", "col": 7, "row": 1, "track": "game", "title": "Main: the game's brain", "input": "a proved line", "output": "origin/main; every player's bots", "simulates": "Nothing: a push. Every machine fetches it, and a release carries it to players.", "why": "This is where the fleet's work becomes the game.", "adds": "All of it: Commander, tactics, crew and fleet read these defaults in every match.", "queued": "Pushes the proved line.", "screens": "Settings/Commits"},
-  {"id": "transform", "col": 1, "row": 2, "track": "transform", "title": "Transform: learned override", "input": "the senses, the rules' answer, the biorhythm", "output": "patches/theta.json: 942 numbers", "simulates": "The same census with the patch switched on, SPSA moving all 942 numbers by one noisy read a step. All zeros is the brain as it was.", "why": "The rules decide and a small net may move their answer if it is confident. This is the first learned part with a path to one brain.", "adds": "Nothing yet: the census reads the slot and the game does not.", "queued": "Learned override: one more SPSA step on a net the rules can fall back from.", "screens": "Results/Algorhythm"},
-  {"id": "slot", "col": 5, "row": 2, "track": "transform", "title": "The game reads a slot", "input": "a patch that read better", "output": "NOT BUILT: a file the game loads", "simulates": "Nothing: this is missing.", "why": "Until it exists, a learned improvement cannot ship, whatever it reads.", "adds": "Would add learned play to the shipped brain.", "queued": "", "screens": "Pipeline/Board"},
-  {"id": "islands", "col": 1, "row": 3, "track": "gpu", "title": "GPU islands: crucible", "input": "champions from the other islands; the ladder", "output": "champ.bin, gens.tsv, exam.tsv", "simulates": "Crucible's own arena on the card: 2,048 small nets duelling, 128 episodes, 100 generations a segment. Different physics, senses and net from the game.", "why": "It is the only use of the GPUs, and it is very fast. It learns to duel, which is not yet the game.", "adds": "Nothing: its nets cannot play treadcore.", "queued": "GPU search: keeps the island's population moving between exams.", "screens": "Results/Algorhythm"},
-  {"id": "bridge", "col": 3, "row": 3, "track": "gpu", "title": "Bridge: crucible to treadcore", "input": "a champion", "output": "NOT BUILT: a net in the game's senses", "simulates": "Nothing: this is missing. It would be imitation: the champion's choices taught to a net that reads treadcore's senses.", "why": "This is what would let the GPUs add to the brain. Today every card-hour ends here.", "adds": "Would make GPU work count.", "queued": "", "screens": "Pipeline/Board"},
-  {"id": "brain", "col": 7, "row": 3, "track": "game", "title": "One brain in treadcore", "input": "main, and a slot", "output": "rules, dials and transform as one", "simulates": "A real match: rules, then dials, then a learned override.", "why": "This is the goal.", "adds": "The goal.", "queued": "", "screens": "Pipeline/Board"}
+  {
+   "id": "search",
+   "col": 0,
+   "row": 0,
+   "track": "dials",
+   "title": "Propose a trial",
+   "input": "the ledger of every census; RANGES; the defaults",
+   "output": "trial.weights",
+   "simulates": "Nothing: this is arithmetic. suggest.py fits the ledger and draws from what it does not yet know; A/B flips each switch and each choice; wide trials look far from today.",
+   "why": "A trial is a question about one set of dials. Every later step only answers it, so better questions are cheaper than more seeds.",
+   "adds": "The source of every number the game's bots run on.",
+   "queued": "A new question: nothing else makes the search look anywhere new.",
+   "screens": "Results/Found"
+  },
+  {
+   "id": "first",
+   "col": 1,
+   "row": 0,
+   "track": "dials",
+   "title": "First read, 55 seeds",
+   "input": "trial.weights; today's binary",
+   "output": "pooled.txt: d +/- se, each map",
+   "simulates": "Bots only. Each seed is one starting world on one of eleven maps, played three times so that each team takes the trial seat once: 15 minutes of game time and three respawns, the trial brain against the baseline.",
+   "why": "The cheapest honest read. Half of all trials stop here, and that is what pays for the long reads.",
+   "adds": "Nothing yet: it spends lanes so the long reads go to what might be real.",
+   "queued": "First read: drops the hopeless for the price of 55 seeds.",
+   "screens": "Pipeline/Flow"
+  },
+  {
+   "id": "read",
+   "col": 2,
+   "row": 0,
+   "track": "dials",
+   "title": "Read on, stage by stage",
+   "input": "pooled.txt so far",
+   "output": "pooled z at 82, 124, 187, 275, 418 seeds",
+   "simulates": "The same census on fresh seeds. Reads pool by inverse variance, and a trial leaves as soon as its z says keep, drop or pass.",
+   "why": "A sequential test: seeds go where the answer is still open. Simulated, this read 40% more real finds a seed than a fixed count.",
+   "adds": "Nothing yet: it decides which few earn a held-out read.",
+   "queued": "Still undecided: more seeds settle it, and it holds no bar yet.",
+   "screens": "Pipeline/Flow"
+  },
+  {
+   "id": "held",
+   "col": 3,
+   "row": 0,
+   "track": "dials",
+   "title": "Held-out read, 400 seeds",
+   "input": "a trial past the read-on bar",
+   "output": "held d +/- se",
+   "simulates": "The census on seeds no search has seen, from 60,000,000 up. Selection has picked out lucky first reads, and only unseen seeds can say so.",
+   "why": "This is the read that makes a generation. High priority: it decides, and it once waited seven hours behind what did not.",
+   "adds": "The evidence every generation's commit message carries.",
+   "queued": "Decides a generation: unseen seeds are the only fair read of a selected trial.",
+   "screens": "Results/Candidates"
+  },
+  {
+   "id": "families",
+   "col": 4,
+   "row": 0,
+   "track": "dials",
+   "title": "Families hold their floors",
+   "input": "a candidate's weights",
+   "output": "plan/families.json: pass or fail by family",
+   "simulates": "Set pieces, not whole matches: a raid on a guarded base, a dodge, a kite. Each scenario has a floor a brain must keep.",
+   "why": "An average can rise while a skill is lost. The families are what the census cannot see, and they caught it on 5899e8e.",
+   "adds": "Keeps the behaviours a person notices when the score alone would trade them away.",
+   "queued": "A candidate waits on this: it must not lose a skill the average hides.",
+   "screens": "Results/Candidates"
+  },
+  {
+   "id": "promote",
+   "col": 5,
+   "row": 0,
+   "track": "dials",
+   "title": "Tests, then the line",
+   "input": "a candidate that held",
+   "output": "a commit: weights.rs and tactics.rs",
+   "simulates": "No match: the brain's own unit tests on a branch. set-defaults.py rewrites the defaults, and if they pass the commit joins the local line.",
+   "why": "This turns numbers into code, and it is the only step that writes to treadcore. A test that pins a default it does not name stops the line here.",
+   "adds": "The generation itself: new defaults in the brain's source.",
+   "queued": "Writes the generation: tests on a branch, then the commit the fleet builds next.",
+   "screens": "Settings/Commits"
+  },
+  {
+   "id": "build",
+   "col": 6,
+   "row": 0,
+   "track": "dials",
+   "title": "Every machine builds it",
+   "input": "the line's commit",
+   "output": "census-bin at the commit, on each machine",
+   "simulates": "Nothing: a cargo build per machine. A read counts only on today's defaults and today's game, so this resets what is asked next.",
+   "why": "The next generation starts from this one. This is how weights are carried: the search never looks for them again.",
+   "adds": "Makes the new brain the baseline everything is read against.",
+   "queued": "The new generation's baseline: nothing can be read on it until this finishes.",
+   "screens": "Settings/Commits"
+  },
+  {
+   "id": "anchor",
+   "col": 5,
+   "row": 1,
+   "track": "guards",
+   "title": "Anchor: back three",
+   "input": "the defaults of three generations ago",
+   "output": "a trial read as any other",
+   "simulates": "The census with the old values against today's. If the old read better, drift is undone by the same road a find takes.",
+   "why": "Generations pass at a low bar, so some are truly worse. This is the correction for what the ratchet lets through.",
+   "adds": "Undoes slow losses.",
+   "queued": "Catches drift: reads today against three generations back.",
+   "screens": "Results/Candidates"
+  },
+  {
+   "id": "proof",
+   "col": 6,
+   "row": 1,
+   "track": "guards",
+   "title": "The line against main",
+   "input": "main's values; the line's commit",
+   "output": "2 x 400 seeds: z of line over main",
+   "simulates": "The census with main's values against the line, on fresh seeds from 700,000,000 up. All the generations' noise is in one read and cannot pass it by luck.",
+   "why": "Generations are unproven on purpose. This is the single gate between a fast search and what players get.",
+   "adds": "Decides what reaches the game on origin/main.",
+   "queued": "The gate to main: nothing reaches a player until the line reads past it.",
+   "screens": "Pipeline/Board"
+  },
+  {
+   "id": "main",
+   "col": 7,
+   "row": 1,
+   "track": "game",
+   "title": "Main: the game's brain",
+   "input": "a proved line",
+   "output": "origin/main; every player's bots",
+   "simulates": "Nothing: a push. Every machine fetches it, and a release carries it to players.",
+   "why": "This is where the fleet's work becomes the game.",
+   "adds": "All of it: Commander, tactics, crew and fleet read these defaults in every match.",
+   "queued": "Pushes the proved line.",
+   "screens": "Settings/Commits"
+  },
+  {
+   "id": "transform",
+   "col": 1,
+   "row": 2,
+   "track": "transform",
+   "title": "Transform: learned override",
+   "input": "the senses, the rules' answer, the biorhythm",
+   "output": "patches/theta.json: 942 numbers",
+   "simulates": "The same census with the patch switched on, SPSA moving all 942 numbers by one noisy read a step. All zeros is the brain as it was.",
+   "why": "The rules decide and a small net may move their answer if it is confident. This is the first learned part with a path to one brain.",
+   "adds": "The file style 5 ships. The search still will not promote one by itself.",
+   "queued": "Learned override: one more SPSA step on a net the rules can fall back from.",
+   "screens": "Results/Algorhythm"
+  },
+  {
+   "id": "slot",
+   "col": 5,
+   "row": 2,
+   "track": "transform",
+   "title": "The game reads a slot",
+   "input": "a transform's file",
+   "output": "nets/patches/1.bin, in the game as style 5",
+   "simulates": "Nothing here: a file shipped in the binary. Under a census it is read from the queue, as before.",
+   "why": "Now a learned improvement can ship and a person can choose it. Off unless chosen.",
+   "adds": "Style 5, Overrider: the rules, with the transform moving their answer when it is sure.",
+   "queued": "",
+   "screens": "Pipeline/Board"
+  },
+  {
+   "id": "islands",
+   "col": 1,
+   "row": 3,
+   "track": "gpu",
+   "title": "GPU islands: crucible",
+   "input": "champions from the other islands; the ladder",
+   "output": "champ.bin, gens.tsv, exam.tsv",
+   "simulates": "Crucible's own arena on the card: 2,048 small nets duelling, 128 episodes, 100 generations a segment. Different physics, senses and net from the game.",
+   "why": "It is the only use of the GPUs, and it is very fast. It learns to duel, which is not yet the game.",
+   "adds": "Champions, which the bridge plays as style 7.",
+   "queued": "GPU search: keeps the island's population moving between exams.",
+   "screens": "Results/Algorhythm"
+  },
+  {
+   "id": "bridge",
+   "col": 3,
+   "row": 3,
+   "track": "gpu",
+   "title": "Bridge: crucible to treadcore",
+   "input": "a hybrid champion, 9,360 bytes",
+   "output": "nets/duelist.bin, in the game as style 7",
+   "simulates": "A real match: the champion's 35 inputs are built from what a tank sees, and its gate decides when it takes over the fight from the rules.",
+   "why": "This is what lets GPU work reach the game. An adapter, so it plays in a world it never trained in; a census says how it does.",
+   "adds": "Style 7, Duelist.",
+   "queued": "",
+   "screens": "Pipeline/Board"
+  },
+  {
+   "id": "brain",
+   "col": 7,
+   "row": 3,
+   "track": "game",
+   "title": "One brain, by name",
+   "input": "main, a slot, a champion",
+   "output": "bot styles 0 to 7, chosen a team at a time",
+   "simulates": "A real match: any mix of rules, dials, transform, net and champion on one map.",
+   "why": "A person can now ask for a kind of mind by name.",
+   "adds": "The menu's team rows, and --bots.",
+   "queued": "",
+   "screens": "Pipeline/Board"
+  }
  ],
  "edges": [
-  ["search", "first", "trial.weights"], ["first", "read", "z at 55"], ["read", "held", "a pass"], ["held", "families", "a candidate"], ["families", "promote", "its floors"], ["promote", "build", "a commit"],
-  ["build", "search", "new baseline"], ["promote", "anchor", "each generation"], ["anchor", "first", "old values"], ["build", "proof", "the line"], ["proof", "main", "z past 3"], ["main", "brain", "defaults"],
-  ["transform", "slot", "theta"], ["slot", "brain", "not built"], ["islands", "bridge", "champions"], ["bridge", "slot", "not built"]
+  [
+   "search",
+   "first",
+   "trial.weights"
+  ],
+  [
+   "first",
+   "read",
+   "z at 55"
+  ],
+  [
+   "read",
+   "held",
+   "a pass"
+  ],
+  [
+   "held",
+   "families",
+   "a candidate"
+  ],
+  [
+   "families",
+   "promote",
+   "its floors"
+  ],
+  [
+   "promote",
+   "build",
+   "a commit"
+  ],
+  [
+   "build",
+   "search",
+   "new baseline"
+  ],
+  [
+   "promote",
+   "anchor",
+   "each generation"
+  ],
+  [
+   "anchor",
+   "first",
+   "old values"
+  ],
+  [
+   "build",
+   "proof",
+   "the line"
+  ],
+  [
+   "proof",
+   "main",
+   "z past 3"
+  ],
+  [
+   "main",
+   "brain",
+   "defaults"
+  ],
+  [
+   "transform",
+   "slot",
+   "theta"
+  ],
+  [
+   "slot",
+   "brain",
+   "style 5"
+  ],
+  [
+   "islands",
+   "bridge",
+   "champions"
+  ],
+  [
+   "bridge",
+   "brain",
+   "style 7"
+  ]
  ],
  "methods": [
-  {"name": "The dial search", "state": "live", "stage": "search", "job": "w, e, h", "what": "Fit, draw, read: suggest.py over the ledger, then the sequential census.", "gives": "about 120 numbers in weights.rs and tactics.rs", "reaches": "the game, through main", "report": "difficulty-lab-report.html"},
-  {"name": "A/B versions", "state": "live", "stage": "search", "job": "w", "what": "Every switch flipped and every choice's other versions, each generation.", "gives": "which functions run: 18 switches and each choice", "reaches": "the game, through main", "report": "brain-versions-lab-report.html"},
-  {"name": "Families", "state": "live", "stage": "families", "job": "f", "what": "Set pieces with floors, for each candidate.", "gives": "a veto", "reaches": "the game, by what it refuses", "report": "fleet-orchestration-lab-report.html"},
-  {"name": "Anchors and the proof", "state": "live", "stage": "proof", "job": "w, pv", "what": "Today read against three back, and the line read against main.", "gives": "corrections and the gate", "reaches": "the game, through main", "report": "difficulty-lab-report.html"},
-  {"name": "The transform (SPSA over 942)", "state": "live, no road", "stage": "transform", "job": "r-k", "what": "A residual net over the rules' answer, moved by one census a step.", "gives": "patches/theta.json", "reaches": "the census only: the game has no slot", "report": "algorhythm-lab-report.html"},
-  {"name": "Crucible's GPU islands", "state": "live, no road", "stage": "islands", "job": "x", "what": "Populations of nets duelling on the card, swapping champions.", "gives": "champions in its own arena", "reaches": "nothing: the bridge is not built", "report": "cuda-hybrid-lab-report.html"},
-  {"name": "Imitation: record, train, school, gauntlet", "state": "dormant since 30 Oct", "stage": "islands", "job": "r", "what": "Recorded matches teach a net to play as the rules do, then it is examined.", "gives": "nets/bc2.bin, the learned tank, about 20 a seat under the rules", "reaches": "the census only: the client never loads a net", "report": "cuda-node-lab-report.html"},
-  {"name": "Whole-brain sweeps: switches, parts, census, round robin", "state": "dormant since 29 Oct", "stage": "first", "job": "r", "what": "Each switch or part alone against the defaults.", "gives": "a reading of what each part is worth", "reaches": "people, and the fit through the ledger", "report": "fleet-orchestration-lab-report.html"},
-  {"name": "Older searches: SPSA and tune on dials", "state": "dormant since 29 Oct", "stage": "search", "job": "r-k, r-g", "what": "Gradient and evolution over a chosen few dials, a run at a time.", "gives": "trials, by way of the same census", "reaches": "the game, had they found anything the fit did not", "report": "fleet-orchestration-lab-report.html"}
+  {
+   "name": "The dial search",
+   "state": "live",
+   "stage": "search",
+   "job": "w, e, h",
+   "what": "Fit, draw, read: suggest.py over the ledger, then the sequential census.",
+   "gives": "about 120 numbers in weights.rs and tactics.rs",
+   "reaches": "the game, through main",
+   "report": "difficulty-lab-report.html"
+  },
+  {
+   "name": "A/B versions",
+   "state": "live",
+   "stage": "search",
+   "job": "w",
+   "what": "Every switch flipped and every choice's other versions, each generation.",
+   "gives": "which functions run: 18 switches and each choice",
+   "reaches": "the game, through main",
+   "report": "brain-versions-lab-report.html"
+  },
+  {
+   "name": "Families",
+   "state": "live",
+   "stage": "families",
+   "job": "f",
+   "what": "Set pieces with floors, for each candidate.",
+   "gives": "a veto",
+   "reaches": "the game, by what it refuses",
+   "report": "fleet-orchestration-lab-report.html"
+  },
+  {
+   "name": "Anchors and the proof",
+   "state": "live",
+   "stage": "proof",
+   "job": "w, pv",
+   "what": "Today read against three back, and the line read against main.",
+   "gives": "corrections and the gate",
+   "reaches": "the game, through main",
+   "report": "difficulty-lab-report.html"
+  },
+  {
+   "name": "The transform (SPSA over 942)",
+   "state": "live",
+   "stage": "transform",
+   "job": "r-k",
+   "what": "A residual net over the rules' answer, moved by one census a step.",
+   "gives": "patches/theta.json",
+   "reaches": "the game as style 5, chosen by a person",
+   "report": "algorhythm-lab-report.html"
+  },
+  {
+   "name": "Crucible's GPU islands",
+   "state": "live",
+   "stage": "islands",
+   "job": "x",
+   "what": "Populations of nets duelling on the card, swapping champions.",
+   "gives": "champions",
+   "reaches": "the game as style 7, chosen by a person",
+   "report": "cuda-hybrid-lab-report.html"
+  },
+  {
+   "name": "Imitation: record, train, school, gauntlet",
+   "state": "dormant since 30 Oct",
+   "stage": "islands",
+   "job": "r",
+   "what": "Recorded matches teach a net to play as the rules do, then it is examined.",
+   "gives": "nets/bc2.bin, the learned tank, about 20 a seat under the rules",
+   "reaches": "the game as style 6, chosen by a person",
+   "report": "cuda-node-lab-report.html"
+  },
+  {
+   "name": "Whole-brain sweeps: switches, parts, census, round robin",
+   "state": "dormant since 29 Oct",
+   "stage": "first",
+   "job": "r",
+   "what": "Each switch or part alone against the defaults.",
+   "gives": "a reading of what each part is worth",
+   "reaches": "people, and the fit through the ledger",
+   "report": "fleet-orchestration-lab-report.html"
+  },
+  {
+   "name": "Older searches: SPSA and tune on dials",
+   "state": "dormant since 29 Oct",
+   "stage": "search",
+   "job": "r-k, r-g",
+   "what": "Gradient and evolution over a chosen few dials, a run at a time.",
+   "gives": "trials, by way of the same census",
+   "reaches": "the game, had they found anything the fit did not",
+   "report": "fleet-orchestration-lab-report.html"
+  }
  ],
  "screens": [
-  {"key": "Machines", "does": "Adds a computer to the fleet: probe it, apply a recipe, join it.", "ties": "The very start of the line. No machine, no lane, no reads.", "drawn": "A list with one step lit, because a setup is a sequence and the next step is what matters.", "look": "A machine stuck on a step, or a recipe that says ready to run.", "sim": "Nothing runs here. It only makes a machine able to run the census and build the brain.", "helps": "More lanes means more seeds an hour, and that is the only currency the search spends."},
-  {"key": "Media", "does": "The cards and images the machines were made from.", "ties": "Before the line: how a machine came to exist.", "drawn": "A ledger of cards, because a card has no other record.", "look": "A card whose image is older than the fleet's.", "sim": "Nothing runs here.", "helps": "Only indirectly: it lets a dead machine come back the same as it was."},
-  {"key": "Storage", "does": "The fleet's disks and shares: survey, share, mount.", "ties": "Where results and snapshots could live. The training record is stored apart, by fleet-archive.py.", "drawn": "A patch bay, because a share is a connection between two machines.", "look": "A disk filling up, or a 10 Gb link not plugged in.", "sim": "Nothing runs here.", "helps": "Indirectly: nothing learned is worth much if the record of it is lost."},
-  {"key": "Projects", "does": "Says which machine works on what: treadcore or crucible.", "ties": "Sets which lanes feed the dial track and which feed the GPU track.", "drawn": "A grid of machines by projects, because that is the only question it answers.", "look": "A machine on no project, or a project paused and forgotten.", "sim": "Nothing runs here. It chooses who runs what.", "helps": "Directly: CPU lanes on treadcore can reach the game, and GPU lanes on crucible cannot yet."},
-  {"key": "Queue/Fleet", "does": "Each machine, its job now, and its buttons.", "ties": "Every stage of the line, seen by machine.", "drawn": "A row a machine with a lamp, because the question is whether anything is idle.", "look": "A lamp not lit under a full queue, or one machine on old work.", "sim": "Whatever each machine shows: mostly the census, 15-minute matches of bots on eleven maps.", "helps": "An idle lane is lost seeds. This is where you see that first."},
-  {"key": "Queue/Runs", "does": "Asks for a one-off run, cancels one, accepts one.", "ties": "A side door into the line: what a person asks goes before the standing search.", "drawn": "A list by run, newest first, because a run is a thing someone asked for.", "look": "A run failed or left running with no lanes.", "sim": "Whatever the run is: a census, a sweep, a recording.", "helps": "Only when a person has a question the search would not ask."},
-  {"key": "Pipeline/Board", "does": "The whole line as tasks: order, machines, expected time, and the next essential task.", "ties": "This is the line. Each bar is a stage.", "drawn": "A Gantt for order and time, and a Kanban for state. Arrows are dependencies, and the red box has most depending on it.", "look": "Red: the biggest blocker. NOT BUILT: a gap in the road to one brain.", "sim": "Nothing itself. It reports the medians the fleet measured in the last day.", "helps": "It says which single thing would free the most work."},
-  {"key": "Pipeline/Flow", "does": "How data moves: what each stage takes in and gives out, and one real trial traced through.", "ties": "All of it, by the files that pass between stages.", "drawn": "Boxes and arrows with the file named on each arrow, because the question is what connects to what.", "look": "How far each trial got, and where the road stops: a red box means data goes no further.", "sim": "Each box says what it simulates. Pick a trial below to see its reads.", "helps": "It shows which work reaches treadcore and which does not yet."},
-  {"key": "Pipeline/Timeline", "does": "Every machine: what it did, what it does now, and what it will do next.", "ties": "All stages, by when and by whom.", "drawn": "A row a machine with now as a line: left is measured, right is a forecast from the medians. Colour is the stage.", "look": "Gaps on the left are lost time. Green marks are generations. A lane of one colour shows where the fleet spends itself.", "sim": "Bars are mostly the census. Crucible's arena on the -cuda rows.", "helps": "It shows the shape of the spending, which is the easiest place to find waste."},
-  {"key": "Pipeline/Queued", "does": "What is waiting and running, each with why it is there.", "ties": "Each row names its stage in the line.", "drawn": "A list in queue order, because that is the order things will happen.", "look": "Priority work behind a long queue, or one kind crowding out the rest.", "sim": "Each row says which: a census, a family, a build, the GPU arena.", "helps": "It lets you judge whether the fleet is asking the right questions."},
-  {"key": "Pipeline/Values", "does": "The numbers that set how hard a generation is. Change them here and the next plan uses them.", "ties": "The bars of Read on, Held-out and the Proof.", "drawn": "One row a value with its default and range, so nothing can be set past what it was tried at.", "look": "A value away from its default, and whether the generation gap on the Board answers.", "sim": "Nothing itself. tools/plans/difficulty-sim.py simulates what a value buys.", "helps": "Too easy and the line fills with noise. Too hard and nothing is carried."},
-  {"key": "Results/Candidates", "does": "Trials past their held-out read: a list of what may become a generation.", "ties": "Between Held-out and Tests.", "drawn": "A filterable list, because the questions are which are current and which promoted.", "look": "Current ones waiting, and the same one failing tests twice.", "sim": "The rows are census reads. The seeds are unseen by the search.", "helps": "These are the finds. Everything before exists to fill this page with few true ones."},
-  {"key": "Results/Found", "does": "Each improvement read, by dial and by machine.", "ties": "Search and First read: the ticker of what was tried.", "drawn": "Rows by dial, because the fit learns by dial and you may want to see what it is learning.", "look": "A dial that keeps coming up, or one machine reading differently from the others.", "sim": "First reads: 55 seeds, 15-minute matches, on all eleven maps.", "helps": "It is what the fit reads next. A machine reading oddly poisons it, as the Mac's one-map bug did."},
-  {"key": "Results/Net", "does": "The learned tank's net: its weight matrices.", "ties": "The imitation method, dormant since 30 October.", "drawn": "Matrices as heat maps, since a net has no other shape to look at.", "look": "Dead rows or columns: a sense or action nothing reaches.", "sim": "Nothing runs here. Its training imitated recorded rule-brain matches.", "helps": "It is the net the census can seat. No player meets it yet: the game's client does not load a net."},
-  {"key": "Results/Flags", "does": "What needs a person, and what progress was made.", "ties": "Every stage can raise one.", "drawn": "A list you can acknowledge, because a flag should be answered once.", "look": "Red, unacknowledged; or the same flag rising again.", "sim": "Nothing runs here.", "helps": "It keeps the line automatic: the fleet asks only when it must."},
-  {"key": "Results/Algorhythm/Patch", "does": "The brain as a patch: dials, switches and the transform, in order.", "ties": "Search and Transform: where each number acts.", "drawn": "A signal path, because the brain is rules, then dials, then an override.", "look": "Stages at zero: they cost nothing and do nothing.", "sim": "Nothing runs here. It maps what the census simulates.", "helps": "It shows which stage of the brain a search can move."},
-  {"key": "Results/Algorhythm/Terrain", "does": "Reads as a landscape over two dials.", "ties": "Search: what the fit believes.", "drawn": "A surface, because peaks and ridges read at a glance. Colour fades where reads are thin.", "look": "Places to look, never results. A peak on thin support is one lucky read.", "sim": "Past censuses, moved to one baseline by assuming gains add.", "helps": "It suggests where a wide trial should go."},
-  {"key": "Results/Algorhythm/Spectrum", "does": "How the GPU champions' nets change over time.", "ties": "GPU islands.", "drawn": "A spectrogram of singular values, because it shows a net's structure growing without reading weights.", "look": "New bright rows: new directions. Flat means the island has stopped learning.", "sim": "Crucible's arena, not the game.", "helps": "It tells you whether GPU work is still moving, even before it can reach the brain."},
-  {"key": "Results/Algorhythm/Matrices", "does": "Tables of each layer of the shipped net.", "ties": "The imitation method.", "drawn": "Numbers for rank and norm, and a map from senses to outputs.", "look": "Low stable rank: the net uses little of its size.", "sim": "Nothing runs here.", "helps": "It tells you how big a slot needs to be."},
-  {"key": "Results/Algorhythm/Senses", "does": "Which senses the net listens to, drawn round the tank.", "ties": "The imitation method, and the transform's inputs.", "drawn": "A disc with forward at the top, since most senses are compass sectors.", "look": "A dark channel: a sense nobody uses, and a candidate to remove.", "sim": "Nothing runs here.", "helps": "Fewer senses mean a faster census and a smaller transform."},
-  {"key": "Results/Algorhythm/Fleet", "does": "The road from trial sources to main, with live counts.", "ties": "All of the dial track.", "drawn": "Boxes and arrows with counts. Pipeline/Flow is the fuller one, with files named.", "look": "A count that stops rising.", "sim": "It reports census counts.", "helps": "A quick read of whether the road is moving."},
-  {"key": "Lab", "does": "The room of machines: a live tile for each.", "ties": "Beside the line: any machine, any time.", "drawn": "Tiles, because a room is looked round, not read.", "look": "A dark tile, or a machine hot under load.", "sim": "What the screen shows, or a terminal.", "helps": "Only when something is wrong and you need to see for yourself."},
-  {"key": "Sessions", "does": "Terminals for each machine, kept alive in tmux.", "ties": "Beside the line: hands on a machine.", "drawn": "A grid of terminals, for watching several things at once.", "look": "A build error or a stack trace nothing reported.", "sim": "Whatever you run.", "helps": "It is how a person fixes what the keeper cannot."},
-  {"key": "Orchestrate", "does": "Who may command the fleet, what each machine is, and the verbs.", "ties": "Beside the line: the authority over machines. Its certificate decides whether Orrery can reach them.", "drawn": "Machines by question, because you select by what is true of them, then act.", "look": "A certificate near expiry, or a machine answering differently.", "sim": "Nothing runs here.", "helps": "It keeps the machines up, updated and alike, so reads can be compared."},
-  {"key": "Chat", "does": "One room to talk with each machine, kept on the machine.", "ties": "Beside the line.", "drawn": "A transcript, as a chat is.", "look": "A machine that stopped answering.", "sim": "Nothing runs here.", "helps": "Not directly. It is for asking a machine a plain question."},
-  {"key": "Settings/Keeper", "does": "Is it running as it should: the keeper's checks, and its buttons.", "ties": "Under the whole line.", "drawn": "Checks with lamps, because the only question is what is amber or red.", "look": "An amber or red lamp, above all search, difficulty and starving lanes.", "sim": "Nothing runs here.", "helps": "A keeper down means every lane stops within a job."},
-  {"key": "Settings/Commits", "does": "The line the fleet builds, newest first, with the defaults each changed.", "ties": "Tests, Build and Main: the generations themselves.", "drawn": "A list by commit, because each generation is exactly one commit.", "look": "How often a commit is a generation, and whether a machine is behind.", "sim": "Nothing runs here. The census read each commit's values before it was written.", "helps": "This is the brain's history, number by number."}
+  {
+   "key": "Machines",
+   "does": "Adds a computer to the fleet: probe it, apply a recipe, join it.",
+   "ties": "The very start of the line. No machine, no lane, no reads.",
+   "drawn": "A list with one step lit, because a setup is a sequence and the next step is what matters.",
+   "look": "A machine stuck on a step, or a recipe that says ready to run.",
+   "sim": "Nothing runs here. It only makes a machine able to run the census and build the brain.",
+   "helps": "More lanes means more seeds an hour, and that is the only currency the search spends."
+  },
+  {
+   "key": "Media",
+   "does": "The cards and images the machines were made from.",
+   "ties": "Before the line: how a machine came to exist.",
+   "drawn": "A ledger of cards, because a card has no other record.",
+   "look": "A card whose image is older than the fleet's.",
+   "sim": "Nothing runs here.",
+   "helps": "Only indirectly: it lets a dead machine come back the same as it was."
+  },
+  {
+   "key": "Storage",
+   "does": "The fleet's disks and shares: survey, share, mount.",
+   "ties": "Where results and snapshots could live. The training record is stored apart, by fleet-archive.py.",
+   "drawn": "A patch bay, because a share is a connection between two machines.",
+   "look": "A disk filling up, or a 10 Gb link not plugged in.",
+   "sim": "Nothing runs here.",
+   "helps": "Indirectly: nothing learned is worth much if the record of it is lost."
+  },
+  {
+   "key": "Projects",
+   "does": "Says which machine works on what: treadcore or crucible.",
+   "ties": "Sets which lanes feed the dial track and which feed the GPU track.",
+   "drawn": "A grid of machines by projects, because that is the only question it answers.",
+   "look": "A machine on no project, or a project paused and forgotten.",
+   "sim": "Nothing runs here. It chooses who runs what.",
+   "helps": "Directly: CPU lanes on treadcore can reach the game, and GPU lanes on crucible cannot yet."
+  },
+  {
+   "key": "Queue/Fleet",
+   "does": "Each machine, its job now, and its buttons.",
+   "ties": "Every stage of the line, seen by machine.",
+   "drawn": "A row a machine with a lamp, because the question is whether anything is idle.",
+   "look": "A lamp not lit under a full queue, or one machine on old work.",
+   "sim": "Whatever each machine shows: mostly the census, 15-minute matches of bots on eleven maps.",
+   "helps": "An idle lane is lost seeds. This is where you see that first."
+  },
+  {
+   "key": "Queue/Runs",
+   "does": "Asks for a one-off run, cancels one, accepts one.",
+   "ties": "A side door into the line: what a person asks goes before the standing search.",
+   "drawn": "A list by run, newest first, because a run is a thing someone asked for.",
+   "look": "A run failed or left running with no lanes.",
+   "sim": "Whatever the run is: a census, a sweep, a recording.",
+   "helps": "Only when a person has a question the search would not ask."
+  },
+  {
+   "key": "Pipeline/Board",
+   "does": "The whole line as tasks: order, machines, expected time, and the next essential task.",
+   "ties": "This is the line. Each bar is a stage.",
+   "drawn": "A Gantt for order and time, and a Kanban for state. Arrows are dependencies, and the red box has most depending on it.",
+   "look": "Red: the biggest blocker. NOT BUILT: a gap in the road to one brain.",
+   "sim": "Nothing itself. It reports the medians the fleet measured in the last day.",
+   "helps": "It says which single thing would free the most work."
+  },
+  {
+   "key": "Pipeline/Flow",
+   "does": "How data moves: what each stage takes in and gives out, and one real trial traced through.",
+   "ties": "All of it, by the files that pass between stages.",
+   "drawn": "Boxes and arrows with the file named on each arrow, because the question is what connects to what.",
+   "look": "How far each trial got, and where the road stops: a red box means data goes no further.",
+   "sim": "Each box says what it simulates. Pick a trial below to see its reads.",
+   "helps": "It shows which work reaches treadcore and which does not yet."
+  },
+  {
+   "key": "Pipeline/Timeline",
+   "does": "Every machine: what it did, what it does now, and what it will do next.",
+   "ties": "All stages, by when and by whom.",
+   "drawn": "A row a machine with now as a line: left is measured, right is a forecast from the medians. Colour is the stage.",
+   "look": "Gaps on the left are lost time. Green marks are generations. A lane of one colour shows where the fleet spends itself.",
+   "sim": "Bars are mostly the census. Crucible's arena on the -cuda rows.",
+   "helps": "It shows the shape of the spending, which is the easiest place to find waste."
+  },
+  {
+   "key": "Pipeline/Queued",
+   "does": "What is waiting and running, each with why it is there.",
+   "ties": "Each row names its stage in the line.",
+   "drawn": "A list in queue order, because that is the order things will happen.",
+   "look": "Priority work behind a long queue, or one kind crowding out the rest.",
+   "sim": "Each row says which: a census, a family, a build, the GPU arena.",
+   "helps": "It lets you judge whether the fleet is asking the right questions."
+  },
+  {
+   "key": "Pipeline/Values",
+   "does": "The numbers that set how hard a generation is. Change them here and the next plan uses them.",
+   "ties": "The bars of Read on, Held-out and the Proof.",
+   "drawn": "One row a value with its default and range, so nothing can be set past what it was tried at.",
+   "look": "A value away from its default, and whether the generation gap on the Board answers.",
+   "sim": "Nothing itself. tools/plans/difficulty-sim.py simulates what a value buys.",
+   "helps": "Too easy and the line fills with noise. Too hard and nothing is carried."
+  },
+  {
+   "key": "Results/Candidates",
+   "does": "Trials past their held-out read: a list of what may become a generation.",
+   "ties": "Between Held-out and Tests.",
+   "drawn": "A filterable list, because the questions are which are current and which promoted.",
+   "look": "Current ones waiting, and the same one failing tests twice.",
+   "sim": "The rows are census reads. The seeds are unseen by the search.",
+   "helps": "These are the finds. Everything before exists to fill this page with few true ones."
+  },
+  {
+   "key": "Results/Found",
+   "does": "Each improvement read, by dial and by machine.",
+   "ties": "Search and First read: the ticker of what was tried.",
+   "drawn": "Rows by dial, because the fit learns by dial and you may want to see what it is learning.",
+   "look": "A dial that keeps coming up, or one machine reading differently from the others.",
+   "sim": "First reads: 55 seeds, 15-minute matches, on all eleven maps.",
+   "helps": "It is what the fit reads next. A machine reading oddly poisons it, as the Mac's one-map bug did."
+  },
+  {
+   "key": "Results/Net",
+   "does": "The learned tank's net: its weight matrices.",
+   "ties": "The imitation method, dormant since 30 October.",
+   "drawn": "Matrices as heat maps, since a net has no other shape to look at.",
+   "look": "Dead rows or columns: a sense or action nothing reaches.",
+   "sim": "Nothing runs here. Its training imitated recorded rule-brain matches.",
+   "helps": "It is the net the census can seat. No player meets it yet: the game's client does not load a net."
+  },
+  {
+   "key": "Results/Flags",
+   "does": "What needs a person, and what progress was made.",
+   "ties": "Every stage can raise one.",
+   "drawn": "A list you can acknowledge, because a flag should be answered once.",
+   "look": "Red, unacknowledged; or the same flag rising again.",
+   "sim": "Nothing runs here.",
+   "helps": "It keeps the line automatic: the fleet asks only when it must."
+  },
+  {
+   "key": "Results/Algorhythm/Patch",
+   "does": "The brain as a patch: dials, switches and the transform, in order.",
+   "ties": "Search and Transform: where each number acts.",
+   "drawn": "A signal path, because the brain is rules, then dials, then an override.",
+   "look": "Stages at zero: they cost nothing and do nothing.",
+   "sim": "Nothing runs here. It maps what the census simulates.",
+   "helps": "It shows which stage of the brain a search can move."
+  },
+  {
+   "key": "Results/Algorhythm/Terrain",
+   "does": "Reads as a landscape over two dials.",
+   "ties": "Search: what the fit believes.",
+   "drawn": "A surface, because peaks and ridges read at a glance. Colour fades where reads are thin.",
+   "look": "Places to look, never results. A peak on thin support is one lucky read.",
+   "sim": "Past censuses, moved to one baseline by assuming gains add.",
+   "helps": "It suggests where a wide trial should go."
+  },
+  {
+   "key": "Results/Algorhythm/Spectrum",
+   "does": "How the GPU champions' nets change over time.",
+   "ties": "GPU islands.",
+   "drawn": "A spectrogram of singular values, because it shows a net's structure growing without reading weights.",
+   "look": "New bright rows: new directions. Flat means the island has stopped learning.",
+   "sim": "Crucible's arena, not the game.",
+   "helps": "It tells you whether GPU work is still moving, even before it can reach the brain."
+  },
+  {
+   "key": "Results/Algorhythm/Matrices",
+   "does": "Tables of each layer of the shipped net.",
+   "ties": "The imitation method.",
+   "drawn": "Numbers for rank and norm, and a map from senses to outputs.",
+   "look": "Low stable rank: the net uses little of its size.",
+   "sim": "Nothing runs here.",
+   "helps": "It tells you how big a slot needs to be."
+  },
+  {
+   "key": "Results/Algorhythm/Senses",
+   "does": "Which senses the net listens to, drawn round the tank.",
+   "ties": "The imitation method, and the transform's inputs.",
+   "drawn": "A disc with forward at the top, since most senses are compass sectors.",
+   "look": "A dark channel: a sense nobody uses, and a candidate to remove.",
+   "sim": "Nothing runs here.",
+   "helps": "Fewer senses mean a faster census and a smaller transform."
+  },
+  {
+   "key": "Results/Algorhythm/Fleet",
+   "does": "The road from trial sources to main, with live counts.",
+   "ties": "All of the dial track.",
+   "drawn": "Boxes and arrows with counts. Pipeline/Flow is the fuller one, with files named.",
+   "look": "A count that stops rising.",
+   "sim": "It reports census counts.",
+   "helps": "A quick read of whether the road is moving."
+  },
+  {
+   "key": "Lab",
+   "does": "The room of machines: a live tile for each.",
+   "ties": "Beside the line: any machine, any time.",
+   "drawn": "Tiles, because a room is looked round, not read.",
+   "look": "A dark tile, or a machine hot under load.",
+   "sim": "What the screen shows, or a terminal.",
+   "helps": "Only when something is wrong and you need to see for yourself."
+  },
+  {
+   "key": "Sessions",
+   "does": "Terminals for each machine, kept alive in tmux.",
+   "ties": "Beside the line: hands on a machine.",
+   "drawn": "A grid of terminals, for watching several things at once.",
+   "look": "A build error or a stack trace nothing reported.",
+   "sim": "Whatever you run.",
+   "helps": "It is how a person fixes what the keeper cannot."
+  },
+  {
+   "key": "Orchestrate",
+   "does": "Who may command the fleet, what each machine is, and the verbs.",
+   "ties": "Beside the line: the authority over machines. Its certificate decides whether Orrery can reach them.",
+   "drawn": "Machines by question, because you select by what is true of them, then act.",
+   "look": "A certificate near expiry, or a machine answering differently.",
+   "sim": "Nothing runs here.",
+   "helps": "It keeps the machines up, updated and alike, so reads can be compared."
+  },
+  {
+   "key": "Chat",
+   "does": "One room to talk with each machine, kept on the machine.",
+   "ties": "Beside the line.",
+   "drawn": "A transcript, as a chat is.",
+   "look": "A machine that stopped answering.",
+   "sim": "Nothing runs here.",
+   "helps": "Not directly. It is for asking a machine a plain question."
+  },
+  {
+   "key": "Settings/Keeper",
+   "does": "Is it running as it should: the keeper's checks, and its buttons.",
+   "ties": "Under the whole line.",
+   "drawn": "Checks with lamps, because the only question is what is amber or red.",
+   "look": "An amber or red lamp, above all search, difficulty and starving lanes.",
+   "sim": "Nothing runs here.",
+   "helps": "A keeper down means every lane stops within a job."
+  },
+  {
+   "key": "Settings/Commits",
+   "does": "The line the fleet builds, newest first, with the defaults each changed.",
+   "ties": "Tests, Build and Main: the generations themselves.",
+   "drawn": "A list by commit, because each generation is exactly one commit.",
+   "look": "How often a commit is a generation, and whether a machine is behind.",
+   "sim": "Nothing runs here. The census read each commit's values before it was written.",
+   "helps": "This is the brain's history, number by number."
+  }
  ]
 }

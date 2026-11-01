@@ -781,6 +781,11 @@ class Plan:
                 if i == int(round(dflt)) or not lo <= i <= hi:
                     continue
                 # A slot with no patch in it stops a census: asked for only when trained.
+                # A whole named brain, a person's to choose (styles.rs): read one by hand
+                # (`new census trial="bot_style = 3"`). Asked each generation it is seven lanes
+                # of what is already known, and at a generation's bar one could replace the brain.
+                if name == "bot_style":
+                    continue
                 if name == "patch":
                     f = os.path.join(patches, "%d.bin" % i)
                     if os.path.exists(f):
@@ -1133,8 +1138,22 @@ class Plan:
             if caps:
                 text += "caps = baseline, %s\n" % ", ".join(("" if on else "-") + c for c, on in sorted(caps.items()))
             jid = self.adopt(text, "anchor: the defaults before %s" % back[0][1])
+            self.state.setdefault("anchor_trials", []).append(jid)
             self.flag("anchor", "%s reads the defaults before %s against today's, after %s" % (jid, back[0][1], p[-1][1]),
                       key="anchor:%s" % p[-1][1], progress=True)
+
+    # UNDOING TAKES EVIDENCE (1 November). A generation passes at a low bar on purpose, and an anchor read
+    # at that bar will pass by chance about as often: w4845, the defaults three back, went on the line as
+    # generation 5 on +0.38 +/- 0.51 and +0.18 +/- 0.58, and undid two generations on noise. A find may be
+    # carried unproven, because the proof stands behind it. A retreat has nothing behind it, so an anchor
+    # must clear the proof's own bar, whatever the ease.
+    def anchor_short(self, name, v):
+        """True for an anchor trial whose held-out reads have not reached HELD_Z."""
+        if name.split("/", 1)[-1] not in self.state.get("anchor_trials", []):
+            return False
+        held = v.get("held") or []
+        iw = sum(1 / h[1] ** 2 for h in held if h[1] > 0)
+        return not iw or sum(h[0] / h[1] ** 2 for h in held if h[1] > 0) / math.sqrt(iw) < self.HELD_Z
 
     @staticmethod
     def pool(dirs):
@@ -1779,7 +1798,7 @@ class Plan:
         # promoted, `patch = k` would stop every game that starts. It waits for a person.
         ev = {k: v for k, v in self.evidence().items()
               if v.get("current") and v["families"] == "holds" and v["held_mean"] is not None and k not in tried
-              and "patch" not in parse_weights(v["weights"])}
+              and "patch" not in parse_weights(v["weights"]) and not self.anchor_short(k, v)}
         if not ev:
             return
         name = max(ev, key=lambda k: ev[k]["held_mean"])
@@ -1847,7 +1866,7 @@ class Plan:
         for k, v in sorted(ev.items(), key=lambda kv: -(kv[1].get("held_mean") or -99)):
             if len(out) >= room:
                 break
-            if not k.startswith(self.name + "/") or v.get("current") or k in promoted or k in carried["names"]:
+            if not k.startswith(self.name + "/") or v.get("current") or k in promoted or k in carried["names"] or self.anchor_short(k, v):
                 continue
             if not v.get("commits") or not all(c and self.same_as(c, parent) for c in v["commits"]):
                 continue
@@ -1989,6 +2008,9 @@ class Plan:
             net_env += "CENSUS_NET=$Q/trials/%s.net " % jid
         cmd = (
             "set -e; [ -f ~/.cargo/env ] && . ~/.cargo/env; export PATH=$HOME/.cargo/bin:$PATH\n"
+            # As census_cmd: BSD paste keeps a Mac on one map of eleven. Every read of a run on macmini
+            # was of one map until this (1 November: Castle read -3.88 so, and the Duelist -25).
+            "paste() { command paste \"$@\" -; }; export -f paste\n"
             "Q=~/%s; C=%s; mkdir -p $Q/trials\n"
             "echo %s | base64 -d > $Q/trials/%s.trial; echo %s | base64 -d > $Q/trials/%s.base\n"
             "cd $C/wt && export CARGO_TARGET_DIR=$HOME/fleet/target\n"
@@ -3554,13 +3576,13 @@ class Plan:
              "note": "z %.1f past main to go on it" % self.HELD_Z},
             {"id": "transform", "title": "Transform: learned override", "track": "transform", "deps": ["build"], "state": state("transform", True), "machines": machines("transform", cpu),
              "dur_min": med("transform", 3.0) * 100, "elapsed_min": elapsed("transform"), "note": "SPSA over 942 numbers, a census a step"},
-            {"id": "slot", "title": "The game reads a transform", "track": "transform", "deps": ["transform", "bridge"], "state": "not built", "machines": [], "dur_min": 0,
-             "note": "the game has no file for a slot, so nothing learned can ship"},
+            {"id": "slot", "title": "The game reads a transform", "track": "transform", "deps": ["transform"], "state": "done", "machines": [], "dur_min": 0,
+             "note": "built: styles.rs ships slot 1, as style 5, Overrider; a person chooses it on the menu"},
             {"id": "islands", "title": "GPU islands: crucible", "track": "gpu", "deps": [], "state": state("islands", True), "machines": sorted(h["name"] for h in self.cuda),
              "dur_min": med("islands", 1.0) * 6, "elapsed_min": elapsed("islands"), "note": "its own arena, senses and net"},
-            {"id": "bridge", "title": "Bridge: crucible into treadcore", "track": "gpu", "deps": ["islands"], "state": "not built", "machines": [], "dur_min": 0,
-             "note": "until built, GPU work cannot reach the game"},
-            {"id": "brain", "title": "One brain in treadcore", "track": "brain", "deps": ["main", "slot"], "state": "waiting", "machines": [], "dur_min": 0, "note": "rules, dials and transform as one"},
+            {"id": "bridge", "title": "Bridge: crucible into treadcore", "track": "gpu", "deps": ["islands"], "state": "done", "machines": [], "dur_min": 0,
+             "note": "built: a champion plays in the game as style 7, Duelist; refreshing it is by hand"},
+            {"id": "brain", "title": "One brain in treadcore", "track": "brain", "deps": ["main", "slot", "bridge"], "state": "waiting", "machines": [], "dur_min": 0, "note": "rules, dials and learned parts, chosen by name: bot styles 0 to 7"},
         ]
         self.board(tasks)
         doc = {"checked": time.strftime("%Y-%m-%dT%H:%M:%S"), "commit": short, "difficulty": d, "tasks": tasks, "down": down,

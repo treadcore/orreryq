@@ -12,6 +12,8 @@ A second pass through the running system changed these things. Part One above is
 - **A generation emptied the Terrain.** `tools/analysis.py` asked only `main` for commits, and only `fleet.tsv` for reads. Generations stand on line commits, and `fleet.tsv` keeps a queue's reads for today's defaults alone. We fixed the commit half. The reads of game 4 are in each job's results and in no ledger the tab reads, so it still shows nothing, and says so. Reading them from the results is open work.
 - **The Runs page's rotation line overstates.** It names every kind of run, and `plan.json` today gives the rotation only the transform. Section III-G's "dormant" is what is true.
 - **`boburner`'s GPU is off Crucible on purpose or by accident.** The log shows it set off at 07:59 on 1 November. It is the amber lamp on Keeper.
+- **Generations 1 to 4 were then undone by an anchor, on noise.** The anchor read at a generation's low bar, and `w4845`, the defaults three back, went on the line as generation 5 at z 0.76. An anchor must now clear the proof's z 3. The story below still follows `w4540`, and `bio` is off again until something reads it back on. See [Eight Named Minds](bot-styles-lab-report.html).
+- **By-hand census runs on macmini read one map of eleven,** because the fix of 31 October reached only the search's jobs. Fixed.
 - **Every commit on treadcore's main replays the line,** with new hashes. A build of the replaced commit then reads as failed in one flag until the new builds are in. That is a false alarm, and it arises whenever a person commits to main.
 
 ## XIV. The first road: how a match becomes a dial
@@ -190,7 +192,7 @@ fitness = dealt - taken +/- 2 for a win or loss + draw value + 0.5 x aim/steps
 keep the best 16;  all others: a copy of a top-quarter parent + 0.03 x gauss per weight
 ```
 
-Every 5 generations the champion joins a hall of fame; islands swap champions; an exam against a ladder of milestones keeps honest score. Fast and real, in its own world. Its nets have not played a tank in treadcore, which the design report that follows this one sets out to change.
+Every 5 generations the champion joins a hall of fame; islands swap champions; an exam against a ladder of milestones keeps honest score. Fast and real, in its own world. Its nets had not played a tank in treadcore when this was written; [the report that follows](bot-styles-lab-report.html) changes that.
 
 !html(double/road-b.html)
 
@@ -308,13 +310,13 @@ Everything above exists to change what happens here. The menu is fresh from toda
 
 !html(double/game.html)
 
-Where to see the fleet's work in play: **every bot in these pictures runs `weights.rs`**. Press `U` for the sliders: a row for every weight and switch, for your own team. Those are the same numbers this report follows, and you can feel the difference between a raider and a castle-builder by loading `profiles/`. Selecting brains by name per team is the next report.
+Where to see the fleet's work in play: **every bot in these pictures runs `weights.rs`**. Press `U` for the sliders: a row for every weight and switch, for your own team. Those are the same numbers this report follows, and you can feel the difference between a raider and a castle-builder by loading `profiles/`. Selecting brains by name per team is [the next report](bot-styles-lab-report.html).
 
 ## XX. Threats and what is open
 
 **Pictures are frames, not screen captures.** `--frame` runs the same drawing code as the window from the same documents, without the window's own state. A selection a person made, or a live hover, can look different. **Treadcore's pictures are old,** as said. **The story's numbers are one trial's:** `w4540` is real, and it is not a proof that `bio` helps. **The worked target score leaves out five terms** so the sum can be followed; the code has them all. **The bc2 training figures come from the lab report,** not from running it again.
 
-**Open:** the Terrain's reads; the Runs line's words; the 2,302 retired jobs still say something real about the cost of a generation; the merges proposed in Section IX-B; a warning before the certificate ends; and the game cannot read a slot, which is the next piece of work.
+**Open:** the Terrain's reads; the Runs line's words; the 2,302 retired jobs still say something real about the cost of a generation; the merges proposed in Section IX-B; a warning before the certificate ends; and the game's slots, since built: see [Eight Named Minds](bot-styles-lab-report.html).
 
 ## XXI. Reproducing this
 

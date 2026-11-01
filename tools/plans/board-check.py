@@ -119,4 +119,11 @@ c = C({"grove/w1": cand()})
 c.state["carried"] = {"for": "r8", "names": ["grove/w1"]}
 assert c.carry_passes() == ["grove/w1"], "a new generation is a new count"
 
+# A retreat takes the proof's bar; a find, the generation's.
+c = C({})
+c.state["anchor_trials"] = ["w5"]
+assert c.anchor_short("grove/w5", {"held": [[0.38, 0.51], [0.18, 0.58]]}), "w4845's reads do not undo a generation"
+assert not c.anchor_short("grove/w5", {"held": [[2.0, 0.4], [2.0, 0.4]]}), "z 7 does"
+assert not c.anchor_short("grove/w6", {"held": [[0.38, 0.51]]}), "only an anchor is held to it"
+
 print("board-check: every check holds")

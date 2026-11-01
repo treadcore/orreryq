@@ -24,4 +24,5 @@ balance|Too Many Shots|orrery · the game · balance
 jaguaribe-clock|A Dead Clock Battery|orrery · the fleet · machines
 whole-line|The Whole Line|orrery · the fleet · the line, end to end
 double|The Double Report|orrery · the fleet · the design and the guide
+bot-styles|Eight Named Minds|orrery · the brain · styles and bridges
 LIST
