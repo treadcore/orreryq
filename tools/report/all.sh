@@ -21,4 +21,6 @@ brain-versions|Many Versions of One Brain|orrery · the brain · whole-number ch
 algorhythm|Algorhythm|orrery · the brain · hybrid programming
 analysis|Reading a Growing Brain|orrery · the brain · analysis
 balance|Too Many Shots|orrery · the game · balance
+jaguaribe-clock|A Dead Clock Battery|orrery · the fleet · machines
+whole-line|The Whole Line|orrery · the fleet · the line, end to end
 LIST

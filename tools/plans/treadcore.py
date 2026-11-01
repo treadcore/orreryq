@@ -55,6 +55,7 @@ The keeper runs it on its own clock (config.json "sync"), so nothing is
 gathered by hand.
 """
 import base64
+import contextlib
 import csv
 import math
 import random
@@ -174,7 +175,7 @@ class Plan:
         # waits for it and no promotion counts it. Its ledger still counts:
         # self.ledgers is every machine that has one, or a removal would shrink
         # fleet.tsv.
-        self.ledgers = [h for h in every + self.qcfg.get("bench", []) if "cpu" in h.get("caps", ["cpu"])]
+        self.ledgers = [h for h in every + self.qcfg.get("bench", []) if "cuda" not in h.get("caps", ["cpu"])]
         stopped = set(self.qcfg.get("paused_projects", []))
         self.paused_projects = stopped
         self.hosts = [h for h in every if "cpu" in h.get("caps", ["cpu"]) and not h.get("paused")
@@ -189,9 +190,34 @@ class Plan:
                      ("families_n", 0), ("families_queued", []), ("commits", {})):
             self.state.setdefault(k, v)
         self.home = "fleet/q-%s" % self.name  # under each host's $HOME
+        self.tuned = {}
+        self.apply_tuning()
         self._sha = None
         self._rsaves = {}
         self._newruns = []
+
+    # ---- the values a person can move ------------------------------------------------------
+    # Paul, 1 November: "set some values that we can adjust ... apply them to the run". The list,
+    # with each one's range and default, is line.json, which orrery's Values page and the report
+    # read too. What has been moved is QUEUE/tuning.json, written by `fleet-queue.py DIR tune`.
+    # A MISSING OR BROKEN FILE IS THE DEFAULTS, NEVER A STOPPED PLAN, and a number is held to its
+    # range here as well as at the button: the file can be edited by hand.
+    def apply_tuning(self):
+        table = load(os.path.join(os.path.dirname(os.path.abspath(__file__)), "line.json"), {}) or {}
+        self.line = table
+        asked = load(os.path.join(self.q, "tuning.json"), {}) or {}
+        asked = asked if isinstance(asked, dict) else {}
+        for v in table.get("values", []):
+            val = asked.get(v["key"], v["default"])
+            if not isinstance(val, (int, float)) or isinstance(val, bool):
+                val = v["default"]
+            val = max(v["min"], min(v["max"], val))
+            if v["key"] in asked:
+                self.tuned[v["key"]] = val
+            if v.get("attr"):
+                setattr(self, v["attr"], type(v["default"])(val))
+            elif v["key"] == "held_seeds" and self.cfg.get("weights") and v["key"] in asked:
+                self.cfg["weights"]["held_seeds"] = int(val)
 
     def flag(self, kind, text, key=None, progress=False):
         """A flag for a person (fleet-queue's flags/, the same form): raised once a key.
@@ -379,6 +405,10 @@ class Plan:
         b = base64.b64encode(trial_text.encode()).decode()
         return (
             "set -e; [ -f ~/.cargo/env ] && . ~/.cargo/env; export PATH=$HOME/.cargo/bin:$PATH\n"
+            # BSD paste will not read stdin unnamed: `paste -sd,` fails on a Mac, census_maps
+            # keeps only `gen`, and MAP=all reads ONE map of eleven. macmini read so from the
+            # day it joined, 470 first reads pooled as if they were the whole game (1 November).
+            "paste() { command paste \"$@\" -; }; export -f paste\n"
             "Q=~/%s; C=%s; mkdir -p $Q/trials; echo %s | base64 -d > $Q/trials/%s.weights\n"
             "cd $C/wt && export CARGO_TARGET_DIR=$HOME/fleet/target\n"
             "TRIAL=$Q/trials/%s.weights CENSUS_MODELS=$Q/models CENSUS_PATCHES=$Q/patches SEEDS=%d SEED0=%d SECS=%d MAP=%s RESPAWNS=3 JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu) CENSUS_BIN=$C/census-bin scripts/census.sh 2>&1 | tail -3\n"
@@ -402,7 +432,7 @@ class Plan:
             # near +2, against the old defaults) went in as gains of the
             # weights that moved, and the fit's "best" chased them: read 309
             # times since, at -0.3 (29 October).
-            if not self.same_defaults(self.census_commit(d)):
+            if not self.same_defaults(self.census_commit(d)) or self.one_map(d):
                 continue
             # The stamp, and the job: two hosts can finish in the same second.
             jid = d.rstrip("/").split(os.sep)[-2]
@@ -500,7 +530,10 @@ class Plan:
         return out
 
     def defaults(self):
+        # The census host's, or any machine's that built it: one flaky machine
+        # must not stop the whole search.
         p = glob.glob(os.path.join(self.q, "results", self.prep_id(self.cfg["census_host"]), self.home, "c", self.short(), "defaults.toml"))
+        p = p or sorted(glob.glob(os.path.join(self.q, "results", "prep-*-" + self.short(), self.home, "c", self.short(), "defaults.toml")))
         return p[0] if p else None
 
     @staticmethod
@@ -536,19 +569,20 @@ class Plan:
             if v["status"] != "passed" or jid in self.state["held_read"]:
                 continue
             trial = v["text"]
-            # ONE AT A TIME: of 117 candidates read twice, the 36 whose first read was
-            # under zero included none that passed at z 2 pooled, and each second
-            # read costs 14 minutes of a machine (30 October).
-            self.state.setdefault("held_second", []).append(jid)
+            # A GENERATION TAKES ONE READ (Paul, 1 November: pass about every half hour,
+            # carry what is not proven). Proof is the line's own read against main
+            # (line_proof), where the noise of many generations is read at once.
             for k in range(1):
                 hid = "h%04d" % self.state["held_n"]
                 seed0 = w["held_seed0"] + 200000 * self.state["held_n"]
                 self.state["held_n"] += 1
                 jobs.append({"id": hid, "kind": "weights", "title": "held-out read %d of %s (%d seeds)" % (k + 1, jid, w["held_seeds"]),
                              "needs": "cpu", "after_host": self.after_host(), "cmd": self.census_cmd(trial, w["held_seeds"], seed0, hid),
-                             "fetch": "%s/out/%s" % (self.home, hid), "timeout_s": 6 * 3600})
+                             "fetch": "%s/out/%s" % (self.home, hid), "timeout_s": 6 * 3600,
+                             # What decides goes first: it got 3% of the lanes behind a queue seven hours long.
+                             "priority": "high"})
             self.state["held_read"].append(jid)
-        # The second read, for a first read that came back at zero or better.
+        # A second read asked for before the rule above, for a first at zero or better.
         waiting = self.state.get("held_second", [])
         if waiting:
             pairs = self.held_pairs()
@@ -593,8 +627,10 @@ class Plan:
             # A/B first: each switch flipped, each choice at each other
             # version, once a generation, a third of the room at most.
             ab = self.ab_trials(max(1, want // 3), out, s)
-            # A stalled search gives half the generation to wide trials.
-            wide = self.wide_trials(want // 2 or 1, out, g, defaults) if s["stalled"] else []
+            # A stalled search took half of each generation for wide trials: 40% of the
+            # lanes on 31 October, 843 trials and none past the first bars, where the
+            # fit passed 21 of 514 and the A/B 4 of 17. One a generation keeps the door open.
+            wide = self.wide_trials(1, out, g, defaults) if s["stalled"] else []
             fit = []
             try:
                 fit = [os.path.join(out, l.split("\t")[0] + ".weights") for l in open(os.path.join(out, "plan.tsv")).read().splitlines()[1:]]
@@ -978,8 +1014,8 @@ class Plan:
     HELD_Z = 3.0
 
     def held_pass(self, ds):
-        """True when a trial's two held-out reads, pooled, pass."""
-        p = self.pool(ds) if len(ds) == 2 else None
+        """True when a trial's held-out reads, pooled, pass: one is enough for a generation."""
+        p = self.pool(ds) if ds else None
         return bool(p) and p["every"][1] > 0 and p["every"][0] / p["every"][1] >= self.HELD_Z - self.ease() and not p["below"]
 
     # ---- difficulty: a promotion about every PROMOTE_EVERY minutes ---------------------
@@ -1012,9 +1048,23 @@ class Plan:
     # rests below the floor rather than pinned to it; a faster fleet
     # promotes sooner at the same ease.
     PROMOTE_EVERY = 150
-    EASE_MAX = 2.0
-    EASE_STEP = 1.0
-    HARDEN = 0.5
+    # A RATCHET (Paul, 1 November: "pass every half hour or so. And each generation this could
+    # continue to get more difficult, until we find nothing for 4 hours, then it gets easier
+    # again"). Each generation the bars rise a step; four hours with no generation they fall,
+    # and fall again each hour after, to the ceiling. Simulated on this game's own noise (a
+    # seed swings 9.5 a seat, not the 4.9 above), 5,000 seeds an hour, one held read of 400:
+    # 2.1 (the "10% easier" asked, held z 0.9) one in 56 minutes, 20% truly worse; 2.5 one in
+    # 38, 28% worse; 2.75 one in 30, 34% worse; gain a day about +14 at all of them. So a
+    # generation is carried, unproven, and only line_proof puts the line on main.
+    START_EASE = 2.5
+    EASE_MAX = 2.75       # held z 0.25. Calibrated on 1 November (docs/whole-line): past it, half is truly worse
+    HARDEN = 0.05         # each generation
+    DRY_MIN = 240         # nothing for four hours
+    EASE_STEP = 0.25      # then this, and again each DRY_AGAIN_MIN
+    DRY_AGAIN_MIN = 60
+    # Easing the read-on bars with the rest only spends lanes on what will be dropped: 38% of
+    # them on 31 October. Kept within half an error: more gain a day at every ease simulated.
+    KEEP_EASE = 0.5
 
     def promotions(self):
         """[(approved epoch, run id, state)] of the promotions on main, oldest first."""
@@ -1028,25 +1078,28 @@ class Plan:
         return sorted(out, key=lambda x: x[0])
 
     def ease(self):
-        """The errors every bar is lowered by now (state difficulty)."""
+        """The errors the pass bars are lowered by now (state difficulty): the ratchet."""
         if getattr(self, "_ease", None) is not None:
             return self._ease
-        every = 60 * float((self.cfg.get("weights") or {}).get("promote_every_min", self.PROMOTE_EVERY))
         d = self.state.setdefault("difficulty", {})
         last = (self.promotions() or [None])[-1]
         now = time.time()
-        if "since" not in d:
-            # Begun from now, not the last promotion: it eases in its time.
-            d.update({"since": now, "base": 0.0, "seen": last[1] if last else None})
+        if d.get("rule") != "ratchet":
+            d.clear()
+            d.update({"rule": "ratchet", "base": self.START_EASE, "since": now, "seen": last[1] if last else None, "generations": 0})
+        # A value moved by hand moves the bar once; the ratchet goes on from there.
+        tuned = getattr(self, "tuned", {})
+        if "ease_now" in tuned and tuned["ease_now"] != d.get("asked"):
+            d.update({"base": tuned["ease_now"], "asked": tuned["ease_now"]})
         if last and last[1] != d.get("seen"):
-            gap = max(60.0, last[0] - d["since"])
-            e = d.get("ease", 0.0)
-            d.update({"base": max(0.0, e - self.HARDEN * max(0.0, math.log2(every / gap))),
-                      "since": last[0], "seen": last[1], "last_gap_min": round(gap / 60)})
-        over = (now - d["since"]) / every - 1
-        self._ease = min(self.EASE_MAX, d["base"] + self.EASE_STEP * max(0.0, over))
-        d.update({"ease": round(self._ease, 3), "every_min": round(every / 60), "held_z": round(self.HELD_Z - self._ease, 3),
-                  "floor": self.EASE_MAX})
+            base = d.get("ease", d["base"])
+            d.update({"base": max(0.0, base - self.HARDEN), "since": now, "seen": last[1], "last_gap_min": round((now - d["since"]) / 60),
+                      "generations": d.get("generations", 0) + 1})
+        dry = (now - d["since"]) / 60
+        steps = 0 if dry < self.DRY_MIN else 1 + int((dry - self.DRY_MIN) // self.DRY_AGAIN_MIN)
+        self._ease = min(self.EASE_MAX, d["base"] + self.EASE_STEP * steps)
+        d.update({"ease": round(self._ease, 3), "held_z": round(self.HELD_Z - self._ease, 3), "floor": self.EASE_MAX,
+                  "dry_min": round(dry), "eases_at_min": self.DRY_MIN + (self.DRY_AGAIN_MIN * steps if steps else 0)})
         return self._ease
 
     ANCHOR = 3
@@ -1089,6 +1142,8 @@ class Plan:
         (d, se, seeds), "below": a map more than two errors under}."""
         every, maps = [], {}
         for d in dirs:
+            if Plan.one_map(d):
+                continue
             try:
                 lines = open(os.path.join(d, "pooled.txt")).read().splitlines()
             except OSError:
@@ -1105,8 +1160,18 @@ class Plan:
             return sum(d / se ** 2 for d, se, _ in rows) / iw, 1 / math.sqrt(iw), sum(n for _, _, n in rows)
         if not every:
             return None
-        below = any(dd < -2 * se for dd, se, _ in (comb(r) for r in maps.values()))
-        return {"every": comb(every), "below": below}
+        rows = [comb(r) for r in maps.values()]
+        return {"every": comb(every), "below": any(dd < -2 * se for dd, se, _ in rows), "above": any(dd > 2 * se for dd, se, _ in rows)}
+
+    @staticmethod
+    def one_map(d):
+        """A census that read only the generated map: a Mac's, before census_cmd's paste.
+        A map is not the game: such a read decides nothing."""
+        try:
+            rows = [l.split()[0] for l in open(os.path.join(d, "pooled.txt")) if " +/- " in l and not l.startswith("every map")]
+        except OSError:
+            return False
+        return rows == ["generated"]
 
     def sequential(self):
         """{trial: {status, d, se, seeds, z, stage, text}} for every trial on
@@ -1143,7 +1208,7 @@ class Plan:
             stage = max([i for i, s in enumerate(self.SEQ) if round(s[0] * base) <= n] or [0])
             _, keep, ok = self.SEQ[stage]
             e = self.ease()
-            keep, ok = (None if keep is None else keep - e), (None if ok is None else ok - e)
+            keep, ok = (None if keep is None else keep - min(e, self.KEEP_EASE)), (None if ok is None else ok - e)
             if jid in self.state["held_read"]:
                 status = "passed"
             elif jid in inflight:
@@ -1231,12 +1296,13 @@ class Plan:
         f = self.cfg.get("families") or {}
         out = [("defaults@%s" % self.short(), "")]
         if f.get("queue", True):
+            # Today's candidates only: each generation asked every old one again.
             for jid, ds in sorted(self.held_pairs().items()):
-                if self.held_pass(ds):
+                if self.held_pass(ds) and self.same_defaults(self.census_commit(ds[0])):
                     trial = glob.glob(os.path.join(self.q, "results", jid, self.home, "out", jid, "*", "trial.weights"))
                     if trial:
                         out.append(("%s/%s" % (self.name, jid), self.weights_set(open(trial[0]).read())))
-        for run_dir in f.get("converge", []):
+        for run_dir in f.get("converge", []) if f.get("converge_each") else []:
             run_dir = os.path.join(self.tc, run_dir) if not os.path.isabs(run_dir) else run_dir
             rows = []
             try:
@@ -1287,7 +1353,7 @@ class Plan:
             ) % (self.home, self.cdir(), fid, b)
             jobs.append({"id": fid, "kind": "families", "title": "families: %s" % ", ".join(c[0] for c in part)[:110],
                          "needs": "cpu", "after_host": self.after_host(), "cmd": cmd,
-                         "fetch": "%s/out/%s" % (self.home, fid), "timeout_s": 12 * 3600,
+                         "fetch": "%s/out/%s" % (self.home, fid), "timeout_s": 12 * 3600, "priority": "high",
                          "on_done": "python3 -I %s %s families" % (os.path.abspath(__file__), self.q)})
             self.state["families_queued"] += [c[0] for c in part]
         return jobs
@@ -1663,13 +1729,17 @@ class Plan:
                          "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 6 * 3600})
             # Its held-out reads at once, not after its own census passes:
             # a run's result was already chosen by a search.
-            for k in range(2):
+            # A carried pass goes first, and takes the one read a generation takes.
+            for k in range(a.get("reads", 2)):
                 hid = "h%04d" % self.state["held_n"]
                 hseed = w["held_seed0"] + 200000 * self.state["held_n"]
                 self.state["held_n"] += 1
-                jobs.append({"id": hid, "kind": "weights", "title": "held-out read %d of %s (%d seeds)" % (k + 1, jid, w["held_seeds"]),
-                             "needs": "cpu", "after_host": self.after_host(), "cmd": self.census_cmd(a["text"], w["held_seeds"], hseed, hid),
-                             "fetch": "%s/out/%s" % (self.home, hid), "timeout_s": 6 * 3600})
+                job = {"id": hid, "kind": "weights", "title": "held-out read %d of %s (%d seeds)" % (k + 1, jid, w["held_seeds"]),
+                       "needs": "cpu", "after_host": self.after_host(), "cmd": self.census_cmd(a["text"], w["held_seeds"], hseed, hid),
+                       "fetch": "%s/out/%s" % (self.home, hid), "timeout_s": 6 * 3600}
+                if a.get("reads"):
+                    job["priority"] = "high"
+                jobs.append(job)
             self.state["held_read"].append(jid)
         self.state["adopt"] = []
         return jobs
@@ -1731,12 +1801,73 @@ class Plan:
     def defaults_blob(self):
         return self.state["commits"].get(self.sha(), {}).get("weights_rs") or self.weights_rs(self.sha())
 
+    # CARRY A PASS ACROSS A GENERATION (Paul, 1 November: "commit. push. impliment."; the whole-line
+    # report, its largest gain left). Each generation threw away every read on the old defaults:
+    # when r0069 landed, w4398 at z 0.83 and w4424 at z 1.07 were still being read and both passed,
+    # on the defaults just overtaken. The faster generations come the more this costs, and at half
+    # an hour hardly a trial could finish. So a trial that passed its held-out read on the defaults
+    # the last generation replaced is read once more on the new ones, ahead of the search. Only one
+    # step back, only a few: a read on old defaults says little about new ones as they drift, and a
+    # read of 400 seeds is a lane for a quarter of an hour.
+    CARRY_MAX = 3
+
+    def parent_of(self, commit):
+        return run(["git", "-C", self.tc, "rev-parse", commit + "^"]).stdout.strip()
+
+    def same_as(self, a_commit, b_commit):
+        """Two commits read the same defaults: same_defaults, between any two."""
+        a, b = self.defaults_at(a_commit), self.defaults_at(b_commit)
+        common = set(a) & set(b)
+        return bool(common) and all(a[k] == b[k] for k in common) and self.game_at(a_commit) == self.game_at(b_commit)
+
+    def carry_passes(self):
+        """Returns what it carried. Called each plan, because a read still running when the
+        generation landed finishes after it."""
+        if not self.auto() or not self.CARRY_MAX:
+            return []
+        p = self.promotions()
+        if not p:
+            return []
+        rid, st_ = p[-1][1], p[-1][2]
+        carried = self.state.setdefault("carried", {})
+        if carried.get("for") != rid:
+            carried.clear()
+            carried.update({"for": rid, "names": []})
+        room = self.CARRY_MAX - len(carried["names"])
+        commit = st_.get("self_modified_at") or st_.get("commit")
+        if room <= 0 or not commit:
+            return []
+        parent = self.parent_of(commit)
+        if not parent:
+            return []
+        promoted = {self.rstate(r["id"]).get("candidate") for r in self.runs()
+                    if r["kind"] == "promote" and self.rstate(r["id"]).get("status") in ("approved", "self-modified")}
+        ev = self.evidence()
+        out = []
+        for k, v in sorted(ev.items(), key=lambda kv: -(kv[1].get("held_mean") or -99)):
+            if len(out) >= room:
+                break
+            if not k.startswith(self.name + "/") or v.get("current") or k in promoted or k in carried["names"]:
+                continue
+            if not v.get("commits") or not all(c and self.same_as(c, parent) for c in v["commits"]):
+                continue
+            self.adopt(v["weights"], "%s carried to %s" % (k.split("/", 1)[1], self.short()))
+            self.state["adopt"][-1]["reads"] = 1
+            carried["names"].append(k)
+            out.append(k)
+            self.flag("carry", "%s passed on the defaults %s replaced: read again on the new ones" % (k, rid), key="carry:%s:%s" % (k, rid), progress=True)
+        return out
+
     def reread_older(self, force=False):
         """Queue the strongest older candidates again; returns their names."""
         if not force and not self.auto():
             return []
         ev = self.evidence()
         if not force and any(v.get("current") for v in ev.values()):
+            return []
+        # Once a generation is half an hour, reading three old trials each is a tenth of the
+        # fleet on what was already passed by: only when nothing has been found for two hours.
+        if not force and self.state.get("difficulty", {}).get("dry_min", 0) < 120:
             return []
         done = self.state.setdefault("reread", {})
         blob = self.defaults_blob()
@@ -2463,9 +2594,16 @@ class Plan:
             st["detail"] = "%s: prepared (%s)" % (st["branch"], st["commit"][:7])
             self.rsave(rid, st)
             accept = self.auto() and self.push_check()["ok"]
+            # Only what is proven goes to main: a generation is carried on the line.
+            held = (st.get("evidence") or {}).get("held") or []
+            proven = (len(held) >= 2 and sum(1 / h[1] ** 2 for h in held) > 0
+                      and sum(h[0] / h[1] ** 2 for h in held) / math.sqrt(sum(1 / h[1] ** 2 for h in held)) >= self.HELD_Z
+                      and not self.state.get("local_line"))
             try:
-                if accept:
+                if accept and proven:
                     self._approve(rid)
+                elif accept:
+                    self.self_modify(rid, because="a generation, carried unproven until the line reads past main")
                 else:
                     self.self_modify(rid)
                 st = self.rstate(rid)
@@ -2739,7 +2877,8 @@ class Plan:
         commiting the weights and nets". Raised while the local line lacks
         main, naming what to commit."""
         line = self.state.get("local_line")
-        if not line:
+        # In auto mode the line is how generations are carried, and line_proof takes it to main.
+        if not line or (self.auto() and self.push_check()["ok"]):
             return
         nets = self.pending_nets()
         remote, branch = self.push_target()
@@ -3019,7 +3158,7 @@ class Plan:
         if not os.path.exists(self.crucible_dir("ladder", "ladder.txt")):
             self.ladder_write()
         cr = self.state.setdefault("crucible", {})
-        done, bad = self.ids("done"), self.ids("failed", "stopped")
+        done, failed, stopped = self.ids("done"), self.ids("failed"), self.ids("stopped")
         # Each island keeps `ahead` segments queued, each after the one
         # before (its state file is the last one's), so the GPU lane is not
         # left idle between the keeper's plans.
@@ -3034,13 +3173,20 @@ class Plan:
                 if j in done:
                     isl.update({"seg": isl["seg"] + 1, "last": j, "failures": 0, "gens": isl["gens"] + opt["gens"]})
                     fresh.append((h["name"], j))
-                elif j in bad:
+                elif j in failed:
                     isl["failures"] += 1
-                else:
+                    isl["failed_at"] = time.time()
+                # A PERSON STOPPING A SEGMENT IS NOT A FAULT IN IT. Counted as one, the stop of
+                # 30 October disabled all three islands for good, and the GPUs idled for two days.
+                elif j not in stopped:
                     live.append(j)
             isl["queued"] = live
+            # Three in a row rests an island for half an hour, and never for good: most of these
+            # are a machine's ssh refusing a file, or a machine off, not the program.
+            if isl["failures"] >= 3 and time.time() - isl.get("failed_at", 0) > 1800:
+                isl["failures"] = 0
             if isl["failures"] >= 3:
-                self.flag("crucible", "crucible on %s failed three segments in a row: see its logs" % h["name"], key="crucible:%s:%d" % (h["name"], isl["seg"]))
+                self.flag("crucible", "crucible on %s failed three segments in a row: it rests half an hour; see its logs" % h["name"], key="crucible:%s:%d" % (h["name"], isl["seg"]))
         self.crucible_ladder(fresh)
         jobs = []
         for h in self.cuda:
@@ -3128,11 +3274,6 @@ class Plan:
         # The local line: to main when auto mode is on and the credentials
         # allow (Paul Accepts); else its flag stays up.
         if self.state.get("local_line"):
-            try:
-                if self.auto() and self.push_check()["ok"]:
-                    self.resolve()
-            except SystemExit as e:
-                print("resolve: %s" % e)
             self.resolve_flag()
         # Auto mode: results adopted, the strongest candidate promoted, a
         # prepared promotion approved (inside run_jobs). A promotion moves
@@ -3141,7 +3282,12 @@ class Plan:
         self.models_update()
         self.candidate_states()
         self.auto_promote()
+        self.retire_stale()
         self.anchor_trial()
+        try:
+            self.carry_passes()
+        except Exception as e:  # a read saved is a gain; a plan lost is not worth one
+            print("carry: %s" % e, file=sys.stderr)
         self.reread_older()
         self.rotate()
         jobs = self.net_jobs()
@@ -3150,6 +3296,7 @@ class Plan:
         jobs = self.prepare_jobs() + jobs
         self.propagation()
         jobs += self.adopt_jobs()
+        jobs += self.line_proof()
         self.ticker_scan()
         try:
             self.commits_log()
@@ -3163,8 +3310,12 @@ class Plan:
         # from looking low: counted against treadcore's share, they left
         # three CPU lanes idle (28 October, 20:40). So the GPU lanes' jobs
         # take none of it, and the share is topped up whatever n says.
+        # BUT NEVER PAST FOUR A MACHINE. The keeper asks each minute while a lane is starved, and
+        # max(n, ...) answered each time: with the GPU islands off their lanes starved for two
+        # days and the queue reached 1,915 jobs, seven hours deep, a held-out read at its back.
+        # The queue's order is first come, so depth is how long a finding waits.
         cpu_queued = len([j for j in self.ids("queue") if not j.startswith("x-")])
-        want = max(n, 3 * len(self.hosts) - cpu_queued)
+        want = max(0, self.QUEUE_PER_MACHINE * len(self.hosts) - cpu_queued)
         # The families first, a share of the queue: a candidate waits on them.
         jobs += self.family_jobs(max(0, (want - len(jobs) + 1) // 2))
         jobs += self.weight_jobs(max(0, want - len(jobs)))
@@ -3177,8 +3328,502 @@ class Plan:
             note["difficulty"] = dict(self.state.get("difficulty", {}), last_promotion=(self.promotions() or [[None, None]])[-1][1])
             save(os.path.join(self.pd, "search.json"), note)
         self.model_sends(jobs)
+        try:
+            self.pipeline_view(jobs)
+        except Exception as e:  # the board is for reading; planning goes on
+            print("pipeline: %s" % e, file=sys.stderr)
+        self.archive_generations()
         self.keep()
         print(json.dumps(jobs))
+
+    # ---- one line of generations --------------------------------------------------------
+    # Paul, 1 November: "always progress forward and carry the weights, and restart with new
+    # configuration when it resets run". A generation that passes its read joins the line, and
+    # the fleet builds the line, so what was found is never searched for again. What the fleet
+    # was asked on the old generation's defaults is no use on the new one.
+    PROOF_EVERY_MIN = 60
+    QUEUE_PER_MACHINE = 4
+
+    def retire_stale(self):
+        """Queued searches built for defaults that are no longer today's go to stopped/."""
+        here = "/c/%s;" % self.short()
+        for f in glob.glob(os.path.join(self.q, "queue", "*.json")):
+            j = load(f, {}) or {}
+            cmd = j.get("cmd", "")
+            if j.get("kind") != "weights" or here in cmd or not re.match(r"[weh]\d+$", j.get("id", "")):
+                continue
+            m = re.search(r"/c/(\w+);", cmd)
+            if m and not self.same_defaults(m.group(1)):
+                try:
+                    os.rename(f, os.path.join(self.q, "stopped", os.path.basename(f)))
+                except OSError:
+                    pass
+
+    def line_proof(self):
+        """Main's values read as a trial against the line, 800 seeds. The line past main by
+        HELD_Z, and no map to main's side by two errors: the line goes to main. A
+        generation's noise is in that read and cannot pass it by luck, one time in 750."""
+        line = self.state.get("local_line")
+        w = self.cfg.get("weights")
+        if not line or not w or not self.auto() or not self.cpu_ready():
+            return []
+        pf = self.state.setdefault("proof", {})
+        known = self.ids("done", "failed", "stopped")
+        if pf.get("jobs"):
+            if not all(j in known for j in pf["jobs"]):
+                return []
+            ds = [d for j in pf["jobs"] for d in glob.glob(os.path.join(self.q, "results", j, self.home, "out", j, "*", ""))]
+            p = self.pool(ds) if len(ds) == len(pf["jobs"]) else None
+            head, jobs = pf.get("head"), pf["jobs"]
+            self.state["proof"] = pf = {"last_at": time.time()}
+            if p and p["every"][1] > 0:
+                d, se, n_ = p["every"]
+                pf["last"] = {"head": head[:7], "d": round(-d, 2), "se": round(se, 2), "z": round(-d / se, 2), "seeds": n_}
+                if -d / se >= self.HELD_Z and not p["above"] and head == line.get("commit"):
+                    try:
+                        with contextlib.redirect_stdout(sys.stderr):
+                            self.resolve()
+                        self.flag("promote", "the line %s proved past main: %+.2f +/- %.2f over %d seeds; it is main now" % (head[:7], -d, se, n_),
+                                  key="proved:%s" % head[:12], progress=True)
+                    except SystemExit as e:
+                        print("resolve: %s" % e, file=sys.stderr)
+                    return []
+                if d / se >= 2:
+                    self.flag("line", "the line %s reads %+.2f +/- %.2f against main over %d seeds: under it; the anchor reads should undo it" % (head[:7], -d, se, n_),
+                              key="line-under:%s" % head[:12])
+        if time.time() - pf.get("last_at", 0) < self.PROOF_EVERY_MIN * 60 or self._built_everywhere() is False:
+            return []
+        remote, branch = self.push_target()
+        main = run(["git", "-C", self.tc, "rev-parse", "%s/%s" % (remote, branch)]).stdout.strip()
+        a, b = self.defaults_at(main), self.defaults_at(line["commit"])
+        vals = {k: a.get(k) for k in set(a) | set(b) if a.get(k) != b.get(k)}
+        lines = ["%s = %s" % (k, v) for k, v in sorted(vals.items()) if not k.startswith("caps:") and v is not None]
+        caps = [("" if vals[k] in (1, 1.0, "1") else "-") + k[5:] for k in sorted(vals) if k.startswith("caps:")]
+        if caps:
+            lines.append("caps = baseline, " + ", ".join(caps))
+        if not lines:
+            return []
+        text = "# the line's proof: main's values, read as a trial against the line\n" + "\n".join(lines) + "\n"
+        jobs = []
+        for k in range(2):
+            n_ = self.state["proof_n"] = self.state.get("proof_n", 0) + 1
+            jid = "pv%04d" % n_
+            jobs.append({"id": jid, "kind": "weights", "title": "proof %d of the line %s against main (%d seeds)" % (k + 1, line["commit"][:7], w["held_seeds"]),
+                         "needs": "cpu", "after_host": self.after_host(), "cmd": self.census_cmd(text, w["held_seeds"], 700000000 + 200000 * n_, jid),
+                         "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 6 * 3600, "priority": "high"})
+        pf.update({"jobs": [j["id"] for j in jobs], "head": line["commit"]})
+        return jobs
+
+    # ---- the board: one process, one screen ------------------------------------------------
+    # Paul, 1 November: "a single coherent process ... like a gantt chart, showing dependency,
+    # machine name, and expected duration, and their sequence with arrows ... Agile Kanban ...
+    # the one with most dependencies denoted as next essential". plan/pipeline.json is the whole
+    # document; orrery's Pipeline view draws it and decides nothing. Durations are the medians
+    # the fleet measured, never a hope, and a task nobody has built says "not built".
+    @staticmethod
+    def board(tasks, generation=None):
+        """Tasks in, with dependents, a schedule from now, and next essential. Each task: id,
+        title, state (done, running, ready, waiting, blocked, not built), deps, dur_min,
+        elapsed_min. A blocked task outranks a healthy one; among them, most dependents wins."""
+        by = {x["id"]: x for x in tasks}
+        kids = {x["id"]: [] for x in tasks}
+        for x in tasks:
+            for d in x["deps"]:
+                kids[d].append(x["id"])
+
+        def down(i, seen):
+            for k in kids[i]:
+                if k not in seen:
+                    seen.add(k)
+                    down(k, seen)
+            return seen
+        order, seen = [], set()
+
+        def visit(i):
+            if i not in seen:
+                seen.add(i)
+                for d in by[i]["deps"]:
+                    visit(d)
+                order.append(i)
+        for x in tasks:
+            visit(x["id"])
+        for i in order:
+            x = by[i]
+            x["dependents"] = len([k for k in down(i, set()) if by[k]["state"] != "done"])
+            start = max([by[d]["end_min"] for d in x["deps"]] or [0.0])
+            dur = float(x.get("dur_min") or 0)
+            if x["state"] == "done":
+                x["start_min"], x["end_min"] = 0.0, 0.0
+            elif x["state"] == "running":
+                x["start_min"] = -float(x.get("elapsed_min") or 0)
+                x["end_min"] = max(start, 0.0) + max(dur - float(x.get("elapsed_min") or 0), dur * 0.1)
+            else:
+                x["start_min"], x["end_min"] = start, start + dur
+            x["essential"] = False
+        open_ = [x for x in tasks if x["state"] != "done"]
+        stuck = [x for x in open_ if x["state"] in ("blocked", "not built")] or open_
+        if stuck:
+            max(stuck, key=lambda x: (x["dependents"], -tasks.index(x)))["essential"] = True
+        return tasks
+
+    def pipeline_view(self, new_jobs=()):
+        since = time.time() - 86400
+        secs, last, recent = {}, {}, []
+        for f in glob.glob(os.path.join(self.q, "done", "*.json")):
+            if os.path.getmtime(f) < since:
+                continue
+            j = load(f, {}) or {}
+            recent.append(j)
+            k = self.task_of(j)
+            if k:
+                secs.setdefault(k, []).append(j.get("seconds", 0))
+                last[k] = max(last.get(k, ""), j.get("ended", ""))
+        med = lambda k, d: (st.median(secs[k]) / 60.0 if secs.get(k) else d)
+        lanes = {}
+        for f in glob.glob(os.path.join(self.q, "lanes", "*.json")):
+            l = load(f, {}) or {}
+            lanes[os.path.basename(f)[:-5]] = l
+        names = {h["name"] for h in self.qcfg.get("hosts", [])}
+        live = {n: l for n, l in lanes.items() if n in names}
+        cpu = sorted(h["name"] for h in self.hosts)
+        cpu_up = [n for n in cpu if live.get(n, {}).get("state") not in ("unreachable", "stopped", "removed", None)]
+        n_up = max(1, len(cpu_up))
+        queued, on = {}, {}
+        for j in self.queue_jobs():
+            k = self.task_of(j)
+            if k:
+                queued.setdefault(k, []).append(j)
+        for n, l in live.items():
+            if l.get("job"):
+                k = self.task_of(l)
+                if k:
+                    on.setdefault(k, []).append((n, l))
+        d = dict(self.state.get("difficulty", {}))
+        line = self.state.get("local_line") or {}
+        proof = self.state.get("proof") or {}
+        short = self.short()
+        built = [h for h in self.hosts if self.prepared(h["name"])]
+        promote_lane = "mac" in names
+
+        def state(k, deps_done=True, blocked=None):
+            if blocked:
+                return "blocked"
+            if on.get(k):
+                return "running"
+            if queued.get(k) or deps_done:
+                return "ready" if deps_done else "waiting"
+            return "waiting"
+
+        def machines(k, dflt):
+            return sorted({n for n, _ in on.get(k, [])}) or dflt
+
+        def elapsed(k):
+            return max([(time.time() - l.get("since", time.time())) / 60 for _, l in on.get(k, [])] or [0])
+
+        down = sorted(n for n in cpu if n not in cpu_up)
+        # A CANDIDATE THAT PASSED AND WAS STOPPED BY A TEST IS THE LINE STOPPED, however busy every
+        # lane looks: the search goes on and nothing is carried. It says so where a person looks.
+        autos = [r for r in self.runs() if r["kind"] == "promote"]
+        stopped_by = None
+        if autos:
+            last_run = self.rstate(autos[-1]["id"])
+            if last_run.get("status") == "failed":
+                stopped_by = "%s stopped %s: %s" % (autos[-1]["id"], (autos[-1].get("params") or {}).get("candidate", ""), (last_run.get("why") or "")[:100])
+        tasks = [
+            {"id": "build", "title": "Build the generation", "track": "brain", "deps": [], "state": "done" if len(built) == len(self.hosts) else state("build"),
+             "machines": [h["name"] for h in self.hosts if not self.prepared(h["name"])] or cpu, "dur_min": med("build", 1.0), "elapsed_min": elapsed("build"),
+             "note": "%s on %d of %d machines" % (short, len(built), len(self.hosts))},
+            {"id": "search", "title": "Trials: the fit and the A/B", "track": "brain", "deps": ["build"], "state": state("search"), "machines": machines("search", cpu),
+             "dur_min": med("search", 3.0) * (1 + len(queued.get("search", [])) / n_up), "elapsed_min": elapsed("search"),
+             "note": "%d queued, %d running" % (len(queued.get("search", [])), len(on.get("search", [])))},
+            {"id": "read", "title": "Read on until decided", "track": "brain", "deps": ["search"], "state": state("read"), "machines": machines("read", cpu),
+             "dur_min": med("read", 2.0) * (1 + len(queued.get("read", [])) / n_up), "elapsed_min": elapsed("read"),
+             "note": "%d queued, %d running" % (len(queued.get("read", [])), len(on.get("read", [])))},
+            {"id": "held", "title": "Held-out read, 400 seeds", "track": "brain", "deps": ["read"], "state": state("held", bool(queued.get("held"))), "machines": machines("held", cpu),
+             "dur_min": med("held", 15.0), "elapsed_min": elapsed("held"), "note": "passes at z %.2f; %d waiting" % (d.get("held_z", 0), len(queued.get("held", [])))},
+            {"id": "families", "title": "Families hold their floors", "track": "brain", "deps": ["held"], "state": state("families", bool(queued.get("families"))), "machines": machines("families", cpu),
+             "dur_min": med("families", 10.0), "elapsed_min": elapsed("families"), "note": "%d waiting" % len(queued.get("families", []))},
+            {"id": "promote", "title": "Tests, then carried on the line", "track": "brain", "deps": ["families"],
+             "state": state("promote", bool(queued.get("promote")), stopped_by if not on.get("promote") and not queued.get("promote") else None if promote_lane or not queued.get("promote") else "no lane"),
+             "machines": ["mac"], "dur_min": med("promote", 2.0), "elapsed_min": elapsed("promote"),
+             "note": stopped_by or ("no lane can take it: the Mac's is off" if queued.get("promote") and not promote_lane else "generation %d this run" % d.get("generations", 0))},
+            {"id": "proof", "title": "The line read against main", "track": "brain", "deps": ["promote"], "state": state("proof", bool(line)), "machines": machines("proof", cpu),
+             "dur_min": 2 * med("proof", med("held", 15.0)) / min(2, n_up), "elapsed_min": elapsed("proof"),
+             "note": ("%d generation(s) on the line, last read %s" % (len(line.get("promotions", [])), json.dumps(proof.get("last")) if proof.get("last") else "not yet")) if line else "main has every generation"},
+            {"id": "main", "title": "Main: the game's brain", "track": "brain", "deps": ["proof"], "state": "waiting" if line else "done", "machines": ["mac"], "dur_min": 1.0,
+             "note": "z %.1f past main to go on it" % self.HELD_Z},
+            {"id": "transform", "title": "Transform: learned override", "track": "transform", "deps": ["build"], "state": state("transform", True), "machines": machines("transform", cpu),
+             "dur_min": med("transform", 3.0) * 100, "elapsed_min": elapsed("transform"), "note": "SPSA over 918 numbers, a census a step"},
+            {"id": "slot", "title": "The game reads a transform", "track": "transform", "deps": ["transform", "bridge"], "state": "not built", "machines": [], "dur_min": 0,
+             "note": "the game has no file for a slot, so nothing learned can ship"},
+            {"id": "islands", "title": "GPU islands: crucible", "track": "gpu", "deps": [], "state": state("islands", True), "machines": sorted(h["name"] for h in self.cuda),
+             "dur_min": med("islands", 1.0) * 6, "elapsed_min": elapsed("islands"), "note": "its own arena, senses and net"},
+            {"id": "bridge", "title": "Bridge: crucible into treadcore", "track": "gpu", "deps": ["islands"], "state": "not built", "machines": [], "dur_min": 0,
+             "note": "until built, GPU work cannot reach the game"},
+            {"id": "brain", "title": "One brain in treadcore", "track": "brain", "deps": ["main", "slot"], "state": "waiting", "machines": [], "dur_min": 0, "note": "rules, dials and transform as one"},
+        ]
+        self.board(tasks)
+        doc = {"checked": time.strftime("%Y-%m-%dT%H:%M:%S"), "commit": short, "difficulty": d, "tasks": tasks, "down": down,
+               "line": {"promotions": len(line.get("promotions", [])), "commit": (line.get("commit") or "")[:7]}, "proof": proof.get("last")}
+        # Each is for reading, and each alone may fail: the board above must still be written.
+        for name, part in (("values", self.values_view), ("flow", lambda: self.flow_view(recent)), ("timeline", lambda: self.timeline_view(recent, live)),
+                           ("queued", lambda: self.queued_view(live)), ("traces", lambda: self.trace_view(recent))):
+            try:
+                doc[name] = part()
+            except Exception as e:
+                print("pipeline %s: %s" % (name, e), file=sys.stderr)
+        save(os.path.join(self.pd, "pipeline.json"), doc)
+
+    @staticmethod
+    def stage_of(i, title=""):
+        """Which stage of line.json a job is, by its id and title. The GPU's, the builds' and
+        the runs' each have a shape; a job nothing names is `other`, and says so."""
+        if i.startswith("prep-"):
+            return "build"
+        if i.startswith("x-"):
+            return "islands"
+        if i.startswith("pv"):
+            return "proof"
+        if re.match(r"f\d+$", i):
+            return "families"
+        if i.endswith("-promote"):
+            return "promote"
+        if re.match(r"r\d+-k\d+", i):
+            return "transform"
+        if re.match(r"h\d+$", i):
+            return "held"
+        if re.match(r"e\d+$", i):
+            return "read"
+        if re.match(r"w\d+$", i):
+            return "anchor" if title.startswith("anchor") else "first"
+        return "other"
+
+    def archive_generations(self):
+        """A generation's record is written when it is made, not when someone remembers: a promotion
+        since the last look runs fleet-archive's snapshot, which is a fraction of a second of text."""
+        try:
+            done = [r for r in self.runs() if r["kind"] == "promote" and self.rstate(r["id"]).get("status") in ("approved", "self-modified", "failed")]
+            if len(done) != self.state.get("archived"):
+                tool = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "fleet-archive.py")
+                if run([sys.executable, tool, self.q, "snapshot"]).returncode == 0:
+                    self.state["archived"] = len(done)
+        except Exception as e:  # the record is for keeping; planning goes on
+            print("archive: %s" % e, file=sys.stderr)
+
+    def values_view(self):
+        """Each value of line.json as the run has it now: its number and whether a person moved it."""
+        d = self.state.get("difficulty", {})
+        out = []
+        for v in self.line.get("values", []):
+            if v["key"] == "ease_now":
+                now_ = d.get("base", v["default"])
+            elif v["key"] == "held_seeds":
+                now_ = (self.cfg.get("weights") or {}).get("held_seeds", v["default"])
+            else:
+                now_ = getattr(self, v["attr"], v["default"])
+            out.append({"key": v["key"], "value": round(now_, 3), "moved": v["key"] in self.tuned})
+        return out
+
+    def flow_view(self, recent):
+        """Per stage, the last day and the moment: jobs finished, machine-hours, waiting, running."""
+        out = {}
+        for j in recent:
+            k = self.stage_of(j.get("id", ""), j.get("title", ""))
+            r = out.setdefault(k, {"jobs": 0, "hours": 0.0, "queued": 0, "running": 0})
+            r["jobs"] += 1
+            r["hours"] += (j.get("seconds") or 0) / 3600.0
+        for j in self.queue_jobs():
+            out.setdefault(self.stage_of(j.get("id", ""), j.get("title", "")), {"jobs": 0, "hours": 0.0, "queued": 0, "running": 0})["queued"] += 1
+        for f in glob.glob(os.path.join(self.q, "running", "*", "*.json")):
+            j = load(f, {}) or {}
+            out.setdefault(self.stage_of(j.get("id", ""), j.get("title", "")), {"jobs": 0, "hours": 0.0, "queued": 0, "running": 0})["running"] += 1
+        for r in out.values():
+            r["hours"] = round(r["hours"], 1)
+        return out
+
+    TIMELINE_H = 6
+
+    def timeline_view(self, recent, live):
+        """Each lane: what it did (from the event log, measured), what it does, and what it would
+        do next: the queue dealt to the lanes in its own order at the medians of the last day. THE
+        RIGHT SIDE IS A FORECAST AND SAYS SO: no job is assigned until a lane is free to take it."""
+        now_, since = time.time(), time.time() - self.TIMELINE_H * 3600
+        path = os.path.join(self.q, "events.jsonl")
+        with open(path, "rb") as f:
+            f.seek(max(0, os.path.getsize(path) - 3000000))
+            lines = f.read().split(b"\n")[1:]
+        parse = lambda t: time.mktime(time.strptime(t, "%Y-%m-%dT%H:%M:%S"))
+        titles = {j.get("id"): j.get("title", "") for j in recent}
+        bars, open_ = {}, {}
+        for l in lines:
+            try:
+                e = json.loads(l)
+            except ValueError:
+                continue
+            ev, job = e.get("event"), e.get("job")
+            if not job:
+                continue
+            if ev == "started":
+                open_[job] = (parse(e["t"]), e.get("host"))
+            elif ev in ("done", "failed", "stopped", "requeued") and job in open_:
+                t0, host = open_.pop(job)
+                t1 = parse(e["t"])
+                if t1 >= since and host:
+                    bars.setdefault(host, []).append([round((max(t0, since) - now_) / 60, 1), round((t1 - now_) / 60, 1), self.stage_of(job, titles.get(job, "")), 1 if ev == "done" else 0])
+        med = {}
+        for j in recent:
+            med.setdefault(self.stage_of(j.get("id", ""), j.get("title", "")), []).append((j.get("seconds") or 0) / 60.0)
+        dur = lambda k: st.median(med[k]) if med.get(k) else 5.0
+        hosts, free, future = [h["name"] for h in self.qcfg.get("hosts", [])], {}, {}
+        for n in hosts:
+            l = live.get(n, {})
+            free[n] = None if l.get("state") in ("unreachable", "stopped", "removed", None) else 0.0
+            if l.get("job"):
+                k = self.stage_of(l["job"], l.get("title", ""))
+                gone = (now_ - l.get("since", now_)) / 60
+                left = max(dur(k) - gone, dur(k) * 0.1)
+                bars.setdefault(n, []).append([round(-gone, 1), 0.0, k, 2])
+                future.setdefault(n, []).append([0.0, round(left, 1), k])
+                free[n] = left
+        cpu = [h["name"] for h in self.qcfg.get("hosts", []) if "cpu" in h.get("caps", ["cpu"]) and free.get(h["name"]) is not None]
+        for j in self.queue_jobs():
+            need = j.get("needs") or "cpu"
+            pool = [need[5:]] if need.startswith("host:") else cpu if need == "cpu" else [n for n in hosts if free.get(n) is not None and need in next(h.get("caps", []) for h in self.qcfg["hosts"] if h["name"] == n)]
+            pool = [n for n in pool if free.get(n) is not None]
+            if not pool:
+                continue
+            n = min(pool, key=lambda x: free[x])
+            k = self.stage_of(j.get("id", ""), j.get("title", ""))
+            future.setdefault(n, []).append([round(free[n], 1), round(free[n] + dur(k), 1), k])
+            free[n] += dur(k)
+        marks = []
+        for t, rid, st_ in self.promotions():
+            if t >= since:
+                marks.append({"at": round((t - now_) / 60, 1), "kind": "generation", "text": rid})
+        for r in self.runs():
+            if r["kind"] == "promote" and self.rstate(r["id"]).get("status") == "failed":
+                try:
+                    t = os.path.getmtime(os.path.join(self.q, "logs", r["id"] + "-promote.log"))
+                except OSError:
+                    continue
+                if t >= since:
+                    marks.append({"at": round((t - now_) / 60, 1), "kind": "failed", "text": r["id"]})
+        d = self.state.get("difficulty", {})
+        if d.get("eases_at_min") is not None and d.get("dry_min") is not None:
+            marks.append({"at": round(d["eases_at_min"] - d["dry_min"], 1), "kind": "eases", "text": "easier"})
+        pf = self.state.get("proof") or {}
+        if self.state.get("local_line") and pf.get("last_at") and not pf.get("jobs"):
+            marks.append({"at": round(max(0.0, (pf["last_at"] + self.PROOF_EVERY_MIN * 60 - now_) / 60), 1), "kind": "proof", "text": "proof"})
+        lanes = []
+        for n in hosts:
+            lanes.append({"host": n, "up": free.get(n) is not None, "past": self.merge_bars(bars.get(n, [])), "next": future.get(n, [])[:12]})
+        return {"past_h": self.TIMELINE_H, "lanes": lanes, "marks": marks}
+
+    @staticmethod
+    def merge_bars(rows):
+        """A lane's bars in time order, touching ones of a stage as one: a second-long gap is not
+        worth a rectangle, and a day of 90-second jobs would be thousands."""
+        out = []
+        for a, b, k, ok in sorted(rows):
+            if out and out[-1][2] == k and a - out[-1][1] < 1.0 and out[-1][3] == ok:
+                out[-1][1] = b
+            else:
+                out.append([a, b, k, ok])
+        return out
+
+    def queued_view(self, live):
+        """What runs and what waits, each with why it is here. The reason is the stage's in
+        line.json; a held-out read adds the bar it must pass, which only the planner knows."""
+        why = {s["id"]: s["queued"] for s in self.line.get("stages", [])}
+        d = self.state.get("difficulty", {})
+
+        def row(j, state, host="", age=0.0):
+            i, title = j.get("job") or j.get("id") or "", j.get("title") or ""
+            k = self.stage_of(i, title)
+            text = why.get(k) or "A run someone asked for: it goes before the standing search."
+            if "carried to" in title:
+                text = "A pass the last generation overtook: read again on the new baseline, not thrown away."
+            if k == "held":
+                text = "%s Passes at z %.2f." % (text, d.get("held_z", 0))
+            return {"id": i, "stage": k, "title": title, "state": state, "host": host, "age_min": round(age, 1), "high": j.get("priority") == "high", "why": text}
+        out = [row(l, "running", n, (time.time() - l.get("since", time.time())) / 60) for n, l in sorted(live.items()) if l.get("job")]
+        out += [row(j, "queued", (j.get("needs") or "")[5:] if (j.get("needs") or "").startswith("host:") else "") for j in self.queue_jobs()[:60]]
+        return out
+
+    def trace_view(self, recent):
+        """The last trials that got as far as a held-out read, each followed through the line:
+        every read with its machine and time, the pooled z after it, and how it ended. This is
+        the visualizer's data: one trial's numbers, moving, from question to commit or to nothing."""
+        steps = {}
+        for j in recent:
+            title, i = j.get("title", ""), j.get("id", "")
+            m = re.match(r"(read on \d+|held-out read \d+) of (w\d+)", title)
+            if m:
+                steps.setdefault(m.group(2), []).append(j)
+            elif re.match(r"w\d+$", i):
+                steps.setdefault(i, []).append(j)
+        held = [t for t, js in steps.items() if any(x.get("title", "").startswith("held-out") for x in js)]
+        ended = {}
+        for r in self.runs():
+            cand = (r.get("params") or {}).get("candidate", "")
+            if r["kind"] == "promote" and cand.startswith(self.name + "/"):
+                st_ = self.rstate(r["id"])
+                ended[cand.split("/", 1)[1]] = {"run": r["id"], "status": st_.get("status", ""), "why": (st_.get("why") or "")[:90], "changed": st_.get("changed", [])[:4]}
+        out = []
+        for t in sorted(held, key=lambda x: max(j.get("ended", "") for j in steps[x]), reverse=True)[:8]:
+            rows, dirs, text = [], [], ""
+            for j in sorted(steps[t], key=lambda x: (0 if x["id"] == t else 1, x.get("ended", ""))):
+                ds = glob.glob(os.path.join(self.q, "results", j["id"], self.home, "out", j["id"], "*", ""))
+                if not ds:
+                    continue
+                dirs += ds
+                one, all_ = self.pool(ds), self.pool(dirs)
+                try:
+                    text = text or open(os.path.join(ds[0], "trial.weights")).read()
+                except OSError:
+                    pass
+                if not one or not all_:
+                    continue
+                d, se, n = one["every"]
+                pd_, pse, pn = all_["every"]
+                k = self.stage_of(j["id"], j.get("title", ""))
+                # A held-out read decides alone: its own z, not the pool's.
+                z = d / se if k == "held" and se else pd_ / pse if pse else 0.0
+                rows.append({"stage": k, "job": j["id"], "host": j.get("host", ""), "ended": j.get("ended", "")[11:16], "seeds": n, "d": round(d, 2), "se": round(se, 2), "z": round(z, 2)})
+            note = next((l[1:].strip() for l in text.splitlines() if l.startswith("#")), "")
+            moved = "; ".join(l.strip() for l in text.splitlines() if l.strip() and not l.startswith("#"))
+            out.append({"trial": t, "note": note[:70], "moved": moved[:110], "reads": rows, "ended": ended.get(t, {})})
+        return out
+
+    def queue_jobs(self):
+        return [load(f, {}) or {} for f in sorted(glob.glob(os.path.join(self.q, "queue", "*.json")))]
+
+    @staticmethod
+    def task_of(j):
+        """Which task on the board a job or a lane's job is."""
+        i, title = j.get("job") or j.get("id") or "", j.get("title") or ""
+        if i.startswith("prep-"):
+            return "build"
+        if i.startswith("x-"):
+            return "islands"
+        if i.startswith("pv"):
+            return "proof"
+        if re.match(r"f\d+$", i):
+            return "families"
+        if i.endswith("-promote"):
+            return "promote"
+        if re.match(r"r\d+-k\d+", i):
+            return "transform"
+        if title.startswith("held-out"):
+            return "held"
+        if title.startswith("read on"):
+            return "read"
+        if re.match(r"w\d+$", i):
+            return "search"
+        return None
+
+    def _built_everywhere(self):
+        return all(self.prepared(h["name"]) for h in self.hosts if h["name"] not in ("jaguaribe",)) if self.hosts else False
 
     def collect(self):
         rows = []

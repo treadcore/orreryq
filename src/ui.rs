@@ -78,6 +78,11 @@ pub struct UiState {
     pub down: bool,
     active: Option<u64>,
     pub focus: Option<u64>,
+    /// The "About this screen" panel (line.rs): which screen, and whether it is open.
+    pub about_key: String,
+    pub about_open: bool,
+    /// A tab inside a page, for the panel's key: the Algorhythm page's.
+    pub about_tab: String,
 }
 
 /// One thing typed: a key press, or text.

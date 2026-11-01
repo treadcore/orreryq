@@ -42,6 +42,8 @@ pub enum View {
     Projects,
     /// The queue: each machine and its job, and the runs (training.rs).
     Queue,
+    /// One process, its order, its machines and its next essential task (pipeline.rs).
+    Pipeline,
     /// What the queue found: candidates, improvements, the net, flags
     /// (training.rs).
     Results,
@@ -77,6 +79,7 @@ impl View {
             View::Storage => "Storage",
             View::Projects => "Projects",
             View::Queue => "Queue",
+            View::Pipeline => "Pipeline",
             View::Results => "Results",
             View::Lab => "Lab",
             View::Sessions => "Sessions",
@@ -88,13 +91,13 @@ impl View {
 
     /// Every view, chapter by chapter.
     pub const ALL: &'static [View] =
-        &[View::Machines, View::Media, View::Storage, View::Projects, View::Queue, View::Results, View::Lab, View::Sessions, View::Fleet, View::Chat, View::Settings];
+        &[View::Machines, View::Media, View::Storage, View::Projects, View::Queue, View::Pipeline, View::Results, View::Lab, View::Sessions, View::Fleet, View::Chat, View::Settings];
 
     pub fn chapter(&self) -> Chapter {
         match self {
             View::Machines | View::Media | View::Storage => Chapter::Machines,
             View::Projects => Chapter::Projects,
-            View::Queue => Chapter::Queue,
+            View::Queue | View::Pipeline => Chapter::Queue,
             View::Results => Chapter::Results,
             View::Lab | View::Sessions => Chapter::Watch,
             View::Fleet | View::Chat => Chapter::Fleet,
@@ -136,7 +139,7 @@ impl Chapter {
         match self {
             Chapter::Machines => &[View::Machines, View::Media, View::Storage],
             Chapter::Projects => &[View::Projects],
-            Chapter::Queue => &[View::Queue],
+            Chapter::Queue => &[View::Queue, View::Pipeline],
             Chapter::Results => &[View::Results],
             Chapter::Watch => &[View::Lab, View::Sessions],
             Chapter::Fleet => &[View::Fleet, View::Chat],
@@ -149,7 +152,7 @@ impl Chapter {
         match self {
             Chapter::Machines => &["1. Add a", "computer: probe", "it, set it up,", "join it."],
             Chapter::Projects => &["2. Give it work:", "treadcore on the", "CPUs, crucible", "on the GPUs."],
-            Chapter::Queue => &["3. The work runs:", "each machine's", "job, and the", "runs asked for."],
+            Chapter::Queue => &["3. The work runs:", "each machine, the", "line, what waits", "and why."],
             Chapter::Results => &["4. What it found:", "candidates", "promote", "themselves."],
             Chapter::Watch => &["5. Look in: the", "room, and every", "terminal."],
             Chapter::Fleet => &["6. Command it:", "ask what each is,", "then act on the", "answer."],
@@ -358,7 +361,23 @@ pub fn header(ui: &mut Ui, current: View, chords: bool, right: &str, keys: Optio
     } else {
         rest
     };
+    // Every screen says what it is for, in one place, or none would keep saying it.
+    let key = about_key(current, keys, &ui.s.about_tab);
+    let body = crate::line::about_bar(ui, body, &key);
     (body, go, page)
+}
+
+/// The key of this screen in line.json: its view, its page key, its tab. A key's count ("Flags 3")
+/// is not its name.
+pub fn about_key(current: View, keys: Option<&[Key]>, tab: &str) -> String {
+    let mut k = current.title().to_string();
+    if let Some(on) = keys.and_then(|ks| ks.iter().find(|x| x.on)) {
+        k = format!("{}/{}", k, on.label.split(' ').next().unwrap_or(""));
+        if !tab.is_empty() {
+            k = format!("{}/{}", k, tab);
+        }
+    }
+    k
 }
 
 /// The keyboard's way there: the platform's command modifier and a digit.

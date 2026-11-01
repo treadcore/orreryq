@@ -498,6 +498,8 @@ const TILE_H: i32 = 78;
 
 pub struct Layout {
     pub header: Rect,
+    /// "About this screen", over the room (line.rs).
+    pub about: Rect,
     pub rail: Rect,
     pub lab: Rect,
     pub bar: Rect,
@@ -510,7 +512,8 @@ pub fn layout(w: i32, h: i32) -> Layout {
     let (status, rest) = rest.cut_bottom(STATUS_H);
     let (bar, rest) = rest.cut_bottom(BAR_H);
     let (rail, lab) = rest.cut_left(RAIL_W);
-    Layout { header, rail, lab, bar, status }
+    let (about, lab) = lab.cut_top(20);
+    Layout { header, about, rail, lab, bar, status }
 }
 
 /// Where each tile goes, in node order.
@@ -551,7 +554,7 @@ fn temp_colour(t: &Theme, c: i64) -> Rgb {
 /// Draw the whole interface and return whatever the operator asked for.
 pub fn draw(ui: &mut Ui, m: &Model, lab: &mut Lab) -> Option<Action> {
     let (w, h) = (ui.c.w as i32, ui.c.h as i32);
-    let l = layout(w, h);
+    let mut l = layout(w, h);
     let t = ui.t;
     let mut action = None;
 
@@ -562,6 +565,8 @@ pub fn draw(ui: &mut Ui, m: &Model, lab: &mut Lab) -> Option<Action> {
     } else {
         ui.panel(rect(0, 0, w, h), t.base);
     }
+    ui.s.about_tab.clear();
+    l.lab = crate::line::about_bar(ui, rect(l.about.x, l.about.y, l.about.w, l.lab.bottom() - l.about.y), "Lab");
 
     if !m.error.is_empty() {
         // Unreadable JSON is itself a picture the operator should get, rather
@@ -1384,7 +1389,7 @@ mod tests {
         assert_eq!(l.status.bottom(), 600);
         assert_eq!(l.bar.bottom(), l.status.y);
         assert_eq!(l.rail.right(), l.lab.x);
-        assert_eq!(l.header.h + l.lab.h + l.bar.h + l.status.h, 600);
+        assert_eq!(l.header.h + l.about.h + l.lab.h + l.bar.h + l.status.h, 600);
     }
 
     #[test]

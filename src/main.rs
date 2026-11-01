@@ -36,6 +36,7 @@
 // meantime: nothing is in there that the whitelist does not name.
 #[allow(dead_code)]
 mod commands;
+mod line;
 mod crypto;
 mod draw;
 #[allow(dead_code)]
@@ -67,6 +68,7 @@ mod sessions;
 mod sftp;
 mod analysis;
 mod orchestrate;
+mod pipeline;
 mod storage;
 #[allow(dead_code)]
 mod ssh;
@@ -133,6 +135,8 @@ fn main() {
     // is training (training.rs). Empty: the view says how to give it one.
     let mut jobs_cmd = String::new();
     // The queue's controls (training.rs): `CMD stop-adding` and the rest.
+    // ORRERY_FRAME_ABOUT=1: the "About this screen" panels open, for review.
+    line::FRAME_OPEN.store(std::env::var("ORRERY_FRAME_ABOUT").is_ok(), std::sync::atomic::Ordering::Relaxed);
     let mut queue_ctl = String::new();
 
     let mut i = 0;
@@ -313,6 +317,8 @@ fn main() {
                 jobs_answer(&format!("{} status", orchestrate_cmd(&queue_ctl)))
             };
             Frame::Fleet { doc, select: frame_select.clone() }
+        } else if frame_view == "pipeline" {
+            Frame::Pipeline { doc: std::fs::read_to_string(&frame_state).unwrap_or_default() }
         } else if frame_view == "chat" {
             Frame::Chat { doc: std::fs::read_to_string(&frame_state).unwrap_or_default() }
         } else if frame_view == "machines" {
@@ -518,6 +524,11 @@ fn storage_cmd(queue_ctl: &str) -> String {
     }
 }
 
+/// fleet-tune.py beside fleet-queue.py: the values, apart, so that moving one restarts no keeper.
+fn tune_cmd(queue_ctl: &str) -> String {
+    queue_ctl.replacen("/fleet-queue.py ", "/fleet-tune.py ", 1)
+}
+
 /// orchestrate.py beside fleet-queue.py, as machines.py is.
 fn orchestrate_cmd(queue_ctl: &str) -> String {
     if queue_ctl.contains("/fleet-queue.py ") {
@@ -560,6 +571,8 @@ enum Frame {
     Storage { doc: String, select: Vec<String> },
     Fleet { doc: String, select: Vec<String> },
     Chat { doc: String },
+    /// The Pipeline's board, from a saved plan/pipeline.json.
+    Pipeline { doc: String },
     /// The machines' sessions, live: joined, then drawn after a wait
     /// (ORRERY_FRAME_WAIT seconds, 8 by default) for their screens to arrive.
     Sessions { fleet: String },
@@ -778,6 +791,20 @@ fn write_frame(
                 let mut u = ui::Ui::begin(&mut c, *theme, &[], &mut ui_state);
                 orchestrate::draw(&mut u, &m, &mut st);
             }
+            Frame::Pipeline { ref doc } => {
+                let m = pipeline::Model::parse(doc);
+                let mut ui_state = ui::UiState::default();
+                ui_state.pointer = (-1, -1);
+                let mut u = ui::Ui::begin(&mut c, *theme, &[], &mut ui_state);
+                let mut st = pipeline::State {
+                    page: std::env::var("ORRERY_FRAME_PAGE").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
+                    operator: std::env::var("ORRERY_FRAME_OPERATOR").is_ok(),
+                    ..Default::default()
+                };
+                let keys = pipeline::column_keys(st.page);
+                let (rest, _, _) = nav::header(&mut u, nav::View::Pipeline, false, "one process, one brain", Some(&keys));
+                pipeline::draw(&mut u, rest, &m, &mut st);
+            }
             Frame::Chat { ref doc } => {
                 let mut st = orchestrate::State::new(true);
                 let mut ui_state = ui::UiState::default();
@@ -879,6 +906,13 @@ fn write_frame(
 
 /// The jobs command's answer: its standard output, or a document that says
 /// why there is none (jobs.rs draws the reason).
+/// The queue's directory, from the command that controls it: `python3 .../fleet-queue.py 'DIR'`.
+fn queue_dir_of(ctl: &str) -> Option<String> {
+    let (_, rest) = ctl.split_once('\'')?;
+    let (dir, _) = rest.split_once('\'')?;
+    Some(dir.to_string())
+}
+
 fn jobs_answer(cmd: &str) -> String {
     match std::process::Command::new("sh").arg("-c").arg(cmd).output() {
         Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).into_owned(),
@@ -968,6 +1002,21 @@ fn gui_loop<S: surface::Surface>(
     let fleet_reply: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
     let fleet_shown = Arc::new(std::sync::atomic::AtomicBool::new(false));
     let chat_doc: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
+    // THE PIPELINE: the file the planner writes at each plan, read every five seconds.
+    let pipeline_doc: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
+    let pipeline_said: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
+    let mut pipeline_text = String::new();
+    let mut pipeline_model = pipeline::Model::default();
+    let mut pipeline_state = pipeline::State::default();
+    if let Some(dir) = queue_dir_of(queue_ctl) {
+        let doc = Arc::clone(&pipeline_doc);
+        thread::spawn(move || loop {
+            if let Ok(text) = std::fs::read_to_string(format!("{}/plan/pipeline.json", dir)) {
+                *doc.lock().unwrap_or_else(|e| e.into_inner()) = text;
+            }
+            thread::sleep(Duration::from_secs(5));
+        });
+    }
     let mut fleet_state = orchestrate::State::new(posture == lab::Posture::Operator && !ocmd.is_empty());
     if !ocmd.is_empty() {
         let doc = Arc::clone(&fleet_doc);
@@ -1315,6 +1364,9 @@ fn gui_loop<S: surface::Surface>(
                     let text = jobs_doc.lock().unwrap_or_else(|e| e.into_inner()).clone();
                     training_state.said = queue_said.lock().unwrap_or_else(|e| e.into_inner()).clone();
                     let go = training::draw(&mut u, &training::Model::parse(&text, &jobs_source), &mut training_state, v);
+                    if let Some(p) = training_state.pipeline_page.take() {
+                        pipeline_state.page = p;
+                    }
                     // A control runs on a thread: the queue's commands return at
                     // once, but a window that waits on a process stops drawing.
                     // A commit clicked on the Commits page: its page on GitHub,
@@ -1428,6 +1480,44 @@ fn gui_loop<S: surface::Surface>(
                                 Err(e) => format!("{}: {}", doing, e),
                             };
                             *said.lock().unwrap_or_else(|e| e.into_inner()) = msg;
+                        });
+                    }
+                    if let Some(v) = go {
+                        action = Some(lab::Action::Go(v));
+                    }
+                }
+                (None, nav::View::Pipeline) => {
+                    // Parsed when the file changes, not each frame: it holds six hours of lanes.
+                    {
+                        let text = pipeline_doc.lock().unwrap_or_else(|e| e.into_inner());
+                        if *text != pipeline_text {
+                            pipeline_text = text.clone();
+                            pipeline_model = pipeline::Model::parse(&pipeline_text);
+                        }
+                    }
+                    pipeline_state.said = pipeline_said.lock().unwrap_or_else(|e| e.into_inner()).clone();
+                    pipeline_state.operator = posture == lab::Posture::Operator;
+                    let keys = pipeline::column_keys(pipeline_state.page);
+                    let (rest, mut go, clicked) = nav::header(&mut u, nav::View::Pipeline, true, "one process, one brain", Some(&keys));
+                    match clicked {
+                        Some(i) if i < pipeline::QUEUE_KEYS.len() => {
+                            training_state.page = i;
+                            go = Some(nav::View::Queue);
+                        }
+                        Some(i) => pipeline_state.page = i - pipeline::QUEUE_KEYS.len(),
+                        None => {}
+                    }
+                    pipeline::draw(&mut u, rest, &pipeline_model, &mut pipeline_state);
+                    if let Some(ask) = pipeline_state.tune.take() {
+                        let cmd = format!("{} {}", tune_cmd(queue_ctl), ask);
+                        let said = Arc::clone(&pipeline_said);
+                        thread::spawn(move || {
+                            let out = std::process::Command::new("sh").arg("-c").arg(&cmd).output();
+                            let line = match out {
+                                Ok(o) => String::from_utf8_lossy(if o.stdout.is_empty() { &o.stderr } else { &o.stdout }).lines().last().unwrap_or("").to_string(),
+                                Err(e) => e.to_string(),
+                            };
+                            *said.lock().unwrap_or_else(|e| e.into_inner()) = line;
                         });
                     }
                     if let Some(v) = go {

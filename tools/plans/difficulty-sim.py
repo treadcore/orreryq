@@ -26,7 +26,9 @@ import re
 import statistics
 import sys
 
-SD = 4.9          # a seed's swing, a seat (the census's own, 29 October)
+# A seed's swing, a seat: 4.9 in the census's own first reading (29 October), 9.5 on this game
+# (1 November: the median first read, 1.27 over 55 seeds). --sd says which.
+SD = 9.5
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -61,11 +63,12 @@ def measure(m, q):
     return statistics.mean(ds), tau, seeds / 24.0
 
 
-def run(seq, held_z, base, held, ease, mu, tau, rate, n, tail=0.0, tail_mu=0.6):
+def run(seq, held_z, base, held, ease, mu, tau, rate, n, tail=0.0, tail_mu=0.6, keep_ease=None):
     seeds, got = 0, []
     for _ in range(n):
         g = random.gauss(tail_mu, 0.1) if random.random() < tail else random.gauss(mu, tau)
         s, tot, passed = 0, 0.0, False
+        ke = ease if keep_ease is None else min(ease, keep_ease)
         for m_, keep, ok in seq:
             k = int(round(m_ * base))
             tot += random.gauss(g * (k - s), SD * math.sqrt(k - s))
@@ -74,7 +77,7 @@ def run(seq, held_z, base, held, ease, mu, tau, rate, n, tail=0.0, tail_mu=0.6):
             if ok is not None and z >= ok - ease:
                 passed = True
                 break
-            if keep is None or z < keep - ease:
+            if keep is None or z < keep - ke:
                 break
         seeds += s
         if passed:
@@ -88,7 +91,9 @@ def run(seq, held_z, base, held, ease, mu, tau, rate, n, tail=0.0, tail_mu=0.6):
 
 def main():
     a = sys.argv[1:]
-    opt = {k: float(a[a.index(k) + 1]) for k in ("--mu", "--tau", "--rate", "--tail", "--tail-mu") if k in a}
+    global SD
+    opt = {k: float(a[a.index(k) + 1]) for k in ("--mu", "--tau", "--rate", "--tail", "--tail-mu", "--sd", "--keep") if k in a}
+    SD = opt.get("--sd", SD)
     q = a[0] if a and not a[0].startswith("--") else None
     m = planner()
     if q:
@@ -101,8 +106,11 @@ def main():
         mu, tau, ", %.1f%% of them +%.2f" % (100 * tail, tail_mu) if tail else "", SD, rate))
     print("ease   one every   true gain each   truly worse   gain a day")
     random.seed(1)
-    for ease in (0, 0.5, 1, 1.5, 2, 2.5, 3, 4):
-        r, mean, worse, day = run(m.Plan.SEQ, m.Plan.HELD_Z, 55, 800, ease, mu, tau, rate, 20000, tail, tail_mu)
+    keep = opt.get("--keep", m.Plan.KEEP_EASE)
+    held = int(opt.get("--held", 400))
+    print("the read-on bars eased at most %.2f; one held read of %d seeds" % (keep, held))
+    for ease in (0, 1, 1.5, 2, 2.2, 2.3, 2.4, 2.5, 2.6, 2.75, 3):
+        r, mean, worse, day = run(m.Plan.SEQ, m.Plan.HELD_Z, 55, held, ease, mu, tau, rate, 20000, tail, tail_mu, keep)
         every = "%6.0f min" % (60 / r) if r else "     never"
         print("%4.1f  %s       %+.2f          %3.0f%%        %+.2f%s" % (
             ease, every, mean, 100 * worse, day, "   (the floor)" if ease == m.Plan.EASE_MAX else ""))

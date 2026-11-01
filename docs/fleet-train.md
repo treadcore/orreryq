@@ -404,6 +404,15 @@ One that passes both is a candidate. Its families run next, with the
 families of every converge run in `families.converge`, newest first, 8 to
 a job side by side.
 
+### 3a. The values, and the record
+
+The difficulty is thirteen values, in `tools/plans/line.json`; move them on Queue, Values or with
+`python3 tools/fleet-tune.py QUEUE KEY VALUE` (`KEY default` puts one back). What has been moved is
+`QUEUE/tuning.json`, read at each plan, and no job restarts. Each generation writes its own record
+to `QUEUE/archive/generations/`; `tools/fleet-archive.py QUEUE pack bd25` packs the raw record and
+`verify` reads it back. [The Whole Line](whole-line-lab-report.html) says why, and how it all
+reaches the game.
+
 ### 4a. Auto mode: the cycle closes itself
 
 **Since 28 October the queue runs in auto mode** (config.json `"auto"`, on

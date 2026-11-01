@@ -99,6 +99,8 @@ pub struct Net {
 /// loop runs and clears.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct State {
+    /// A Pipeline page clicked in the Queue's column: main moves there.
+    pub pipeline_page: Option<usize>,
     pub zoom: Option<usize>,
     /// The Algorhythm page's tab and views.
     pub analysis: crate::analysis::State,
@@ -758,9 +760,21 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State, view: nav::View) -> Option<n
             nav::Key { label, on: st.page == p, lamp }
         })
         .collect();
+    // The Queue's column goes on into the Pipeline's pages: one chapter, one column, however many
+    // views it takes to draw them. A page nothing can click to is a page nobody finds.
+    let mut keys = keys;
+    if view == nav::View::Queue {
+        keys.extend(crate::pipeline::PAGES.iter().map(|p| nav::Key { label: p.to_string(), on: false, lamp: None }));
+    }
+    ui.s.about_tab = if results && st.page == 8 { crate::analysis::TABS[st.analysis.tab.min(crate::analysis::TABS.len() - 1)].to_string() } else { String::new() };
     let (rest, mut go, clicked) = nav::header(ui, view, true, &right, Some(&keys));
     if let Some(i) = clicked {
-        st.page = pages[i];
+        if i < pages.len() {
+            st.page = pages[i];
+        } else {
+            st.pipeline_page = Some(i - pages.len());
+            go = Some(nav::View::Pipeline);
+        }
     }
     if go == Some(view) {
         go = None;
@@ -1760,14 +1774,17 @@ fn draw_steps(ui: &mut Ui, at: Rect, m: &Model, lit: Option<usize>) {
 fn draw_queue(ui: &mut Ui, at: Rect, q: &Queue, st: &mut State) -> i32 {
     let t = ui.t;
     let sum = |i: usize| q.counts.iter().map(|(_, c)| c[i]).sum::<i64>();
-    let (queued, running, done, failed) = (sum(0), sum(1), sum(2), sum(3) + sum(4));
-    let total = (queued + running + done + failed).max(1);
+    let (queued, running, done, failed, retired) = (sum(0), sum(1), sum(2), sum(3), sum(4));
+    let total = (queued + running + done + failed + retired).max(1);
     let bw = if st.operator { at.w - 430 } else { at.w };
     let bar = rect(at.x, at.y, bw, 12);
     ui.panel(bar, t.tile);
     ui.outline(bar, t.line);
     let mut x = bar.x + 1;
-    for (n, c) in [(done, t.up), (running, t.accent), (failed, t.alarm)] {
+    // APART, AND NOT RED: 2,124 of the 2,270 stopped never ran. They were queued for a generation
+    // that was overtaken, and a retired job is not a failed one (Paul, 1 November, reading the
+    // bar: "I'm seeing lots of families fail"; no family job has ever failed).
+    for (n, c) in [(done, t.up), (running, t.accent), (retired, t.dim), (failed, t.alarm)] {
         let w = ((bar.w - 2) as i64 * n / total) as i32;
         ui.c.rect(x, bar.y + 1, w, bar.h - 2, c);
         x += w;
@@ -1776,8 +1793,8 @@ fn draw_queue(ui: &mut Ui, at: Rect, q: &Queue, st: &mut State) -> i32 {
     // The bar's key: it counts the queue's jobs, not a machine's load.
     // (label returns the x where its text ends.)
     let mut kx = ui.label(at.x, ly, "jobs: ", &F8X13, t.dim) + 2;
-    for (label, n, c) in [("done", done, t.up), ("running", running, t.accent), ("queued", queued, t.line), ("failed or stopped", failed, t.alarm)] {
-        if n == 0 && label.starts_with("failed") {
+    for (label, n, c) in [("done", done, t.up), ("running", running, t.accent), ("queued", queued, t.line), ("retired", retired, t.dim), ("failed", failed, t.alarm)] {
+        if n == 0 && (label == "failed" || label == "retired") {
             continue;
         }
         ui.c.rect(kx, ly + 3, 9, 9, c);

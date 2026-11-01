@@ -246,8 +246,15 @@ def remote(target, script, timeout=None, stdin=None, capture=True):
     no quoting is read twice, whatever the host's login shell."""
     b = b64encode(script.encode()).decode()
     cmd = ["bash", "-c", script] if target == "-" else SSH + [target, 'exec bash -c "$(echo %s | base64 -d)"' % b]
-    return subprocess.run(cmd, input=stdin, capture_output=capture, text=stdin is None or isinstance(stdin, str),
-                          timeout=timeout)
+    # ssh's own failure, 255, three times over half a minute before it is believed: the Copal
+    # machines reset a connection now and then (154 "unreachable" and 81 failed jobs in two days
+    # on saskatchewan, while it answered every other ssh), and one reset lost a finished read.
+    for attempt in range(3):
+        r = subprocess.run(cmd, input=stdin, capture_output=capture, text=stdin is None or isinstance(stdin, str),
+                           timeout=timeout)
+        if r.returncode != 255 or target == "-" or attempt == 2:
+            return r
+        time.sleep(15)
 
 
 def run_job(q, host, job, log):
@@ -319,12 +326,18 @@ def fetch(q, host, job, log):
     dest = q.p("results", job["id"])
     os.makedirs(dest, exist_ok=True)
     src = "tar -C ~ -cf - %s" % shlex.quote(rel)
-    a = subprocess.Popen(["bash", "-c", src] if host["target"] == "-" else SSH + [host["target"], src], stdout=subprocess.PIPE)
-    b = subprocess.run(["tar", "-C", dest, "-xf", "-"], stdin=a.stdout, capture_output=True)
-    a.wait()
-    with open(log, "a") as out:
-        out.write("fetched %s -> %s (%s)\n" % (rel, dest, "ok" if a.returncode == 0 and b.returncode == 0 else "FAILED"))
-    return a.returncode == 0 and b.returncode == 0
+    # A finished read is the dearest thing on the wire: a reset here cost the whole census.
+    for attempt in range(4):
+        a = subprocess.Popen(["bash", "-c", src] if host["target"] == "-" else SSH + [host["target"], src], stdout=subprocess.PIPE)
+        b = subprocess.run(["tar", "-C", dest, "-xf", "-"], stdin=a.stdout, capture_output=True)
+        a.wait()
+        ok = a.returncode == 0 and b.returncode == 0
+        with open(log, "a") as out:
+            out.write("fetched %s -> %s (%s)\n" % (rel, dest, "ok" if ok else "FAILED"))
+        if ok or a.returncode != 255:
+            return ok
+        time.sleep(15)
+    return False
 
 
 def deliver(q, host, job, log):
@@ -428,6 +441,10 @@ def starved(q, cfg, idle_s=None):
     for h in cfg["hosts"]:
         l = lane_file(q, h["name"])
         h = working(cfg, h)
+        # A lane for one kind of job (the Mac's, promotions alone) is not hungry: nothing the
+        # planner could add would feed it, and asking each minute is how a queue grew to 1,915.
+        if not {"cpu", "gpu", "cuda"} & set(h.get("caps", ["cpu"])):
+            continue
         if l.get("state") == "idle" and now() - l.get("since", now()) >= idle_s and not any(ready(h, j, done) for j in jobs):
             out.append(h["name"])
     return out
@@ -622,11 +639,15 @@ def work(q, host, j, say):
             os.rename(j["_file"], q.p("queue", os.path.basename(j["_file"])))
             q.event("requeued", job=j["id"], host=name, why="the keeper restarted for new code")
             return
-        elif not ok and rc == 255 and not reachable(host):
-            # ssh's own failure, and the host is gone: not the job's fault.
-            # It goes back on the queue for any host, its log kept.
+        elif not ok and rc == 255 and j.get("ssh_tries", 0) < 3:
+            # ssh's own failure: not the job's fault, whether or not the host answers a moment
+            # later. It goes back on the queue for any host, its log kept, three times at most.
             with open(log, "a") as out:
-                out.write("the host went away (ssh 255): the job goes back on the queue\n")
+                out.write("ssh failed (255): the job goes back on the queue\n")
+            j2 = {k: v for k, v in j.items() if k != "_file"}
+            j2["ssh_tries"] = j.get("ssh_tries", 0) + 1
+            with open(j["_file"], "w") as f:
+                json.dump(j2, f, indent=1)
             os.rename(j["_file"], q.p("queue", os.path.basename(j["_file"])))
             q.event("requeued", job=j["id"], host=name, why="host unreachable")
             return
@@ -1087,6 +1108,14 @@ def health(q):
             check("ok", "search", said + ": widened (bound %s, half of each generation wide trials)" % s.get("bound"))
         else:
             check("ok", "search", said)
+    # The line: generations carried, not yet proven past main.
+    try:
+        p = json.load(open(q.p("plan", "pipeline.json")))
+        if p.get("line", {}).get("promotions"):
+            check("ok", "line", "%d generation(s) carried on the line at %s; last proof %s" % (
+                p["line"]["promotions"], p["line"].get("commit"), json.dumps(p.get("proof")) if p.get("proof") else "not yet read"))
+    except (OSError, ValueError):
+        pass
     # The model slots (plan treadcore's models/models.tsv): the league of
     # learned brains the A/B reads against the rules, by generation.
     try:
@@ -1103,12 +1132,10 @@ def health(q):
     if d.get("since"):
         every = d.get("every_min", 240)
         ago = (now() - d["since"]) / 60
-        said = "bars lowered %.1f errors (held-out z %.1f), %s since %s, aiming at one each %s" % (
-            d.get("ease", 0), d.get("held_z", 3), took(ago * 60),
-            "the last promotion (%s)" % d["last_promotion"] if d.get("last_promotion") == d.get("seen") and d.get("last_gap_min") else "it began",
-            took(every * 60))
-        if d.get("ease", 0) >= d.get("floor", 1.5) and ago > 2 * every + 300:
-            check("warn", "difficulty", said + ": at its floor and no promotion")
+        said = "the ratchet: a generation passes at held-out z %.2f, %s since the last, generation %d of this run; harder each generation, easier after %d h dry" % (
+            d.get("held_z", 3), took(ago * 60), d.get("generations", 0), 4)
+        if d.get("ease", 0) >= d.get("floor", 3.0) and ago > 480:
+            check("warn", "difficulty", said + ": at its easiest and nothing found: the brain itself needs a change")
         else:
             check("ok", "difficulty", said)
     return out

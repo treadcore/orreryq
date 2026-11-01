@@ -66,6 +66,12 @@ def blocks(ls):
         if not s:
             i += 1
             continue
+        # A figure drawn by a script, as it is: !html(path), relative to the report.
+        m = re.match(r"^!html\((.+)\)$", s)
+        if m:
+            out.append(open(os.path.join(BASE, m.group(1))).read())
+            i += 1
+            continue
         if s.startswith("```"):
             lang = s[3:].strip()
             j = i + 1
