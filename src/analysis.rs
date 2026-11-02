@@ -656,7 +656,7 @@ fn draw_temper(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
     if control {
         ui.label_in(main.x, y, main.w, "THE CONTROL: these waves drive nothing, so this is what chance looks like.", &F8X13, t.warn);
     } else {
-        ui.label_in(main.x, y, main.w, "Less the control, cell by cell. Bright: past two errors of that difference. By chance alone, about one cell in twenty will be.", &F8X13, t.dim);
+        ui.label_in(main.x, y, main.w, "Less the control. Bright: past two errors, as one cell in twenty will be by chance.", &F8X13, t.dim);
     }
     y += lh + 2;
     let cells = arr(g, "cells");
