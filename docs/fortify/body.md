@@ -107,7 +107,7 @@ Everything above is read from logs. On 1 November the game ran in a window on `t
 | Rule | `w_pos_fortify` 1.5 | `w_pos_fortify` 0.4 |
 | --- | --- | --- |
 | R1, held-out, families, tests | **Passed:** the road carried it as `r0092` | Reads and families passed. Stopped by hand before the tests |
-| R2, line z 3 past main | `94a99be`, which holds 1.5, read **+1.97 +/- 0.41, z 4.82** over 800 seeds. Main did not move, for a fault in the planner: see Section VI | Read past z 3; main still to move at the next proof |
+| R2, line z 3 past main | `94a99be`, which holds 1.5, read **+1.97 +/- 0.41, z 4.82** over 800 seeds, and main did not move, for a fault in the planner: see Section VI. An hour later `d4002e5`, the same values but for `base_r` 8, read **-0.07 +/- 0.41** | Not met by the line as it stands. Main has not moved |
 | R3, a gain beyond walking | **Not shown:** +0.36 +/- 0.31, inside the noise | **Failed:** -0.30 +/- 0.41 |
 | R4, combat clearly worse | **No:** -0.05 +/- 0.05 | **Yes:** -0.17 +/- 0.05, z -3.1 |
 
@@ -163,7 +163,7 @@ treadcore --solo --autopilot --weights /tmp/fort.weights
 
 ## VIII. Threats and what is open
 
-**Pooled reads mix builds,** since the line moved between them: `r0090` and `h0351` on one commit, `r0097` and `r0098` on another, each with the base set to 6.0 by hand in the later ones. **The behaviour table has no column for 6.0,** since the census logs a trial team's rungs and not the baseline's. **R3 rests on 220 seeds,** so its error is larger than the 400-seed reads'. **Per-map bars are 20 seeds each.** **R2 has one read of the line with 1.5.** The proof before these generations read +0.54 +/- 0.35. **Nothing has reached main at this writing,** so the pictures show 6.0. **1.5 landed before its R3 and R4 reads were back,** because the road moved first; had it failed R4, it would have been taken back by hand.
+**Pooled reads mix builds,** since the line moved between them: `r0090` and `h0351` on one commit, `r0097` and `r0098` on another, each with the base set to 6.0 by hand in the later ones. **The behaviour table has no column for 6.0,** since the census logs a trial team's rungs and not the baseline's. **R3 rests on 220 seeds,** so its error is larger than the 400-seed reads'. **Per-map bars are 20 seeds each.** **R2 has one read of the line with 1.5.** The proof before these generations read +0.54 +/- 0.35. **Nothing has reached main at this writing,** so the pictures show 6.0. **The last two proofs disagree, and I cannot say why.** They differ by 2.04 +/- 0.58, z 3.5, lower on all eleven maps, and only `base_r` changed between them. Read directly, `base_r` 16 against the line is +0.03 +/- 0.39 over 400 seeds (`r0102`, on the line with `escort` off as well), so it does not explain the fall. Each proof's two jobs agree with each other, so the error within a proof looks honest. Either one read was lucky or something differs between them that I have not found. The four jobs pooled read +0.94 +/- 0.29. **Do not quote +1.97 as the gain.** **1.5 landed before its R3 and R4 reads were back,** because the road moved first; had it failed R4, it would have been taken back by hand.
 
 **Open:**
 
