@@ -1,9 +1,8 @@
 <figure>
-<svg viewBox="0 0 1000 560" width="100%" role="img" aria-label="The whole program's flow: a person and the bots give commands, the world steps, observations come back; the fleet reads censuses and moves main" style="font-family: var(--cond); max-width: 1000px;">
+<svg viewBox="0 0 1000 600" width="100%" role="img" aria-label="The whole program's flow: a person and the bots give commands, the world steps, observations come back; the fleet reads censuses and moves main" style="font-family: var(--cond); max-width: 1000px;">
   <defs><marker id="fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker></defs>
   <g font-size="14" fill="var(--ink)">
-    <!-- the game, top half -->
-    <rect x="20" y="20" width="960" height="250" rx="8" fill="none" stroke="var(--line)" stroke-dasharray="5 4"/>
+    <rect x="20" y="20" width="960" height="290" rx="8" fill="none" stroke="var(--line)" stroke-dasharray="5 4"/>
     <text x="36" y="42" font-size="13" fill="var(--dim)" letter-spacing="1">THE GAME, TWENTY TIMES A SECOND (treadcore-sim, -brain, -client, -net)</text>
     <rect x="40" y="60" width="180" height="70" rx="6" fill="var(--tile)" stroke="var(--line)"/>
     <text x="130" y="84" text-anchor="middle" font-weight="700">a person</text>
@@ -30,43 +29,44 @@
     <text x="880" y="138" text-anchor="middle" font-weight="700">Observation</text>
     <text x="880" y="158" text-anchor="middle" font-size="12" fill="var(--dim)">what seat p may see;</text>
     <text x="880" y="174" text-anchor="middle" font-size="12" fill="var(--dim)">events, the HUD's top strip</text>
-    <!-- the fleet, bottom half -->
-    <rect x="20" y="300" width="960" height="240" rx="8" fill="none" stroke="var(--line)" stroke-dasharray="5 4"/>
-    <text x="36" y="322" font-size="13" fill="var(--dim)" letter-spacing="1">THE FLEET, ONCE A MINUTE (orrery: the planner, the keeper, nine machines)</text>
-    <rect x="40" y="340" width="200" height="90" rx="6" fill="var(--tile)" stroke="var(--line)"/>
-    <text x="140" y="364" text-anchor="middle" font-weight="700">the planner</text>
-    <text x="140" y="382" text-anchor="middle" font-size="12" fill="var(--dim)">tools/plans/treadcore.py</text>
-    <text x="140" y="398" text-anchor="middle" font-size="12" fill="var(--dim)">trials, gates, the proof</text>
-    <text x="140" y="416" text-anchor="middle" font-size="12" fill="var(--accent)">trade guard · shape watch · gauntlet (new)</text>
-    <rect x="300" y="340" width="170" height="90" rx="6" fill="var(--tile)" stroke="var(--line)"/>
-    <text x="385" y="364" text-anchor="middle" font-weight="700">the keeper</text>
-    <text x="385" y="382" text-anchor="middle" font-size="12" fill="var(--dim)">tools/fleet-queue.py</text>
-    <text x="385" y="398" text-anchor="middle" font-size="12" fill="var(--dim)">a lane a machine; health</text>
-    <text x="385" y="416" text-anchor="middle" font-size="12" fill="var(--accent)">certificate check (new)</text>
-    <rect x="540" y="340" width="200" height="90" rx="6" fill="var(--tile)" stroke="var(--line)"/>
-    <text x="640" y="364" text-anchor="middle" font-weight="700">a census</text>
-    <text x="640" y="382" text-anchor="middle" font-size="12" fill="var(--dim)">treadcore-server --local, 400 seeds,</text>
-    <text x="640" y="398" text-anchor="middle" font-size="12" fill="var(--dim)">the trial team against today's;</text>
-    <text x="640" y="416" text-anchor="middle" font-size="12" fill="var(--dim)">pooled.txt, built, road, kills, deaths</text>
-    <rect x="800" y="340" width="160" height="90" rx="6" fill="var(--tile)" stroke="var(--line)"/>
-    <text x="880" y="364" text-anchor="middle" font-weight="700">main</text>
-    <text x="880" y="382" text-anchor="middle" font-size="12" fill="var(--dim)">a generation lands;</text>
-    <text x="880" y="398" text-anchor="middle" font-size="12" fill="var(--dim)">every machine builds it;</text>
-    <text x="880" y="416" text-anchor="middle" font-size="12" fill="var(--dim)">the site's reports</text>
-    <rect x="300" y="460" width="440" height="60" rx="6" fill="var(--tile)" stroke="var(--line)"/>
-    <text x="520" y="484" text-anchor="middle" font-weight="700">the console (orrery, six chapters)</text>
-    <text x="520" y="504" text-anchor="middle" font-size="12" fill="var(--accent)">Personas · Gauntlet · Ranges pages, the hold's Release (new)</text>
+    <text x="500" y="290" text-anchor="middle" font-size="12" fill="var(--dim)">the observation goes back to every brain and to the window, which draws it and decides again</text>
+    <rect x="20" y="340" width="960" height="240" rx="8" fill="none" stroke="var(--line)" stroke-dasharray="5 4"/>
+    <text x="36" y="362" font-size="13" fill="var(--dim)" letter-spacing="1">THE FLEET, ONCE A MINUTE (orrery: the planner, the keeper, nine machines)</text>
+    <rect x="40" y="380" width="200" height="90" rx="6" fill="var(--tile)" stroke="var(--line)"/>
+    <text x="140" y="404" text-anchor="middle" font-weight="700">the planner</text>
+    <text x="140" y="422" text-anchor="middle" font-size="12" fill="var(--dim)">tools/plans/treadcore.py</text>
+    <text x="140" y="438" text-anchor="middle" font-size="12" fill="var(--dim)">trials, gates, the proof</text>
+    <text x="140" y="456" text-anchor="middle" font-size="12" fill="var(--accent)">trade guard · shape watch · gauntlet</text>
+    <rect x="300" y="380" width="170" height="90" rx="6" fill="var(--tile)" stroke="var(--line)"/>
+    <text x="385" y="404" text-anchor="middle" font-weight="700">the keeper</text>
+    <text x="385" y="422" text-anchor="middle" font-size="12" fill="var(--dim)">tools/fleet-queue.py</text>
+    <text x="385" y="438" text-anchor="middle" font-size="12" fill="var(--dim)">a lane a machine; health</text>
+    <text x="385" y="456" text-anchor="middle" font-size="12" fill="var(--accent)">certificate check (new)</text>
+    <rect x="540" y="380" width="200" height="90" rx="6" fill="var(--tile)" stroke="var(--line)"/>
+    <text x="640" y="404" text-anchor="middle" font-weight="700">a census</text>
+    <text x="640" y="422" text-anchor="middle" font-size="12" fill="var(--dim)">treadcore-server --local, 400 seeds,</text>
+    <text x="640" y="438" text-anchor="middle" font-size="12" fill="var(--dim)">the trial team against today's;</text>
+    <text x="640" y="456" text-anchor="middle" font-size="12" fill="var(--dim)">pooled.txt, built, road, kills, deaths</text>
+    <rect x="800" y="380" width="160" height="90" rx="6" fill="var(--tile)" stroke="var(--line)"/>
+    <text x="880" y="404" text-anchor="middle" font-weight="700">main</text>
+    <text x="880" y="422" text-anchor="middle" font-size="12" fill="var(--dim)">a generation lands;</text>
+    <text x="880" y="438" text-anchor="middle" font-size="12" fill="var(--dim)">every machine builds it;</text>
+    <text x="880" y="456" text-anchor="middle" font-size="12" fill="var(--dim)">the site's reports</text>
+    <rect x="300" y="505" width="440" height="60" rx="6" fill="var(--tile)" stroke="var(--line)"/>
+    <text x="520" y="529" text-anchor="middle" font-weight="700">the console (orrery, six chapters)</text>
+    <text x="520" y="549" text-anchor="middle" font-size="12" fill="var(--accent)">Personas · Gauntlet · Ranges pages, the hold's Release (new)</text>
+    <text x="150" y="545" text-anchor="middle" font-size="12" fill="var(--dim)">reads pipeline.json and</text>
+    <text x="150" y="560" text-anchor="middle" font-size="12" fill="var(--dim)">treadcore-view.py's document</text>
+    <text x="760" y="330" font-size="12" fill="var(--dim)">the same simulator plays the censuses</text>
   </g>
   <g stroke="var(--accent)" stroke-width="1.5" fill="none" marker-end="url(#fa)">
     <path d="M220 95 L298 135"/><path d="M220 205 L298 165"/><path d="M470 150 L538 150"/><path d="M740 150 L798 150"/>
-    <path d="M880 190 C880 240 130 250 130 158"/><path d="M880 190 C880 230 130 240 130 132" opacity="0"/>
-    <path d="M240 385 L298 385"/><path d="M470 385 L538 385"/><path d="M740 385 L798 385"/>
-    <path d="M880 430 C880 460 140 470 140 432"/>
-    <path d="M520 460 L520 435" stroke-dasharray="3 3"/>
-    <path d="M640 250 L640 338" stroke-dasharray="3 3"/>
+    <path d="M880 190 L880 265 L130 265 L130 252"/>
+    <path d="M240 425 L298 425"/><path d="M470 425 L538 425"/><path d="M740 425 L798 425"/>
+    <path d="M880 470 L880 490 L140 490 L140 472"/>
+    <path d="M300 535 L240 535 L240 472" stroke-dasharray="3 3"/>
+    <path d="M740 250 L740 378" stroke-dasharray="3 3"/>
   </g>
-  <text x="655" y="300" font-size="12" fill="var(--dim)">the same simulator plays the censuses</text>
-  <text x="500" y="455" font-size="12" fill="var(--dim)" text-anchor="middle">reads pipeline.json and treadcore-view.py's document</text>
 </svg>
 <figcaption>Fig. 1. The whole program's flow. The top half runs twenty times a second: commands from a person and from the bots into one deterministic world, observations back out. The bottom half runs once a minute: the planner asks the machines for censuses of the same simulator, gates what they find, and moves main. What is new today is marked in the accent.</figcaption>
 </figure>
