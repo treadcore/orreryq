@@ -342,6 +342,8 @@ pub struct Model {
     /// plan of 2 November, chapter 14: every feature an element).
     pub ranges: Option<json::Value>,
     pub personas: Option<json::Value>,
+    /// The gauntlet's last record: items by brains (the plan, chapter 15).
+    pub gauntlet: Option<json::Value>,
     pub quality: Option<Quality>,
     pub queue: Option<Queue>,
 }
@@ -612,6 +614,7 @@ impl Model {
         m.long_run = v.get("long_run").cloned();
         m.ranges = v.get("ranges").cloned();
         m.personas = v.get("personas").cloned();
+        m.gauntlet = v.get("gauntlet").cloned();
         if let Some(x) = v.get("algorhythm").filter(|x| x.get("dials").is_some()) {
             let num = |v: &json::Value, k: &str| v.get(k).and_then(|n| n.as_num()).unwrap_or(0.0);
             m.algo = Some(Algo {
@@ -714,14 +717,15 @@ fn bar(ui: &mut Ui, r: Rect, frac: f64, c: Rgb) {
 /// the Results' (Candidates, Found, Net, Flags) and the Settings' (Keeper,
 /// Commits), by page number.
 const QUEUE_PAGES: [usize; 2] = [0, 1];
-const RESULTS_PAGES: [usize; 6] = [5, 2, 3, 8, 10, 4];
+const RESULTS_PAGES: [usize; 7] = [5, 2, 3, 8, 10, 12, 4];
 const SETTINGS_PAGES: [usize; 4] = [6, 9, 11, 7];
 
 /// (page number, name, what it shows). Candidates came after the rest and
 /// keeps the number 5, so ORRERY_FRAME_PAGE and a saved page mean what they
-/// meant. Personas (10) and Ranges (11) came on 2 November.
-const PAGES: [(usize, &str, &str); 12] = [
+/// meant. Personas (10), Ranges (11) and Gauntlet (12) came on 2 November.
+const PAGES: [(usize, &str, &str); 13] = [
     (10, "Personas", "the roster of styles and personas: what each plays, its dials over today's defaults, and its last census read"),
+    (12, "Gauntlet", "the single-decision tests: a row a gauntlet, a column a brain, the share passed; red under the file's floor"),
     (11, "Ranges", "the brain's RANGES: every number's limits, the decrees, and the reason beside each; only Paul decrees"),
     (0, "Fleet", "each machine and its job"),
     (1, "Runs", "ask for a run, cancel, accept"),
@@ -868,6 +872,7 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State, view: nav::View) -> Option<n
             9 => draw_long_run(ui, page, m, st),
             10 => draw_personas(ui, page, m),
             11 => draw_ranges(ui, page, m, st),
+            12 => draw_gauntlet(ui, page, m),
             7 => draw_commits_page(ui, page, q, st),
             3 => {
                 if let Some(i) = draw_net(ui, page, m) {
@@ -1581,6 +1586,55 @@ fn draw_personas(ui: &mut Ui, at: Rect, m: &Model) {
         });
         tip.push("Source: styles.rs, profiles/, and the queue's runs.".to_string());
         ui.tip(rect(at.x, y, at.w, lh), || tip.clone());
+        y += lh;
+    }
+}
+
+/// Results, Gauntlet: the last record of `make gauntlet` or the nightly job, a grid of items by
+/// brains, each cell the share passed; red under the file's floor, green at or over it; the error,
+/// the runs and the reaction's median on hover (the plan, chapter 15).
+fn draw_gauntlet(ui: &mut Ui, at: Rect, m: &Model) {
+    let t = ui.t;
+    let lh = F8X13.height as i32 + 4;
+    let Some(g) = m.gauntlet.as_ref().filter(|g| g.get("rows").is_some()) else {
+        ui.label_in(at.x, at.y, at.w, "No record yet: the gauntlet writes build/train/gauntlet.tsv when it runs (nightly on this Mac, or `make gauntlet`).", &F8X13, t.dim);
+        return;
+    };
+    let strs = |k: &str| -> Vec<String> { g.get(k).and_then(|x| x.as_array()).map(|a| a.iter().filter_map(|s| s.as_str().map(|s| s.to_string())).collect()).unwrap_or_default() };
+    let (brains, items) = (strs("brains"), strs("items"));
+    let rows: Vec<json::Value> = g.get("rows").and_then(|x| x.as_array()).map(|a| a.to_vec()).unwrap_or_default();
+    let mut y = at.y;
+    ui.label_in(at.x, y, at.w, &format!("Read {}: {} gauntlets, {} brains, the share of seeds each passed. The floor is each file's; a cell under it is red.", g.get("at").and_then(|x| x.as_str()).unwrap_or("?"), items.len(), brains.len()), &F8X13, t.dim);
+    y += lh + 6;
+    let item_w = (F8X13.measure("G11 cover the leader against what appears ahead ") as i32).min(at.w / 2);
+    let col_w = F8X13.measure("untrained  ") as i32 + 6;
+    for (j, b) in brains.iter().enumerate() {
+        ui.label_in(at.x + item_w + col_w * j as i32, y, col_w - 4, b, &F8X13, t.dim);
+    }
+    y += lh + 2;
+    for it in &items {
+        if y + lh > at.bottom() {
+            break;
+        }
+        ui.label_in(at.x + 4, y, item_w - 8, it, &F8X13, t.ink);
+        for (j, b) in brains.iter().enumerate() {
+            let Some(r) = rows.iter().find(|r| r.get("item").and_then(|x| x.as_str()) == Some(it.as_str()) && r.get("brain").and_then(|x| x.as_str()) == Some(b.as_str())) else { continue };
+            let share = r.get("share").and_then(|x| x.as_num()).unwrap_or(0.0);
+            let floor = r.get("floor").and_then(|x| x.as_num());
+            let colour = match floor {
+                Some(f) if share < f => t.alarm,
+                Some(_) => t.up,
+                None => t.ink,
+            };
+            let x = at.x + item_w + col_w * j as i32;
+            ui.label(x, y, &format!("{:>5.1}%", 100.0 * share), &F8X13, colour);
+            let (se, runs, re) = (r.get("se").and_then(|x| x.as_num()).unwrap_or(0.0), r.get("runs").and_then(|x| x.as_num()).unwrap_or(0.0) as i64, r.get("reaction").and_then(|x| x.as_str()).unwrap_or(""));
+            ui.tip(rect(x, y, col_w, lh), || vec![
+                format!("{} / {}: {:.1}% +/- {:.1} of {} seeds{}", it, b, 100.0 * share, 100.0 * se, runs, floor.map(|f| format!("; the floor is {:.0}%", 100.0 * f)).unwrap_or_default()),
+                if re.is_empty() { "No reaction timed.".to_string() } else { format!("Reaction, median: {} s.", re) },
+                "Source: build/train/gauntlet.tsv; the files are scenarios/gauntlet/.".to_string(),
+            ]);
+        }
         y += lh;
     }
 }

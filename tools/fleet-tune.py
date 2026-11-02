@@ -48,8 +48,30 @@ def main(a):
             now = live.get(v["key"], {}).get("value", asked.get(v["key"], v["default"]))
             print("%-18s %8s %-12s %s  default %s, %s to %s" % (v["key"], now, v["unit"], "moved" if v["key"] in asked else "     ", v["default"], v["min"], v["max"]))
         return
+    # `hold DIAL VALUE` and `hold DIAL off`: QUEUE/hold.json, a dial's value a person has held (the plan of
+    # 2 November, chapter 14: the hold was a file with no button). A trial setting the dial to that
+    # value does not promote itself; its reads go on. The planner reads the file at each plan.
+    if len(a) == 4 and a[1] == "hold":
+        hp = os.path.join(q, "hold.json")
+        hold = load(hp, {}) or {}
+        dial, val = a[2], a[3]
+        if val == "off":
+            hold.pop(dial, None)
+            said = "%s is no longer held" % dial
+        else:
+            try:
+                hold[dial] = float(val)
+            except ValueError:
+                sys.exit("%s is not a number" % val)
+            said = "%s held at %s: a trial there waits for a person" % (dial, hold[dial])
+        save(hp, hold)
+        with open(os.path.join(q, "events.jsonl"), "a") as f:
+            import time
+            f.write(json.dumps({"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "event": "hold", "text": said}) + "\n")
+        print(said)
+        return
     if len(a) != 3:
-        sys.exit("usage: fleet-tune.py QUEUE [KEY VALUE | KEY default]")
+        sys.exit("usage: fleet-tune.py QUEUE [KEY VALUE | KEY default | hold DIAL VALUE | hold DIAL off]")
     key, val = a[1], a[2]
     v = next((x for x in table() if x["key"] == key), None)
     if not v:

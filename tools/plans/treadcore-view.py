@@ -446,10 +446,52 @@ def personas():
     return out
 
 
+def gauntlet():
+    """The gauntlet's last record (build/train/gauntlet.tsv, written by `make gauntlet` or the nightly
+    job): a row an item, a column a brain, the share passed with its error and the reaction's median;
+    the floor from each gauntlet file, so a cell under it can be red (the plan, chapter 15)."""
+    path = os.path.join(TC, "build", "train", "gauntlet.tsv")
+    try:
+        lines = read(path).splitlines()
+    except OSError:
+        return None
+    if len(lines) < 2:
+        return None
+    floors = {}
+    for f in glob.glob(os.path.join(TC, "scenarios", "gauntlet", "*.toml")):
+        name, floor = "", None
+        for l in read(f).splitlines():
+            m = re.match(r'\s*name\s*=\s*"([^"]+)"', l)
+            if m:
+                name = m.group(1)
+            m = re.match(r"\s*floor\s*=\s*([\d.]+)", l)
+            if m:
+                floor = float(m.group(1))
+        if name:
+            floors[name] = floor
+    head = lines[0].split("\t")
+    rows, brains = [], []
+    for l in lines[1:]:
+        f = dict(zip(head, l.split("\t")))
+        try:
+            rows.append({"item": f["item"], "brain": f["brain"], "share": float(f["share"]), "se": float(f["se"]), "runs": int(f["runs"]),
+                         "reaction": f.get("reaction_median", ""), "floor": floors.get(f["item"])})
+        except (KeyError, ValueError):
+            continue
+        if f["brain"] not in brains:
+            brains.append(f["brain"])
+    items = []
+    for r in rows:
+        if r["item"] not in items:
+            items.append(r["item"])
+    return {"at": time.strftime("%Y-%m-%dT%H:%M", time.localtime(os.path.getmtime(path))), "brains": brains, "items": items, "rows": rows}
+
+
 if __name__ == "__main__":
     run = newest_run()
     qd = queue()
     doc = {"fleet": FLEET, "queue": qd, "project": "treadcore", "at": time.strftime("%H:%M:%S"),
            "machines": machines(run, qd), "run": run, "loop": loop(), "net": net(), "algorhythm": algorhythm(), "analysis": analysis(), "long_run": long_run(), "quality": quality(),
-           "ranges": ranges(), "personas": personas()}
+           "ranges": ranges(), "personas": personas(), "gauntlet": gauntlet(),
+           "held": (lambda p: (lambda t: json.loads(t) if t.strip() else {})(read(p)))(os.path.join(QDIR, "hold.json")) if QDIR else {}}
     print(json.dumps(doc))

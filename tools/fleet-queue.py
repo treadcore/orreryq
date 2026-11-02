@@ -99,6 +99,7 @@ job. A remote job runs in its own process group, its pid kept on the host,
 so `stop-now` can stop all of it.
 """
 import glob
+import re
 import hashlib
 import json
 import os
@@ -997,6 +998,24 @@ def health(q):
         check("bad", "heartbeat", "no beat for %s: the keeper is alive but its loop is stuck" % took(beat or 0))
     else:
         check("ok", "heartbeat", "last beat %s ago" % took(beat))
+    # The operator's certificate (the plan of 2 November, chapter 14: a warning before it expires). An
+    # expired one once dialled every machine and had this Mac penalised for a day before anyone knew.
+    for cert in sorted(glob.glob(os.path.expanduser("~/.copal/fleets/*/operator-cert.pub"))):
+        fleet = os.path.basename(os.path.dirname(cert))
+        try:
+            said = subprocess.run(["ssh-keygen", "-L", "-f", cert], capture_output=True, text=True, timeout=10).stdout
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        m = re.search(r"Valid: from \S+ to (\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)", said)
+        if not m:
+            continue
+        left = time.mktime(time.strptime(m.group(1), "%Y-%m-%dT%H:%M:%S")) - now()
+        if left <= 0:
+            check("bad", "certificate", "%s's operator certificate expired at %s: every button and the chat room fail until Renew (Fleet)" % (fleet, m.group(1)[11:16]))
+        elif left < 24 * 3600:
+            check("warn", "certificate", "%s's operator certificate runs out in %s, at %s: Renew it (Fleet) before then" % (fleet, took(left), m.group(1).replace("T", " ")))
+        else:
+            check("ok", "certificate", "%s's operator certificate is good for %s" % (fleet, took(left)))
     disk = code_id()
     lose = info.get("restart_lose_s", 600)
     held = ("; %s's %s is %s in" % (oldest[0], oldest[1].get("title") or oldest[1]["job"], took(now() - oldest[1]["since"]))

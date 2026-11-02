@@ -1256,8 +1256,9 @@ class Plan:
     WIDTH_EVERY = 20
     WIDTH_SEEDS = 240
     WIDTH_BAR = 1.0
-    WIDTHS = (32, 64, 128)
-    WIDTH_NOW = 64
+    # The shapes (the plan of 2 November, chapter 12): widths at two hidden layers, and one deeper.
+    WIDTHS = ("32", "64", "128", "64x3")
+    WIDTH_NOW = "64"
 
     def width_watch(self):
         """The watch's next step: jobs, if any are due."""
@@ -1282,10 +1283,13 @@ class Plan:
                 return []
             jid = "width-%04d" % wd["n"]
             wd["job"] = jid
+            # A SHAPE WATCH (the plan of 2 November, chapter 12): widths and depths alike, "64" two
+            # hidden layers of 64 as ever, "64x3" three of them; tools/bc takes WIDTH and DEPTH.
             loop = "".join(
-                "WIDTH=%d GPU_GB=1 BC_DEVICE=cuda %s/treadcore-bc ~/fleet/%s/shards $D/w%d.bin 12 32768 0.01 > $D/w%d.log 2>&1 || echo failed at %d\n" % (w, self.cdir(), wd["name"], w, w, w)
-                for w in self.WIDTHS)
-            return [{"id": jid, "kind": "net", "title": "the width watch: the same data at %s" % ", ".join(str(w) for w in self.WIDTHS),
+                "WIDTH=%d DEPTH=%d GPU_GB=1 BC_DEVICE=cuda %s/treadcore-bc ~/fleet/%s/shards $D/w%s.bin 12 32768 0.01 > $D/w%s.log 2>&1 || echo failed at %s\n"
+                % (self.shape(s)[0], self.shape(s)[1], self.cdir(), wd["name"], s, s, s)
+                for s in self.WIDTHS)
+            return [{"id": jid, "kind": "net", "title": "the shape watch: the same data at %s" % ", ".join(str(w) for w in self.WIDTHS),
                      "needs": "host:" + gpu[0]["name"], "after": [self.prep_id(gpu[0]["name"])],
                      "cmd": "D=~/%s/out/%s; mkdir -p $D\n%sgrep -h 'drive\\|gun' $D/w*.log | tail -8\n" % (self.home, jid, loop),
                      "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 4 * 3600}]
@@ -1300,12 +1304,44 @@ class Plan:
         wd["run"] = self.new_run("record", {"run": wd["name"], "count": self.WIDTH_SEEDS, "per": 12, "secs": 600, "seed0": 9200000 + 100000 * wd["n"]}, "auto")
         return []
 
+    # THE GAUNTLET, NIGHTLY (the plan of 2 November, chapter 15): every single-decision file in
+    # scenarios/gauntlet, for the rules, the untrained net and every net in nets/, on this Mac's checkout
+    # of main, written to build/train/gauntlet.tsv, which Results, Gauntlet reads. Once each
+    # GAUNTLET_EVERY_H hours; 0 turns it off. The Mac, because it is the one machine with the checkout
+    # the people read, and the gauntlet is minutes.
+    GAUNTLET_EVERY_H = 24
+
+    def gauntlet_watch(self):
+        g = self.state.setdefault("gauntlet", {})
+        if g.get("job"):
+            if g["job"] not in self.ids("done", "failed", "stopped"):
+                return []
+            g["last_at"] = time.time()
+            self.flag("gauntlet", "the gauntlet ran (%s): Results, Gauntlet has the record" % g["job"], key="gauntlet:%s" % g["job"], progress=True)
+            g.pop("job", None)
+            return []
+        if not self.GAUNTLET_EVERY_H or time.time() - g.get("last_at", 0) < self.GAUNTLET_EVERY_H * 3600:
+            return []
+        jid = "gauntlet-%s" % time.strftime("%m%d-%H%M")
+        g["job"] = jid
+        cmd = ("set -o pipefail; [ -f ~/.cargo/env ] && . ~/.cargo/env; export PATH=$HOME/.cargo/bin:/opt/homebrew/bin:$PATH\n"
+               "cd ~/code/treadcore || exit 1\n"
+               "GAUNTLET=1 GAUNTLET_RUNS=100 OUT=build/train cargo test -q -p treadcore-brain --release --lib -- --ignored train --nocapture 2>&1 | tail -60\n")
+        return [{"id": jid, "kind": "gauntlet", "title": "the gauntlet: every single decision, the rules and every net, 100 seeds each", "needs": "host:mac", "cmd": cmd, "timeout_s": 2 * 3600}]
+
+    @staticmethod
+    def shape(s):
+        """A shape's (width, depth) from "64" or "64x3"."""
+        w, _, d = str(s).partition("x")
+        return int(w), int(d or 2)
+
     def width_read(self, jid, run):
-        """What a watch found: each width's agreement on drive and gun, and whether it says widen."""
+        """What a watch found: each shape's agreement on drive and gun, and whether one says widen or
+        deepen past the bar; the shapes are read against the shape in use."""
         rows = {}
         for w in self.WIDTHS:
             got = {}
-            for f in glob.glob(os.path.join(self.q, "results", jid, self.home, "out", jid, "w%d.log" % w)):
+            for f in glob.glob(os.path.join(self.q, "results", jid, self.home, "out", jid, "w%s.log" % w)):
                 for l in open(f, errors="replace"):
                     m = re.match(r"\s*(drive|gun)\s+([\d.]+)% \+/- ([\d.]+)", l)
                     if m:
@@ -1313,15 +1349,26 @@ class Plan:
             rows[str(w)] = got
         row = {"at": time.strftime("%Y-%m-%dT%H:%M:%S"), "gen": len(self.promotions()), "seeds": self.WIDTH_SEEDS, "job": jid, "rows": rows, "verdict": "no reading"}
         mean = lambda w: (rows.get(str(w), {}).get("drive", (None,))[0], rows.get(str(w), {}).get("gun", (None,))[0])
-        a, b = mean(self.WIDTH_NOW), mean(max(self.WIDTHS))
-        if None in a or None in b:
-            row["said"] = "the width watch %s read nothing: see its log" % jid
+        a = mean(self.WIDTH_NOW)
+        if None in a:
+            row["said"] = "the shape watch %s read nothing for the shape in use: see its log" % jid
             return row
-        gain = ((b[0] - a[0]) + (b[1] - a[1])) / 2
-        row["gain"] = round(gain, 2)
+        # The best of the other shapes against the one in use; a tie keeps the smaller shape.
+        best, gain = None, None
+        for s in self.WIDTHS:
+            b = mean(s)
+            if str(s) == str(self.WIDTH_NOW) or None in b:
+                continue
+            g = ((b[0] - a[0]) + (b[1] - a[1])) / 2
+            if gain is None or g > gain:
+                best, gain = s, g
+        if gain is None:
+            row["said"] = "the shape watch %s read nothing: see its log" % jid
+            return row
+        row["gain"], row["best"] = round(gain, 2), str(best)
         row["verdict"] = "widen" if gain >= self.WIDTH_BAR else "stay"
-        row["said"] = "the width watch: %d against %d on held-out seeds, %+.2f points of agreement on drive and gun: %s" % (
-            max(self.WIDTHS), self.WIDTH_NOW, gain, "past the bar, a person should look" if gain >= self.WIDTH_BAR else "stay")
+        row["said"] = "the shape watch: %s against %s on held-out seeds, %+.2f points of agreement on drive and gun: %s" % (
+            best, self.WIDTH_NOW, gain, "past the bar, a person should look" if gain >= self.WIDTH_BAR else "stay")
         return row
 
     # REGIONS (Paul, 1 November: "Selecting regions of operation with the terrain map"). A person draws a
@@ -3916,6 +3963,7 @@ class Plan:
         jobs += self.adopt_jobs()
         jobs += self.line_proof()
         jobs += self.width_watch()
+        jobs += self.gauntlet_watch()
         self.ticker_scan()
         try:
             self.commits_log()
@@ -4196,7 +4244,9 @@ class Plan:
                "line": {"promotions": len(line.get("promotions", [])), "commit": (line.get("commit") or "")[:7]}, "proof": proof.get("last")}
         # Each is for reading, and each alone may fail: the board above must still be written.
         for name, part in (("values", self.values_view), ("flow", lambda: self.flow_view(recent)), ("timeline", lambda: self.timeline_view(recent, live)),
-                           ("queued", lambda: self.queued_view(live)), ("traces", lambda: self.trace_view(recent))):
+                           ("queued", lambda: self.queued_view(live)), ("traces", lambda: self.trace_view(recent)),
+                           # The dials a person holds (hold.json): the Values page shows them with a Release.
+                           ("held", lambda: load(os.path.join(self.q, "hold.json"), {}) or {})):
             try:
                 doc[name] = part()
             except Exception as e:

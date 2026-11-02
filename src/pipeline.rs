@@ -135,6 +135,8 @@ pub struct Model {
     pub down: Vec<String>,
     /// (key, value now, moved by a person).
     pub values: Vec<(String, f64, bool)>,
+    /// The dials a person holds (QUEUE/hold.json): a trial there waits for a person.
+    pub held: Vec<(String, f64)>,
     pub flow: Vec<(String, Flowing)>,
     pub past_h: f64,
     pub lanes: Vec<Lane>,
@@ -184,6 +186,10 @@ impl Model {
             line: v.get("line").and_then(|x| x.get("promotions")).and_then(|x| x.as_num()).unwrap_or(0.0) as i64,
             down: words(&v, "down"),
             values: list(&v, "values").iter().map(|x| (s(x, "key"), n(x, "value"), x.get("moved").and_then(|b| b.as_bool()).unwrap_or(false))).collect(),
+            held: match v.get("held") {
+                Some(json::Value::Obj(m)) => m.iter().map(|(k, x)| (k.clone(), x.as_num().unwrap_or(0.0))).collect(),
+                _ => Vec::new(),
+            },
             flow: match v.get("flow") {
                 Some(json::Value::Obj(m)) => m.iter().map(|(k, x)| (k.clone(), Flowing { jobs: n(x, "jobs"), hours: n(x, "hours"), queued: n(x, "queued"), running: n(x, "running") })).collect(),
                 _ => Vec::new(),
@@ -773,9 +779,29 @@ fn values(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
     let say = if st.said.is_empty() { format!("Held z now {:.2}. tools/plans/difficulty-sim.py simulates what a value buys.", m.held_z) } else { st.said.clone() };
     ui.label_in(at.x + 4, at.y + 15, at.w - 8, &say, &F8X13, t.dim);
     let table: Vec<line::Value> = line::values().into_iter().filter(|v| !v.long).collect();
-    let body = rect(at.x, at.y + 36, at.w, at.h - 36);
     let operator = st.operator;
+    // THE HOLD, A ROW WITH A BUTTON (the plan of 2 November, chapter 14: it was a file with none). Each
+    // dial a person holds, its value, and Release, which runs `fleet-tune.py hold DIAL off`.
+    let held_h = if m.held.is_empty() { 0 } else { 22 + 24 * m.held.len() as i32 };
+    let body = rect(at.x, at.y + 36, at.w, at.h - 36 - held_h);
     value_rows(ui, body, &table, &m.values, operator, &mut st.tune);
+    if !m.held.is_empty() {
+        let mut y = body.bottom() + 2;
+        ui.label_in(at.x + 4, y, at.w - 8, "Held by a person (hold.json): a trial that sets a dial to its held value does not promote itself; its reads go on.", &F8X13, t.dim);
+        y += 20;
+        for (dial, v) in &m.held {
+            ui.label(at.x + 8, y + 4, &format!("{} at {}", dial, v), &F8X13, t.warn);
+            if operator && ui.button(rect(at.x + 300, y, 72, 22), "Release", true) {
+                st.tune = Some(format!("hold {} off", dial));
+            }
+            ui.tip(rect(at.x, y, at.w, 24), || vec![
+                format!("{} is held at {}: w_pos_fortify 0.4 was held on 1 November by rules written before its read (A Stale Dial).", dial, v),
+                "Release takes it out of hold.json; a trial there may then promote by the ordinary road.".to_string(),
+                "Hold another with `tools/fleet-tune.py QUEUE hold DIAL VALUE`.".to_string(),
+            ]);
+            y += 24;
+        }
+    }
 }
 
 /// A row for each value, with a press to move it a step: here, and on Settings, Long run.
