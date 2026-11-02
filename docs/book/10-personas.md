@@ -39,7 +39,20 @@ Each persona keeps the seat's skill (a person's choice, no part of a style) and 
 
 ## Certifying a persona
 
-A persona earns its line in the table by a census: 400 seeds, all eleven maps, against today's defaults, with the composition read as well as the total (built, road, kills less deaths), the way chapter 6 learned to read. The read is asked for by hand today (`fleet-queue.py grove new census "trial=bot_style = 8" seeds=400 adopt=no`) and the eight were asked for on 2 November; a persona's row on the Lab Reports page and in `nets/styles.tsv` carries its last read. Two further reads say what a persona is for:
+A persona earns its line in the table by a census: 400 seeds, all eleven maps, against today's defaults, with the composition read as well as the total (built, road, kills less deaths), the way chapter 6 learned to read. The read is asked for by hand (`fleet-queue.py grove new census "trial=bot_style = 8" seeds=400 adopt=no`); orrery's Results, Personas page carries each slot's last read. The eight were read on the afternoon of 2 November, on the game before stage 1 of the economy landed (chapter 13), and are asked for again under game 5:
+
+| Persona | Score, a seat | Built, a team | Road, a team | Kills less deaths, a seat | What the read says |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Rome | −5.13 ± 0.58 | +5.96 ± 0.40 | +2.12 ± 0.21 | +0.05 ± 0.06 | builds a third more and fights even; the score pays for walking, not building |
+| China | −5.17 ± 0.67 | +4.53 ± 0.37 | +0.42 ± 0.19 | −0.07 ± 0.07 | the castle goes up; the score does not pay for it |
+| Mongolia | −0.30 ± 0.65 | +3.53 ± 0.37 | +0.74 ± 0.17 | +0.01 ± 0.07 | even on score, and builds more than the Fleet: the bold hill's `w_duck` 0.25 cost nothing in fights |
+| Shoshone | −7.15 ± 0.63 | +1.48 ± 0.30 | −0.53 ± 0.16 | −0.49 ± 0.07 | the one true loss: the front forward and the advance plan together lose half a kill a seat |
+| Venice | +0.39 ± 0.54 | −1.71 ± 0.30 | −0.55 ± 0.15 | −0.06 ± 0.06 | even, and builds less: an economist by score, not by stock |
+| Japan | −0.63 ± 0.61 | −0.28 ± 0.34 | −0.06 ± 0.17 | −0.06 ± 0.07 | no different from the Fleet within noise: bushido does not show at these dials |
+| Polynesia | −0.36 ± 0.45 | −1.04 ± 0.21 | −0.17 ± 0.08 | −0.01 ± 0.06 | even; its maps (naval, the isles) are where to read it next |
+| Assyria | −0.96 ± 0.63 | +5.32 ± 0.41 | +1.38 ± 0.20 | +0.04 ± 0.07 | the siege builds too, which was not its design; its longshots are not what the score counts |
+
+Read as the table reads: six of the eight are within noise of the Fleet on the score, two lose, and three of them (Rome, China, Assyria) build five to six more a team for that score, which is chapter 6's finding again from another side, since the score weighs the walk and not the wall. Shoshone is a real finding against `w_front` 0.5 with `advance_plan` forward: the pair loses fights. None of the eight is certified by the score alone, and none should be: a persona's certificate is its composition matching its name, and Rome's, China's and Assyria's do. Two further reads say what a persona is for:
 
 - **Which maps it wins on.** The census's per-map lines; a persona is a strength on some maps and a weakness on others, and the table should say which (Polynesia on naval and the isles, Rome on industry).
 - **Does it feel different?** No census can read that. Chapter 15's playtest plan has a person play one match against each persona and name it blind; a persona nobody can tell from the Fleet is not one.
