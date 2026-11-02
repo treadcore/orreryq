@@ -1,0 +1,35 @@
+<figure>
+<svg viewBox="0 0 700 520" width="100%" role="img" aria-label="The wingman's five numbers drawn round its leader" style="font-family: var(--cond); max-width: 700px;">
+  <defs><marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--ink)"/></marker></defs>
+  <!-- one tile is ten units; the leader at (330, 270) faces east -->
+  <g fill="none" stroke-width="1.5">
+    <circle cx="330" cy="270" r="200" stroke="var(--line)" stroke-dasharray="6 5"/>
+    <circle cx="330" cy="270" r="160" stroke="var(--dim)" stroke-dasharray="3 4"/>
+    <circle cx="330" cy="270" r="100" stroke="var(--accent)"/>
+    <path d="M330 270 L469 190 A160 160 0 0 1 469 350 Z" fill="var(--accent)" fill-opacity="0.12" stroke="var(--accent)"/>
+  </g>
+  <g font-size="14" fill="var(--ink)">
+    <text x="330" y="60" text-anchor="middle" fill="var(--dim)">wing_leash 20: nothing takes it further than this</text>
+    <text x="330" y="102" text-anchor="middle" fill="var(--dim)">wing_greed 16: a pillbox or depot this near is worth taking</text>
+    <text x="330" y="162" text-anchor="middle" fill="var(--accent)">wing_threat 10: anything hostile here is its first job</text>
+    <text x="520" y="268" fill="var(--accent)">wing_ahead 16,</text>
+    <text x="520" y="286" fill="var(--accent)">60° wide: hit</text>
+    <text x="520" y="304" fill="var(--accent)">what is coming</text>
+  </g>
+  <!-- the leader -->
+  <g transform="translate(330,270)">
+    <rect x="-14" y="-9" width="28" height="18" rx="3" fill="var(--ink)"/>
+    <path d="M14 0 L40 0" stroke="var(--ink)" stroke-width="2" marker-end="url(#arr2)"/>
+    <text x="0" y="36" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">the leader (a person)</text>
+  </g>
+  <!-- the station, four tiles behind -->
+  <g transform="translate(290,270)">
+    <rect x="-11" y="-7" width="22" height="14" rx="3" fill="var(--accent)"/>
+    <text x="-20" y="-16" text-anchor="end" font-size="14" fill="var(--ink)">escort_distance 4: the station</text>
+  </g>
+  <g font-size="13" fill="var(--dim)">
+    <text x="40" y="500">One tile is 25 m. The five were constants until 2 November; they are weights, sliders on the U page, and ranged (chapter 9).</text>
+  </g>
+</svg>
+<figcaption>Fig. 3. The scripted wingman's world, drawn to scale round its leader. It is a follower: the station is behind the leader on its heading, which is why a leader that drives as fast as the wingman is not caught for half a minute (G10).</figcaption>
+</figure>

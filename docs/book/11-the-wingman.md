@@ -8,6 +8,8 @@ A person's team is dealt a builder, a guard and two wingmen; the wingmen's goal 
 
 Five numbers govern all of this, and until today they were constants in `commander.rs`: the station (4 tiles), the leash (20), the greed (16), the threat radius (10), the look-ahead (16). A constant cannot be moved by the person, by a persona or by the search.
 
+!html(figs/the-wingman.html)
+
 ## Built today: the five numbers as weights
 
 `escort_distance`, `wing_leash`, `wing_greed`, `wing_threat` and `wing_ahead` are weights with the same defaults, so nothing plays differently, and with ranges (chapter 9). What that gives at once:

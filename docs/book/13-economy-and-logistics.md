@@ -10,6 +10,8 @@ Nothing in this is finite. Shells and drones appear at depots from nowhere, for 
 
 ## The design: four stocks, one of them renewable
 
+!html(figs/the-stocks.html)
+
 | Stock | Source | Finite? | Spent on | The structure that improves it |
 | --- | --- | --- | --- | --- |
 | wood | forest tiles, felled by the squad; regrows | no | roads, walls, bridges, boats, pillboxes | the **harvester**: a works on a pad by a forest; the squad's harvest near it yields six, not four, and the tile regrows in one minute |

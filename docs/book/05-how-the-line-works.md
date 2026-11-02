@@ -8,6 +8,8 @@ A brain is a list of numbers. The fleet proposes small changes to the list, play
 
 ## The stages
 
+!html(figs/the-funnel.html)
+
 ```
  the fit's draws, A/B of switches and choices, the far read, the temperament
  rounds, the width watch, the anchors            ->  a trial (a weights file)

@@ -22,6 +22,8 @@ Orrery began as a fleet console with no dependencies: a window drawn by hand on 
 
 Paul set the frame on 2 November in six parts, and this book keeps to it:
 
+!html(figs/design-in-six.html)
+
 1. **The design**: the game's rules, the brain's shape, the process. Written, mostly; chapter 2 says where.
 2. **The implementation**: the game, the brains, the console. Built and shipped (0.2.0).
 3. **Training the programmed brain's weights**: the fleet's censuses, the line, the proof. Running; a week of it is this book's subject.
