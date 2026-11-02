@@ -126,11 +126,13 @@ def screens():
     open(os.path.join(DOCS, "double", "screens.html"), "w").write("".join(out))
 
 
-GAME = [("game-menu", "<strong>The launch menu.</strong> A fresh shot of the game on this Mac. Every row stands for a command-line flag. The Bots row set skill only, not style: the gap the next report closes. It is now called Skill, and team rows sit under it."),
-        ("game-frame", "<strong>In play.</strong> The tank in the middle is yours. The rings are ranges; the green shows the ground your team holds. Left: the order column. Right: the roster, your tanks, pillboxes and depots. Every bot here runs the weights the fleet carries."),
-        ("game-fire", "<strong>Under fire.</strong> What the numbers exist for: <code>rate</code> chose these targets, and the ring shows direct range, 10 tiles."),
-        ("game-sixteen", "<strong>Sixteen seats.</strong> What a census plays, three times a seed, thousands of times a day, with no person and no window."),
-        ("game-over", "<strong>A match's end.</strong> The scores here are made of the same terms as the seat score in Section XIV.")]
+GAME = [("game-menu", "<strong>The launch menu.</strong> On treadcore-vm, with a style chosen for each team. Every row stands for a command-line flag. The old Bots row set skill only: it is now called Skill, and the team rows sit under it."),
+        ("game-frame", "<strong>In play.</strong> Europe, 285 seconds in, a team of Duelists against a team of Raiders. Your tank is at the middle of the rings, on autopilot, and the line at the top says what it is doing and why: taking a depot. Left: the order column. Right: your stock, kills, pillboxes and depots, with the colours explained, and the map. Every bot here runs the weights the fleet carries."),
+        ("game-fire", "<strong>Under fire.</strong> 245 seconds in. The line at the top reads BASE UNDER THREAT, and the red marks at the upper right are hostile. What the numbers exist for."),
+        ("game-coord", "<strong>The coordination screen.</strong> Press Space. The ladder of goals with each rung's condition, the first that holds being what your tank does; the rotation; and each ally's errand and its reason, in words."),
+        ("game-sliders", "<strong>The sliders.</strong> From the coordination screen, press U. A row for every switch and weight, for your own team, with its default and its step. The cursor here is on <code>w_called</code>."),
+        ("game-sixteen", "<strong>Sixteen seats.</strong> Naval, three teams. What a census plays, three times a seed, thousands of times a day, with no person and no window."),
+        ("game-over", "<strong>A match's end.</strong> From the playtest record of October, not retaken. The scores here are made of the same terms as the seat score in Section XIV.")]
 
 
 def game():

@@ -306,15 +306,15 @@ Sessions' terminals have no tips, because their text is the machine's own. The t
 
 ## XIX. Treadcore
 
-Everything above exists to change what happens here. The menu is fresh from today; the rest are from the game's own playtest record of 13 to 26 October, so some of its rules have moved since, and its look has not.
+Everything above exists to change what happens here. These were taken on 1 November in a real window on `treadcore-vm`, a virtual machine on this Mac, from main at `5c599f7`, with the desktop's top bar cropped off. Only the match's end is older, from the playtest record of October.
 
 !html(double/game.html)
 
-Where to see the fleet's work in play: **every bot in these pictures runs `weights.rs`**. Press `U` for the sliders: a row for every weight and switch, for your own team. Those are the same numbers this report follows, and you can feel the difference between a raider and a castle-builder by loading `profiles/`. Selecting brains by name per team is [the next report](bot-styles-lab-report.html).
+Where to see the fleet's work in play: **every bot in these pictures runs `weights.rs`**. Press Space for the coordination screen, then `U` for the sliders: a row for every weight and switch, for your own team. Those are the same numbers this report follows, and you can feel the difference between a raider and a castle-builder by loading `profiles/`. Selecting brains by name per team is [the next report](bot-styles-lab-report.html).
 
 ## XX. Threats and what is open
 
-**Pictures are frames, not screen captures.** `--frame` runs the same drawing code as the window from the same documents, without the window's own state. A selection a person made, or a live hover, can look different. **Treadcore's pictures are old,** as said. **The story's numbers are one trial's:** `w4540` is real, and it is not a proof that `bio` helps. **The worked target score leaves out five terms** so the sum can be followed; the code has them all. **The bc2 training figures come from the lab report,** not from running it again.
+**Pictures are frames, not screen captures.** `--frame` runs the same drawing code as the window from the same documents, without the window's own state. A selection a person made, or a live hover, can look different. **Treadcore's pictures are of main,** so they show the weights before the line reaches it, and they come from a virtual machine drawing in software, which says nothing of the frame rate on real hardware. **The story's numbers are one trial's:** `w4540` is real, and it is not a proof that `bio` helps. **The worked target score leaves out five terms** so the sum can be followed; the code has them all. **The bc2 training figures come from the lab report,** not from running it again.
 
 **Open:** the Terrain's reads; the Runs line's words; the 2,302 retired jobs still say something real about the cost of a generation; the merges proposed in Section IX-B; a warning before the certificate ends; and the game's slots, since built: see [Eight Named Minds](bot-styles-lab-report.html).
 

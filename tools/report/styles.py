@@ -109,7 +109,7 @@ def main():
     open(os.path.join(OUT, "decision.html"), "w").write(decision())
     rows = "".join("<tr><td>%d</td><td><strong>%s</strong></td><td>%s</td><td>%s</td></tr>" % (a, b, c, e(d)) for a, b, c, d in ROSTER)
     open(os.path.join(OUT, "roster.html"), "w").write('<div class="table"><table><thead><tr><th>Slot</th><th>Name</th><th>Kind</th><th>What it is</th></tr></thead><tbody>%s</tbody></table></div>\n' % rows)
-    open(os.path.join(OUT, "menu.html"), "w").write('<figure style="max-width:760px"><img loading="lazy" src="styles/menu.png" alt="The launch menu with team rows" style="width:100%;border:1px solid var(--line);border-radius:6px"><figcaption><strong>Fig. 2. The launch menu, today.</strong> A fresh shot from the game on this Mac. Your team and teams 2 to 4 each choose a style; Skill is what the old Bots row always set.</figcaption></figure>\n')
+    open(os.path.join(OUT, "menu.html"), "w").write('<figure style="max-width:760px"><img loading="lazy" src="styles/menu.png" alt="The launch menu with team rows" style="width:100%;border:1px solid var(--line);border-radius:6px"><figcaption><strong>Fig. 2. The launch menu, today.</strong> A shot from the game on treadcore-vm. Your team and teams 2 to 4 each choose a style; Skill is what the old Bots row always set.</figcaption></figure>\n')
     open(os.path.join(OUT, "board.html"), "w").write('<figure><img loading="lazy" src="styles/board.png" alt="The Board" style="width:100%;border:1px solid var(--line);border-radius:6px"><figcaption><strong>Fig. 4. The Board after this work,</strong> from the live run.</figcaption></figure>\n')
     reads = census()
     res = results(reads)

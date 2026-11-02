@@ -2934,8 +2934,9 @@ class Plan:
                       "; nets not committed: " + ", ".join(nets) if nets else "", remote, self.LINE, branch, self.q),
                   key="resolve:%s" % line["commit"][:12])
 
-    def resolve(self):
-        """The local line to main, when this coordinator can push."""
+    def resolve(self, upto=None, carried=None):
+        """The local line to main, when this coordinator can push; or only as far as `upto`, the
+        commit a proof read, and the first `carried` generations with it."""
         line = self.state.get("local_line")
         if not line:
             print("no local line: main has every promotion")
@@ -2947,6 +2948,22 @@ class Plan:
         main = run(["git", "-C", self.tc, "rev-parse", "%s/%s" % (remote, branch)]).stdout.strip()
         head = self.local_line(main)
         if not head:
+            return
+        if upto and upto != head:
+            r = run(["git", "-C", self.tc, "push", remote, "%s:refs/heads/%s" % (upto, branch)])
+            if r.returncode != 0:
+                raise SystemExit("the push failed: " + r.stderr[-300:])
+            run(["git", "-C", self.tc, "fetch", "-q", remote])
+            n = len(line["promotions"]) if carried is None else min(carried, len(line["promotions"]))
+            for rid in line["promotions"][:n]:
+                st = self.rstate(rid)
+                if st.get("status") == "self-modified":
+                    st.update({"status": "approved", "accepted": "the line's proof", "self_modified_at": st.get("commit", ""), "commit": upto,
+                               "detail": "on main at %s, by the line's proof" % upto[:7]})
+                    self.rsave(rid, st)
+            line["promotions"] = line["promotions"][n:]
+            self._sha = None
+            print("the line is main as far as %s; %d generation(s) still carried" % (upto[:7], len(line["promotions"])))
             return
         r = run(["git", "-C", self.tc, "push", remote, "%s:refs/heads/%s" % (head, branch)])
         if r.returncode != 0:
@@ -3420,15 +3437,21 @@ class Plan:
                 return []
             ds = [d for j in pf["jobs"] for d in glob.glob(os.path.join(self.q, "results", j, self.home, "out", j, "*", ""))]
             p = self.pool(ds) if len(ds) == len(pf["jobs"]) else None
-            head, jobs = pf.get("head"), pf["jobs"]
+            head, jobs, carried = pf.get("head"), pf["jobs"], pf.get("n")
             self.state["proof"] = pf = {"last_at": time.time()}
             if p and p["every"][1] > 0:
                 d, se, n_ = p["every"]
                 pf["last"] = {"head": head[:7], "d": round(-d, 2), "se": round(se, 2), "z": round(-d / se, 2), "seeds": n_}
-                if -d / se >= self.HELD_Z and not p["above"] and head == line.get("commit"):
+                # THE COMMIT IT READ, NOT THE LINE'S HEAD NOW (1 November). A proof takes a quarter of an
+                # hour, and at this pace a generation lands inside it: 94a99be read z 4.82 past main and
+                # went nowhere, because two more had landed. So what was proved goes on main, and what
+                # came after waits for its own proof. Only if it is still on the line: a commit to main
+                # replays the line under new hashes, and then this read is of no commit that remains.
+                on_line = head and run(["git", "-C", self.tc, "merge-base", "--is-ancestor", head, line.get("commit", "")]).returncode == 0
+                if -d / se >= self.HELD_Z and not p["above"] and on_line:
                     try:
                         with contextlib.redirect_stdout(sys.stderr):
-                            self.resolve()
+                            self.resolve(upto=head, carried=carried)
                         self.flag("promote", "the line %s proved past main: %+.2f +/- %.2f over %d seeds; it is main now" % (head[:7], -d, se, n_),
                                   key="proved:%s" % head[:12], progress=True)
                     except SystemExit as e:
@@ -3457,7 +3480,7 @@ class Plan:
             jobs.append({"id": jid, "kind": "weights", "title": "proof %d of the line %s against main (%d seeds)" % (k + 1, line["commit"][:7], w["held_seeds"]),
                          "needs": "cpu", "after_host": self.after_host(), "cmd": self.census_cmd(text, w["held_seeds"], 700000000 + 200000 * n_, jid),
                          "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 6 * 3600, "priority": "high"})
-        pf.update({"jobs": [j["id"] for j in jobs], "head": line["commit"]})
+        pf.update({"jobs": [j["id"] for j in jobs], "head": line["commit"], "n": len(line.get("promotions", []))})
         return jobs
 
     # ---- the board: one process, one screen ------------------------------------------------

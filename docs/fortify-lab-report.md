@@ -124,12 +124,29 @@ Multiply each measured change by what the score pays for it, per seat:
 
 From the itemised reads. So 0.4 does what it says: less castle, more going out.
 
+### What it looks like
+
+Everything above is read from logs. On 1 November the game ran in a window on `treadcore-vm`, from main at `5c599f7`, where the dial is still 6.0. One tank's goal line over the first six minutes on Europe, a team of Duelists against Raiders, from nine frames:
+
+| Seconds | The goal line |
+| --- | --- |
+| 42 | `fortify: the squad is building: pillboxes 0/4, wall 4/8, road 0/5` |
+| 125 | `fortify: the castle stands: pillboxes 2/2, wall 0/0, road 0/2` |
+| 165, 205 | `turrets: waiting for the squad` |
+| 245 | `defend base: BASE UNDER THREAT` |
+| 285 | `expand: taking the depot: 99%` |
+| 325, 365 | `expand: gathering the fleet` |
+
+(At 85 seconds the autopilot lamp read off and there was no goal line.) **This is the ladder of one tank, not the posture dial,** so it does not measure the dial. It shows, in this one match, what the words "until the castle stands" look like to a person watching: about two minutes of building, and nearly five before this tank's goal turns to taking ground.
+
+!html(fortify/play.html)
+
 ## V. Conclusions, rule by rule
 
 | Rule | `w_pos_fortify` 1.5 | `w_pos_fortify` 0.4 |
 | --- | --- | --- |
 | R1, held-out, families, tests | **Passed:** the road carried it as `r0092` | Reads and families passed. Stopped by hand before the tests |
-| R2, line z 3 past main | Pending: the next proof reads it | Not reached |
+| R2, line z 3 past main | `94a99be`, which holds 1.5, read **+1.97 +/- 0.41, z 4.82** over 800 seeds. Main did not move, for a fault in the planner: see Section VI | Read past z 3; main still to move at the next proof |
 | R3, a gain beyond walking | **Not shown:** +0.36 +/- 0.31, inside the noise | **Failed:** -0.30 +/- 0.41 |
 | R4, combat clearly worse | **No:** -0.05 +/- 0.05 | **Yes:** -0.17 +/- 0.05, z -3.1 |
 
@@ -172,6 +189,7 @@ treadcore --solo --autopilot --weights /tmp/fort.weights
 | **An anchor could undo generations on noise** (found the same day) | An anchor must clear z 3 |
 | **By-hand censuses on macmini read one map** (the same) | The paste fix now covers them |
 | A read taken to measure was adopted as if to promote | `adopt=no` on a census |
+| **A passed proof could go nowhere.** A proof takes a quarter of an hour, and at this pace a generation lands inside it. `94a99be` read z 4.82, two more generations had landed, and the planner looked at the line's head, which had not been read, and pushed nothing | A passed proof puts on main the commit it read, and what came after waits for its own proof |
 
 **In treadcore (`fcaadc3`):**
 
@@ -184,7 +202,7 @@ treadcore --solo --autopilot --weights /tmp/fort.weights
 
 ## VIII. Threats and what is open
 
-**Pooled reads mix builds,** since the line moved between them: `r0090` and `h0351` on one commit, `r0097` and `r0098` on another, each with the base set to 6.0 by hand in the later ones. **The behaviour table has no column for 6.0,** since the census logs a trial team's rungs and not the baseline's. **R3 rests on 220 seeds,** so its error is larger than the 400-seed reads'. **Per-map bars are 20 seeds each.** **R2 is not yet read:** nothing has reached main. The last proof, before these generations, read +0.54 +/- 0.35. **1.5 landed before its R3 and R4 reads were back,** because the road moved first; had it failed R4, it would have been taken back by hand.
+**Pooled reads mix builds,** since the line moved between them: `r0090` and `h0351` on one commit, `r0097` and `r0098` on another, each with the base set to 6.0 by hand in the later ones. **The behaviour table has no column for 6.0,** since the census logs a trial team's rungs and not the baseline's. **R3 rests on 220 seeds,** so its error is larger than the 400-seed reads'. **Per-map bars are 20 seeds each.** **R2 has one read of the line with 1.5.** The proof before these generations read +0.54 +/- 0.35. **Nothing has reached main at this writing,** so the pictures show 6.0. **1.5 landed before its R3 and R4 reads were back,** because the road moved first; had it failed R4, it would have been taken back by hand.
 
 **Open:**
 

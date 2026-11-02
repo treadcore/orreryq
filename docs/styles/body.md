@@ -133,6 +133,41 @@ t2 p11 t2-Raider11  ashore score   25 armor 100 shells 22 depots 1  escort: in f
 
 Three kinds of mind on one team and one map, and no fault in the log. The last column shows the difference: a Commander states its goal, and a net states its head's choices.
 
+
+### Seen in play
+
+On 1 November these ran in a real window on `treadcore-vm`, built from main at `5c599f7`: Naval with three teams, then Europe with Duelists against Raiders, about six minutes each.
+
+!html(styles/play.html)
+
+The Europe roster at 365 seconds, from the game's log, cut at the right margin:
+
+```text
+t0 p2  t0-Duelist2  ashore score  325 armor 100 depots 1 boxes 1  defend base: rotati...
+t0 p4  t0-Duelist4  ashore score  308 armor  60 depots 1 boxes 0  escort: in formatio...
+t0 p10 t0-Duelist10 ashore score  505 armor  79 depots 1 boxes 0  escort: in formatio...
+t1 p1  t1-Raider1   ashore score  112 armor 100 depots 4 boxes 0  auto > expand (comm...
+t1 p3  t1-Raider3   ashore score  200 armor 100 depots 1 boxes 0  defend base: rotati...
+t1 p5  t1-Raider5   ashore score  300 armor  98 depots 1 boxes 1  escort: in formatio...
+```
+
+And in the Naval match, seats on one team running three styles at once:
+
+```text
+t2 p2  t2-Raider2   dead   score  245 armor   0 depots 0
+t2 p5  t2-Castle5   afloat score  425 armor 100 depots 0  defend base: island...
+t2 p8  t2-Scholar8  ashore score   30 armor 100 depots 0  net: [(Drive, 9), (...
+t2 p14 t2-Castle14  ashore score  120 armor 100 depots 1  auto > fortify: the...
+```
+
+**What the pictures say that the census cannot:**
+
+- **A mix on one team works.** The Scholar's line is a net's choices, and the Castle's beside it is an errand.
+- **From the outside, Duelists and Raiders look alike.** At 365 seconds six of seven Duelists and five of eight Raiders were on one errand, in formation. They share the team's layer, so the difference is in how a tank steers and what its dials prefer, which a person sees only close up.
+- **In a bunch the names overprint,** and the name is the whole of how a person tells styles apart. The teams here bunched in most frames. That is open.
+
+**What they do not say:** which is better. The Duelists led this Europe match at that moment, 2,003 points among seven tanks to 1,532 among eight, with a person's seat on their side. The census has them 17.14 a seat behind over 110 seeds, and the census is the one to believe: six minutes of one match is a picture, not a read.
+
 ## VI. Results: every style read by the census
 
 RESULTS
@@ -198,7 +233,7 @@ The two red boxes are gone. The Board's next essential is whatever the run needs
 
 ## IX. Threats and what is open
 
-**The numbers are of one champion and one transform.** They say what these files are worth today. **110 seeds is a first look,** with errors near one to two points. **The reads ran on different builds of the line,** as it moved during the afternoon. Different reads stood on different commits: a style's dials are its own, but it is read against that hour's Fleet. **The census plays whole teams** of a style against whole teams of Fleet; a mix on one team has not been read, because the census deals one style to a team. **I saw the styled game run in its log and on its menu, not in play,** because this terminal may not capture the screen; pictures are welcome.
+**The numbers are of one champion and one transform.** They say what these files are worth today. **110 seeds is a first look,** with errors near one to two points. **The reads ran on different builds of the line,** as it moved during the afternoon. Different reads stood on different commits: a style's dials are its own, but it is read against that hour's Fleet. **The census plays whole teams** of a style against whole teams of Fleet; a mix on one team has not been read, because the census deals one style to a team. **I watched the styled game in two matches of about six minutes, on main's build,** as pictures taken a frame every 40 to 90 seconds, not as a person playing. I did not play them, and whether a style feels different to play against is not something this report can say.
 
 **Open:**
 
