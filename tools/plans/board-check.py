@@ -561,3 +561,63 @@ w.auto_promote()
 assert not w.asked, "two candidates failing alike: something all trip on, and it waits for a person"
 
 print("less noise: every check holds")
+
+# ---- what the score does not weigh: a read that gives up building or fights waits for a person ----
+class Sides(P):
+    def __init__(self):
+        self.state, self.flags = {}, []
+    def flag(self, kind, text, key=None, progress=False):
+        self.flags.append((kind, text))
+
+
+JOBS = iter(range(10 ** 6))
+
+
+def census(rows):
+    """A census directory from {seed: ((trial built, road, kills, deaths), (rest built, road, kills, deaths))}."""
+    d = tempfile.mkdtemp() + "/w%d/20261102-000000/" % next(JOBS)  # the cache knows a read by its job and stamp
+    os.makedirs(d)
+    open(d + "pooled.txt", "w").write("every map +1.00 +/- 0.10 over 3 seeds\n")
+    for seed, (a, b) in rows.items():
+        line = "  team %d%s: score 10.0, kills %g, deaths %g, revives 1, built %g, road %g, bridge 0\n"
+        with open(d + "g-%s.log" % seed, "w") as f:
+            f.write("seed %s on atlantic: trial team 1\n" % seed)
+            f.write(line % (0, "", b[2], b[3], b[0], b[1]))
+            f.write(line % (1, " (trial)", a[2], a[3], a[0], a[1]))
+    return d
+
+
+LOSES = {s_: ((16 + s_ * 0.1, 6, 17, 18), (20, 6, 17, 18)) for s_ in range(6)}
+FIGHTS = {s_: ((20, 6, 17 - s_ * 0.2, 19), (20, 6, 17, 17)) for s_ in range(6)}
+FLAT = {s_: ((20 + (-1) ** s_, 6, 17, 17), (20, 6, 17, 17)) for s_ in range(6)}
+d_ = Sides.side_read(census(LOSES))
+assert abs(d_["built"][0] + 3.75) < 1e-6 and d_["built"][2] == 6 and d_["road"][0] == 0, d_
+sd = Sides()
+assert [w_.split(" +/-")[0] for w_ in sd.gives_up([census(LOSES)])] == ["built a team -3.75"], "building lost past noise and floor"
+assert sd.gives_up([census(FIGHTS)])[0].startswith("kills less deaths a seat"), "fights lost"
+assert sd.gives_up([census(FLAT)]) == [], "noise gives up nothing"
+assert sd.gives_up(None) == [] and sd.gives_up([tempfile.mkdtemp() + "/"]) == [], "no logs, nothing known, nothing held"
+assert sd.gives_up([census({s_: (b_, a_) for s_, (a_, b_) in LOSES.items()})], sign=-1), "the proof's trial is main: a sign"
+assert sd.gives_up([census(LOSES)], sign=-1) == [], "the line that builds more gives up nothing"
+sd.GIVE_BUILT = 99.0
+assert sd.gives_up([census(LOSES)]) == [], "a floor raised on Values lets it through"
+sd = Sides()
+assert sd.trades_away("grove/w1", {"held_dirs": [census(LOSES)], "held_mean": 1.0}) and sd.flags[0][0] == "trade"
+assert not sd.trades_away("grove/w2", {"held_dirs": [census(FLAT)], "held_mean": 1.0})
+assert not sd.trades_away("gen3/x", {"held_mean": 1.0}), "a converge run's candidate has no logs here"
+
+
+class Trades(Window):
+    def __init__(self):
+        super().__init__([])
+    def trades_away(self, k, v):
+        return True
+    def noise(self, k, v):
+        return ""
+
+
+w = Trades()
+w.auto_promote()
+assert not w.asked, "a candidate that trades away waits, and asks no promotion"
+
+print("what the score does not weigh: every check holds")

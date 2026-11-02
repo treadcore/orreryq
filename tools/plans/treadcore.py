@@ -2229,6 +2229,71 @@ class Plan:
             self.flag("noise", "%s waits: it %s" % (name, why), key="noise:%s" % name, progress=True)
         return why
 
+    # WHAT THE SCORE DOES NOT WEIGH (Paul, 2 November). The night's search turned `cycle` off, and with it the
+    # building fix, at +0.83 on the score: a generation had built 4 less a team and lost 0.38 a seat in fights, and
+    # nothing read either. Against main the line had gained 1.46 and lost 0.41 of it all but the reward for going
+    # forward. So a read that gives up building or fights past noise and past a floor waits for a person.
+    # Past noise: two errors, seed by seed. The floors are values, so raising one lets a generation through.
+    GIVE_BUILT = 1.0
+    GIVE_ROAD = 0.5
+    GIVE_KD = 0.10
+
+    @staticmethod
+    def side_read(d):
+        """A census's trial less the rest in what the score does not weigh, from its logs, seed by
+        seed as the score is pooled: {"built": (mean, se, seeds), "road": ..., "kd": ...}."""
+        trial, rest = {}, {}
+        for f in glob.glob(os.path.join(d, "g-*.log")):
+            seed = None
+            for l in open(f, errors="replace"):
+                m = re.match(r"seed (\S+) on \S+: trial team \d", l)
+                if m:
+                    seed = m.group(1)
+                    continue
+                m = re.match(r"\s+team \d( \(trial\))?: score [-\d.]+, (.*)", l)
+                if m and seed:
+                    row = {k: float(v) for k, v in re.findall(r"(kills|deaths|built|road) ([-\d.]+)", m.group(2))}
+                    (trial if m.group(1) else rest).setdefault(seed, []).append(row)
+        sides = {"built": lambda r: r.get("built", 0.0), "road": lambda r: r.get("road", 0.0),
+                 "kd": lambda r: (r.get("kills", 0.0) - r.get("deaths", 0.0)) / 5.0}
+        out = {}
+        for k, fn in sides.items():
+            ds = [sum(map(fn, trial[x])) / len(trial[x]) - sum(map(fn, rest[x])) / len(rest[x]) for x in trial if rest.get(x)]
+            if len(ds) >= 2:
+                mean = sum(ds) / len(ds)
+                out[k] = (mean, math.sqrt(sum((x - mean) ** 2 for x in ds) / (len(ds) - 1) / len(ds)), len(ds))
+        return out
+
+    def gives_up(self, dirs, sign=1):
+        """What these reads, pooled, give up past noise and past a floor, in words. sign -1: the
+        trial is what would be left behind, as in the proof, where main is the trial."""
+        cache = self.state.setdefault("side_reads", {})
+        reads = []
+        for d in dirs or []:
+            key = os.sep.join(d.rstrip(os.sep).split(os.sep)[-2:])
+            if key not in cache and os.path.exists(os.path.join(d, "pooled.txt")):
+                cache[key] = self.side_read(d)
+            reads.append(cache.get(key) or {})
+        while len(cache) > 300:
+            del cache[next(iter(cache))]
+        out = []
+        for k, word, floor in (("built", "built a team", self.GIVE_BUILT), ("road", "road a team", self.GIVE_ROAD), ("kd", "kills less deaths a seat", self.GIVE_KD)):
+            rows = [r[k] for r in reads if k in r and r[k][1] > 0]
+            if rows:
+                iw = sum(1 / x[1] ** 2 for x in rows)
+                mean, se = sign * sum(x[0] / x[1] ** 2 for x in rows) / iw, 1 / math.sqrt(iw)
+                if mean < -floor and mean < -2 * se:
+                    out.append("%s %+.2f +/- %.2f" % (word, mean, se))
+        return out
+
+    def trades_away(self, name, v):
+        """True for a candidate whose held-out reads give up building or fights: it stays a candidate."""
+        lost = self.gives_up(v.get("held_dirs"))
+        if lost:
+            self.flag("trade", "%s waits for a person: held out %+.2f, and it gives up %s. Promote it by hand, or raise that floor on Values" % (
+                name, v.get("held_mean") or 0.0, ", ".join(lost)), key="trade:%s" % name, progress=True)
+        return bool(lost)
+
     def batch(self, ev, name):
         """The strongest candidate's weights and, on top, each other current candidate that moves
         nothing it moves, strongest first: (text, names added). Together they have not been read:
@@ -2296,7 +2361,7 @@ class Plan:
         ev = {k: v for k, v in self.evidence().items()
               if v.get("current") and v["families"] == "holds" and v["held_mean"] is not None and k not in tried
               and "patch" not in parse_weights(v["weights"]) and "bot_style" not in parse_weights(v["weights"])
-              and not self.anchor_short(k, v) and not self.held_by_a_person(v["weights"]) and not self.noise(k, v)}
+              and not self.anchor_short(k, v) and not self.held_by_a_person(v["weights"]) and not self.noise(k, v) and not self.trades_away(k, v)}
         if not ev:
             return
         name = max(ev, key=lambda k: ev[k]["held_mean"])
@@ -3012,7 +3077,7 @@ class Plan:
                     # defaults. Only a current candidate may promote itself.
                     commits = [self.census_commit(os.path.dirname(tw[0]))] + [self.census_commit(d) for d in ds]
                     out["%s/%s" % (self.name, jid)] = {"weights": open(tw[0]).read(), "census": c[:2], "held": [h[:2] for h in held],
-                                                       "commits": commits, "current": all(self.same_defaults(x) for x in commits)}
+                                                       "commits": commits, "current": all(self.same_defaults(x) for x in commits), "held_dirs": ds}
         # Each converge run's: its progress lines.
         for run_dir in (self.cfg.get("families") or {}).get("converge", []):
             run_dir = os.path.join(self.tc, run_dir) if not os.path.isabs(run_dir) else run_dir
@@ -3939,7 +4004,11 @@ class Plan:
                 # came after waits for its own proof. Only if it is still on the line: a commit to main
                 # replays the line under new hashes, and then this read is of no commit that remains.
                 on_line = head and run(["git", "-C", self.tc, "merge-base", "--is-ancestor", head, line.get("commit", "")]).returncode == 0
-                if -d / se >= self.HELD_Z and not p["above"] and on_line:
+                lost = self.gives_up(ds, sign=-1) if -d / se >= self.HELD_Z and not p["above"] and on_line else []
+                if lost:
+                    self.flag("trade", "the line %s reads %+.2f past main and gives up %s: it stays on the line for a person. Raise that floor on Values to let it land" % (
+                        head[:7], -d, ", ".join(lost)), key="trade-line:%s" % head[:12])
+                elif -d / se >= self.HELD_Z and not p["above"] and on_line:
                     try:
                         with contextlib.redirect_stdout(sys.stderr):
                             self.resolve(upto=head, carried=carried)

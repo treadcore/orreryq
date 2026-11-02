@@ -197,6 +197,45 @@
    "down": "a dial may be tuned step on step"
   },
   {
+   "key": "give_built",
+   "attr": "GIVE_BUILT",
+   "label": "Building a generation may give up",
+   "default": 1.0,
+   "min": 0.25,
+   "max": 99.0,
+   "step": 0.25,
+   "unit": "built a team",
+   "what": "A candidate or a proof that loses more than this, and by two errors, waits for a person, whatever its score. The score does not weigh building for itself.",
+   "up": "more goes through that builds less",
+   "down": "more waits for a person"
+  },
+  {
+   "key": "give_road",
+   "attr": "GIVE_ROAD",
+   "label": "Road a generation may give up",
+   "default": 0.5,
+   "min": 0.25,
+   "max": 99.0,
+   "step": 0.25,
+   "unit": "road a team",
+   "what": "The same floor, for road laid.",
+   "up": "more goes through that lays less road",
+   "down": "more waits for a person"
+  },
+  {
+   "key": "give_kd",
+   "attr": "GIVE_KD",
+   "label": "Fights a generation may give up",
+   "default": 0.1,
+   "min": 0.05,
+   "max": 99.0,
+   "step": 0.05,
+   "unit": "kills less deaths a seat",
+   "what": "The same floor, for kills less deaths.",
+   "up": "more goes through that fights worse",
+   "down": "more waits for a person"
+  },
+  {
    "key": "long_on_fast",
    "attr": "LONG_ON_FAST",
    "label": "Long reads, fast machines",
