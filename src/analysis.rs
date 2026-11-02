@@ -611,7 +611,7 @@ fn draw_temper(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
     }
     y += 6;
     let shape = ["off", "sine", "triangle", "square", "saw"].get(dial("bio") as usize).copied().unwrap_or("?");
-    ui.label_in(side.x, y, side.w, &format!("Waves: {}, every {:.0} s at the slowest of its ratio.", shape, dial("bio_period")), &F8X13, if dial("bio") > 0.0 { t.ink } else { t.warn });
+    ui.label_in(side.x, y, side.w, &format!("Waves: {}. Cycles of {:.0}, {:.0}, {:.0} s.", shape, dial("bio_period"), dial("bio_period") * 28.0 / 23.0, dial("bio_period") * 33.0 / 23.0), &F8X13, if dial("bio") > 0.0 { t.ink } else { t.warn });
     y += lh;
     ui.label_in(side.x, y, side.w, &format!("Mood into engage_odds: {:.2}.", dial("bio_amount")), &F8X13, t.dim);
     y += lh + 4;
@@ -621,6 +621,7 @@ fn draw_temper(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
     }
 
     let main = rect(at.x, at.y, at.w - 316, at.h);
+    // Each read is a question a grid can answer, and the longest list is long: the control and the mood first.
     if groups.is_empty() {
         let line = if doc.get("error").is_some() { s(doc, "error") } else { "No census with waves on has been folded yet: the first round is on its way.".to_string() };
         ui.label_in(main.x, main.y, main.w, &line, &F8X13, t.dim);
@@ -650,12 +651,12 @@ fn draw_temper(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
     y += 6;
     let g = &groups[st.temper];
     let control = s(g, "label").contains("nothing");
-    ui.label_in(main.x, y, main.w, &format!("The wave's high less its low: {}, {}% of live seconds in a fight", s(g, "label"), n(g, "fight_share")), &F8X13, t.ink);
+    ui.label_in(main.x, y, main.w, &format!("A wave's high less its low: {}, {}% of live seconds in a fight", s(g, "label"), n(g, "fight_share")), &F8X13, t.ink);
     y += lh - 2;
     if control {
         ui.label_in(main.x, y, main.w, "THE CONTROL: these waves drive nothing, so this is what chance looks like.", &F8X13, t.warn);
     } else {
-        ui.label_in(main.x, y, main.w, "Bright: past two errors. Compare the waves driving nothing: only a read past that means anything.", &F8X13, t.dim);
+        ui.label_in(main.x, y, main.w, "Less the control, cell by cell. Bright: past two errors of that difference. By chance alone, about one cell in twenty will be.", &F8X13, t.dim);
     }
     y += lh + 2;
     let cells = arr(g, "cells");
@@ -673,15 +674,15 @@ fn draw_temper(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
         ui.label_in(main.x, y + cell_h / 2 - 7, head - 4, waves.get(i).map(|x| x.as_str()).unwrap_or(""), &F8X13, t.dim);
         for (j, c) in row.as_array().unwrap_or(&[]).iter().enumerate() {
             let r = rect(main.x + head + j as i32 * cell_w, y, cell_w - 2, cell_h - 2);
-            let (d, se) = (n(c, "d"), n(c, "se"));
+            let (d, se) = (n(c, "net"), n(c, "net_se"));
             let z = if se > 0.0 { d / se } else { 0.0 };
             let col = heat(ui, z, 4.0);
             ui.c.rect(r.x, r.y, r.w, r.h, if z.abs() >= 2.0 { col } else { blend(t.tile, col, 0.35) });
             ui.label_in(r.x + 4, r.y + 3, r.w - 6, &format!("{:+.2}", d), &F8X13, if z.abs() >= 2.0 { t.ink } else { t.dim });
-            ui.label_in(r.x + 4, r.y + 3 + lh - 4, r.w - 6, &format!("+/- {:.2}", se), &F8X13, t.dim);
+            ui.label_in(r.x + 4, r.y + 3 + lh - 4, r.w - 6, &format!("+/- {:.2}", se), &F8X13, if z.abs() >= 2.0 { t.ink } else { t.dim });
             let name = metrics.get(j).map(|m| s(m, "name")).unwrap_or_default();
             ui.tip(r, || vec![
-                format!("{} at the {} wave's high less its low: {:+.2} +/- {:.2}", name, waves.get(i).map(|x| x.as_str()).unwrap_or(""), d, se),
+                format!("{} at the {} wave's high less its low, less the control: {:+.2} +/- {:.2}", name, waves.get(i).map(|x| x.as_str()).unwrap_or(""), d, se),
                 format!("{:+.1} errors, over {} plays.", z, n(c, "n")),
                 "That a wave reaches behaviour, not that it wins: only a census says that.".to_string(),
             ]);

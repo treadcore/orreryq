@@ -114,6 +114,16 @@ def read(q):
         out.append({"label": label, "plays": len(ps), "fight_share": round(100 * fights / max(secs, 1), 2), "cells": cells})
     order = lambda g: (0 if "nothing" in g["label"] else 1 if "mood" in g["label"] else 2, g["label"])
     out.sort(key=order)
+    # Every read less the control, cell by cell. The control's shells read 5 errors from nothing, on waves
+    # driving nothing: a match's early minutes fire more, and fall on some phases more than others. A
+    # read's own error cannot see that, and only this subtraction does.
+    control = next((g for g in out if "nothing" in g["label"]), None)
+    for g in out:
+        for w, row in enumerate(g["cells"]):
+            for m, c in enumerate(row):
+                k = control["cells"][w][m] if control and g is not control else None
+                c["net"] = round(c["d"] - k["d"], 3) if k else c["d"]
+                c["net_se"] = round(math.hypot(c["se"], k["se"]), 3) if k else c["se"]
     return {"waves": WAVES, "metrics": [{"key": m[0], "name": m[1], "unit": m[2]} for m in METRICS], "groups": out}
 
 

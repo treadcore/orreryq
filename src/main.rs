@@ -778,6 +778,7 @@ fn write_frame(
                             (c.len() == 4).then(|| [c[0], c[1], c[2], c[3]])
                         }),
                         operator: std::env::var("ORRERY_FRAME_OPERATOR").is_ok(),
+                        temper: std::env::var("ORRERY_FRAME_TEMPER").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
                         ..Default::default()
                     },
                     page: std::env::var("ORRERY_FRAME_PAGE").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
