@@ -133,6 +133,29 @@ Commit messages now say what changed against the line, not against main's checko
 
 **A `bio` trial lands by the same rules,** so the waves stay off until one gains 0.25 a seat.
 
+## IX. The desire to build (added the same night)
+
+Paul: "maybe we need to focus on fixing the desire to build." A temporary count, 198 plays on all eleven maps:
+
+| Measure | Reading |
+|---|---|
+| Material a tank holds | Rises to about **6 of 8 by minute 5, and stays there to the end** |
+| Squad time on construction | **6%**, against 13% going home |
+| Built a minute, a team | 2.4 at its best, about 1.0 late on |
+| Pillboxes built a minute | 0.56 in the first minute, about 0.05 late on |
+
+**Material was not the limit. Nothing was asking for it.** Two reasons in the code: the base cycle, written for Paul's "after they fill up on base resources", ran only for a leader and a guard; and a wingman built only while its leader stood at the fort, and a guard not at all. So a low `w_pos_fortify` sends the leader forward and the crews follow.
+
+Two dials, read at 400 seeds on the line with `w_pos_fortify` 0.375:
+
+| Trial | Built, team | Road, team | Kills less deaths, a seat | Score |
+|---|---:|---:|---:|---:|
+| `crew_stay` guard | +0.22 +/- 0.25 | +0.07 +/- 0.13 | **-0.15 +/- 0.05** | +0.11 +/- 0.41 |
+| `cycle_all` every tank | **+1.53 +/- 0.27** | **+1.50 +/- 0.16** | +0.14 +/- 0.05 | -0.44 +/- 0.43 |
+| **Both** | **+3.16 +/- 0.35** | **+2.14 +/- 0.20** | **+0.19 +/- 0.06** | -0.26 +/- 0.46 |
+
+**Both together build 18% more, lay 34% more road, and trade better in fights, which is the weakness that held 0.4 back. The score does not show a gain.** A person's decision took the pair to the line, past the 0.25 floor it would not have cleared: the proof still stands before main. `crew_stay` alone reads worse in fights and together better, which I cannot explain. `w5525` (`w_pos_fortify` 0.375) was promoted at Paul's word by the ordinary road once its test named its own dial, and the same count on the line reads about 18 built against 22 before it: **low fortify costs building, about 4 a team, and this pair gives most of that back.** Those figures come from different builds of the line, so read that as a rough size.
+
 ## VII. Reproducing this
 
 ```sh
