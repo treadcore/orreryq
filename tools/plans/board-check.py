@@ -478,3 +478,26 @@ assert len(w.runs_asked) == 2 and w.runs_asked[1][1]["run"] == "width2" and w.ru
 _sh.rmtree(root)
 
 print("the temperament's rounds and the width watch: every check holds")
+
+# ---- Long reads go to fast machines, and to any machine if none of those is fit.
+class Long(P):
+    def __init__(self, q, hosts):
+        self.q, self.hosts = q, hosts
+
+
+root = tempfile.mkdtemp()
+os.makedirs(os.path.join(root, "lanes"))
+h = [{"name": "a", "caps": ["cpu", "fast"]}, {"name": "b", "caps": ["cpu"]}]
+l = Long(root, h)
+assert l.long_needs() == "fast"
+l.LONG_ON_FAST = 0
+assert l.long_needs() == "cpu", "off"
+l = Long(root, [{"name": "b", "caps": ["cpu"]}])
+assert l.long_needs() == "cpu", "no machine marked"
+l = Long(root, [{"name": "a", "caps": ["cpu", "fast"], "paused": True}])
+assert l.long_needs() == "cpu", "the only one set aside"
+json.dump({"state": "down"}, open(os.path.join(root, "lanes", "a.json"), "w"))
+l = Long(root, [{"name": "a", "caps": ["cpu", "fast"]}])
+assert l.long_needs() == "cpu", "the only one down"
+_sh.rmtree(root)
+print("long reads: every check holds")

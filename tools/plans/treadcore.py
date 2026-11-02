@@ -674,6 +674,22 @@ class Plan:
                 below = True
         return ok and not below
 
+    # LONG READS ON FAST MACHINES (1 November). macmini reads a seed in 1.4 s and columbia in 6.2, and a
+    # held-out read fell to whichever lane came free: 9 minutes or 41, and a slow machine in a long read
+    # is also the last to build a new commit, which held up the proof for up to 29 minutes. A machine's
+    # "fast" cap in config.json says where they go; with none of those fit to take one, any machine does.
+    LONG_ON_FAST = 1
+
+    def long_needs(self):
+        if not self.LONG_ON_FAST:
+            return "cpu"
+        for h in self.hosts:
+            if "fast" in h.get("caps", []) and not h.get("paused"):
+                lane = load(os.path.join(self.q, "lanes", h["name"] + ".json"), {}) or {}
+                if lane.get("state") not in ("down", "unreachable", "paused"):
+                    return "fast"
+        return "cpu"
+
     def cpu_ready(self):
         return [h for h in self.hosts if "cpu" in h.get("caps", ["cpu"]) and self.prepared(h["name"])]
 
@@ -697,7 +713,7 @@ class Plan:
                 seed0 = w["held_seed0"] + 200000 * self.state["held_n"]
                 self.state["held_n"] += 1
                 jobs.append({"id": hid, "kind": "weights", "title": "held-out read %d of %s (%d seeds)" % (k + 1, jid, w["held_seeds"]),
-                             "needs": "cpu", "after_host": self.after_host(), "cmd": self.census_cmd(trial, w["held_seeds"], seed0, hid),
+                             "needs": self.long_needs(), "after_host": self.after_host(), "cmd": self.census_cmd(trial, w["held_seeds"], seed0, hid),
                              "fetch": "%s/out/%s" % (self.home, hid), "timeout_s": 6 * 3600,
                              # What decides goes first: it got 3% of the lanes behind a queue seven hours long.
                              "priority": "high"})
@@ -720,7 +736,7 @@ class Plan:
                 seed0 = w["held_seed0"] + 200000 * self.state["held_n"]
                 self.state["held_n"] += 1
                 jobs.append({"id": hid, "kind": "weights", "title": "held-out read 2 of %s (%d seeds)" % (jid, w["held_seeds"]),
-                             "needs": "cpu", "after_host": self.after_host(), "cmd": self.census_cmd(seq[jid]["text"], w["held_seeds"], seed0, hid),
+                             "needs": self.long_needs(), "after_host": self.after_host(), "cmd": self.census_cmd(seq[jid]["text"], w["held_seeds"], seed0, hid),
                              "fetch": "%s/out/%s" % (self.home, hid), "timeout_s": 6 * 3600})
         # Then the reads on, the most promising first: a test begun is
         # finished before most new ones begin (Fishtest's way). A third of
@@ -1623,9 +1639,12 @@ class Plan:
             k = self.state.get("read_on_n", 0)
             self.state["read_on_n"] = k + 1
             eid = "e%04d" % k
+            # AHEAD OF NEW TRIALS (1 November). A winner took 49 minutes from its first read to its pass,
+            # with 19 minutes of work in it. The rest was queue, ten minutes at each of its stages, behind
+            # trials that had not yet shown anything. Whatever has shown something goes first.
             jobs.append({"id": eid, "kind": "weights",
                          "title": "read on %d of %s (%d seeds more, z %+.2f on %d)" % (v["stage"] + 2, jid, more, v["z"], v["seeds"]),
-                         "needs": "cpu", "after_host": self.after_host(),
+                         "needs": "cpu", "after_host": self.after_host(), "priority": "high",
                          "cmd": self.census_cmd(v["text"], more, 300000000 + 1000 * k, eid),
                          "fetch": "%s/out/%s" % (self.home, eid), "timeout_s": 6 * 3600})
         return jobs
@@ -2123,7 +2142,7 @@ class Plan:
                 hseed = w["held_seed0"] + 200000 * self.state["held_n"]
                 self.state["held_n"] += 1
                 job = {"id": hid, "kind": "weights", "title": "held-out read %d of %s (%d seeds)" % (k + 1, jid, w["held_seeds"]),
-                       "needs": "cpu", "after_host": self.after_host(), "cmd": self.census_cmd(a["text"], w["held_seeds"], hseed, hid),
+                       "needs": self.long_needs(), "after_host": self.after_host(), "cmd": self.census_cmd(a["text"], w["held_seeds"], hseed, hid),
                        "fetch": "%s/out/%s" % (self.home, hid), "timeout_s": 6 * 3600}
                 if a.get("reads"):
                     job["priority"] = "high"
@@ -3878,7 +3897,7 @@ class Plan:
             n_ = self.state["proof_n"] = self.state.get("proof_n", 0) + 1
             jid = "pv%04d" % n_
             jobs.append({"id": jid, "kind": "weights", "title": "proof %d of the line %s against main (%d seeds)" % (k + 1, line["commit"][:7], w["held_seeds"]),
-                         "needs": "cpu", "after_host": self.after_host(), "cmd": self.census_cmd(text, w["held_seeds"], 700000000 + 200000 * n_, jid),
+                         "needs": self.long_needs(), "after_host": self.after_host(), "cmd": self.census_cmd(text, w["held_seeds"], 700000000 + 200000 * n_, jid),
                          "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 6 * 3600, "priority": "high"})
         pf.update({"jobs": [j["id"] for j in jobs], "head": line["commit"], "n": len(line.get("promotions", []))})
         return jobs

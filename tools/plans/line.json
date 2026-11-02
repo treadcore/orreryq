@@ -171,6 +171,20 @@
    "down": "finds reach the line sooner, more reads lost to the generation after"
   },
   {
+   "key": "long_on_fast",
+   "attr": "LONG_ON_FAST",
+   "label": "Long reads, fast machines",
+   "default": 1,
+   "min": 0,
+   "max": 1,
+   "step": 1,
+   "unit": "on",
+   "long": true,
+   "what": "Held-out reads and proofs go only to machines marked fast in config.json, 9 minutes against 41. 0 lets any machine take them. If none is fit, any does.",
+   "up": "long reads finish sooner, builds reach slow machines sooner",
+   "down": "more machines can take them when the fast ones are busy"
+  },
+  {
    "key": "memory_tau",
    "attr": "MEMORY_TAU",
    "label": "The fit forgets at",
