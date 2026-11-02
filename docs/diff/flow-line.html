@@ -1,0 +1,54 @@
+<figure>
+<svg viewBox="0 0 1000 520" width="100%" role="img" aria-label="The line as the planner runs it after 2 November: trials, read-ons, held-out reads, the gates including the trade guard, tests and families, the generation, the proof, main; beside it the watches: shape, gauntlet, personas" style="font-family: var(--cond); max-width: 1000px;">
+  <defs><marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker></defs>
+  <g font-size="13" fill="var(--ink)">
+    <text x="20" y="30" font-size="13" fill="var(--dim)" letter-spacing="1">plan(), once a minute (tools/plans/treadcore.py)</text>
+    <rect x="20" y="45" width="300" height="60" rx="6" fill="var(--tile)" stroke="var(--line)"/><text x="170" y="68" text-anchor="middle" font-weight="700">trials</text><text x="170" y="88" text-anchor="middle" font-size="11" fill="var(--dim)">search · ab_trials · far_trials · temper_trials · anchors · regions</text>
+    <rect x="20" y="125" width="300" height="50" rx="6" fill="var(--tile)" stroke="var(--line)"/><text x="170" y="146" text-anchor="middle" font-weight="700">read on until decided</text><text x="170" y="164" text-anchor="middle" font-size="11" fill="var(--dim)">55 · 110 · 220 · 440 seeds, inside RANGES</text>
+    <rect x="20" y="195" width="300" height="50" rx="6" fill="var(--tile)" stroke="var(--line)"/><text x="170" y="216" text-anchor="middle" font-weight="700">two held-out reads, pooled</text><text x="170" y="234" text-anchor="middle" font-size="11" fill="var(--dim)">held_pass: z ≥ 3, no map two errors under</text>
+    <rect x="20" y="265" width="300" height="90" rx="6" fill="var(--tile)" stroke="var(--accent)" stroke-width="2"/><text x="170" y="286" text-anchor="middle" font-weight="700">auto_promote's gates</text>
+    <text x="170" y="304" text-anchor="middle" font-size="11" fill="var(--dim)">noise(): MIN_GAIN 0.25, SETTLE_GENS 2</text>
+    <text x="170" y="320" text-anchor="middle" font-size="11" fill="var(--accent)">trades_away() → gives_up(): built 1.0, road 0.5, kd 0.10 (new)</text>
+    <text x="170" y="336" text-anchor="middle" font-size="11" fill="var(--dim)">held_by_a_person(): hold.json (now a row with Release)</text>
+    <rect x="20" y="375" width="300" height="50" rx="6" fill="var(--tile)" stroke="var(--line)"/><text x="170" y="396" text-anchor="middle" font-weight="700">promote_run: tests, nine families</text><text x="170" y="414" text-anchor="middle" font-size="11" fill="var(--accent)">the pinned-test lint runs with the tests (new)</text>
+    <rect x="20" y="445" width="140" height="50" rx="6" fill="var(--tile)" stroke="var(--line)"/><text x="90" y="466" text-anchor="middle" font-weight="700">the line</text><text x="90" y="484" text-anchor="middle" font-size="11" fill="var(--dim)">a generation</text>
+    <rect x="180" y="445" width="140" height="50" rx="6" fill="var(--accent)"/><text x="250" y="466" text-anchor="middle" font-weight="700" fill="var(--base)">main</text><text x="250" y="484" text-anchor="middle" font-size="11" fill="var(--base)">line_proof: 800 seeds, z 3, and gives up nothing</text>
+    <!-- the watches -->
+    <text x="400" y="30" font-size="13" fill="var(--dim)" letter-spacing="1">the watches, on their own clocks</text>
+    <rect x="400" y="45" width="280" height="90" rx="6" fill="var(--tile)" stroke="var(--accent)"/><text x="540" y="66" text-anchor="middle" font-weight="700">width_watch → a shape watch</text>
+    <text x="540" y="84" text-anchor="middle" font-size="11" fill="var(--dim)">every width_every generations: record, then train</text>
+    <text x="540" y="100" text-anchor="middle" font-size="11" fill="var(--dim)">WIDTHS "32" "64" "128" "64x3" (WIDTH, DEPTH to tools/bc)</text>
+    <text x="540" y="118" text-anchor="middle" font-size="11" fill="var(--accent)">width_read: the best other shape against "64", bar 1.0</text>
+    <rect x="400" y="155" width="280" height="80" rx="6" fill="var(--tile)" stroke="var(--accent)"/><text x="540" y="176" text-anchor="middle" font-weight="700">gauntlet_watch (new)</text>
+    <text x="540" y="194" text-anchor="middle" font-size="11" fill="var(--dim)">every gauntlet_every_h hours, needs host:mac:</text>
+    <text x="540" y="210" text-anchor="middle" font-size="11" fill="var(--dim)">GAUNTLET=1 cargo test … --ignored train</text>
+    <text x="540" y="226" text-anchor="middle" font-size="11" fill="var(--dim)">→ build/train/gauntlet.tsv → Results, Gauntlet</text>
+    <rect x="400" y="255" width="280" height="80" rx="6" fill="var(--tile)" stroke="var(--line)"/><text x="540" y="276" text-anchor="middle" font-weight="700">a persona's census (by hand)</text>
+    <text x="540" y="294" text-anchor="middle" font-size="11" fill="var(--dim)">new census "trial=bot_style = K" adopt=no</text>
+    <text x="540" y="310" text-anchor="middle" font-size="11" fill="var(--dim)">400 seeds; pooled.txt; its composition read</text>
+    <text x="540" y="326" text-anchor="middle" font-size="11" fill="var(--dim)">→ treadcore-view.py personas() → Results, Personas</text>
+    <rect x="400" y="355" width="280" height="70" rx="6" fill="var(--tile)" stroke="var(--line)"/><text x="540" y="376" text-anchor="middle" font-weight="700">the keeper's health</text>
+    <text x="540" y="394" text-anchor="middle" font-size="11" fill="var(--dim)">keeper, heartbeat, code, planning, sync, lanes,</text>
+    <text x="540" y="410" text-anchor="middle" font-size="11" fill="var(--accent)">certificate (new): warn a day before, bad when gone</text>
+    <!-- what a person touches -->
+    <text x="740" y="30" font-size="13" fill="var(--dim)" letter-spacing="1">what a person moves</text>
+    <rect x="740" y="45" width="240" height="120" rx="6" fill="var(--tile)" stroke="var(--line)"/>
+    <text x="860" y="66" text-anchor="middle" font-weight="700">Queue → Values, Settings → Long run</text>
+    <text x="860" y="86" text-anchor="middle" font-size="11" fill="var(--dim)">fleet-tune.py KEY VALUE → tuning.json</text>
+    <text x="860" y="104" text-anchor="middle" font-size="11" fill="var(--accent)">fleet-tune.py hold DIAL VALUE|off → hold.json (new)</text>
+    <text x="860" y="122" text-anchor="middle" font-size="11" fill="var(--dim)">give_built, give_road, give_kd; gauntlet_every_h</text>
+    <text x="860" y="140" text-anchor="middle" font-size="11" fill="var(--dim)">live at the next plan; no restart</text>
+    <rect x="740" y="185" width="240" height="70" rx="6" fill="var(--tile)" stroke="var(--line)"/>
+    <text x="860" y="206" text-anchor="middle" font-weight="700">Settings → Ranges</text>
+    <text x="860" y="224" text-anchor="middle" font-size="11" fill="var(--dim)">RANGES as rows, the decrees marked;</text>
+    <text x="860" y="240" text-anchor="middle" font-size="11" fill="var(--dim)">the file is edited by hand, only Paul decrees</text>
+  </g>
+  <g stroke="var(--accent)" stroke-width="1.5" fill="none" marker-end="url(#fl)">
+    <path d="M170 105 L170 123"/><path d="M170 175 L170 193"/><path d="M170 245 L170 263"/><path d="M170 355 L170 373"/><path d="M90 425 L90 443"/><path d="M160 470 L178 470"/>
+    <path d="M320 300 L398 300" stroke-dasharray="3 3"/>
+    <path d="M740 100 C700 100 360 100 320 300" stroke-dasharray="3 3" opacity="0.6"/>
+  </g>
+  <text x="500" y="505" text-anchor="middle" font-size="12" fill="var(--dim)">A persona's read enters no gate: it is read for what it is, never promoted because a person looked there.</text>
+</svg>
+<figcaption>Fig. 3. The line as the planner runs it from 2 November. The left column is the road a trial takes to main; the gates in the accent box are the rules of the last two days. The middle column is the watches on their own clocks; the right what a person moves, now including the hold.</figcaption>
+</figure>

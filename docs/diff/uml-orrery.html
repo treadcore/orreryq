@@ -1,0 +1,105 @@
+<figure>
+<svg viewBox="0 0 1000 520" width="100%" role="img" aria-label="UML of orrery's training side: the planner Plan class, the keeper, the tune tool, the view script, and the console's training and pipeline models and states" style="font-family: var(--mono); font-size: 11px; max-width: 1000px;">
+  <defs><marker id="od" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10" fill="none" stroke="var(--dim)" stroke-width="1.2"/></marker></defs>
+  <g fill="var(--ink)">
+    <text x="20" y="22" font-family="var(--cond)" font-size="13" fill="var(--dim)" letter-spacing="1">Python: the planner, the keeper, the tools (tools/)</text>
+    <rect x="20" y="30" width="330" height="250" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="20" y="30" width="330" height="18" fill="var(--line)"/><text x="185" y="43" text-anchor="middle" font-weight="700">plans/treadcore.py :: Plan</text>
+    <text x="26" y="62">state, cfg, line (line.json), hosts, cuda, q (QUEUE)</text>
+    <text x="26" y="76">MIN_GAIN 0.25, SETTLE_GENS 2, HELD_Z 3, PROOF_EVERY_MIN 60</text>
+    <text x="26" y="90" fill="var(--accent)">GIVE_BUILT 1.0, GIVE_ROAD 0.5, GIVE_KD 0.10 (new)</text>
+    <text x="26" y="104" fill="var(--accent)">WIDTHS ("32","64","128","64x3"), GAUNTLET_EVERY_H 24 (new)</text>
+    <line x1="20" y1="112" x2="350" y2="112" stroke="var(--ink)"/>
+    <text x="26" y="126">plan()  search()  ab_trials()  far_trials()  temper_trials()</text>
+    <text x="26" y="140">held_pairs()  held_pass()  evidence()  batch()</text>
+    <text x="26" y="154">noise()  held_by_a_person()  anchor_short()</text>
+    <text x="26" y="168" fill="var(--accent)">side_read(dir)  gives_up(dirs, sign)  trades_away(k, v) (new)</text>
+    <text x="26" y="182">auto_promote()  promote_run()  resolve()  land()  build_tip()</text>
+    <text x="26" y="196" fill="var(--accent)">line_proof(): … and gives up nothing past the floors (new)</text>
+    <text x="26" y="210" fill="var(--accent)">width_watch()  width_read()  shape(s)  gauntlet_watch() (new)</text>
+    <text x="26" y="224">region_trials()  carry_passes()  remembered()</text>
+    <text x="26" y="238">board()  values_view()  pipeline.json ← values, flow, timeline,</text>
+    <text x="26" y="252" fill="var(--accent)">  queued, traces, held (new)</text>
+    <text x="26" y="266">apply_tuning(): tuning.json over line.json's values</text>
+    <rect x="380" y="30" width="290" height="120" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="380" y="30" width="290" height="18" fill="var(--line)"/><text x="525" y="43" text-anchor="middle" font-weight="700">fleet-queue.py (the keeper)</text>
+    <text x="386" y="62">lanes, keeper loop, sync, plan each minute</text>
+    <line x1="380" y1="70" x2="670" y2="70" stroke="var(--ink)"/>
+    <text x="386" y="84">health(q): keeper, heartbeat, code, planning,</text>
+    <text x="386" y="98" fill="var(--accent)">  certificate (new), sync, machines, lanes, jobs,</text>
+    <text x="386" y="112">  search, line, models, difficulty</text>
+    <text x="386" y="126">verbs: new, cancel, machine, project, resume,</text>
+    <text x="386" y="140">  stop-job, restart, status, health</text>
+    <rect x="380" y="170" width="290" height="110" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="380" y="170" width="290" height="18" fill="var(--line)"/><text x="525" y="183" text-anchor="middle" font-weight="700">fleet-tune.py · treadcore-view.py</text>
+    <text x="386" y="202">tune: KEY VALUE | KEY default → tuning.json</text>
+    <text x="386" y="216" fill="var(--accent)">hold DIAL VALUE | off → hold.json (new)</text>
+    <line x1="380" y1="224" x2="670" y2="224" stroke="var(--ink)"/>
+    <text x="386" y="238">view: machines(), run(), net(), analysis(), long_run(),</text>
+    <text x="386" y="252" fill="var(--accent)">  ranges(), personas(), gauntlet(), held (new)</text>
+    <text x="386" y="266">→ one JSON document the console draws</text>
+    <!-- data files -->
+    <rect x="700" y="30" width="280" height="250" fill="var(--tile)" stroke="var(--ink)" stroke-dasharray="4 3"/>
+    <rect x="700" y="30" width="280" height="18" fill="var(--line)"/><text x="840" y="43" text-anchor="middle" font-weight="700">files (QUEUE = build/queue/grove)</text>
+    <text x="706" y="62">plan/state.json  (search, far, temper, width,</text>
+    <text x="706" y="76" fill="var(--accent)">  gauntlet, side_reads (new))</text>
+    <text x="706" y="90">plan/pipeline.json  (the board, values, held)</text>
+    <text x="706" y="104">tuning.json  hold.json  config.json</text>
+    <text x="706" y="118">runs/*.json  results/*/…/pooled.txt, g-*.log</text>
+    <text x="706" y="132">flags/*.json  events.jsonl  archive/</text>
+    <text x="706" y="150">treadcore: RANGES, weights.rs, styles.rs,</text>
+    <text x="706" y="164">  profiles/*.weights, scenarios/gauntlet/*.toml,</text>
+    <text x="706" y="178">  build/train/gauntlet.tsv</text>
+    <text x="706" y="196">tools/plans/line.json: values (the floors,</text>
+    <text x="706" y="210" fill="var(--accent)">  gauntlet_every_h new), stages, edges, methods,</text>
+    <text x="706" y="224" fill="var(--accent)">  screens (Personas, Gauntlet, Ranges new)</text>
+    <text x="706" y="242">docs/book/*.md → chapters.py → the site</text>
+    <!-- Rust console -->
+    <text x="20" y="312" font-family="var(--cond)" font-size="13" fill="var(--dim)" letter-spacing="1">Rust: the console (src/, no crates)</text>
+    <rect x="20" y="320" width="330" height="180" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="20" y="320" width="330" height="18" fill="var(--line)"/><text x="185" y="333" text-anchor="middle" font-weight="700">training::Model / State</text>
+    <text x="26" y="352">Model: machines, run, net, algo, analysis, long_run,</text>
+    <text x="26" y="366" fill="var(--accent)">  ranges, personas, gauntlet: Option&lt;json::Value&gt; (new)</text>
+    <text x="26" y="380">State: page, zoom, tune, operator, cand_off,</text>
+    <text x="26" y="394" fill="var(--accent)">  ranges_off (new), analysis, arm_*</text>
+    <line x1="20" y1="402" x2="350" y2="402" stroke="var(--ink)"/>
+    <text x="26" y="416">PAGES: [(n, name, what); 13]  draw(ui, m, st, view)</text>
+    <text x="26" y="430">draw_runs_page … draw_long_run  draw_commits_page</text>
+    <text x="26" y="444" fill="var(--accent)">draw_personas(ui, at, m) (10)  draw_gauntlet (12) (new)</text>
+    <text x="26" y="458" fill="var(--accent)">draw_ranges(ui, at, m, st) (11): ui.scroll_list (new)</text>
+    <text x="26" y="472">RESULTS_PAGES [5,2,3,8,10,12,4]  SETTINGS_PAGES [6,9,11,7]</text>
+    <text x="26" y="486">frames: ORRERY_FRAME_PAGE, --frame-view results|settings</text>
+    <rect x="380" y="320" width="290" height="180" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="380" y="320" width="290" height="18" fill="var(--line)"/><text x="525" y="333" text-anchor="middle" font-weight="700">pipeline::Model / pages</text>
+    <text x="386" y="352">Model: tasks, values: Vec&lt;(key, now, moved)&gt;,</text>
+    <text x="386" y="366" fill="var(--accent)">  held: Vec&lt;(dial, value)&gt; (new), flow, lanes, queued</text>
+    <line x1="380" y1="374" x2="670" y2="374" stroke="var(--ink)"/>
+    <text x="386" y="388">PAGES: Board, Flow, Timeline, Queued, Values</text>
+    <text x="386" y="402">values(ui, at, m, st): value_rows() for the table,</text>
+    <text x="386" y="416" fill="var(--accent)">  then the held rows with Release →</text>
+    <text x="386" y="430" fill="var(--accent)">  st.tune = "hold DIAL off" (new)</text>
+    <text x="386" y="444">main: tune_cmd(queue_ctl) runs fleet-tune.py with it</text>
+    <text x="386" y="466" fill="var(--dim)">line::values() from line.json, baked in; line::Value</text>
+    <text x="386" y="480" fill="var(--dim)">  { key, attr, label, default, min, max, step, unit, long }</text>
+    <rect x="700" y="320" width="280" height="180" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="700" y="320" width="280" height="18" fill="var(--line)"/><text x="840" y="333" text-anchor="middle" font-weight="700">ui / nav / draw</text>
+    <text x="706" y="352">Ui: label, label_in, label_right, button, tip,</text>
+    <text x="706" y="366">  scroll_list(box, n, lh, &amp;mut off), c.rect, c.disc</text>
+    <text x="706" y="380">nav::header(ui, view, …, keys) → (rest, go, clicked)</text>
+    <text x="706" y="394">nav::Key { label, on, lamp }</text>
+    <text x="706" y="408">theme t: ink, dim, accent, up, warn, alarm, tile, line</text>
+    <text x="706" y="422">fonts F8X13, F6X10, F10X20 (baked glyphs)</text>
+    <line x1="700" y1="430" x2="980" y2="430" stroke="var(--ink)"/>
+    <text x="706" y="444" fill="var(--dim)">tools/report: md.py (Doc), build.py (a page),</text>
+    <text x="706" y="458" fill="var(--accent)">  chapters.py (a book) (new); page.html the look</text>
+    <text x="706" y="472" fill="var(--dim)">docs/book/00-front.md … 16-references.md, figs/</text>
+  </g>
+  <g stroke="var(--dim)" stroke-width="1.2" fill="none" marker-end="url(#od)" stroke-dasharray="2 3">
+    <path d="M350 150 L378 150"/><path d="M670 100 L698 100"/><path d="M670 240 L698 240"/>
+    <path d="M185 280 L185 318"/><path d="M525 280 L525 318"/>
+    <path d="M840 280 L840 318"/>
+  </g>
+  <text x="195" y="300" font-size="10" fill="var(--dim)">«reads» view JSON, pipeline.json</text>
+</svg>
+<figcaption>Fig. 5. UML of orrery's training side. The planner is one class of about ninety methods; the keeper, the tune tool and the view script are small programs beside it; the console's two models are what the pages draw, read from the files in the middle. What is new is in the accent.</figcaption>
+</figure>

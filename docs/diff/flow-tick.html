@@ -1,0 +1,33 @@
+<figure>
+<svg viewBox="0 0 1000 300" width="100%" role="img" aria-label="One tick of the world, in the order World::step runs it, with game 5's two changes marked" style="font-family: var(--cond); max-width: 1000px;">
+  <defs><marker id="ft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker></defs>
+  <g font-size="13" fill="var(--ink)">
+    <rect x="20" y="40" width="100" height="56" rx="6" fill="var(--tile)" stroke="var(--line)"/><text x="70" y="64" text-anchor="middle" font-weight="700">proposals</text><text x="70" y="82" text-anchor="middle" font-size="11" fill="var(--dim)">lapse</text>
+    <rect x="140" y="40" width="100" height="56" rx="6" fill="var(--tile)" stroke="var(--line)"/><text x="190" y="64" text-anchor="middle" font-weight="700">orders</text><text x="190" y="82" text-anchor="middle" font-size="11" fill="var(--dim)">apply, or refuse</text>
+    <rect x="260" y="40" width="100" height="56" rx="6" fill="var(--tile)" stroke="var(--line)"/><text x="310" y="64" text-anchor="middle" font-weight="700">tanks</text><text x="310" y="82" text-anchor="middle" font-size="11" fill="var(--dim)">drive, mines</text>
+    <rect x="380" y="40" width="100" height="56" rx="6" fill="var(--tile)" stroke="var(--line)"/><text x="430" y="64" text-anchor="middle" font-weight="700">pillboys</text><text x="430" y="82" text-anchor="middle" font-size="11" fill="var(--dim)">capture, build</text>
+    <rect x="500" y="40" width="100" height="56" rx="6" fill="var(--tile)" stroke="var(--line)"/><text x="550" y="64" text-anchor="middle" font-weight="700">drones</text><text x="550" y="82" text-anchor="middle" font-size="11" fill="var(--dim)">orbit, intercept</text>
+    <rect x="620" y="40" width="100" height="56" rx="6" fill="var(--tile)" stroke="var(--accent)" stroke-width="2"/><text x="670" y="64" text-anchor="middle" font-weight="700">pillboxes</text><text x="670" y="82" text-anchor="middle" font-size="11" fill="var(--dim)">regen, supply, fire</text>
+    <rect x="740" y="40" width="100" height="56" rx="6" fill="var(--tile)" stroke="var(--accent)" stroke-width="2"/><text x="790" y="64" text-anchor="middle" font-weight="700">shells</text><text x="790" y="82" text-anchor="middle" font-size="11" fill="var(--dim)">fly, land, damage</text>
+    <rect x="860" y="40" width="120" height="56" rx="6" fill="var(--tile)" stroke="var(--line)"/><text x="920" y="64" text-anchor="middle" font-weight="700">depots, swarm,</text><text x="920" y="82" text-anchor="middle" font-size="11" fill="var(--dim)">match: stock made, ended?</text>
+    <!-- the two new paths -->
+    <rect x="560" y="150" width="220" height="100" rx="6" fill="var(--tile)" stroke="var(--accent)"/>
+    <text x="670" y="172" text-anchor="middle" font-weight="700" fill="var(--accent)">step_pillboxes, every 2 s</text>
+    <text x="670" y="192" text-anchor="middle" font-size="12">for each live owned pillbox short of 8:</text>
+    <text x="670" y="208" text-anchor="middle" font-size="12">the nearest depot of its side within 12 tiles</text>
+    <text x="670" y="224" text-anchor="middle" font-size="12">with shells in stock sends one</text>
+    <text x="670" y="242" text-anchor="middle" font-size="11" fill="var(--dim)">(and every 10 s, one of its own, as before)</text>
+    <rect x="800" y="150" width="180" height="100" rx="6" fill="var(--tile)" stroke="var(--accent)"/>
+    <text x="890" y="172" text-anchor="middle" font-weight="700" fill="var(--accent)">damage_pillbox</text>
+    <text x="890" y="192" text-anchor="middle" font-size="12">health −= amount</text>
+    <text x="890" y="210" text-anchor="middle" font-size="12" font-weight="700">shells = 0</text>
+    <text x="890" y="228" text-anchor="middle" font-size="11" fill="var(--dim)">PillboxDamaged event; dead at 0</text>
+  </g>
+  <g stroke="var(--accent)" stroke-width="1.5" fill="none" marker-end="url(#ft)">
+    <path d="M120 68 L138 68"/><path d="M240 68 L258 68"/><path d="M360 68 L378 68"/><path d="M480 68 L498 68"/><path d="M600 68 L618 68"/><path d="M720 68 L738 68"/><path d="M840 68 L858 68"/>
+    <path d="M670 96 L670 148" stroke-dasharray="3 3"/><path d="M790 96 C790 120 890 120 890 148" stroke-dasharray="3 3"/>
+  </g>
+  <text x="500" y="285" text-anchor="middle" font-size="12" fill="var(--dim)">World::step, source/treadcore-sim/src/lib.rs; the order is the one the world hash depends on, and it did not change.</text>
+</svg>
+<figcaption>Fig. 2. One tick of the world in the order <code>World::step</code> runs it. Game 5 touches two boxes: the pillboxes' step gains the depot's supply, and a shell's damage empties the pillbox it hits. Nothing else in the tick moved.</figcaption>
+</figure>

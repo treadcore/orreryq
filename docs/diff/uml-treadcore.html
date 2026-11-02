@@ -1,0 +1,144 @@
+<figure>
+<svg viewBox="0 0 1000 720" width="100%" role="img" aria-label="UML of treadcore's three layers: the simulator's World, Map, Pillbox, Depot and Command; the brain's Brain trait, Commander, Settings, Style roster and scenario Outcome; the window's Args, Pilot, Action and View" style="font-family: var(--mono); font-size: 11px; max-width: 1000px;">
+  <defs>
+    <marker id="gen" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M0 0 L12 6 L0 12 z" fill="var(--base)" stroke="var(--ink)" stroke-width="1"/></marker>
+    <marker id="dep" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10" fill="none" stroke="var(--dim)" stroke-width="1.2"/></marker>
+  </defs>
+  <g fill="var(--ink)">
+    <text x="20" y="22" font-family="var(--cond)" font-size="13" fill="var(--dim)" letter-spacing="1">treadcore-sim (the world; no I/O; deterministic)</text>
+    <!-- World -->
+    <rect x="20" y="30" width="250" height="150" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="20" y="30" width="250" height="18" fill="var(--line)"/><text x="145" y="43" text-anchor="middle" font-weight="700">World</text>
+    <text x="26" y="62">tick, map: Map, tanks, drones, shells</text>
+    <text x="26" y="76">pillboxes: Vec&lt;Pillbox&gt;, depots: Vec&lt;Depot&gt;</text>
+    <text x="26" y="90">structures, mines, players, events</text>
+    <line x1="20" y1="98" x2="270" y2="98" stroke="var(--ink)"/>
+    <text x="26" y="112">step(orders)  observe(p) → Observation</text>
+    <text x="26" y="126">apply(order)  damage_pillbox(id, amt, by)</text>
+    <text x="26" y="140" fill="var(--accent)">step_pillboxes(): regen + supply (new)</text>
+    <text x="26" y="154">step_shells()  step_depots()  hash()</text>
+    <text x="26" y="168">map_as_played()  route_for()</text>
+    <!-- Map -->
+    <rect x="300" y="30" width="230" height="130" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="300" y="30" width="230" height="18" fill="var(--line)"/><text x="415" y="43" text-anchor="middle" font-weight="700">Map</text>
+    <text x="306" y="62">w, h, seed, cells: Vec&lt;u8&gt;</text>
+    <text x="306" y="76" fill="var(--accent)">scale_m: f32 = 25, tempo: f32 = 6 (new)</text>
+    <text x="306" y="90">starts, depots, pillboxes, structures</text>
+    <line x1="300" y1="98" x2="530" y2="98" stroke="var(--ink)"/>
+    <text x="306" y="112">generate(seed)  from_text()  to_text()</text>
+    <text x="306" y="126" fill="var(--accent)">class() → "field" | "theatre" (new)</text>
+    <text x="306" y="140" fill="var(--accent)">metres(tiles)  real_seconds(s) (new)</text>
+    <text x="306" y="154">route()  line_clear()  at()</text>
+    <!-- Pillbox -->
+    <rect x="560" y="30" width="200" height="100" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="560" y="30" width="200" height="18" fill="var(--line)"/><text x="660" y="43" text-anchor="middle" font-weight="700">Pillbox</text>
+    <text x="566" y="62">id, pos, owner: Option&lt;PlayerId&gt;</text>
+    <text x="566" y="76">health, reload, capture, capturer</text>
+    <text x="566" y="90" fill="var(--accent)">shells: u16 (0 on a hit, game 5)</text>
+    <line x1="560" y1="98" x2="760" y2="98" stroke="var(--ink)"/>
+    <text x="566" y="112">alive()  shooter()  hostile_to()</text>
+    <!-- Depot -->
+    <rect x="790" y="30" width="190" height="100" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="790" y="30" width="190" height="18" fill="var(--line)"/><text x="885" y="43" text-anchor="middle" font-weight="700">Depot</text>
+    <text x="796" y="62">id, pos, owner, capture</text>
+    <text x="796" y="76">stock: DepotStock</text>
+    <text x="796" y="90">  kinds: [u8; 6], turn</text>
+    <line x1="790" y1="98" x2="980" y2="98" stroke="var(--ink)"/>
+    <text x="796" y="112">stock.make()  (shells to pillboxes)</text>
+    <!-- Command / rules -->
+    <rect x="560" y="150" width="200" height="90" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="560" y="150" width="200" height="18" fill="var(--line)"/><text x="660" y="163" text-anchor="middle" font-weight="700">«enum» Command</text>
+    <text x="566" y="182">Move, Stop, FireIndirect, FireDirect</text>
+    <text x="566" y="196">Launch, Recall, SetBubble, Deploy</text>
+    <text x="566" y="210">Ping { at: V2, kind: PingKind }</text>
+    <text x="566" y="224">Propose, Answer, Chat, Embark …</text>
+    <rect x="790" y="150" width="190" height="90" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="790" y="150" width="190" height="18" fill="var(--line)"/><text x="885" y="163" text-anchor="middle" font-weight="700">rules (consts)</text>
+    <text x="796" y="182">PILLBOX_SHELLS 8, _REGEN 10 s</text>
+    <text x="796" y="196" fill="var(--accent)">PILLBOX_SUPPLY_REACH 12, _EVERY 2 s</text>
+    <text x="796" y="210" fill="var(--accent)">METRES_PER_TILE 25, TEMPO 6</text>
+    <text x="796" y="224" fill="var(--accent)">physical() → Vec&lt;Physical&gt;</text>
+    <!-- brain layer -->
+    <text x="20" y="282" font-family="var(--cond)" font-size="13" fill="var(--dim)" letter-spacing="1">treadcore-brain (above observe; every kind ends in a Command)</text>
+    <rect x="20" y="290" width="170" height="80" fill="var(--tile)" stroke="var(--ink)" stroke-dasharray="4 3"/>
+    <rect x="20" y="290" width="170" height="18" fill="var(--line)"/><text x="105" y="303" text-anchor="middle" font-weight="700">«trait» Brain</text>
+    <text x="26" y="322">name()  think(obs)</text>
+    <text x="26" y="336">think_on(obs, map)  settings()</text>
+    <text x="26" y="350">act()  rung()  stance()</text>
+    <rect x="220" y="290" width="270" height="170" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="220" y="290" width="270" height="18" fill="var(--line)"/><text x="355" y="303" text-anchor="middle" font-weight="700">Commander</text>
+    <text x="226" y="322">goal: Goal, settings: Settings, slot, task</text>
+    <text x="226" y="336">fleet, crew, cycle, rotation, rally, pings</text>
+    <line x1="220" y1="344" x2="490" y2="344" stroke="var(--ink)"/>
+    <text x="226" y="358">set_goal(g)  think_on()  hunt()  go()</text>
+    <text x="226" y="372" fill="var(--accent)">fly_wing(): reads escort_distance, wing_*,</text>
+    <text x="226" y="386" fill="var(--accent)">  station by wing_stance (new)</text>
+    <text x="226" y="400">fortify()  cycle  defend_base()</text>
+    <text x="226" y="414">«enum» Goal: Manual | HuntPillboxes |</text>
+    <text x="226" y="428">  DefendPillbox | DefendDepot | Escort(p) |</text>
+    <text x="226" y="442">  Hold(V2) | Fortify | DefendBase | Auto</text>
+    <rect x="520" y="290" width="240" height="140" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="520" y="290" width="240" height="18" fill="var(--line)"/><text x="640" y="303" text-anchor="middle" font-weight="700">Settings</text>
+    <text x="526" y="322">w: Weights ([f32; W::ALL] = 141)</text>
+    <text x="526" y="336">caps: Caps (u64 bits)</text>
+    <line x1="520" y1="344" x2="760" y2="344" stroke="var(--ink)"/>
+    <text x="526" y="358">parse(text)  to_text()  diff()</text>
+    <text x="526" y="372">hold(): clamp to RANGES (include_str!)</text>
+    <text x="526" y="386">choice(w) → version  nudge()  ticks()</text>
+    <text x="526" y="400" fill="var(--accent)">+ EscortDistance, WingLeash, WingGreed,</text>
+    <text x="526" y="414" fill="var(--accent)">  WingThreat, WingAhead, WingStance (new)</text>
+    <rect x="790" y="290" width="190" height="140" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="790" y="290" width="190" height="18" fill="var(--line)"/><text x="885" y="303" text-anchor="middle" font-weight="700">styles</text>
+    <text x="796" y="322">Style { slot, name, about, kind }</text>
+    <text x="796" y="336">«enum» Kind: Rules(&amp;str) |</text>
+    <text x="796" y="350">  Transform | Net(bytes) | Duel(bytes)</text>
+    <text x="796" y="364" fill="var(--accent)">ROSTER: [Style; 16] (8 personas new)</text>
+    <line x1="790" y1="372" x2="980" y2="372" stroke="var(--ink)"/>
+    <text x="796" y="386">find(word)  parse_list()</text>
+    <text x="796" y="400">settings_for(style, base)</text>
+    <text x="796" y="414">make(style, base, name, rules)</text>
+    <rect x="20" y="480" width="470" height="110" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="20" y="480" width="470" height="18" fill="var(--line)"/><text x="255" y="493" text-anchor="middle" font-weight="700">scenario</text>
+    <text x="26" y="512">Doc { top, expect, reward, lists }   Outcome { hits, alive, start, end, points, advance,</text>
+    <text x="26" y="526" fill="var(--accent)">  station: BTreeMap&lt;(seat, to), (near, ticks)&gt; (new) }</text>
+    <line x1="20" y1="534" x2="490" y2="534" stroke="var(--ink)"/>
+    <text x="26" y="548">run_inner(doc, seed, net, make)   check(expect, out) → failed   reward(doc, out, failed)</text>
+    <text x="26" y="562" fill="var(--accent)">brain goal "escort:N"; expect/reward "station" (new);  learn::REWARDS has "station"</text>
+    <text x="26" y="576">learn: Course, gauntlet(out, threads) over scenarios/gauntlet/*.toml (G1 … G12)</text>
+    <rect x="520" y="480" width="460" height="110" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="520" y="480" width="460" height="18" fill="var(--line)"/><text x="750" y="493" text-anchor="middle" font-weight="700">the learned kinds</text>
+    <text x="526" y="512">NetBrain { net: Net { layers: Vec&lt;Layer&gt; } }   143 senses → 64 → 64 → heads (TCNET1)</text>
+    <text x="526" y="526">patch::Patch { steps: Vec&lt;Step&gt; }   153 inputs, 3 outputs, k steps, all zeros = the rules</text>
+    <text x="526" y="540">styles::Duelist { champion: Champion (35 → 32 → 32 → 4), rules: Box&lt;dyn Brain&gt; }</text>
+    <text x="526" y="554" fill="var(--accent)">tools/bc Mlp { hidden: Vec&lt;Linear&gt; (DEPTH × WIDTH), c: Linear } (new shape)</text>
+    <text x="526" y="576" fill="var(--dim)">fleet: role(seat, person_leads), team_brain(), fleet_of(): a person's team gets a builder, a guard, two wingmen</text>
+    <!-- client -->
+    <text x="20" y="622" font-family="var(--cond)" font-size="13" fill="var(--dim)" letter-spacing="1">treadcore-client (the window, Bevy)</text>
+    <rect x="20" y="630" width="300" height="80" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="20" y="630" width="300" height="18" fill="var(--line)"/><text x="170" y="643" text-anchor="middle" font-weight="700">Args / menu</text>
+    <text x="26" y="662">players, teams, map, skill, bots: Vec&lt;(team, styles)&gt;</text>
+    <text x="26" y="676" fill="var(--accent)">brain_file: Option&lt;String&gt; (--brain-file, new)</text>
+    <text x="26" y="690">menu rows: Map, Sides, Skill, Your team … (16 styles)</text>
+    <rect x="350" y="630" width="300" height="80" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="350" y="630" width="300" height="18" fill="var(--line)"/><text x="500" y="643" text-anchor="middle" font-weight="700">keys::Action / input</text>
+    <text x="356" y="662">ALL: [Action; 45]  word()  default_key()  group()</text>
+    <text x="356" y="676" fill="var(--accent)">FormUp F1, HoldHere F2, ScreenAhead F3,</text>
+    <text x="356" y="690" fill="var(--accent)">GoHome F4, SpreadOut F5 → Command::Ping (new)</text>
+    <rect x="680" y="630" width="300" height="80" fill="var(--tile)" stroke="var(--ink)"/>
+    <rect x="680" y="630" width="300" height="18" fill="var(--line)"/><text x="830" y="643" text-anchor="middle" font-weight="700">goal::Pilot / hud / session</text>
+    <text x="686" y="662">Pilot { brain: Commander, coord, folded }  screen()</text>
+    <text x="686" y="676" fill="var(--accent)">hud::top(): "field 25 m/tile" (new)</text>
+    <text x="686" y="690">session: bots by styles::make | fleet | NetBrain(file)</text>
+  </g>
+  <!-- relations -->
+  <g stroke="var(--dim)" stroke-width="1.2" fill="none">
+    <path d="M270 60 L298 60"/><path d="M270 80 L558 80" stroke-dasharray="2 3"/><path d="M270 95 L788 95" stroke-dasharray="2 3"/>
+    <path d="M190 330 L218 330" marker-end="url(#gen)"/>
+    <path d="M490 330 L518 330"/><path d="M760 400 L788 400" stroke-dasharray="2 3" marker-end="url(#dep)"/>
+    <path d="M355 290 L355 250 L660 250 L660 242" stroke-dasharray="2 3" marker-end="url(#dep)"/>
+    <path d="M500 630 L500 600 L660 600 L660 242" stroke-dasharray="2 3" marker-end="url(#dep)" opacity="0.6"/>
+  </g>
+  <text x="200" y="258" font-size="10" fill="var(--dim)">«use» a brain's think returns Commands</text>
+</svg>
+<figcaption>Fig. 4. UML of treadcore's three layers, the classes that today's changes touch drawn in full and the rest named. The arrows: World owns a Map and its pillboxes and depots; a Commander is a Brain; a Commander reads its Settings; the window's actions become Commands. What is new is in the accent: a field, a method or a slot added today.</figcaption>
+</figure>

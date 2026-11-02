@@ -28,4 +28,5 @@ bot-styles|Eight Named Minds|orrery · the brain · styles and bridges
 fortify|A Stale Dial|orrery · the brain · what we measured and changed
 terrain|A Terrain for Each Dataset|orrery · the brain · maxima and what works on them
 waves|Waves, Width and Waiting|orrery · the brain and the fleet · temperament, capacity, the queue
+diff|The Day's Difference|orrery · treadcore · 2 November in exact code, flow and UML
 LIST
