@@ -3166,7 +3166,8 @@ class Plan:
         post_spacing without saying so, treadcore 9032026). Once a main
         commit, so a candidate that fails on its own numbers is not tried
         over and over."""
-        r = run(["git", "-C", self.tc, "log", "-1", "--format=%ct %H", "origin/main"])
+        # What a machine builds moved, not a report: a test cannot have been mended by a page.
+        r = run(["git", "-C", self.tc, "log", "-1", "--format=%ct %H", self.build_tip(run(["git", "-C", self.tc, "rev-parse", "origin/main"]).stdout.strip())])
         try:
             when, sha = r.stdout.split()
             when = int(when)
