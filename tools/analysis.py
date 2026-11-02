@@ -3,7 +3,7 @@
 QUEUE/plan/analysis.json. Slow by the standard of a poll (a minute of plain Python), so
 treadcore-view.py starts it in the background when the file is old and never waits for it.
 
-    terrain    the census reads as a surface over two dials, with its local maxima
+    terrains   each dataset's surface and local maxima, and what works on them: tools/terrain.py
     spectrum   each champion's singular values over its generations: a net's spectrogram
     dials      each dial at each promotion, in doublings
     matrices   a net's layers: norms, ranks, sparsity, the end-to-end linear map
@@ -45,7 +45,11 @@ def weights_at(commit, cache={}):
     return cache[commit]
 
 
-# ---- terrain -------------------------------------------------------------------------------
+# ---- terrain ----------------------------------------------------------------------------------
+# tools/terrain.py. What was here read fleet.tsv, whose rows of game 4 carry no commit, and a ledger
+# stopped on 28 October: 109 reads of 2,659, and heights set by the gains promotions had claimed.
+
+
 def promotions():
     """[(commit, held gain)] oldest first, from the commits the fleet's promotions made."""
     out = []
@@ -53,122 +57,6 @@ def promotions():
         m = re.search(r"held out ([-+][\d.]+)(?: and ([-+][\d.]+))?", line)
         gain = (float(m.group(1)) + float(m.group(2) or m.group(1))) / 2 if m else 0.0
         out.append((line.split()[0], gain))
-    return out
-
-
-def reads():
-    """Every census against its day's defaults, as (dial values, gain over today's defaults)."""
-    promos = promotions()
-    # THE LINE TOO. Since generations are carried unproven, most reads stand on commits main does not
-    # hold yet; asking main alone drew an empty terrain after the first one (1 November).
-    order = git("log", "--format=%h", "orrery/accepted").split() or []
-    order += [c for c in git("log", "--format=%h", "main").split() if c not in order]
-    place = {c: i for i, c in enumerate(order)}  # 0 is newest
-    today = weights_at("HEAD")
-    rows = []
-    game = git("show", "HEAD:source/treadcore-sim/GAME_VERSION").strip()
-    games = {}
-    try:
-        lines = open(os.path.join(TC, "build/ledger/fleet.tsv")).read().splitlines()
-    except OSError:
-        return [], today
-    # And the queue's whole ledger: fleet.tsv holds only its reads on today's defaults, so each
-    # generation took the last one's reads out of it. A stamp is one census, whichever table says so.
-    try:
-        lines += open(os.path.join(QUEUE, "plan", "ledger-all.tsv")).read().splitlines()[1:]
-    except OSError:
-        pass
-    head = lines[0].split("\t")
-    seen = set()
-    for l in lines[1:]:
-        r = dict(zip(head, l.split("\t")))
-        if r.get("stamp") in seen:
-            continue
-        seen.add(r.get("stamp"))
-        c = r.get("commit", "")
-        # A line commit replayed onto a newer main has a new hash, and the old one is still the
-        # commit its reads stood on: placed as newest, with no promotion counted since it.
-        if c and c not in place and subprocess.run(["git", "-C", TC, "cat-file", "-e", c + "^{commit}"], capture_output=True).returncode == 0:
-            place[c] = -1
-        if r.get("base", "").replace(" ", "") != "caps=baseline" or "caps" in r.get("trial", "") or c not in place:
-            continue
-        try:
-            d, se = float(r["d"]), float(r["se"])
-        except (KeyError, ValueError):
-            continue
-        if se <= 0 or int(r.get("seeds") or 0) < 12:
-            continue
-        # A read of an older game says nothing of this one's ground.
-        if c not in games:
-            games[c] = git("show", c + ":source/treadcore-sim/GAME_VERSION").strip()
-        if games[c] != game:
-            continue
-        base = weights_at(c)
-        if not base:
-            continue
-        vals = dict(base)
-        for kv in r["trial"].split(";"):
-            if "=" in kv:
-                k, v = kv.split("=", 1)
-                try:
-                    vals[k.strip()] = float(v)
-                except ValueError:
-                    pass
-        # Today's defaults are this read's baseline plus what was promoted since.
-        since = sum(g for pc, g in promos if pc in place and place[pc] < place[c])
-        rows.append((vals, d - since, se))
-    return rows, today
-
-
-def terrain(rows, today, n=30):
-    moved = {}
-    for vals, _, _ in rows:
-        for k, v in vals.items():
-            t = today.get(k, 0)
-            if t > 0 and v > 0 and abs(math.log2(v / t)) > 0.02:
-                moved[k] = moved.get(k, 0) + 1
-    top = [k for k, _ in sorted(moved.items(), key=lambda kv: -kv[1])[:5]]
-    pairs = [(top[i], top[j]) for i in range(len(top)) for j in range(i + 1, len(top))][:6]
-    out = []
-    for a, b in pairs:
-        pts = []
-        for vals, d, se in rows:
-            va, vb = vals.get(a, 0), vals.get(b, 0)
-            if va > 0 and vb > 0:
-                pts.append((math.log2(va / today[a]), math.log2(vb / today[b]), d, 1 / (se * se + 0.25)))
-        if len(pts) < 20:
-            continue
-        lo = lambda i: max(-2.5, min(p[i] for p in pts) - 0.1)
-        hi = lambda i: min(2.5, max(p[i] for p in pts) + 0.1)
-        ax0, ax1, ay0, ay1 = lo(0), hi(0), lo(1), hi(1)
-        h = max(0.15, max(ax1 - ax0, ay1 - ay0) / 10)
-        z, sup = [], []
-        for iy in range(n):
-            y = ay0 + (ay1 - ay0) * iy / (n - 1)
-            zr, sr = [], []
-            for ix in range(n):
-                x = ax0 + (ax1 - ax0) * ix / (n - 1)
-                s0 = s1 = 0.0
-                for px, py, d, w in pts:
-                    k = w * math.exp(-((px - x) ** 2 + (py - y) ** 2) / (2 * h * h))
-                    s0 += k
-                    s1 += k * d
-                # Toward zero where little stands: a bare hilltop on one read is not a hill.
-                zr.append(round(s1 / (s0 + 2.0), 3))
-                sr.append(round(s0, 2))
-            z.append(zr)
-            sup.append(sr)
-        peaks = []
-        for iy in range(1, n - 1):
-            for ix in range(1, n - 1):
-                v = z[iy][ix]
-                if sup[iy][ix] >= 2.0 and all(v >= z[iy + dy][ix + dx] for dy in (-1, 0, 1) for dx in (-1, 0, 1)):
-                    x, y = ax0 + (ax1 - ax0) * ix / (n - 1), ay0 + (ay1 - ay0) * iy / (n - 1)
-                    peaks.append({"ix": ix, "iy": iy, "z": v, "support": sup[iy][ix],
-                                  "a": round(today[a] * 2 ** x, 4), "b": round(today[b] * 2 ** y, 4)})
-        peaks.sort(key=lambda p: -p["z"])
-        out.append({"a": a, "b": b, "ax": [round(ax0, 3), round(ax1, 3)], "ay": [round(ay0, 3), round(ay1, 3)],
-                    "today": [today[a], today[b]], "reads": len(pts), "z": z, "support": sup, "peaks": peaks[:6]})
     return out
 
 
@@ -322,14 +210,21 @@ def main(q):
     global QUEUE
     QUEUE = q
     t0 = time.time()
-    rows, today = reads()
-    out = {"at": time.strftime("%H:%M"), "reads": len(rows), "terrain": terrain(rows, today), "dials": dial_history(), "channels": CHANNELS,
+    out = {"at": time.strftime("%H:%M"), "reads": 0, "dials": dial_history(), "channels": CHANNELS,
            "spectrum": {"plain": champion_spectrum(by_time(os.path.join(q, "crucible", "champions")), 32, 3),
                         "hybrid": champion_spectrum(by_time(os.path.join(q, "crucible-hybrid", "champions")), 35, 4)}}
     for name in ("bc2",):
         p = os.path.join(TC, "nets", name + ".bin")
         if os.path.exists(p):
             out["net"] = net_analysis(p)
+    # Each dataset's terrain is a file of its own, read when it is chosen: this document is read every few seconds.
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import terrain as terrains
+        out["terrains"] = terrains.index(q)
+        out["reads"] = out["terrains"]["reads"]["used"]
+    except Exception as e:
+        out["terrains"] = {"error": str(e)[:300], "datasets": []}
     try:
         out["fleet"] = fleet_counts(q)
         out["limits"] = number_limits()
@@ -340,7 +235,7 @@ def main(q):
     with open(tmp, "w") as f:
         json.dump(out, f)
     os.rename(tmp, os.path.join(q, "plan", "analysis.json"))
-    print("analysis: %d reads, %d terrains, %.0f s" % (len(rows), len(out["terrain"]), out["seconds"]))
+    print("analysis: %d reads, %d terrains, %.0f s" % (out["reads"], len(out["terrains"].get("datasets", [])), out["seconds"]))
 
 
 if __name__ == "__main__":

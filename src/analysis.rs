@@ -12,6 +12,9 @@ use crate::draw::Rgb;
 use crate::font::{F10X20, F8X13};
 use crate::json::Value;
 use crate::ui::{rect, Rect, Ui};
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::time::SystemTime;
 
 pub const TABS: [&str; 6] = ["Patch", "Terrain", "Spectrum", "Matrices", "Senses", "Fleet"];
 
@@ -22,6 +25,17 @@ pub struct State {
     /// Quarter-turns of a sixteenth each.
     pub yaw: i32,
     pub hybrid: bool,
+    /// Which of the terrains' datasets.
+    pub dataset: usize,
+    /// The selected region, x0 x1 y0 y1 on the pair's axes, and the corner a drag began at.
+    pub sel: Option<[f64; 4]>,
+    /// The two dials it was drawn over.
+    pub sel_on: String,
+    pub drag: Option<(f64, f64)>,
+    pub operator: bool,
+    /// Arguments for tools/regions.py, for main to run; and what it last said.
+    pub ask: Option<String>,
+    pub said: String,
 }
 
 fn blend(a: Rgb, b: Rgb, t: f64) -> Rgb {
@@ -99,60 +113,244 @@ pub fn project(u: f64, v: f64, h: f64, yaw: f64, cx: f64, cy: f64, r: f64) -> (f
     (cx + x * r, cy + y * r * 0.5 - h, y)
 }
 
+/// The dataset's own file, read again only when it changes: this runs each frame, and a file is
+/// tens of thousands of numbers. The document polled every few seconds carries only the index.
+fn load_doc(path: &str) -> Option<Rc<Value>> {
+    thread_local! {
+        static DOC: RefCell<(String, Option<SystemTime>, Option<Rc<Value>>)> = const { RefCell::new((String::new(), None, None)) };
+    }
+    let when = std::fs::metadata(path).and_then(|m| m.modified()).ok();
+    DOC.with(|d| {
+        let mut d = d.borrow_mut();
+        if d.0 != path || d.1 != when {
+            let v = std::fs::read_to_string(path).ok().and_then(|t| crate::json::parse(&t).ok()).map(Rc::new);
+            *d = (path.to_string(), when, v);
+        }
+        d.2.clone()
+    })
+}
+
+/// Three figures: a peak's place needs no more, and the panel has no room for them.
+fn sig(v: f64) -> String {
+    if v.abs() >= 100.0 { format!("{:.0}", v) } else if v.abs() >= 10.0 { format!("{:.1}", v) } else { format!("{:.2}", v) }
+}
+
+/// Two corners as [x0, x1, y0, y1], least first.
+pub fn corners(a: (f64, f64), b: (f64, f64)) -> [f64; 4] {
+    [a.0.min(b.0), a.0.max(b.0), a.1.min(b.1), a.1.max(b.1)]
+}
+
+pub fn inside(b: &[f64; 4], x: f64, y: f64) -> bool {
+    x >= b[0] && x <= b[1] && y >= b[2] && y <= b[3]
+}
+
+/// The word a maximum carries, and its colour: nothing working on it is the one to see.
+fn word_of(ui: &Ui, q: &Value) -> (String, Rgb) {
+    let t = ui.t;
+    match (s(q, "word").as_str(), s(q, "says").as_str()) {
+        ("read", "holds") => ("read: it holds".to_string(), t.up),
+        ("read", "falls") => ("read: under today".to_string(), t.dim),
+        ("read", _) => ("read: not settled".to_string(), t.ink),
+        ("reading", _) => ("being worked on".to_string(), t.warn),
+        _ => ("NOTHING ON IT".to_string(), t.alarm),
+    }
+}
+
 fn draw_terrain(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
     let t = ui.t;
     let lh = F8X13.height as i32 + 5;
-    let list = arr(a, "terrain");
-    if list.is_empty() {
-        ui.label_in(at.x, at.y, at.w, "Not enough reads yet to draw a terrain.", &F8X13, t.dim);
+    let Some(idx) = a.get("terrains") else {
+        ui.label_in(at.x, at.y, at.w, "The terrains are being worked out; it takes about a minute.", &F8X13, t.dim);
+        return;
+    };
+    let sets = arr(idx, "datasets");
+    if sets.is_empty() {
+        ui.label_in(at.x, at.y, at.w, &format!("No terrain to draw. {}", s(idx, "error")), &F8X13, t.dim);
         return;
     }
-    st.pair = st.pair.min(list.len() - 1);
-    let w = 230;
+    st.dataset = st.dataset.min(sets.len() - 1);
+
+    // The datasets, each saying how many of its maxima have something on them.
+    let rail = rect(at.x, at.y, 212, at.h);
+    let mut y = rail.y;
+    let mut group = String::new();
+    for (i, d) in sets.iter().enumerate() {
+        let g = s(d, "group");
+        if g != group {
+            let head = match g.as_str() {
+                "reads" => "All the reads",
+                "maps" => "By map",
+                "parts" => "By what was scored",
+                _ => "Nets, not dials",
+            };
+            y += if group.is_empty() { 0 } else { 5 };
+            ui.label_in(rail.x, y, rail.w, head, &F8X13, t.dim);
+            y += lh - 3;
+            group = g;
+        }
+        let r = rect(rail.x, y, rail.w - 6, lh - 1);
+        let on = i == st.dataset;
+        ui.panel(r, if on { t.tile } else { t.base });
+        if on {
+            ui.outline(r, t.up);
+        }
+        let (peaks, bare, reading) = (n(d, "peaks"), n(d, "bare"), n(d, "reading"));
+        let mark = if peaks == 0.0 { t.line } else if bare > 0.0 { t.alarm } else if reading > 0.0 { t.warn } else { t.up };
+        ui.c.disc(r.x + 8, r.y + r.h / 2, 4, mark);
+        ui.label_in(r.x + 17, r.y + 2, r.w - 62, &s(d, "label"), &F8X13, if on { t.ink } else { t.dim });
+        ui.label_right(r.right() - 4, r.y + 2, &format!("{}/{}", peaks - bare, peaks), &F8X13, if bare > 0.0 { t.alarm } else { t.dim });
+        ui.tip(r, || vec![
+            format!("{}: {} maxima over {} pairs of dials", s(d, "label"), peaks, n(d, "pairs")),
+            format!("{} read, {} being worked on, {} with nothing on them.", n(d, "read"), reading, bare),
+            "Click to draw this dataset.".to_string(),
+        ]);
+        if ui.button_hit(r) && !on {
+            st.dataset = i;
+            st.pair = 0;
+            st.sel = None;
+        }
+        y += lh;
+    }
+    if let Some(r) = idx.get("reads") {
+        y += 6;
+        ui.label_in(rail.x, y, rail.w - 6, &format!("{} reads used", n(r, "used")), &F8X13, t.dim);
+        y += lh;
+    }
+    let bare_all: f64 = sets.iter().filter(|d| s(d, "group") != "nets").map(|d| n(d, "bare")).sum();
+    if st.operator && bare_all > 0.0 && ui.button(rect(rail.x, y, rail.w - 6, 22), &format!("Read every bare: {}", bare_all), true) {
+        st.ask = Some("cover-all".to_string());
+    }
+
+    let d = &sets[st.dataset];
+    let Some(doc) = load_doc(&format!("{}/{}.json", s(idx, "dir"), s(d, "id"))) else {
+        ui.label_in(rail.right() + 8, at.y, at.w - rail.w - 8, "This dataset's file cannot be read yet.", &F8X13, t.dim);
+        return;
+    };
+    let pairs = arr(&doc, "pairs");
+    if pairs.is_empty() {
+        ui.label_in(rail.right() + 8, at.y, at.w - rail.w - 8, &format!("{}: too few reads to draw any pair of dials.", s(d, "label")), &F8X13, t.dim);
+        return;
+    }
+    if st.pair >= pairs.len() {
+        st.pair = 0;
+        st.sel = None;
+    }
+    // The pairs are chosen afresh each reading: a box drawn over two dials is not a box over two others.
+    let names = format!("{} {}", s(&pairs[st.pair], "a"), s(&pairs[st.pair], "b"));
+    if st.sel_on != names {
+        if !st.sel_on.is_empty() {
+            st.sel = None;
+            st.drag = None;
+        }
+        st.sel_on = names;
+    }
+    let can_send = doc.get("can_send").and_then(|v| v.as_bool()).unwrap_or(false);
+
+    // The pairs, the maxima and what to do about them.
+    let w = 240;
     let side = rect(at.right() - w, at.y, w, at.h);
-    // The pairs.
     let mut y = side.y;
-    ui.label(side.x, y, "Two dials at a time", &F8X13, t.dim);
-    y += lh;
-    for (i, p) in list.iter().enumerate() {
-        let r = rect(side.x, y, w, lh + 2);
+    for (i, p) in pairs.iter().enumerate() {
+        let r = rect(side.x, y, w, lh - 1);
         let on = i == st.pair;
         ui.panel(r, if on { t.tile } else { t.base });
         if on {
             ui.outline(r, t.up);
         }
-        ui.label_in(r.x + 5, r.y + 3, w - 10, &format!("{} x {}", s(p, "a"), s(p, "b")), &F8X13, if on { t.ink } else { t.dim });
-        if ui.button_hit(r) {
-            st.pair = i;
+        let bare = arr(p, "peaks").iter().filter(|q| s(q, "word") == "bare").count();
+        let wid = if bare > 0 { w - 28 } else { w - 10 };
+        ui.label_in(r.x + 5, r.y + 2, wid, &format!("{} x {}", s(p, "a"), s(p, "b")), &F8X13, if on { t.ink } else { t.dim });
+        if bare > 0 {
+            ui.c.disc(r.right() - 10, r.y + r.h / 2, 4, t.alarm);
         }
-        y += lh + 4;
+        if ui.button_hit(r) && !on {
+            st.pair = i;
+            st.sel = None;
+        }
+        y += lh;
     }
-    y += 4;
-    if ui.button(rect(side.x, y, 72, 22), "Turn <", true) {
+    y += 3;
+    if ui.button(rect(side.x, y, 66, 22), "Turn <", true) {
         st.yaw -= 1;
     }
-    if ui.button(rect(side.x + 78, y, 72, 22), "Turn >", true) {
+    if ui.button(rect(side.x + 72, y, 66, 22), "Turn >", true) {
         st.yaw += 1;
     }
-    y += 30;
-    let p = &list[st.pair];
+    y += 28;
+    let p = &pairs[st.pair];
+    let log = p.get("log").and_then(|v| v.as_bool()).unwrap_or(false);
+    let h_box = n(p, "h");
     let peaks = arr(p, "peaks");
-    ui.label(side.x, y, if peaks.is_empty() { "No local maximum here" } else { "Local maxima, best first" }, &F8X13, if peaks.is_empty() { t.dim } else { t.ink });
-    y += lh;
+    ui.label(side.x, y, if peaks.is_empty() { "No local maximum here" } else { "Local maxima, highest first" }, &F8X13, if peaks.is_empty() { t.dim } else { t.ink });
+    y += lh - 2;
     for (i, q) in peaks.iter().take(5).enumerate() {
-        ui.label_in(side.x, y, w, &format!("{}  {:+.2} at {:.3}, {:.3}", i + 1, n(q, "z"), n(q, "a"), n(q, "b")), &F8X13, t.ink);
-        y += lh - 2;
-        ui.label_in(side.x + 22, y, w - 22, &format!("weight of reads {:.0}", n(q, "support")), &F8X13, t.dim);
-        y += lh - 1;
-    }
-    y += 4;
-    for line in ["Ring: today's defaults.", "Dim: few reads there.", "A map of where to look.", "Only a census proves one."] {
-        ui.label_in(side.x, y, w, line, &F8X13, t.dim);
-        y += lh - 2;
+        let r = rect(side.x, y, w, lh * 2 - 3);
+        let (word, col) = word_of(ui, q);
+        ui.c.disc(r.x + 7, r.y + 7, 7, col);
+        ui.label(r.x + 4, r.y + 1, &(i + 1).to_string(), &F8X13, t.base);
+        ui.label_in(r.x + 18, r.y, w - 18, &format!("{:+.2}  {}", n(q, "z"), word), &F8X13, col);
+        let second = if s(q, "word") == "read" {
+            format!("{}, {}: {:+.2} +/- {:.2}", sig(n(q, "a")), sig(n(q, "b")), n(q, "mean"), n(q, "err"))
+        } else if !log && n(q, "jobs") > 0.0 {
+            format!("{} is here", s(q, "says"))
+        } else if n(q, "jobs") > 0.0 {
+            format!("{}, {}: {} at work", sig(n(q, "a")), sig(n(q, "b")), n(q, "jobs"))
+        } else {
+            format!("{}, {}: {} near", sig(n(q, "a")), sig(n(q, "b")), n(q, "reads"))
+        };
+        ui.label_in(r.x + 18, r.y + lh - 4, w - 18, &second, &F8X13, t.dim);
+        ui.tip(r, || vec![
+            format!("Maximum {}: {:+.2} on the surface", i + 1, n(q, "z")),
+            format!("{} reads, {} seeds and {} jobs within {:.2} of it.", n(q, "reads"), n(q, "seeds"), n(q, "jobs"), h_box),
+            if s(q, "word") == "read" { format!("Those reads say {:+.2} +/- {:.2}, against today's defaults.", n(q, "mean"), n(q, "err")) } else { "Too few seeds yet to say.".to_string() },
+            "Click to select the ground around it.".to_string(),
+        ]);
+        if ui.button_hit(r) {
+            st.sel = Some([n(q, "x") - h_box, n(q, "x") + h_box, n(q, "y") - h_box, n(q, "y") + h_box]);
+        }
+        y += lh * 2 - 3;
     }
 
-    // The surface.
-    let plot = rect(at.x, at.y, at.w - w - 14, at.h);
+    // What is selected, and asking for work on it.
+    y += 2;
+    if let Some(b) = st.sel {
+        let dots = arr(p, "dots").iter().filter(|v| { let c = nums(v); c.len() >= 2 && inside(&b, c[0], c[1]) }).count();
+        let jobs = arr(p, "jobs").iter().filter(|v| { let c = v.as_array().unwrap_or(&[]); c.len() >= 2 && inside(&b, c[0].as_num().unwrap_or(9e9), c[1].as_num().unwrap_or(9e9)) }).count();
+        let tops = peaks.iter().filter(|q| inside(&b, n(q, "x"), n(q, "y"))).count();
+        let today = p.get("today").map(nums).unwrap_or_default();
+        let value = |i: usize, x: f64| if log { today.get(i).copied().unwrap_or(1.0) * 2f64.powf(x) } else { x };
+        ui.label_in(side.x, y, w, "Selected", &F8X13, t.warn);
+        y += lh - 3;
+        ui.label_in(side.x, y, w, &format!("{}: {:.3} to {:.3}", s(p, "a"), value(0, b[0]), value(0, b[1])), &F8X13, t.dim);
+        y += lh - 3;
+        ui.label_in(side.x, y, w, &format!("{}: {:.3} to {:.3}", s(p, "b"), value(1, b[2]), value(1, b[3])), &F8X13, t.dim);
+        y += lh - 3;
+        ui.label_in(side.x, y, w, &format!("{} reads, {} at work, {} maxima", dots, jobs, tops), &F8X13, t.ink);
+        y += lh - 1;
+        if can_send && st.operator && ui.button(rect(side.x, y, 134, 22), "Read here: 6", true) {
+            st.ask = Some(format!("add {} {:.6} {:.6} {} {:.6} {:.6} 6", s(p, "a"), value(0, b[0]), value(0, b[1]), s(p, "b"), value(1, b[2]), value(1, b[3])));
+        }
+        if ui.button(rect(side.x + 140, y, 62, 22), "Clear", true) {
+            st.sel = None;
+        }
+        y += 26;
+    } else {
+        ui.label_in(side.x, y, w, "Drag on the flat map.", &F8X13, t.dim);
+        y += lh;
+    }
+    let bare_here = peaks.iter().filter(|q| s(q, "word") == "bare").count();
+    if can_send && st.operator && bare_here > 0 {
+        if ui.button(rect(side.x, y, 202, 22), &format!("Read the bare: {}", bare_here), true) {
+            st.ask = Some(format!("cover {} {}", s(d, "id"), st.pair));
+        }
+        y += 26;
+    }
+    if !st.said.is_empty() {
+        ui.label_in(side.x, y, w, &st.said, &F8X13, t.warn);
+    }
+
+    // The heading says the one thing this screen is for.
+    let plot = rect(rail.right() + 6, at.y, at.w - rail.w - w - 18, at.h);
     let z = grid(arr(p, "z"));
     let sup = grid(arr(p, "support"));
     let rows = z.len();
@@ -160,11 +358,48 @@ fn draw_terrain(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
     if rows < 2 || cols < 2 {
         return;
     }
-    ui.label_in(plot.x, plot.y, plot.w, &format!("Gain, floored at -3, over today's defaults, points a seat: {} reads over {} and {}", n(p, "reads"), s(p, "a"), s(p, "b")), &F8X13, t.ink);
+    ui.label_in(plot.x, plot.y, plot.w, &format!("{}: {}. {} reads over {} and {}", s(d, "label"), s(&doc, "unit"), n(p, "reads"), s(p, "a"), s(p, "b")), &F8X13, t.ink);
+    let (read, doing, bare) = (
+        peaks.iter().filter(|q| s(q, "word") == "read").count(),
+        peaks.iter().filter(|q| s(q, "word") == "reading").count(),
+        bare_here,
+    );
+    let verdict = if peaks.is_empty() {
+        "No maximum stands out of this pair.".to_string()
+    } else if bare == 0 {
+        format!("Every maximum here has work on it: {} read, {} being worked on.", read, doing)
+    } else {
+        format!("{} of {} maxima have nothing on them: {} read, {} being worked on.", bare, peaks.len(), read, doing)
+    };
+    ui.label_in(plot.x, plot.y + lh - 2, plot.w, &verdict, &F8X13, if bare > 0 { t.alarm } else { t.up });
+
+    let (ax, ay) = (p.get("ax").map(nums).unwrap_or_default(), p.get("ay").map(nums).unwrap_or_default());
+    if ax.len() != 2 || ay.len() != 2 {
+        return;
+    }
+    let top = plot.y + lh * 2 + 2;
+    let body = rect(plot.x, top, plot.w, plot.bottom() - top);
+    let flat_size = (body.w * 44 / 100).min(body.h - lh * 3).max(120);
+    let flat = rect(body.right() - flat_size, body.y + 4, flat_size, flat_size);
+    let land = rect(body.x, body.y, body.w - flat_size - 10, body.h - lh * 2);
+
     // A floor at three points under today: the valleys reach -7, and on their scale the ground
     // that matters, within a point of today, drew flat and black.
     let z: Vec<Vec<f64>> = z.iter().map(|row| row.iter().map(|v| v.max(-3.0)).collect()).collect();
-    let zmax = z.iter().flatten().fold(0.5f64, |m, v| m.max(v.abs()));
+    // Kills less deaths moves in tenths, where points move in points: its own scale, its own terraces.
+    let zmax = z.iter().flatten().fold(0.05f64, |m, v| m.max(v.abs()));
+    let sup_max = sup.iter().flatten().fold(1e-6f64, |m, v| m.max(*v));
+    let colour = |ui: &Ui, ix: usize, iy: usize, v: f64, lit: f64| {
+        // Terraces, a twelfth of the height: contour lines without drawing any.
+        let step = zmax / 12.0;
+        let base = heat(ui, (v / step).round() * step, zmax);
+        let shaded = if lit > 0.5 { blend(base, ui.t.ink, (lit - 0.5) * 0.35) } else { blend(base, ui.t.base, (0.5 - lit) * 0.7) };
+        blend(ui.t.tile, shaded, (sup[iy][ix] / (sup_max * 0.08)).clamp(0.12, 1.0))
+    };
+    let cell_x = |ix: usize| ax[0] + (ax[1] - ax[0]) * ix as f64 / (cols - 1) as f64;
+    let cell_y = |iy: usize| ay[0] + (ay[1] - ay[0]) * iy as f64 / (rows - 1) as f64;
+
+    // The surface, as before, with the selection lit on it.
     let yaw = 0.7 + st.yaw as f64 * std::f64::consts::PI / 8.0;
     let at_uv = |ix: usize, iy: usize| (2.0 * ix as f64 / (cols - 1) as f64 - 1.0, 2.0 * iy as f64 / (rows - 1) as f64 - 1.0);
     // Fitted to the panel: a deep valley hung off the bottom of a fixed scale. Measured at unit
@@ -181,7 +416,7 @@ fn draw_terrain(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
             y1 = y1.max(g.1);
         }
     }
-    let area = rect(plot.x, plot.y + lh + 30, plot.w, plot.h - lh * 3 - 40);
+    let area = rect(land.x, land.y + 30, land.w, land.h - 34);
     let r = (area.w as f64 / (x1 - x0).max(1e-6)).min(area.h as f64 / (y1 - y0).max(1e-6));
     let hs = hu * r;
     let cx = area.x as f64 + area.w as f64 / 2.0 - r * (x0 + x1) / 2.0;
@@ -195,7 +430,6 @@ fn draw_terrain(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
         }
     }
     cells.sort_by(|a, b| a.0.total_cmp(&b.0));
-    let sup_max = sup.iter().flatten().fold(1e-6f64, |m, v| m.max(*v));
     for (_, ix, iy) in cells {
         let c = [(ix, iy), (ix + 1, iy), (ix + 1, iy + 1), (ix, iy + 1)];
         let q: Vec<(f64, f64)> = c
@@ -207,51 +441,139 @@ fn draw_terrain(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
             })
             .collect();
         let mean = c.iter().map(|&(i, j)| z[j][i]).sum::<f64>() / 4.0;
-        // Terraces each quarter point: contour lines without drawing any.
-        let band = (mean * 4.0).round() / 4.0;
         // Lit from one side, so a slope shows on a surface of one colour.
         let slope = (z[iy][ix + 1] - z[iy][ix]) + (z[iy + 1][ix] - z[iy][ix]);
         let lit = (0.5 + slope / zmax * 4.0).clamp(0.0, 1.0);
-        let base = heat(ui, band, zmax);
-        let shaded = if lit > 0.5 { blend(base, t.ink, (lit - 0.5) * 0.35) } else { blend(base, t.base, (0.5 - lit) * 0.7) };
-        let seen = (sup[iy][ix] / (sup_max * 0.08)).clamp(0.12, 1.0);
-        let col = blend(t.tile, shaded, seen);
+        let mut col = colour(ui, ix, iy, mean, lit);
+        if st.sel.is_some_and(|b| inside(&b, cell_x(ix), cell_y(iy))) {
+            col = blend(col, t.warn, 0.45);
+        }
         tri(ui, [q[0], q[1], q[2]], col);
         tri(ui, [q[0], q[2], q[3]], col);
     }
-    // Today's defaults: 0 doublings on each axis.
-    let (ax, ay) = (nums(p.get("ax").unwrap_or(&Value::Null)), nums(p.get("ay").unwrap_or(&Value::Null)));
-    if ax.len() == 2 && ay.len() == 2 {
+    let cell_of = |x: f64, a0: f64, a1: f64, m: usize| (m - 1) as f64 * (x - a0) / (a1 - a0).max(1e-9);
+    if log {
         let (u, v) = (2.0 * (0.0 - ax[0]) / (ax[1] - ax[0]) - 1.0, 2.0 * (0.0 - ay[0]) / (ay[1] - ay[0]) - 1.0);
         let g = project(u, v, 0.0, yaw, cx, cy, r);
         ui.c.disc(g.0 as i32, g.1 as i32, 6, t.ink);
         ui.c.disc(g.0 as i32, g.1 as i32, 3, t.base);
-        ui.tip(plot, || vec![
-            format!("The terrain over {} and {}", s(p, "a"), s(p, "b")),
-            "Each read in the ledger is a point in dial space. Height is the smoothed gain nearby, in points a seat; colour fades where there are few reads.".to_string(),
-            "A place to look, never a result: only a census says what is there. Hover a numbered flag for a peak; the ringed dot is today's defaults.".to_string(),
-        ]);
-        ui.tip(rect(g.0 as i32 - 8, g.1 as i32 - 8, 16, 16), || vec!["Today's defaults".to_string(), "Where the brain is now: no doublings on either dial.".to_string()]);
+        ui.tip(rect(g.0 as i32 - 8, g.1 as i32 - 8, 16, 16), || vec!["Today's defaults".to_string(), "Where the line is now: no doublings on either dial, and height zero by definition.".to_string()]);
     }
     for (i, q) in peaks.iter().take(5).enumerate() {
         let (ix, iy) = (n(q, "ix") as usize, n(q, "iy") as usize);
         let (u, v) = at_uv(ix, iy);
         let g = project(u, v, n(q, "z") * hs, yaw, cx, cy, r);
-        ui.c.rect(g.0 as i32, g.1 as i32 - 24, 1, 24, t.warn);
-        ui.c.disc(g.0 as i32, g.1 as i32 - 28, 8, t.warn);
+        let (_, col) = word_of(ui, q);
+        ui.c.rect(g.0 as i32, g.1 as i32 - 24, 1, 24, col);
+        ui.c.disc(g.0 as i32, g.1 as i32 - 28, 8, col);
         ui.label(g.0 as i32 - 3, g.1 as i32 - 34, &(i + 1).to_string(), &F8X13, t.base);
-        ui.tip(rect(g.0 as i32 - 9, g.1 as i32 - 37, 18, 18), || vec![
-            format!("Peak {}: {:+.2} points a seat", i + 1, n(q, "z")),
-            format!("{} reads nearby.", n(q, "support")),
-            "Ground higher than its eight neighbours. Worth a trial, and not yet evidence.".to_string(),
+    }
+    ui.tip(land, || vec![
+        format!("The terrain over {} and {}", s(p, "a"), s(p, "b")),
+        "Height is the smoothed gain over today's defaults, from the reads that moved one of these dials. Colour fades where there are few.".to_string(),
+        "A place to look, never a result: only a census says what is there.".to_string(),
+    ]);
+
+    // The same ground from above, where a region can be drawn and what works on it seen.
+    let cw = flat.w as f64 / cols as f64;
+    let ch = flat.h as f64 / rows as f64;
+    for iy in 0..rows {
+        for ix in 0..cols {
+            let x = flat.x + (ix as f64 * cw) as i32;
+            let y = flat.bottom() - ((iy + 1) as f64 * ch) as i32;
+            ui.c.rect(x, y, cw.ceil() as i32, ch.ceil() as i32, colour(ui, ix, iy, z[iy][ix], 0.5));
+        }
+    }
+    ui.outline(flat, t.line);
+    let px = |x: f64| flat.x + (((x - ax[0]) / (ax[1] - ax[0]).max(1e-9)) * flat.w as f64) as i32;
+    let py = |y: f64| flat.bottom() - (((y - ay[0]) / (ay[1] - ay[0]).max(1e-9)) * flat.h as f64) as i32;
+    for v in arr(p, "dots") {
+        let c = nums(v);
+        if c.len() >= 2 && inside(&[ax[0], ax[1], ay[0], ay[1]], c[0], c[1]) {
+            ui.c.rect(px(c[0]), py(c[1]), 2, 2, blend(t.base, t.ink, 0.65));
+        }
+    }
+    for g in arr(p, "regions") {
+        let (a0, a1, b0, b1) = (px(n(g, "x0")), px(n(g, "x1")), py(n(g, "y1")), py(n(g, "y0")));
+        ui.outline(rect(a0, b0, (a1 - a0).max(2), (b1 - b0).max(2)), t.warn);
+    }
+    for v in arr(p, "jobs") {
+        let c = v.as_array().unwrap_or(&[]);
+        if c.len() == 3 {
+            let (x, y) = (c[0].as_num().unwrap_or(0.0), c[1].as_num().unwrap_or(0.0));
+            if inside(&[ax[0], ax[1], ay[0], ay[1]], x, y) {
+                if c[2].as_str() == Some("running") {
+                    ui.c.disc(px(x), py(y), 4, t.base);
+                    ui.c.disc(px(x), py(y), 3, t.warn);
+                } else {
+                    ui.c.frame(px(x) - 3, py(y) - 3, 7, 7, t.warn);
+                }
+            }
+        }
+    }
+    if log {
+        ui.c.disc(px(0.0), py(0.0), 6, t.ink);
+        ui.c.disc(px(0.0), py(0.0), 3, t.base);
+    }
+    for (i, q) in peaks.iter().take(5).enumerate() {
+        let (mx, my) = (px(n(q, "x")), py(n(q, "y")));
+        let (_, col) = word_of(ui, q);
+        ui.c.disc(mx, my, 8, t.base);
+        ui.c.disc(mx, my, 7, col);
+        ui.label(mx - 3, my - 7, &(i + 1).to_string(), &F8X13, t.base);
+    }
+
+    // Drawing a region: down on the map, across, up. A click alone takes the ground around it.
+    let to_value = |x: i32, y: i32| {
+        (ax[0] + (x - flat.x) as f64 / flat.w.max(1) as f64 * (ax[1] - ax[0]), ay[0] + (flat.bottom() - y) as f64 / flat.h.max(1) as f64 * (ay[1] - ay[0]))
+    };
+    let (mx, my) = ui.pointer();
+    let here = to_value(mx.clamp(flat.x, flat.right()), my.clamp(flat.y, flat.bottom()));
+    for ((x, y), b, down) in ui.f.button_events() {
+        if b == crate::surface::Button::Left && down && flat.contains((x, y)) {
+            st.drag = Some(to_value(x, y));
+        }
+    }
+    if let Some(from) = st.drag {
+        let b = corners(from, here);
+        st.sel = Some(b);
+        if !ui.s.down {
+            st.drag = None;
+            if b[1] - b[0] < h_box / 4.0 && b[3] - b[2] < h_box / 4.0 {
+                st.sel = Some([here.0 - h_box / 2.0, here.0 + h_box / 2.0, here.1 - h_box / 2.0, here.1 + h_box / 2.0]);
+            }
+        }
+    }
+    if let Some(b) = st.sel {
+        let (a0, a1, b0, b1) = (px(b[0].max(ax[0])), px(b[1].min(ax[1])), py(b[3].min(ay[1])), py(b[2].max(ay[0])));
+        let frame = rect(a0, b0, (a1 - a0).max(2), (b1 - b0).max(2));
+        ui.outline2(frame, t.warn);
+    }
+    if ui.is_hot(flat) {
+        let (ix, iy) = (cell_of(here.0, ax[0], ax[1], cols).round() as usize, cell_of(here.1, ay[0], ay[1], rows).round() as usize);
+        let (ix, iy) = (ix.min(cols - 1), iy.min(rows - 1));
+        let today = p.get("today").map(nums).unwrap_or_default();
+        let value = |i: usize, x: f64| if log { today.get(i).copied().unwrap_or(1.0) * 2f64.powf(x) } else { x };
+        ui.tip(flat, || vec![
+            format!("{:+.2} at {} {:.3}, {} {:.3}", z[iy][ix], s(p, "a"), value(0, here.0), s(p, "b"), value(1, here.1)),
+            format!("Weight of reads under it: {:.0}. Dots are reads, amber are jobs: filled running, square queued.", sup[iy][ix]),
+            "Drag to select a region; its cells light up on the surface too.".to_string(),
         ]);
     }
-    // The corners, so the axes can be read: each dial's range, in real values.
-    if let Some(today) = p.get("today").map(nums).filter(|x| x.len() == 2) {
-        let lab = plot.bottom() - lh;
-        ui.label_in(plot.x, lab - lh, plot.w, &format!("{}: {:.3} to {:.3}", s(p, "a"), today[0] * 2f64.powf(ax[0]), today[0] * 2f64.powf(ax[1])), &F8X13, t.dim);
-        ui.label_in(plot.x, lab, plot.w, &format!("{}: {:.3} to {:.3}", s(p, "b"), today[1] * 2f64.powf(ay[0]), today[1] * 2f64.powf(ay[1])), &F8X13, t.dim);
-    }
+
+    // The legend and the axes.
+    let lab = flat.bottom() + 4;
+    let today = p.get("today").map(nums).unwrap_or_default();
+    let value = |i: usize, x: f64| if log { today.get(i).copied().unwrap_or(1.0) * 2f64.powf(x) } else { x };
+    ui.label_in(flat.x, lab, flat.w, &format!("{} across: {:.3} to {:.3}", s(p, "a"), value(0, ax[0]), value(0, ax[1])), &F8X13, t.dim);
+    ui.label_in(flat.x, lab + lh - 3, flat.w, &format!("{} up: {:.3} to {:.3}", s(p, "b"), value(1, ay[0]), value(1, ay[1])), &F8X13, t.dim);
+    let (first, second) = if log {
+        ("Ring: today. Dim: few reads. Dots: reads. Amber: jobs, filled running, square queued.", "Flags: green read and holding, white unsettled, grey under today, amber worked on, red none.")
+    } else {
+        ("Each dot is a champion net, placed by its weights. Amber: where each island's net is now.", "Flags: amber an island is there, red none is. A net's ground has no dials to send trials to.")
+    };
+    ui.label_in(plot.x, plot.bottom() - lh * 2 + 2, plot.w, first, &F8X13, t.dim);
+    ui.label_in(plot.x, plot.bottom() - lh + 1, plot.w, second, &F8X13, t.dim);
 }
 
 /// What a heat map's cell under the pointer is: its row and column by name, its number, and what
@@ -672,6 +994,69 @@ mod tests {
         let high = project(0.2, 0.3, 20.0, 0.7, 100.0, 100.0, 50.0);
         assert_eq!(high.1, low.1 - 20.0);
         assert_eq!(project(0.0, 0.0, 0.0, 2.1, 100.0, 80.0, 50.0).0, 100.0);
+    }
+
+    /// One frame of the terrain, over a dataset written to a file, with these events.
+    fn frame(st: &mut State, doc: &Value, ev: &[crate::surface::Input], ui_state: &mut crate::ui::UiState) {
+        let (w, h) = (1200usize, 700usize);
+        let mut px = vec![0u8; w * h * 4];
+        let mut c = crate::draw::Canvas::new(&mut px, w, h);
+        let mut ui = Ui::begin(&mut c, crate::draw::LIGHT, ev, ui_state);
+        draw_terrain(&mut ui, rect(0, 0, w as i32, h as i32), doc, st);
+        ui.finish();
+    }
+
+    #[test]
+    fn a_region_is_drawn_on_the_flat_map_and_asks_for_trials() {
+        use crate::surface::{Button, Input};
+        let dir = std::env::temp_dir().join(format!("orrery-terrain-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let row = format!("[{}]", vec!["0.5"; 30].join(","));
+        let table = format!("[{}]", vec![row; 30].join(","));
+        let pair = format!(r#"{{"a":"w_a","b":"w_b","ax":[-1,1],"ay":[-1,1],"h":0.2,"today":[2,8],"reads":40,"z":{t},"support":{t},"log":true,"peaks":[{{"ix":15,"iy":15,"z":0.5,"x":0.0,"y":0.0,"a":2,"b":8,"word":"bare","reads":1,"seeds":55,"jobs":0}}],"dots":[[0.1,0.1,0.2],[0.9,0.9,0.1]],"jobs":[],"regions":[]}}"#, t = table);
+        std::fs::write(dir.join("every.json"), format!(r#"{{"id":"every","unit":"points","can_send":true,"pairs":[{}]}}"#, pair)).unwrap();
+        let idx = crate::json::parse(&format!(r#"{{"terrains":{{"dir":"{}","datasets":[{{"id":"every","label":"Every map","group":"reads","peaks":1,"bare":1,"reading":0,"read":0,"pairs":1}}],"reads":{{"used":40}}}}}}"#, dir.display())).unwrap();
+        let mut st = State { operator: true, ..Default::default() };
+        let mut us = crate::ui::UiState::default();
+        frame(&mut st, &idx, &[], &mut us);
+        assert!(st.sel.is_none());
+        // The plot and the flat map, by the screen's own sums.
+        let lh = F8X13.height as i32 + 5;
+        let plot_w = 1200 - 212 - 240 - 18;
+        let plot_right = 212 + 6 + plot_w;
+        let size = (plot_w * 44 / 100).min(700 - lh * 2 - 2 - lh * 3);
+        let (fx, fy) = (plot_right - size, lh * 2 + 2 + 4);
+        // Down at the middle of the map, across a quarter of it and up a quarter, and let go.
+        let (mx, my) = (fx + size / 2, fy + size / 2);
+        frame(&mut st, &idx, &[Input::Button { x: mx, y: my, button: Button::Left, down: true }], &mut us);
+        assert!(st.drag.is_some(), "a press on the map begins a region");
+        frame(&mut st, &idx, &[Input::Motion { x: mx + size / 4, y: my - size / 4 }], &mut us);
+        frame(&mut st, &idx, &[Input::Button { x: mx + size / 4, y: my - size / 4, button: Button::Left, down: false }], &mut us);
+        let b = st.sel.expect("a region");
+        assert!(st.drag.is_none());
+        assert!(b[0].abs() < 0.03 && (b[1] - 0.5).abs() < 0.03 && b[2].abs() < 0.03 && (b[3] - 0.5).abs() < 0.03, "{:?}", b);
+        // Its button: the side panel, under the pair, turn, one maximum and four lines.
+        let by = (0..700).step_by(2).find_map(|y| {
+            let mut probe = st.clone();
+            let mut u2 = crate::ui::UiState::default();
+            frame(&mut probe, &idx, &[Input::Button { x: 1200 - 240 + 40, y, button: Button::Left, down: true }], &mut u2);
+            frame(&mut probe, &idx, &[Input::Button { x: 1200 - 240 + 40, y, button: Button::Left, down: false }], &mut u2);
+            probe.ask.clone()
+        });
+        let ask = by.expect("a press finds the button");
+        // Real values, not doublings: a quarter of a map two doublings wide is half a doubling from today's 2 and 8.
+        let f: Vec<&str> = ask.split(' ').collect();
+        let num = |i: usize| f[i].parse::<f64>().unwrap();
+        assert!(f[0] == "add" && f[1] == "w_a" && f[4] == "w_b" && f[7] == "6", "{}", ask);
+        assert!((num(2) - 2.0).abs() < 0.05 && (num(3) - 2.83).abs() < 0.05 && (num(5) - 8.0).abs() < 0.1 && (num(6) - 11.31).abs() < 0.1, "{}", ask);
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn a_region_is_its_corners_either_way_round() {
+        assert_eq!(corners((2.0, -1.0), (1.0, 3.0)), [1.0, 2.0, -1.0, 3.0]);
+        let b = corners((0.0, 0.0), (1.0, 1.0));
+        assert!(inside(&b, 0.5, 1.0) && !inside(&b, 1.5, 0.5) && !inside(&b, 0.5, -0.1));
     }
 
     #[test]

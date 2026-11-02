@@ -361,3 +361,29 @@ assert len(f.state["far"]["todo"]) == left and not f.state["far"]["asked"]
 _sh.rmtree(root)
 
 print("the line, batches, the window, memory and the far read: every check holds")
+
+# ---- A region: its trials inside it, on the log scale, none twice, and a retired one back.
+class Regions(P):
+    def __init__(self, q):
+        self.q, self.state, self.stopped = q, {}, set()
+    def ids(self, *a):
+        return self.stopped
+
+
+root = tempfile.mkdtemp()
+g = {"id": "g1", "a": "w_a", "b": "w_b", "a0": 1.0, "a1": 4.0, "b0": 0.1, "b1": 0.2, "n": 4}
+json.dump({"regions": [g]}, open(os.path.join(root, "regions.json"), "w"))
+r = Regions(root)
+got = r.region_trials(10, root)
+assert len(got) == 4 and os.path.basename(got[0]) == "region-g1-0.weights"
+vals = [m.parse_weights(open(f).read()) for f in got]
+assert all(1 <= v["w_a"] <= 4 and 0.1 <= v["w_b"] <= 0.2 for v in vals) and len({v["w_a"] for v in vals}) == 4
+assert abs(vals[0]["w_a"] - 2.0) < 1e-3, "halfway on the log scale"
+assert len(r.region_trials(2, root)) == 2, "never more than asked for at once"
+r.state["regions"]["g1"]["jobs"] = {"w1": 0, "w2": 1, "w3": 2, "w4": 3}
+assert r.region_trials(10, root) == []
+r.stopped = {"w2"}
+assert [os.path.basename(f) for f in r.region_trials(10, root)] == ["region-g1-1.weights"]
+_sh.rmtree(root)
+
+print("regions: every check holds")

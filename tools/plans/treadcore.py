@@ -753,13 +753,14 @@ class Plan:
             # fit passed 21 of 514 and the A/B 4 of 17. One a generation keeps the door open.
             wide = self.wide_trials(1, out, g, defaults) if s["stalled"] else []
             far = self.far_trials(max(1, int(want * self.FAR_SHARE)), out, defaults)
+            asked = self.region_trials(want, out)
             fit = []
             try:
                 fit = [os.path.join(out, l.split("\t")[0] + ".weights") for l in open(os.path.join(out, "plan.tsv")).read().splitlines()[1:]]
             except OSError:
                 pass
             picked, now, far_seen = [], set(), []
-            for f in ab + far + wide + fit:
+            for f in asked + ab + far + wide + fit:
                 if len(picked) >= want:
                     break
                 text = self.ranged(open(f).read())
@@ -795,6 +796,8 @@ class Plan:
                 what = os.path.basename(f)[:-8]
                 if what.startswith("far-"):
                     self.state["far"].setdefault("asked", {})[jid] = what
+                if what.startswith("region-"):
+                    self.state.setdefault("regions", {}).setdefault(what.split("-")[1], {}).setdefault("jobs", {})[jid] = int(what.split("-")[2])
                 moved = short_moved(text)
                 jobs.append({"id": jid, "kind": "weights", "title": "%s: %s" % (what, moved or "the defaults"),
                              "needs": "cpu", "after_host": self.after_host(), "cmd": self.census_cmd(text, w["seeds"], seed0, jid),
@@ -1176,6 +1179,44 @@ class Plan:
             key = n[len("far-"):]
             if far and key in far["todo"]:
                 far["todo"].remove(key)
+
+    # REGIONS (Paul, 1 November: "Selecting regions of operation with the terrain map"). A person draws a
+    # box on a terrain, and tools/regions.py writes it to QUEUE/regions.json with how many trials to read
+    # in it. They go ahead of the search, spaced evenly by a Halton sequence, on the log scale of each
+    # dial, and go by the ordinary road: nothing is promoted because a person looked there.
+    @staticmethod
+    def halton(i, base):
+        f, r = 1.0, 0.0
+        i += 1
+        while i:
+            f /= base
+            r += f * (i % base)
+            i //= base
+        return r
+
+    def region_trials(self, n, out):
+        """Up to n trials of what regions ask, as region-ID-I.weights. A job retired before it ran goes back."""
+        regions = load(os.path.join(self.q, "regions.json"), {}) or {}
+        state = self.state.setdefault("regions", {})
+        gone, files = self.ids("stopped"), []
+        for g in regions.get("regions", []) if isinstance(regions, dict) else []:
+            mine = state.setdefault(g["id"], {"jobs": {}})
+            for jid in [j for j in mine["jobs"] if j in gone]:
+                del mine["jobs"][jid]
+            held = set(mine["jobs"].values())
+            for i in range(g.get("n", 0)):
+                if len(files) >= n:
+                    return files
+                if i in held:
+                    continue
+                u, v = self.halton(i, 2), self.halton(i, 3)
+                a = g["a0"] * (g["a1"] / g["a0"]) ** u
+                b = g["b0"] * (g["b1"] / g["b0"]) ** v
+                f = os.path.join(out, "region-%s-%d.weights" % (g["id"], i))
+                with open(f, "w") as fh:
+                    fh.write("# orrery: a person's region %s, over %s and %s\n%s = %.6g\n%s = %.6g\n" % (g["id"], g["a"], g["b"], g["a"], a, g["b"], b))
+                files.append(f)
+        return files
 
     # ---- the sequential read -----------------------------------------------------------
     # Fishtest's way, in seeds: a test begun is read on until it is decided,

@@ -536,6 +536,10 @@ fn frame_pointer() -> (i32, i32) {
 }
 
 /// fleet-tune.py beside fleet-queue.py: the values, apart, so that moving one restarts no keeper.
+fn regions_cmd(queue_ctl: &str) -> String {
+    queue_ctl.replacen("/fleet-queue.py ", "/regions.py ", 1)
+}
+
 fn tune_cmd(queue_ctl: &str) -> String {
     queue_ctl.replacen("/fleet-queue.py ", "/fleet-tune.py ", 1)
 }
@@ -766,6 +770,14 @@ fn write_frame(
                     analysis: analysis::State {
                         tab: std::env::var("ORRERY_FRAME_TAB").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
                         hybrid: true,
+                        // ORRERY_FRAME_DATASET=n, ORRERY_FRAME_PAIR=n, ORRERY_FRAME_REGION=x0,x1,y0,y1: one terrain, for review.
+                        dataset: std::env::var("ORRERY_FRAME_DATASET").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
+                        pair: std::env::var("ORRERY_FRAME_PAIR").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
+                        sel: std::env::var("ORRERY_FRAME_REGION").ok().and_then(|v| {
+                            let c: Vec<f64> = v.split(',').filter_map(|x| x.parse().ok()).collect();
+                            (c.len() == 4).then(|| [c[0], c[1], c[2], c[3]])
+                        }),
+                        operator: std::env::var("ORRERY_FRAME_OPERATOR").is_ok(),
                         ..Default::default()
                     },
                     page: std::env::var("ORRERY_FRAME_PAGE").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
@@ -1025,6 +1037,7 @@ fn gui_loop<S: surface::Surface>(
     // THE PIPELINE: the file the planner writes at each plan, read every five seconds.
     let pipeline_doc: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
     let pipeline_said: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
+    let regions_said: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
     let mut pipeline_text = String::new();
     let mut pipeline_model = pipeline::Model::default();
     let mut pipeline_state = pipeline::State::default();
@@ -1383,7 +1396,21 @@ fn gui_loop<S: surface::Surface>(
                 (None, v @ (nav::View::Queue | nav::View::Results | nav::View::Settings)) => {
                     let text = jobs_doc.lock().unwrap_or_else(|e| e.into_inner()).clone();
                     training_state.said = queue_said.lock().unwrap_or_else(|e| e.into_inner()).clone();
+                    training_state.analysis.said = regions_said.lock().unwrap_or_else(|e| e.into_inner()).clone();
                     let go = training::draw(&mut u, &training::Model::parse(&text, &jobs_source), &mut training_state, v);
+                    if let Some(ask) = training_state.analysis.ask.take() {
+                        let cmd = format!("{} {}", regions_cmd(queue_ctl), ask);
+                        let said = Arc::clone(&regions_said);
+                        *said.lock().unwrap_or_else(|e| e.into_inner()) = "asking...".to_string();
+                        thread::spawn(move || {
+                            let out = std::process::Command::new("sh").arg("-c").arg(&cmd).output();
+                            let line = match out {
+                                Ok(o) => String::from_utf8_lossy(if o.status.success() { &o.stdout } else { &o.stderr }).lines().last().unwrap_or("").to_string(),
+                                Err(e) => e.to_string(),
+                            };
+                            *said.lock().unwrap_or_else(|e| e.into_inner()) = line;
+                        });
+                    }
                     if let Some(p) = training_state.pipeline_page.take() {
                         pipeline_state.page = p;
                     }

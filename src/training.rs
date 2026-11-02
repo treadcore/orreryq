@@ -856,6 +856,7 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State, view: nav::View) -> Option<n
                 }
             }
             8 => {
+                st.analysis.operator = st.operator;
                 let rest = crate::analysis::tabs(ui, page, &mut st.analysis);
                 if !crate::analysis::draw(ui, rest, m.analysis.as_ref(), &mut st.analysis) {
                     draw_algorhythm(ui, rest, m);

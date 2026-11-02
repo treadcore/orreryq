@@ -26,4 +26,5 @@ whole-line|The Whole Line|orrery · the fleet · the line, end to end
 double|The Double Report|orrery · the fleet · the design and the guide
 bot-styles|Eight Named Minds|orrery · the brain · styles and bridges
 fortify|A Stale Dial|orrery · the brain · what we measured and changed
+terrain|A Terrain for Each Dataset|orrery · the brain · maxima and what works on them
 LIST

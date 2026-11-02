@@ -756,12 +756,12 @@
   },
   {
    "key": "Results/Algorhythm/Terrain",
-   "does": "Reads as a landscape over two dials.",
-   "ties": "Search: what the fit believes.",
-   "drawn": "A surface, because peaks and ridges read at a glance. Colour fades where reads are thin.",
-   "look": "Places to look, never results. A peak on thin support is one lucky read.",
-   "sim": "Past censuses, moved to one baseline by assuming gains add.",
-   "helps": "It suggests where a wide trial should go."
+   "does": "Each dataset's reads as a landscape over two dials, with its local maxima and what works on each.",
+   "ties": "Search: where the fleet has looked, and what it has not. Select a region to send it trials.",
+   "drawn": "A surface, because peaks read at a glance, and the same ground flat, because a region and a job can be placed there. Red flags have nothing on them.",
+   "look": "Places to look, never results. A peak on thin support is one lucky read, and 'read' means seeds stood there, not that it won.",
+   "sim": "Past censuses, moved to today's defaults by a small fit of the dials since moved. Only reads that moved one of the two dials count.",
+   "helps": "It shows whether every maximum in every dataset is being worked on, and asks for work on those that are not."
   },
   {
    "key": "Results/Algorhythm/Spectrum",
