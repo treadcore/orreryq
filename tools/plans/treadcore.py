@@ -2276,7 +2276,10 @@ class Plan:
         # October: w1198 the square law, w1266 the capped castle), and two
         # that failed before main last moved may pass on it now: neither waits.
         last = [self.rstate(r["id"]) for r in autos[-2:]]
-        if len(last) == 2 and all(x.get("status") == "failed" for x in last) and self.same_failure([x.get("job") for x in last]):
+        # BUT TWO TRIES OF ONE CANDIDATE SAY ONLY THAT IT FAILS (1 November: w5525, on its own numbers, was
+        # tried again because main moved, and stopped every other candidate behind it).
+        if (len(last) == 2 and all(x.get("status") == "failed" for x in last) and last[0].get("candidate") != last[1].get("candidate")
+                and self.same_failure([x.get("job") for x in last])):
             self.flag("auto", "auto promotion paused: %s and %s failed in a row; see their logs, then ask for a promotion by hand"
                       % (autos[-2]["id"], autos[-1]["id"]), key="paused:%s" % autos[-1]["id"])
             return

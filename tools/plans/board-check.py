@@ -538,4 +538,26 @@ assert n.changed_from_line("a = 8\nb = 5\ncaps = baseline, escort\n") == ["a 2 -
 assert n.changed_from_line("a = 2\ncaps = baseline, -escort\n") == []
 assert m.changed_vars(["a 2 -> 8"])["a"]["value"] == 8.0
 
+
+class Paused(Window):
+    def __init__(self, cands):
+        super().__init__([])
+        self.cands = cands
+    def runs(self):
+        return [{"id": "r%d" % i, "kind": "promote", "by": "auto"} for i in range(len(self.cands))]
+    def rstate(self, rid):
+        return {"status": "failed", "candidate": self.cands[int(rid[1:])], "job": rid}
+    def same_failure(self, jobs):
+        return True
+    def noise(self, k, v):
+        return ""
+
+
+w = Paused(["grove/w9", "grove/w9"])
+w.auto_promote()
+assert w.asked == [{"candidate": "grove/w1"}], "one candidate failing twice stops no other"
+w = Paused(["grove/w8", "grove/w9"])
+w.auto_promote()
+assert not w.asked, "two candidates failing alike: something all trip on, and it waits for a person"
+
 print("less noise: every check holds")
