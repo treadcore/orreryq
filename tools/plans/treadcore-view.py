@@ -23,6 +23,7 @@ orrery's Training view draws this (`--jobs-cmd`). It reads, every time:
 import glob
 import json
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -379,9 +380,34 @@ def quality():
     }
 
 
+def ranges():
+    """The brain's RANGES as rows for a Settings page (the plan of 2 November, chapter 14): name, min,
+    max, today's default, whether a decree (min = max), the comment, and the kind the file's sections
+    name. Read from the checkout, so what the fleet compiles in is what the page shows."""
+    rows, kind, defaults = [], "", {}
+    try:
+        src = read(os.path.join(TC, "source", "treadcore-brain", "src", "weights.rs"))
+        for m in re.finditer(r'^\s+[A-Z][A-Za-z0-9]+ "([a-z_0-9]+)" ([-0-9.eE]+|crate::commander::[A-Z_]+),', src, re.M):
+            defaults[m.group(1)] = m.group(2)
+        for l in read(os.path.join(TC, "source", "treadcore-brain", "RANGES")).splitlines():
+            bare, _, note = l.partition("#")
+            if not bare.strip():
+                if note.strip() and not bare.strip():
+                    kind = note.strip().rstrip(".").split(":")[0][:40]
+                continue
+            f = bare.split()
+            if len(f) == 3:
+                rows.append({"name": f[0], "min": float(f[1]), "max": float(f[2]), "decree": f[1] == f[2], "why": note.strip(),
+                             "kind": kind, "default": defaults.get(f[0], "")})
+    except (OSError, ValueError):
+        return rows
+    return rows
+
+
 if __name__ == "__main__":
     run = newest_run()
     qd = queue()
     doc = {"fleet": FLEET, "queue": qd, "project": "treadcore", "at": time.strftime("%H:%M:%S"),
-           "machines": machines(run, qd), "run": run, "loop": loop(), "net": net(), "algorhythm": algorhythm(), "analysis": analysis(), "long_run": long_run(), "quality": quality()}
+           "machines": machines(run, qd), "run": run, "loop": loop(), "net": net(), "algorhythm": algorhythm(), "analysis": analysis(), "long_run": long_run(), "quality": quality(),
+           "ranges": ranges()}
     print(json.dumps(doc))
