@@ -69,7 +69,7 @@ A test presses, drags and lets go through the screen's own code, and checks the 
 
 **One hill is counted several times.** Each hill is seen through every pair containing its dial: 0.37 appears in five. The 88 are 88 flags, not 88 places. **Two dials at a time is a slice of something with 118.** Other dials average out, and a trial moving four dials sits on all of its pairs. **The move to today's defaults assumes the score adds,** and switches a generation flipped are not in it: `bridges` and `escort` are off, and those reads are left out. **The reads are not random.** The search chose them, and read winners more, so a hill is partly where it looked hardest. **Which pairs are drawn changes as the fit changes its mind,** and a selection is dropped when its pair goes. **"Holds" uses each read's own error,** and the two proofs that disagreed in A Stale Dial say that error may be small. **A net's map is two directions from 400 sampled weights of thousands,** and I did not measure how much of the variation they hold.
 
-**Unrelated, found while testing:** `sftp::tests::an_empty_file_is_a_transfer_and_not_a_hang` failed in about one run in three here, in code this work did not touch. It is not fixed.
+**Unrelated, found while testing:** the `sftp` tests fail now and then here: two different ones, in about one run in three, in code this work did not touch. It is not fixed.
 
 **Not drawn:** bot styles (8 points, not a surface), the bc nets (one each), the transform's reads (too few so far).
 
