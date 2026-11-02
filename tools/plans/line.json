@@ -158,6 +158,58 @@
    "down": "more lanes go to new trials"
   },
   {
+   "key": "generation_every_min",
+   "attr": "GENERATION_EVERY_MIN",
+   "label": "Between generations",
+   "default": 30,
+   "min": 0,
+   "max": 240,
+   "step": 5,
+   "unit": "min",
+   "what": "A generation does not land sooner than this after the last. What passes meanwhile waits and lands together. 0 lands each as it passes, as it was.",
+   "up": "fewer reads overtaken, larger and less separately read batches",
+   "down": "finds reach the line sooner, more reads lost to the generation after"
+  },
+  {
+   "key": "memory_tau",
+   "attr": "MEMORY_TAU",
+   "label": "The fit forgets at",
+   "default": 0.5,
+   "min": 0.0,
+   "max": 3.0,
+   "step": 0.1,
+   "unit": "a doubling",
+   "what": "An older read counts for less: its error grows by this many points for each doubling the defaults have moved since it was read.",
+   "up": "the fit trusts today's reads more",
+   "down": "the fit leans on what it read before"
+  },
+  {
+   "key": "memory_drift",
+   "attr": "MEMORY_DRIFT",
+   "label": "The fit looks back",
+   "default": 6.0,
+   "min": 0.0,
+   "max": 20.0,
+   "step": 0.5,
+   "unit": "doublings",
+   "what": "A read is not used once the defaults have moved this far since it, a switch counting as one, and never across a game. 0 is today's reads alone, as it was.",
+   "up": "more reads, older and less like today",
+   "down": "fewer reads, each more like today"
+  },
+  {
+   "key": "far_share",
+   "attr": "FAR_SHARE",
+   "label": "Looking far",
+   "default": 0.25,
+   "min": 0.0,
+   "max": 1.0,
+   "step": 0.05,
+   "unit": "of a top-up",
+   "what": "Under each new game, every dial is read alone at a quarter and four times today's value, this share of each top-up until they are done.",
+   "up": "the far read finishes sooner, fewer lanes for the fit",
+   "down": "more lanes for the fit, a stale dial stands longer"
+  },
+  {
    "key": "held_seeds",
    "attr": null,
    "label": "Seeds in a held-out read",

@@ -200,6 +200,28 @@ treadcore --solo --autopilot --weights /tmp/fort.weights
 
 **It cannot see far.** The fit's reach is one doubling, two when stalled. 0.4 was nearly four away, and it took hand-written styles from another week to point at it. After a game change, each dial should be read at a quarter and four times today. **Nor does it look past the total:** a gain made of one reward reads the same as a gain made of everything, and z 5.9 was reassuring right up until it was broken down. The new log makes this possible, and a candidate's report could carry it automatically.
 
+### What was built from this, the same evening
+
+Paul said "continue. implimenting." Four changes, all in the planner and the fit, none in the game. Each is a number on Queue, Values, and each has a setting that returns to how it was.
+
+| Change | Before | Now | What was checked |
+| --- | --- | --- | --- |
+| **The fit remembers** | Only reads on today's defaults: of 42 hours, the fit could use the last 0.4 | Older reads count as what they are, the trial's value less the value of its day, with error growing 0.5 a doubling of drift. Up to 6 doublings back, never across a game | Fit rows 65 to 400, live. Back-test below |
+| **One generation a half hour** | Each as it passed, some 15 minutes apart | Not sooner than 30 minutes; what passes meanwhile lands together, each moving what the others do not | Checks only. It has not landed a batch yet |
+| **Looks far** | One doubling, two when stalled | Under each new game, each of 118 dials at a quarter and four times, a quarter of each top-up: 236 trials, by the ordinary road | Started live under game 4 |
+| **No rebuild for documents** | Each commit made seven machines build, and voided a running proof | Reports, docs, `*.md` and the two scripts that run only here go on main with nothing rebuilt or replayed. Builds go ahead of the queue | A real push of `suggest.py` left the fleet's commit where it was. Checks on real git for landing on main's documents |
+
+**What the memory said at once.** With 65 rows, the fit's best was `alpha` at +1.19. With 400, `alpha` falls to +0.23, and the best is `w_pos_fortify` at 0.75, +0.78 +/- 0.27, and `base_r` back at 16, +0.16 +/- 0.11. This is a fit's opinion and not a read. **The hold is on 0.4 exactly,** so a trial near it goes by the ordinary road.
+
+**The back-test.** The rule, before reading it: at each set of defaults with 20 rows or more, fit only older rows under the same game, and predict that set's rows. The memory earns its place if it beats saying nothing. It does, and it beats older rows taken uncorrected:
+
+| Fit from older rows, 2,192 rows predicted | Weighted squared error left, of predicting zero |
+| --- | --- |
+| Corrected, the memory, at 0.5 a doubling | **0.44** |
+| The same rows uncorrected | 0.47, and on one generation 2.6 times worse than predicting zero |
+
+**It is not a large gain where it matters.** Most of that is big losses staying big: a dial that was terrible stays terrible. On the last six generations alone, it explained between -13% and +31% of what predicting zero left, near nothing on most. So it should mostly save the fit from re-reading what is known bad and from chasing a few rows, and I would not expect it to predict small gains well.
+
 ## VIII. Threats and what is open
 
 **Pooled reads mix builds,** since the line moved between them: `r0090` and `h0351` on one commit, `r0097` and `r0098` on another, each with the base set to 6.0 by hand in the later ones. **The behaviour table has no column for 6.0,** since the census logs a trial team's rungs and not the baseline's. **R3 rests on 220 seeds,** so its error is larger than the 400-seed reads'. **Per-map bars are 20 seeds each.** **R2 has one read of the line with 1.5.** The proof before these generations read +0.54 +/- 0.35. **Nothing has reached main at this writing,** so the pictures show 6.0. **The last two proofs disagree, and I cannot say why.** They differ by 2.04 +/- 0.58, z 3.5, lower on all eleven maps, and only `base_r` changed between them. Read directly, `base_r` 16 against the line is +0.03 +/- 0.39 over 400 seeds (`r0102`, on the line with `escort` off as well), so it does not explain the fall. Each proof's two jobs agree with each other, so the error within a proof looks honest. Either one read was lucky or something differs between them that I have not found. The four jobs pooled read +0.94 +/- 0.29. **Do not quote +1.97 as the gain.** **1.5 landed before its R3 and R4 reads were back,** because the road moved first; had it failed R4, it would have been taken back by hand.
@@ -208,7 +230,6 @@ treadcore --solo --autopilot --weights /tmp/fort.weights
 
 - Teams never fill pillbox slots: a tank must own the pillbox it carries, and the commander holding the plan rarely does. The real mend gives the job to the owner.
 - The hold is a file with no button: Queue, Values could show it.
-- The fit's memory, batched generations and looking far: the proposals of the abandoned-work review, not yet built.
 
 ## IX. Reproducing this
 

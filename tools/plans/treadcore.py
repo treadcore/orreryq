@@ -291,6 +291,8 @@ class Plan:
         self._sha = r.stdout.strip()
         # Self-modified promotions not yet on main: the fleet builds the
         # local line, main with them on top.
+        if ref == "origin/main":
+            self._sha = self.build_tip(self._sha)
         line = self.local_line(self._sha) if ref == "origin/main" else None
         if line:
             self._sha = line
@@ -300,6 +302,56 @@ class Plan:
             # defaults, so their rows can feed one fit.
             c[self._sha] = {"weights_rs": self.weights_rs(self._sha), "first_seen": time.strftime("%Y-%m-%dT%H:%M:%S")}
         return self._sha
+
+    # NOTHING TO BUILD (1 November). Nine commits to main in a day, three of them reports, and each made
+    # seven machines build, retired the search's queue and replayed the line, which also voids a proof
+    # running at the time. These paths go into no census binary: the fleet stays on the last commit that
+    # touched anything else, the line stays where it is, and land() puts the difference right on the
+    # way to main. The two scripts run on this machine alone, from its checkout.
+    NOT_BUILT = ("reports", "docs", "scripts/suggest.py", "scripts/ledger.py")
+
+    def build_tip(self, tip):
+        """The newest commit at or under tip that something a machine builds has changed in."""
+        r = run(["git", "-C", self.tc, "log", "-1", "--format=%H", tip, "--", "."]
+                + [":(exclude)%s" % p for p in self.NOT_BUILT] + [":(exclude,glob)*.md"])
+        return r.stdout.strip() or tip
+
+    def replay(self, own, onto):
+        """Commits cherry-picked in order onto a commit, in a worktree: the new head, or "" if they do not apply."""
+        w = os.path.join(self.pd, "line-replay")
+        run(["git", "-C", self.tc, "worktree", "remove", "--force", w])
+        run(["git", "-C", self.tc, "worktree", "prune"])
+        r = run(["git", "-C", self.tc, "worktree", "add", "-q", "--detach", w, onto])
+        for c in own:
+            if r.returncode:
+                break
+            r = run(["git", "-C", w, "cherry-pick", "--allow-empty", c])
+        new = run(["git", "-C", w, "rev-parse", "HEAD"]).stdout.strip() if r.returncode == 0 else ""
+        if r.returncode:
+            run(["git", "-C", w, "cherry-pick", "--abort"])
+        run(["git", "-C", self.tc, "worktree", "remove", "--force", w])
+        return new
+
+    def land(self, commit):
+        """A commit of the line onto main, by a push; the commit main now has. If main has moved since
+        only by what no machine builds, the line's commits go on top of it first: what was read is what
+        main then builds. If it has moved by anything else, that read is not of this main, and it stops."""
+        remote, branch = self.push_target()
+        run(["git", "-C", self.tc, "fetch", "-q", remote], timeout=120)
+        tip = "%s/%s" % (remote, branch)
+        if run(["git", "-C", self.tc, "merge-base", "--is-ancestor", tip, commit]).returncode != 0:
+            real = self.build_tip(run(["git", "-C", self.tc, "rev-parse", tip]).stdout.strip())
+            if run(["git", "-C", self.tc, "merge-base", "--is-ancestor", real, commit]).returncode != 0:
+                raise SystemExit("main's source has moved since %s was read: it waits for its own proof" % commit[:7])
+            own = run(["git", "-C", self.tc, "rev-list", "--reverse", "%s..%s" % (tip, commit)]).stdout.split()
+            commit = self.replay(own, tip)
+            if not commit:
+                raise SystemExit("main moved by documents, and the line does not replay on it")
+        r = run(["git", "-C", self.tc, "push", remote, "%s:refs/heads/%s" % (commit, branch)])
+        if r.returncode != 0:
+            raise SystemExit("the push failed: " + r.stderr[-300:])
+        run(["git", "-C", self.tc, "fetch", "-q", remote])
+        return commit
 
     def short(self, sha=None):
         return (sha or self.sha())[:7]
@@ -379,8 +431,10 @@ class Plan:
                 "CENSUS_DUMP=$C/defaults.toml CENSUS_SEEDS=0 $C/census-bin --ignored brain_census >/dev/null 2>&1\n"
                 "echo \"census binary %s: $( (sha256sum $C/census-bin 2>/dev/null || shasum -a 256 $C/census-bin) | cut -c1-16)\"\n"
             ) % (self.cdir(), self.LINE, sha, short)
+            # Ahead of the queue: every job on that machine waits on this one, and it took the last
+            # machine 3 to 43 minutes to reach a build behind the search's own reads.
             job = {"id": jid, "kind": "prepare", "title": "build %s on %s" % (short, h["name"]),
-                   "needs": "host:" + h["name"], "cmd": cmd, "timeout_s": 3600}
+                   "needs": "host:" + h["name"], "cmd": cmd, "timeout_s": 3600, "priority": "high"}
             if self.state.get("local_line"):
                 job["send"] = [{"src": os.path.join(self.pd, "accepted.bundle"), "dst": "%s/accepted.bundle" % self.cdir()}]
                 job["title"] += " (the local line: %d promotion(s) not on main)" % len(self.state["local_line"]["promotions"])
@@ -445,6 +499,68 @@ class Plan:
         with open(out, "w") as f:
             subprocess.run([sys.executable, "-I", os.path.join(self.tc, "scripts", "ledger.py"), root], stdout=f, check=True)
         return out
+
+    # THE FIT REMEMBERS (Paul, 1 November: "continue. implimenting."). The fit read only today's defaults,
+    # so each generation wiped it: of 42 hours of reads, it could use the last 0.4. The old reason stands,
+    # that a read of a trial against old defaults is not a gain of that trial against today's: 182 rows
+    # near +2 went in as gains of the weights that moved. But the read is still a true difference, between
+    # the trial's value and the value of its day, and suggest.py can fit it as that (--memory). What
+    # moved between then and now and is not in the trial cancels, if the score adds. It does not quite,
+    # so an older read counts for less: its error grows MEMORY_TAU a seat for each doubling the defaults
+    # have moved, and past MEMORY_DRIFT doublings, or across a game version, it is not used at all.
+    MEMORY_TAU = 0.5
+    MEMORY_DRIFT = 6.0
+
+    def drift_from(self, commit):
+        """{"old": the dials that differ, at their values then, "drift": doublings moved} of a commit's
+        defaults from today's. None when its read cannot be used: other rules, or moved too far."""
+        memo = self.__dict__.setdefault("_drift", {})
+        if commit not in memo:
+            memo[commit] = None
+            if commit and not commit.endswith("+") and self.game_at(commit) == self.game_at(self.sha()):
+                a, b = self.defaults_at(commit), self.defaults_at(self.sha())
+                old, drift = {}, 0.0
+                for k in set(a) & set(b):
+                    if a[k] != b[k]:
+                        old[k] = a[k]
+                        drift += abs(math.log2(a[k] / b[k])) if a[k] > 0 and b[k] > 0 else 1.0
+                if a and b and drift <= self.MEMORY_DRIFT:
+                    memo[commit] = {"old": old, "drift": round(drift, 3)}
+        return memo[commit]
+
+    def remembered(self, ledger):
+        """Today's ledger and the reads of earlier defaults, as one table for the fit, with
+        plan/memory.json saying what each older commit's defaults were. Not plan/ledger.tsv itself,
+        which others read as rows of today's."""
+        root = os.path.join(self.pd, "census-memory")
+        shutil.rmtree(root, ignore_errors=True)
+        os.makedirs(root)
+        mem = {}
+        for d in self.census_dirs():
+            c = self.census_commit(d)
+            if self.same_defaults(c) or self.one_map(d):
+                continue
+            m = self.drift_from(c)
+            if m:
+                mem[c] = m
+                jid = d.rstrip("/").split(os.sep)[-2]
+                os.symlink(d, os.path.join(root, "%s-%s" % (os.path.basename(d.rstrip("/")), jid)))
+        out = os.path.join(self.pd, "ledger-memory.tsv")
+        older = run([sys.executable, "-I", os.path.join(self.tc, "scripts", "ledger.py"), root]).stdout.splitlines()
+        with open(out, "w") as f:
+            f.write(open(ledger).read())
+            f.write("".join(l + "\n" for l in older[1:]))
+        save(os.path.join(self.pd, "memory.json"), mem)
+        self.state["memory"] = {"commits": len(mem), "rows": max(0, len(older) - 1)}
+        return out
+
+    def memory_args(self):
+        try:
+            if "--memory" not in open(os.path.join(self.tc, "scripts", "suggest.py")).read():
+                return []
+        except OSError:
+            return []
+        return ["--memory", os.path.join(self.pd, "memory.json"), "--tau", str(self.MEMORY_TAU)]
 
     def ranges(self):
         """{name: (min, max)} from the brain's RANGES: past these a number means nothing, or a
@@ -623,8 +739,9 @@ class Plan:
             shutil.rmtree(out, ignore_errors=True)
             # Four times what is wanted: the trials already read are dropped
             # below, and the rest must still fill the generation.
-            r = run([sys.executable, "-I", os.path.join(self.tc, "scripts", "suggest.py"), self.ledger(), defaults, out,
-                     "--n", str(max(12, 4 * want)), "--seed", str(g), "--bound", str(s["bound"]), "--also-skip", ",".join(sorted(self.decreed()))])
+            r = run([sys.executable, "-I", os.path.join(self.tc, "scripts", "suggest.py"), self.remembered(self.ledger()), defaults, out,
+                     "--n", str(max(12, 4 * want)), "--seed", str(g), "--bound", str(s["bound"]), "--also-skip", ",".join(sorted(self.decreed()))]
+                    + self.memory_args())
             if r.returncode != 0:
                 raise SystemExit("suggest.py: " + r.stderr[-400:])
             self.state["gen"] += 1
@@ -635,16 +752,19 @@ class Plan:
             # lanes on 31 October, 843 trials and none past the first bars, where the
             # fit passed 21 of 514 and the A/B 4 of 17. One a generation keeps the door open.
             wide = self.wide_trials(1, out, g, defaults) if s["stalled"] else []
+            far = self.far_trials(max(1, int(want * self.FAR_SHARE)), out, defaults)
             fit = []
             try:
                 fit = [os.path.join(out, l.split("\t")[0] + ".weights") for l in open(os.path.join(out, "plan.tsv")).read().splitlines()[1:]]
             except OSError:
                 pass
-            picked, now = [], set()
-            for f in ab + wide + fit:
+            picked, now, far_seen = [], set(), []
+            for f in ab + far + wide + fit:
                 if len(picked) >= want:
                     break
                 text = self.ranged(open(f).read())
+                if os.path.basename(f).startswith("far-"):
+                    far_seen.append(os.path.basename(f)[:-8])
                 key = self.trial_key(text)
                 # suggest.py's reads again are the sequential read's to make
                 # (read_on_jobs, pooled with the first): not new trials.
@@ -665,12 +785,16 @@ class Plan:
                 picked.append((f, text))
             if any(os.path.basename(f).startswith("best") for f, _ in picked):
                 s["best_at"] = s["reads"]
+            self.far_asked(far_seen)
+            s["far_left"] = len((self.state.get("far") or {}).get("todo", []))
             self.search_note(s)
             for f, text in picked:
                 jid = "w%04d" % self.state["weights_n"]
                 seed0 = w["seed0"] + 10000 * self.state["weights_n"]
                 self.state["weights_n"] += 1
                 what = os.path.basename(f)[:-8]
+                if what.startswith("far-"):
+                    self.state["far"].setdefault("asked", {})[jid] = what
                 moved = short_moved(text)
                 jobs.append({"id": jid, "kind": "weights", "title": "%s: %s" % (what, moved or "the defaults"),
                              "needs": "cpu", "after_host": self.after_host(), "cmd": self.census_cmd(text, w["seeds"], seed0, jid),
@@ -997,6 +1121,61 @@ class Plan:
                     fh.write("# orrery: wide, past the fit's bound (the search stalled)\n" + "\n".join(lines) + "\n")
                 files.append(f)
         return files
+
+    # LOOK FAR (1 November). The fit's reach is one doubling, two when stalled. w_pos_fortify was promoted
+    # at 6.0 under game 1 and stood at nearly four doublings from where it wanted to be under game 4,
+    # and the fit could not reach it. So under each new game every dial is read alone at a quarter and at
+    # four times today's value, a share of each generation until they are done. They are ordinary trials,
+    # and go by the ordinary road: nothing is promoted because it was far.
+    FAR_SHARE = 0.25
+
+    def far_trials(self, n, out, defaults):
+        """Up to n trials of the far read still to do, written to out as far-NAME.lo/hi.weights."""
+        game = self.game_at(self.sha())
+        far = self.state.get("far")
+        if not far or far.get("game") != game:
+            dflt = parse_weights(open(defaults).read())
+            _, choices = self.versions()
+            skip = self.decreed() | set(choices) | {"bot_style", "patch", "model"}
+            names = sorted(k for k, v in dflt.items() if v > 0 and k not in skip)
+            far = self.state["far"] = {"game": game, "todo": ["%s.%s" % (k, e) for k in names for e in ("lo", "hi")], "asked": {}, "total": 2 * len(names)}
+            self.flag("far", "game %s: each of %d dials to be read at a quarter and four times, %d trials" % (game, len(names), far["total"]),
+                      key="far:%s" % game, progress=True)
+        # A job retired by a generation before it ran was never read: it goes back.
+        gone = self.ids("stopped")
+        for jid, what in list(far.get("asked", {}).items()):
+            if jid in gone:
+                del far["asked"][jid]
+                key = what[len("far-"):]
+                if key not in far["todo"]:
+                    far["todo"].insert(0, key)
+        dflt, unit, files = parse_weights(open(defaults).read()), self.unit_weights(), []
+        for key in far["todo"][:]:
+            if len(files) >= n:
+                break
+            name, end = key.rsplit(".", 1)
+            d = dflt.get(name, 0)
+            y = d / 4 if end == "lo" else d * 4
+            if end == "hi" and name in unit:
+                y = d + (1 - d) / 2 if d < 1 else d
+            lo, hi = self.ranges().get(name, (None, None))
+            if lo is not None:
+                y = min(hi, max(lo, y))
+            if d <= 0 or abs(y - d) <= 1e-9 * max(d, 1):
+                far["todo"].remove(key)
+                continue
+            f = os.path.join(out, "far-%s.weights" % key)
+            with open(f, "w") as fh:
+                fh.write("# orrery: far, under game %s: %s at %s today's\n%s = %.6g\n" % (game, name, "a quarter of" if end == "lo" else "four times", name, y))
+            files.append(f)
+        return files
+
+    def far_asked(self, names):
+        far = self.state.get("far")
+        for n in names:
+            key = n[len("far-"):]
+            if far and key in far["todo"]:
+                far["todo"].remove(key)
 
     # ---- the sequential read -----------------------------------------------------------
     # Fishtest's way, in seeds: a test begun is read on until it is decided,
@@ -1794,6 +1973,40 @@ class Plan:
             pass
         return None
 
+    GENERATION_EVERY_MIN = 30
+
+    def batch(self, ev, name):
+        """The strongest candidate's weights and, on top, each other current candidate that moves
+        nothing it moves, strongest first: (text, names added). Together they have not been read:
+        the tests and the families are run on the whole, and the proof stands behind it."""
+        def parts(text):
+            caps, rest = [], []
+            for l in text.splitlines():
+                bare = l.split("#")[0].strip()
+                if re.match(r"^caps\s*=", bare):
+                    caps += [c.strip() for c in bare.split("=", 1)[1].split(",") if c.strip() and c.strip() != "baseline"]
+                elif bare:
+                    rest.append(bare)
+            return rest, caps
+
+        def moves(rest, caps):
+            return {l.split("=")[0].strip() for l in rest} | {c.lstrip("+-") for c in caps}
+        rest, caps = parts(ev[name]["weights"])
+        held, also = moves(rest, caps), []
+        for k in sorted((k for k in ev if k != name), key=lambda k: -ev[k]["held_mean"]):
+            r, c = parts(ev[k]["weights"])
+            if moves(r, c) & held or not moves(r, c):
+                continue
+            held |= moves(r, c)
+            rest, caps = rest + r, caps + c
+            also.append(k)
+        if not also:
+            return ev[name]["weights"], []
+        text = "# orrery: a batch: %s\n" % ", ".join([name] + also) + "\n".join(rest) + "\n"
+        if caps:
+            text += "caps = baseline, " + ", ".join(caps) + "\n"
+        return text, also
+
     def auto_promote(self):
         """The strongest current candidate whose families hold, promoted: one
         promotion at a time, each candidate tried once."""
@@ -1813,6 +2026,12 @@ class Plan:
             self.flag("auto", "auto promotion paused: %s and %s failed in a row; see their logs, then ask for a promotion by hand"
                       % (autos[-2]["id"], autos[-1]["id"]), key="paused:%s" % autos[-1]["id"])
             return
+        # ONE GENERATION A WINDOW (Paul, 1 November: half an hour). Faster than this, a generation lands
+        # inside the reads of the last, and each one cost the proof, the builds and the fit's freshest
+        # rows. What passes meanwhile waits, and goes together.
+        p = self.promotions()
+        if p and time.time() - p[-1][0] < self.GENERATION_EVERY_MIN * 60:
+            return
         tried = self.state.setdefault("auto_tried", [])
         self.retry_after_main(autos, tried)
         # NOT A TRANSFORM, YET. The slot's file lives with the queue and the game has none:
@@ -1825,9 +2044,16 @@ class Plan:
             return
         name = max(ev, key=lambda k: ev[k]["held_mean"])
         tried.append(name)
-        rid = self.new_run("promote", {"candidate": name}, "auto")
-        self.flag("promote", "auto: %s asked to promote %s (held out %s)" % (rid, name, " and ".join("%+.2f" % h[0] for h in ev[name]["held"])),
-                  key="auto:%s" % name, progress=True)
+        # Only the strongest counts as tried. Those riding with it, if the batch fails its tests, come
+        # up again alone: and if it lands, the defaults have moved and they are not current any more.
+        text, also = self.batch(ev, name)
+        params = {"candidate": name}
+        if also:
+            params.update({"with": also, "weights": text, "name": name})
+        rid = self.new_run("promote", params, "auto")
+        self.flag("promote", "auto: %s asked to promote %s%s (held out %s)" % (
+            rid, name, " with " + ", ".join(also) if also else "", " and ".join("%+.2f" % h[0] for h in ev[name]["held"])),
+            key="auto:%s" % name, progress=True)
 
     # ---- older candidates, read again on today's defaults ----------------------------
     # Paul, 28 October: "why are some older, when it says promoted". A
@@ -1883,6 +2109,9 @@ class Plan:
             return []
         promoted = {self.rstate(r["id"]).get("candidate") for r in self.runs()
                     if r["kind"] == "promote" and self.rstate(r["id"]).get("status") in ("approved", "self-modified")}
+        for r in self.runs():
+            if r["kind"] == "promote" and self.rstate(r["id"]).get("status") in ("approved", "self-modified"):
+                promoted |= set((r.get("params") or {}).get("with", []))
         ev = self.evidence()
         out = []
         for k, v in sorted(ev.items(), key=lambda kv: -(kv[1].get("held_mean") or -99)):
@@ -2572,7 +2801,10 @@ class Plan:
                 name, ev = self.strongest()
             else:
                 ev = self.evidence().get(name)
-            if p.get("weights"):
+            if p.get("with"):
+                # A batch: the strongest one's evidence, and the whole of the weights.
+                ev = dict(ev, weights=p["weights"]) if ev else ev
+            elif p.get("weights"):
                 name, ev = p.get("name", "weights"), {"weights": self.text(p["weights"]), "census": None, "held": [], "families": "not read"}
             if not ev:
                 self.rsave(rid, {"status": "failed", "why": "no candidate %s with evidence (families held, two held-out reads)" % name})
@@ -2875,19 +3107,8 @@ class Plan:
         if run(["git", "-C", self.tc, "merge-base", "--is-ancestor", main_sha, head]).returncode == 0:
             return head
         # main moved on: the line's own commits again, on top of it.
-        w = os.path.join(self.pd, "line-replay")
-        run(["git", "-C", self.tc, "worktree", "remove", "--force", w])
-        run(["git", "-C", self.tc, "worktree", "prune"])
         own = run(["git", "-C", self.tc, "rev-list", "--reverse", "%s..%s" % (main_sha, head)]).stdout.split()
-        r = run(["git", "-C", self.tc, "worktree", "add", "-q", "--detach", w, main_sha])
-        for c in own:
-            if r.returncode:
-                break
-            r = run(["git", "-C", w, "cherry-pick", "--allow-empty", c])
-        new = run(["git", "-C", w, "rev-parse", "HEAD"]).stdout.strip() if r.returncode == 0 else ""
-        if r.returncode:
-            run(["git", "-C", w, "cherry-pick", "--abort"])
-        run(["git", "-C", self.tc, "worktree", "remove", "--force", w])
+        new = self.replay(own, main_sha)
         if not new:
             self.flag("resolve", "main moved and the local line %s does not replay on it: please resolve this by committing the weights and nets by hand"
                       % head[:7], key="replay:%s:%s" % (head[:12], main_sha[:12]))
@@ -2946,14 +3167,23 @@ class Plan:
             raise SystemExit("no push permission (%s): push %s from a machine that can" % (ps["detail"], self.LINE))
         remote, branch = self.push_target()
         main = run(["git", "-C", self.tc, "rev-parse", "%s/%s" % (remote, branch)]).stdout.strip()
-        head = self.local_line(main)
+        head = self.local_line(self.build_tip(main))
         if not head:
             return
         if upto and upto != head:
-            r = run(["git", "-C", self.tc, "push", remote, "%s:refs/heads/%s" % (upto, branch)])
-            if r.returncode != 0:
-                raise SystemExit("the push failed: " + r.stderr[-300:])
-            run(["git", "-C", self.tc, "fetch", "-q", remote])
+            landed = self.land(upto)
+            if landed != upto:
+                # Replayed on main's documents: what stood above it goes on top, under new hashes.
+                rest = run(["git", "-C", self.tc, "rev-list", "--reverse", "%s..%s" % (upto, head)]).stdout.split()
+                top = self.replay(rest, landed)
+                if not top:
+                    self.flag("resolve", "%s is on main at %s, and what stood above it does not replay: please resolve this by hand" % (upto[:7], landed[:7]),
+                              key="replay:%s" % landed[:12])
+                    return
+                run(["git", "-C", self.tc, "branch", "-f", self.LINE, top])
+                line["commit"] = top
+                self.bundle()
+            upto = landed
             n = len(line["promotions"]) if carried is None else min(carried, len(line["promotions"]))
             for rid in line["promotions"][:n]:
                 st = self.rstate(rid)
@@ -2965,10 +3195,10 @@ class Plan:
             self._sha = None
             print("the line is main as far as %s; %d generation(s) still carried" % (upto[:7], len(line["promotions"])))
             return
-        r = run(["git", "-C", self.tc, "push", remote, "%s:refs/heads/%s" % (head, branch)])
-        if r.returncode != 0:
-            raise SystemExit("the push failed: " + r.stderr[-300:])
-        run(["git", "-C", self.tc, "fetch", "-q", remote])
+        landed = self.land(head)
+        if landed != head:
+            run(["git", "-C", self.tc, "branch", "-f", self.LINE, landed])
+            line["commit"] = head = landed
         self.local_line(head, by="Paul Accepts (auto mode)" if self.auto() else "Paul approved")
         for rid in line["promotions"]:
             st = self.rstate(rid)
