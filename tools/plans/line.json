@@ -1029,6 +1029,24 @@
    "helps": "Long jobs are set once and read from time to time, without being asked for again."
   },
   {
+   "key": "Results/Personas",
+   "does": "The roster of styles and personas: what each plays, the dials its profile sets over today's defaults, and its last census read here.",
+   "ties": "Bot styles 0 to 7 and the personas 8 to 15 of styles.rs; a persona's census is its certificate (the plan, chapter 10).",
+   "drawn": "A row a slot: a lamp coloured by its read, the name, the read with its error and seeds, what it plays; the dials on hover.",
+   "look": "A persona still unread, or one reading under today's defaults by two errors.",
+   "sim": "Nothing runs here. A read is asked for with `new census \"trial=bot_style = K\"`.",
+   "helps": "A person can see which named mind is proven and which is a hypothesis before putting it on a side."
+  },
+  {
+   "key": "Settings/Ranges",
+   "does": "The brain's RANGES: every number's limits, today's default between them, the kind, the reason, and the decrees marked.",
+   "ties": "Physical constraints first (the plan, chapter 9): the search moves inside a range; a decree, min = max, is Paul's alone.",
+   "drawn": "A row a range: name, min, today, max, the file's section as its kind, the reason; a red lamp on a decree.",
+   "look": "A default at an edge of its range, which means the search wants past it, and a decree the search is still asked about.",
+   "sim": "Nothing runs here, and nothing here moves a number: the file is edited by hand.",
+   "helps": "What was a constant in all but name is now written down with its reason, in one place a person can read."
+  },
+  {
    "key": "Settings/Commits",
    "does": "The line the fleet builds, newest first, with the defaults each changed.",
    "ties": "Tests, Build and Main: the generations themselves.",

@@ -404,10 +404,52 @@ def ranges():
     return rows
 
 
+def personas():
+    """The roster of styles.rs (the eight styles and the eight personas of 2 November) for a Results
+    page: slot, name, what it plays, the dials its profile sets over today's defaults, and its last
+    census read in this queue (a run named persona-NAME, or a trial `bot_style = K`), pooled line."""
+    out = []
+    try:
+        src = read(os.path.join(TC, "source", "treadcore-brain", "src", "styles.rs"))
+    except OSError:
+        return out
+    for m in re.finditer(r'Style \{ slot: (\d+), name: "([^"]+)", about: "([^"]+)", kind: Kind::(\w+)\((?:include_str!\("[./]*profiles/([^"]+)"\))?', src):
+        slot, name, about, kind, profile = int(m.group(1)), m.group(2), m.group(3), m.group(4), m.group(5)
+        dials = []
+        if profile:
+            for l in read(os.path.join(TC, "profiles", profile)).splitlines():
+                bare = l.split("#")[0].strip()
+                if "=" in bare:
+                    k, _, v = bare.partition("=")
+                    dials.append("%s %s" % (k.strip(), v.strip()))
+        out.append({"slot": slot, "name": name, "about": about, "kind": kind.lower(), "dials": dials, "read": None})
+    if not QDIR:
+        return out
+    # The newest read of each slot: a run whose trial sets bot_style, by its results' pooled line.
+    for f in sorted(glob.glob(os.path.join(QDIR, "runs", "*.json"))):
+        try:
+            r = json.loads(read(f))
+        except ValueError:
+            continue
+        trial = (r.get("params") or {}).get("trial", "")
+        mm = re.match(r"\s*bot_style\s*=\s*(\d+)", trial)
+        if not mm:
+            continue
+        rid = os.path.basename(f)[:-5]
+        for p in glob.glob(os.path.join(QDIR, "results", rid + "*", "*", "*", "out", rid + "*", "*", "pooled.txt")):
+            line = read(p).splitlines()[:1]
+            ml = re.match(r"every map\s+([-+][\d.]+) \+/- ([\d.]+) over\s+(\d+) seeds", line[0]) if line else None
+            if ml:
+                for x in out:
+                    if x["slot"] == int(mm.group(1)):
+                        x["read"] = {"d": float(ml.group(1)), "se": float(ml.group(2)), "seeds": int(ml.group(3)), "run": rid}
+    return out
+
+
 if __name__ == "__main__":
     run = newest_run()
     qd = queue()
     doc = {"fleet": FLEET, "queue": qd, "project": "treadcore", "at": time.strftime("%H:%M:%S"),
            "machines": machines(run, qd), "run": run, "loop": loop(), "net": net(), "algorhythm": algorhythm(), "analysis": analysis(), "long_run": long_run(), "quality": quality(),
-           "ranges": ranges()}
+           "ranges": ranges(), "personas": personas()}
     print(json.dumps(doc))

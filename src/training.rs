@@ -118,6 +118,8 @@ pub struct State {
     /// 3 older) and the first row.
     pub cand_filter: u8,
     pub cand_off: usize,
+    /// The Ranges page's first row (the wheel scrolls it).
+    pub ranges_off: usize,
     /// Collect results and stop now, armed from the menu: the button says
     /// so, and its press runs it.
     pub arm_stop: bool,
@@ -336,6 +338,10 @@ pub struct Model {
     pub analysis: Option<json::Value>,
     /// treadcore-view.py's account of what repeats over many generations.
     pub long_run: Option<json::Value>,
+    /// The brain's RANGES as rows, and the roster of styles and personas with their reads (the
+    /// plan of 2 November, chapter 14: every feature an element).
+    pub ranges: Option<json::Value>,
+    pub personas: Option<json::Value>,
     pub quality: Option<Quality>,
     pub queue: Option<Queue>,
 }
@@ -604,6 +610,8 @@ impl Model {
         }
         m.analysis = v.get("analysis").cloned();
         m.long_run = v.get("long_run").cloned();
+        m.ranges = v.get("ranges").cloned();
+        m.personas = v.get("personas").cloned();
         if let Some(x) = v.get("algorhythm").filter(|x| x.get("dials").is_some()) {
             let num = |v: &json::Value, k: &str| v.get(k).and_then(|n| n.as_num()).unwrap_or(0.0);
             m.algo = Some(Algo {
@@ -706,13 +714,15 @@ fn bar(ui: &mut Ui, r: Rect, frac: f64, c: Rgb) {
 /// the Results' (Candidates, Found, Net, Flags) and the Settings' (Keeper,
 /// Commits), by page number.
 const QUEUE_PAGES: [usize; 2] = [0, 1];
-const RESULTS_PAGES: [usize; 5] = [5, 2, 3, 8, 4];
-const SETTINGS_PAGES: [usize; 3] = [6, 9, 7];
+const RESULTS_PAGES: [usize; 6] = [5, 2, 3, 8, 10, 4];
+const SETTINGS_PAGES: [usize; 4] = [6, 9, 11, 7];
 
 /// (page number, name, what it shows). Candidates came after the rest and
 /// keeps the number 5, so ORRERY_FRAME_PAGE and a saved page mean what they
-/// meant.
-const PAGES: [(usize, &str, &str); 10] = [
+/// meant. Personas (10) and Ranges (11) came on 2 November.
+const PAGES: [(usize, &str, &str); 12] = [
+    (10, "Personas", "the roster of styles and personas: what each plays, its dials over today's defaults, and its last census read"),
+    (11, "Ranges", "the brain's RANGES: every number's limits, the decrees, and the reason beside each; only Paul decrees"),
     (0, "Fleet", "each machine and its job"),
     (1, "Runs", "ask for a run, cancel, accept"),
     (2, "Found", "improvements, by variable and machine"),
@@ -856,6 +866,8 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State, view: nav::View) -> Option<n
             5 => draw_candidates_page(ui, page, q, st),
             6 => draw_keeper_page(ui, page, q, st),
             9 => draw_long_run(ui, page, m, st),
+            10 => draw_personas(ui, page, m),
+            11 => draw_ranges(ui, page, m, st),
             7 => draw_commits_page(ui, page, q, st),
             3 => {
                 if let Some(i) = draw_net(ui, page, m) {
@@ -1521,6 +1533,112 @@ fn draw_long_run(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
     )).collect();
     let operator = st.operator;
     crate::pipeline::value_rows(ui, rect(at.x, y, at.w, at.bottom() - y), &table, &now, operator, &mut st.tune);
+}
+
+/// Results, Personas: the roster of styles.rs, a row each: slot and name, what it plays, the dials its
+/// profile sets over today's defaults, and its last census read in this queue, coloured by whether it
+/// holds. A persona with no read says so: its census is its certificate (the plan, chapter 10).
+fn draw_personas(ui: &mut Ui, at: Rect, m: &Model) {
+    let t = ui.t;
+    let lh = F8X13.height as i32 + 4;
+    let Some(list) = m.personas.as_ref().and_then(|v| v.as_array()) else {
+        ui.label_in(at.x, at.y, at.w, "Nothing read yet: the roster is read from treadcore's styles.rs by treadcore-view.py.", &F8X13, t.dim);
+        return;
+    };
+    let name_w = F8X13.measure("15  Polynesia  ") as i32 + 12;
+    let read_w = F8X13.measure("+0.00 +/- 0.00 over 400 seeds  ") as i32 + 8;
+    let about_w = (at.w - name_w - read_w - 16).max(80);
+    let mut y = at.y;
+    ui.label(at.x + 4, y, "slot  name", &F8X13, t.dim);
+    ui.label_in(at.x + name_w, y, read_w - 8, "last census read here", &F8X13, t.dim);
+    ui.label(at.x + name_w + read_w, y, "what it plays (hover: its dials, its run)", &F8X13, t.dim);
+    y += lh + 2;
+    for p in list {
+        if y + lh > at.bottom() {
+            break;
+        }
+        let name = p.get("name").and_then(|x| x.as_str()).unwrap_or("?");
+        let slot = p.get("slot").and_then(|x| x.as_num()).unwrap_or(0.0) as i64;
+        let about = p.get("about").and_then(|x| x.as_str()).unwrap_or("");
+        let dials: Vec<String> = p.get("dials").and_then(|x| x.as_array()).map(|a| a.iter().filter_map(|d| d.as_str().map(|s| s.to_string())).collect()).unwrap_or_default();
+        let read = p.get("read").filter(|r| r.get("d").is_some());
+        let (text, colour) = match read {
+            Some(r) => {
+                let (d, se, seeds) = (r.get("d").and_then(|x| x.as_num()).unwrap_or(0.0), r.get("se").and_then(|x| x.as_num()).unwrap_or(0.0), r.get("seeds").and_then(|x| x.as_num()).unwrap_or(0.0) as i64);
+                (format!("{:+.2} +/- {:.2} over {} seeds", d, se, seeds), if se > 0.0 && d > 2.0 * se { t.up } else if se > 0.0 && d < -2.0 * se { t.alarm } else { t.ink })
+            }
+            None => ("unread: its census is its certificate".to_string(), t.dim),
+        };
+        ui.c.disc(at.x + 6, y + lh / 2 - 1, 5, colour);
+        ui.label(at.x + 18, y, &format!("{:>2}  {}", slot, name), &F8X13, if slot >= 8 { t.accent } else { t.ink });
+        ui.label_in(at.x + name_w, y, read_w - 8, &text, &F8X13, colour);
+        ui.label_in(at.x + name_w + read_w, y, about_w, about, &F8X13, t.ink);
+        let mut tip = vec![format!("{} {}: {}", slot, name, about)];
+        tip.push(if dials.is_empty() { "No dials of its own: today's defaults, or a learned kind.".to_string() } else { format!("Over today's defaults: {}.", dials.join(", ")) });
+        tip.push(match read {
+            Some(r) => format!("Read by run {}: {}. Every dial it does not name rides the line.", r.get("run").and_then(|x| x.as_str()).unwrap_or("?"), text),
+            None => "No census of it in this queue yet: ask one with `new census \"trial=bot_style = K\"`.".to_string(),
+        });
+        tip.push("Source: styles.rs, profiles/, and the queue's runs.".to_string());
+        ui.tip(rect(at.x, y, at.w, lh), || tip.clone());
+        y += lh;
+    }
+}
+
+/// Settings, Ranges: RANGES as rows, name, min, today's default, max, the kind the file's section
+/// names, and the reason, with a lamp on a decree. Nothing here moves a number: only Paul decrees,
+/// and a range is a line in the file (the plan, chapter 9).
+fn draw_ranges(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
+    let t = ui.t;
+    let lh = F8X13.height as i32 + 3;
+    let Some(rows) = m.ranges.as_ref().and_then(|v| v.as_array()) else {
+        ui.label_in(at.x, at.y, at.w, "Nothing read yet: RANGES is read from treadcore's checkout by treadcore-view.py.", &F8X13, t.dim);
+        return;
+    };
+    let decrees = rows.iter().filter(|r| r.get("decree").and_then(|x| x.as_bool()).unwrap_or(false)).count();
+    let mut y = at.y;
+    ui.label_in(at.x, y, at.w, &format!("{} ranges, {} of them decrees (min = max, a person's ruling). The search moves inside a range; a trial that asks for more is read at the edge. Only Paul edits a decree.", rows.len(), decrees), &F8X13, t.dim);
+    y += lh + 6;
+    let name_w = F8X13.measure("ping_defend_reach  ") as i32 + 10;
+    let num_w = F8X13.measure("16384.0 ") as i32;
+    let kind_w = F8X13.measure("The temperament matrix  ") as i32;
+    ui.label(at.x + 18, y, "name", &F8X13, t.dim);
+    for (i, h) in ["min", "today", "max"].iter().enumerate() {
+        ui.label(at.x + name_w + num_w * i as i32, y, h, &F8X13, t.dim);
+    }
+    ui.label(at.x + name_w + num_w * 3 + 8, y, "kind", &F8X13, t.dim);
+    ui.label(at.x + name_w + num_w * 3 + kind_w + 8, y, "why", &F8X13, t.dim);
+    y += lh + 2;
+    let why_w = (at.w - name_w - num_w * 3 - kind_w - 24).max(60);
+    // The wheel scrolls the rows, as the Candidates page's do.
+    let box_ = rect(at.x, y, at.w, at.bottom() - y);
+    let mut off = st.ranges_off;
+    let (area, first, fit) = ui.scroll_list(box_, rows.len(), lh, &mut off);
+    st.ranges_off = off;
+    let mut y = area.y;
+    for r in rows.iter().skip(first).take(fit) {
+        let name = r.get("name").and_then(|x| x.as_str()).unwrap_or("?");
+        let (lo, hi) = (r.get("min").and_then(|x| x.as_num()).unwrap_or(0.0), r.get("max").and_then(|x| x.as_num()).unwrap_or(0.0));
+        let today = r.get("default").and_then(|x| x.as_str()).unwrap_or("");
+        let decree = r.get("decree").and_then(|x| x.as_bool()).unwrap_or(false);
+        let kind = r.get("kind").and_then(|x| x.as_str()).unwrap_or("");
+        let why = r.get("why").and_then(|x| x.as_str()).unwrap_or("");
+        if decree {
+            ui.c.disc(at.x + 6, y + lh / 2 - 1, 5, t.alarm);
+        }
+        ui.label(at.x + 18, y, name, &F8X13, if decree { t.accent } else { t.ink });
+        for (i, v) in [format!("{}", lo), today.trim_start_matches("crate::commander::").to_string(), format!("{}", hi)].iter().enumerate() {
+            ui.label_in(at.x + name_w + num_w * i as i32, y, num_w - 6, v, &F8X13, if i == 1 { t.ink } else { t.dim });
+        }
+        ui.label_in(at.x + name_w + num_w * 3 + 8, y, kind_w - 6, kind, &F8X13, t.dim);
+        ui.label_in(at.x + name_w + num_w * 3 + kind_w + 8, y, why_w, why, &F8X13, t.dim);
+        ui.tip(rect(at.x, y, at.w, lh), || vec![
+            format!("{}: {} to {}{}", name, lo, hi, if decree { ", a decree" } else { "" }),
+            format!("Today's default: {}. {}", if today.is_empty() { "not a weight of weights.rs (a switch, held by min = max)" } else { today }, why),
+            "Source: source/treadcore-brain/RANGES, as the brain compiles it in.".to_string(),
+        ]);
+        y += lh;
+    }
 }
 
 fn draw_keeper_page(ui: &mut Ui, at: Rect, q: &Queue, st: &mut State) {
