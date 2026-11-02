@@ -226,6 +226,12 @@ def main(q):
     except Exception as e:
         out["terrains"] = {"error": str(e)[:300], "datasets": []}
     try:
+        import temperament
+        out["temper"] = temperament.read(q)
+        out["temper"]["dials"] = {k: v for k, v in weights_at("orrery/accepted").items() if k.startswith("temper_") or k in ("bio", "bio_amount", "bio_period")}
+    except Exception as e:
+        out["temper"] = {"error": str(e)[:300], "groups": []}
+    try:
         out["fleet"] = fleet_counts(q)
         out["limits"] = number_limits()
     except Exception as e:

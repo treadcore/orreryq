@@ -772,14 +772,22 @@ fn values(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
     ui.label_in(at.x + 4, at.y, at.w - 8, head, &F8X13, t.ink);
     let say = if st.said.is_empty() { format!("Held z now {:.2}. tools/plans/difficulty-sim.py simulates what a value buys.", m.held_z) } else { st.said.clone() };
     ui.label_in(at.x + 4, at.y + 15, at.w - 8, &say, &F8X13, t.dim);
-    let table = line::values();
-    let mut y = at.y + 36;
-    let row_h = ((at.h - 36) / table.len().max(1) as i32).clamp(30, 46);
+    let table: Vec<line::Value> = line::values().into_iter().filter(|v| !v.long).collect();
+    let body = rect(at.x, at.y + 36, at.w, at.h - 36);
+    let operator = st.operator;
+    value_rows(ui, body, &table, &m.values, operator, &mut st.tune);
+}
+
+/// A row for each value, with a press to move it a step: here, and on Settings, Long run.
+pub fn value_rows(ui: &mut Ui, at: Rect, table: &[line::Value], values: &[(String, f64, bool)], operator: bool, tune: &mut Option<String>) {
+    let t = ui.t;
+    let mut y = at.y;
+    let row_h = (at.h / table.len().max(1) as i32).clamp(30, 46);
     let (lab, val, btn) = (220, 104, 28);
-    for v in &table {
+    for v in table {
         let r = rect(at.x, y, at.w, row_h - 3);
         ui.c.rect(r.x, r.y, r.w, r.h, t.tile);
-        let now_ = m.values.iter().find(|x| x.0 == v.key);
+        let now_ = values.iter().find(|x| x.0 == v.key);
         let (cur, moved) = now_.map(|x| (x.1, x.2)).unwrap_or((v.default, false));
         ui.label_in(r.x + 8, r.y + 3, lab - 10, v.label, &F8X13, t.ink);
         ui.label_in(r.x + 8, r.y + 17, lab - 10, &format!("from {} to {}, default {}", number(v.min, v.step), number(v.max, v.step), number(v.default, v.step)), &F6X10, t.dim);
@@ -789,18 +797,18 @@ fn values(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
             ui.label_right(x + val - 8, r.y + 17, "moved", &F6X10, t.warn);
         }
         x += val;
-        if st.operator {
+        if operator {
             let by = r.y + (r.h - 22) / 2;
             let down = (cur - v.step).max(v.min);
             let up = (cur + v.step).min(v.max);
             if ui.button(rect(x, by, btn, 22), "-", cur > v.min) {
-                st.tune = Some(format!("{} {}", v.key, down));
+                *tune = Some(format!("{} {}", v.key, down));
             }
             if ui.button(rect(x + btn + 3, by, btn, 22), "+", cur < v.max) {
-                st.tune = Some(format!("{} {}", v.key, up));
+                *tune = Some(format!("{} {}", v.key, up));
             }
             if moved && ui.button(rect(x + 2 * btn + 6, by, 62, 22), "Default", true) {
-                st.tune = Some(format!("{} default", v.key));
+                *tune = Some(format!("{} default", v.key));
             }
         }
         x += 2 * btn + 6 + 70;

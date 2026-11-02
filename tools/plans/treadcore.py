@@ -754,18 +754,21 @@ class Plan:
             wide = self.wide_trials(1, out, g, defaults) if s["stalled"] else []
             far = self.far_trials(max(1, int(want * self.FAR_SHARE)), out, defaults)
             asked = self.region_trials(want, out)
+            temper = self.temper_trials(max(1, int(want * self.TEMPER_SHARE)), out)
             fit = []
             try:
                 fit = [os.path.join(out, l.split("\t")[0] + ".weights") for l in open(os.path.join(out, "plan.tsv")).read().splitlines()[1:]]
             except OSError:
                 pass
-            picked, now, far_seen = [], set(), []
-            for f in asked + ab + far + wide + fit:
+            picked, now, far_seen, temper_seen = [], set(), [], []
+            for f in asked + ab + temper + far + wide + fit:
                 if len(picked) >= want:
                     break
                 text = self.ranged(open(f).read())
                 if os.path.basename(f).startswith("far-"):
                     far_seen.append(os.path.basename(f)[:-8])
+                if os.path.basename(f).startswith("temper-"):
+                    temper_seen.append(os.path.basename(f)[:-8])
                 key = self.trial_key(text)
                 # suggest.py's reads again are the sequential read's to make
                 # (read_on_jobs, pooled with the first): not new trials.
@@ -787,6 +790,7 @@ class Plan:
             if any(os.path.basename(f).startswith("best") for f, _ in picked):
                 s["best_at"] = s["reads"]
             self.far_asked(far_seen)
+            self.temper_asked(temper_seen)
             s["far_left"] = len((self.state.get("far") or {}).get("todo", []))
             self.search_note(s)
             for f, text in picked:
@@ -796,6 +800,8 @@ class Plan:
                 what = os.path.basename(f)[:-8]
                 if what.startswith("far-"):
                     self.state["far"].setdefault("asked", {})[jid] = what
+                if what.startswith("temper-"):
+                    self.state["temper"].setdefault("asked", {})[jid] = what
                 if what.startswith("region-"):
                     self.state.setdefault("regions", {}).setdefault(what.split("-")[1], {}).setdefault("jobs", {})[jid] = int(what.split("-")[2])
                 moved = short_moved(text)
@@ -1179,6 +1185,128 @@ class Plan:
             key = n[len("far-"):]
             if far and key in far["todo"]:
                 far["todo"].remove(key)
+
+    # THE TEMPERAMENT MATRIX, READ AGAIN AND AGAIN (Paul, 1 November: "connect biorhythems to the output
+    # temperment"; "can these be setup in a way to achieve this in many generations in the future"). The
+    # fit cannot read these twelve dials: they stand at 0, and it works on a log scale. So every
+    # TEMPER_EVERY generations each entry is read each way alone, with the mood's older road shut, on the
+    # sine wave, and goes by the ordinary road. Three reads of 400 seeds go with them, to fold: the waves
+    # driving nothing, which are the same games and show chance; the mood as it stands; and the mood at full.
+    TEMPER_SHARE = 0.15
+    TEMPER_EVERY = 12
+    TEMPER_STEP = 0.5
+    TEMPER_ROWS = ("engage", "press", "retreat", "trigger")
+
+    def temper_trials(self, n, out):
+        """Up to n of the matrix's trials still to read, as temper-NAME.lo/hi.weights."""
+        if not self.TEMPER_EVERY or "temper_engage_1" not in self.defaults_at(self.sha()):
+            return []
+        gens = len(self.promotions())
+        tp = self.state.setdefault("temper", {"todo": [], "asked": {}, "at_gen": None, "rounds": 0})
+        gone = self.ids("stopped")
+        for jid, what in list(tp.get("asked", {}).items()):
+            if jid in gone:
+                del tp["asked"][jid]
+                tp["todo"].insert(0, what[len("temper-"):])
+        if not tp["todo"] and (tp.get("at_gen") is None or gens - tp["at_gen"] >= self.TEMPER_EVERY):
+            tp.update({"at_gen": gens, "rounds": tp.get("rounds", 0) + 1,
+                       "todo": ["temper_%s_%d.%s" % (r, i, e) for r in self.TEMPER_ROWS for i in (1, 2, 3) for e in ("lo", "hi")]})
+            for name, text in (("bio-null", "bio = 1\nbio_amount = 0\n"), ("bio-mood", "bio = 1\n"), ("bio-full", "bio = 1\nbio_amount = 1\n")):
+                self.new_run("census", {"trial": text, "name": name, "seeds": 400, "adopt": "no"}, "auto")
+            self.flag("temper", "round %d of the temperament matrix: %d trials, and three reads to fold" % (tp["rounds"], len(tp["todo"])),
+                      key="temper:%d" % tp["rounds"], progress=True)
+        files = []
+        for key in tp["todo"][:n]:
+            name, end = key.rsplit(".", 1)
+            f = os.path.join(out, "temper-%s.weights" % key)
+            with open(f, "w") as fh:
+                fh.write("# orrery: the temperament matrix\nbio = 1\nbio_amount = 0\n%s = %g\n" % (name, -self.TEMPER_STEP if end == "lo" else self.TEMPER_STEP))
+            files.append(f)
+        return files
+
+    def temper_asked(self, names):
+        tp = self.state.get("temper")
+        for x in names:
+            key = x[len("temper-"):]
+            if tp and key in tp["todo"]:
+                tp["todo"].remove(key)
+
+    # THE WIDTH WATCH (Paul, 1 November: "do we need to expand its dimensions"; "in many generations in the
+    # future"; "add the options in the settings page"). Whether a net has run out of room is a thing to
+    # measure from time to time, and not to guess from a chart. Every WIDTH_EVERY generations: record
+    # WIDTH_SEEDS seeds of today's brain, train the same data at each of WIDTHS, and read each on held-out
+    # seeds. Past the bar it raises a flag for a person. IT CHANGES NO NET: a wider net needs a person's
+    # yes, because the game ships this file, and copying better is not yet playing better.
+    WIDTH_EVERY = 20
+    WIDTH_SEEDS = 240
+    WIDTH_BAR = 1.0
+    WIDTHS = (32, 64, 128)
+    WIDTH_NOW = 64
+
+    def width_watch(self):
+        """The watch's next step: jobs, if any are due."""
+        wd = self.state.setdefault("width", {"history": [], "at_gen": None, "n": 0})
+        gens = len(self.promotions())
+        gpu = [h for h in self.hosts if "gpu" in h.get("caps", [])]
+        if wd.get("job"):
+            if wd["job"] not in self.ids("done", "failed", "stopped"):
+                return []
+            row = self.width_read(wd["job"], wd.get("run"))
+            wd["history"].append(row)
+            for k in ("job", "run", "name"):
+                wd.pop(k, None)
+            save(os.path.join(self.pd, "widths.json"), {"history": wd["history"], "widths": self.WIDTHS, "now": self.WIDTH_NOW})
+            self.flag("width" if row.get("verdict") == "widen" else "width-read", row.get("said", ""), key="width:%d" % len(wd["history"]), progress=row.get("verdict") != "widen")
+            return []
+        if wd.get("run"):
+            st = self.rstate(wd["run"])
+            if st.get("status") != "done":
+                return []
+            if not gpu or not self.prepared(gpu[0]["name"]):
+                return []
+            jid = "width-%04d" % wd["n"]
+            wd["job"] = jid
+            loop = "".join(
+                "WIDTH=%d GPU_GB=1 BC_DEVICE=cuda %s/treadcore-bc ~/fleet/%s/shards $D/w%d.bin 12 32768 0.01 > $D/w%d.log 2>&1 || echo failed at %d\n" % (w, self.cdir(), wd["name"], w, w, w)
+                for w in self.WIDTHS)
+            return [{"id": jid, "kind": "net", "title": "the width watch: the same data at %s" % ", ".join(str(w) for w in self.WIDTHS),
+                     "needs": "host:" + gpu[0]["name"], "after": [self.prep_id(gpu[0]["name"])],
+                     "cmd": "D=~/%s/out/%s; mkdir -p $D\n%sgrep -h 'drive\\|gun' $D/w*.log | tail -8\n" % (self.home, jid, loop),
+                     "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 4 * 3600}]
+        # The count begins when the watch is first seen: "in the future", and nothing to measure today.
+        if wd.get("at_gen") is None:
+            wd["at_gen"] = gens
+        if not self.WIDTH_EVERY or not gpu or gens - wd["at_gen"] < self.WIDTH_EVERY:
+            return []
+        wd["n"] += 1
+        wd["at_gen"] = gens
+        wd["name"] = "width%d" % wd["n"]
+        wd["run"] = self.new_run("record", {"run": wd["name"], "count": self.WIDTH_SEEDS, "per": 12, "secs": 600, "seed0": 9200000 + 100000 * wd["n"]}, "auto")
+        return []
+
+    def width_read(self, jid, run):
+        """What a watch found: each width's agreement on drive and gun, and whether it says widen."""
+        rows = {}
+        for w in self.WIDTHS:
+            got = {}
+            for f in glob.glob(os.path.join(self.q, "results", jid, self.home, "out", jid, "w%d.log" % w)):
+                for l in open(f, errors="replace"):
+                    m = re.match(r"\s*(drive|gun)\s+([\d.]+)% \+/- ([\d.]+)", l)
+                    if m:
+                        got[m.group(1)] = (float(m.group(2)), float(m.group(3)))
+            rows[str(w)] = got
+        row = {"at": time.strftime("%Y-%m-%dT%H:%M:%S"), "gen": len(self.promotions()), "seeds": self.WIDTH_SEEDS, "job": jid, "rows": rows, "verdict": "no reading"}
+        mean = lambda w: (rows.get(str(w), {}).get("drive", (None,))[0], rows.get(str(w), {}).get("gun", (None,))[0])
+        a, b = mean(self.WIDTH_NOW), mean(max(self.WIDTHS))
+        if None in a or None in b:
+            row["said"] = "the width watch %s read nothing: see its log" % jid
+            return row
+        gain = ((b[0] - a[0]) + (b[1] - a[1])) / 2
+        row["gain"] = round(gain, 2)
+        row["verdict"] = "widen" if gain >= self.WIDTH_BAR else "stay"
+        row["said"] = "the width watch: %d against %d on held-out seeds, %+.2f points of agreement on drive and gun: %s" % (
+            max(self.WIDTHS), self.WIDTH_NOW, gain, "past the bar, a person should look" if gain >= self.WIDTH_BAR else "stay")
+        return row
 
     # REGIONS (Paul, 1 November: "Selecting regions of operation with the terrain map"). A person draws a
     # box on a terrain, and tools/regions.py writes it to QUEUE/regions.json with how many trials to read
@@ -3631,6 +3759,7 @@ class Plan:
         self.propagation()
         jobs += self.adopt_jobs()
         jobs += self.line_proof()
+        jobs += self.width_watch()
         self.ticker_scan()
         try:
             self.commits_log()

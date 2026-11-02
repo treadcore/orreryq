@@ -1398,6 +1398,12 @@ fn gui_loop<S: surface::Surface>(
                     training_state.said = queue_said.lock().unwrap_or_else(|e| e.into_inner()).clone();
                     training_state.analysis.said = regions_said.lock().unwrap_or_else(|e| e.into_inner()).clone();
                     let go = training::draw(&mut u, &training::Model::parse(&text, &jobs_source), &mut training_state, v);
+                    if let Some(ask) = training_state.tune.take() {
+                        let cmd = format!("{} {}", tune_cmd(queue_ctl), ask);
+                        thread::spawn(move || {
+                            let _ = std::process::Command::new("sh").arg("-c").arg(&cmd).output();
+                        });
+                    }
                     if let Some(ask) = training_state.analysis.ask.take() {
                         let cmd = format!("{} {}", regions_cmd(queue_ctl), ask);
                         let said = Arc::clone(&regions_said);

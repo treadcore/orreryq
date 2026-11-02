@@ -387,3 +387,94 @@ assert [os.path.basename(f) for f in r.region_trials(10, root)] == ["region-g1-1
 _sh.rmtree(root)
 
 print("regions: every check holds")
+
+# ---- The temperament matrix's rounds, and the width watch's steps.
+class Temper(P):
+    def __init__(self, gens):
+        self.state, self.gens, self.gone, self.flags, self.runs_asked = {}, gens, set(), [], []
+    def promotions(self):
+        return [None] * self.gens
+    def ids(self, *a):
+        return self.gone
+    def flag(self, kind, text, key=None, progress=False):
+        self.flags.append(text)
+    def new_run(self, kind, params, by):
+        self.runs_asked.append((kind, params))
+        return "r9"
+    def sha(self):
+        return "now"
+    def defaults_at(self, c):
+        return {"temper_engage_1": 0.0}
+
+
+root = tempfile.mkdtemp()
+t = Temper(0)
+files = t.temper_trials(4, root)
+assert len(files) == 4 and len(t.state["temper"]["todo"]) == 24, "twelve entries, each way"
+text = open(files[0]).read()
+v = m.parse_weights(text)
+assert v["bio"] == 1 and v["bio_amount"] == 0 and v["temper_engage_1"] == -0.5, text
+assert [r[1]["name"] for r in t.runs_asked] == ["bio-null", "bio-mood", "bio-full"] and all(r[1]["adopt"] == "no" and r[1]["seeds"] == 400 for r in t.runs_asked)
+t.temper_asked([os.path.basename(f)[:-8] for f in files])
+assert len(t.state["temper"]["todo"]) == 20
+t.state["temper"]["asked"]["w1"] = os.path.basename(files[0])[:-8]
+t.gone = {"w1"}
+assert os.path.basename(t.temper_trials(1, root)[0]) == os.path.basename(files[0]), "retired before it ran: it goes back"
+t.gone = set()
+t.state["temper"]["todo"] = []
+n_runs = len(t.runs_asked)
+assert t.temper_trials(4, root) == [] and len(t.runs_asked) == n_runs, "a round done: not again until its time"
+t.gens = t.TEMPER_EVERY
+assert len(t.temper_trials(4, root)) == 4 and t.state["temper"]["rounds"] == 2
+off = Temper(0)
+off.TEMPER_EVERY = 0
+assert off.temper_trials(4, root) == [] and not off.runs_asked
+
+class Width(Temper):
+    home = "fleet"
+    def __init__(self, gens, q):
+        super().__init__(gens)
+        self.q, self.pd, self.st, self.done = q, q, {}, set()
+        self.hosts = [{"name": "calber", "target": "u@c", "caps": ["cpu", "gpu"]}]
+    def rstate(self, rid):
+        return self.st.get(rid, {})
+    def prepared(self, host):
+        return True
+    def prep_id(self, host):
+        return "prep-" + host
+    def cdir(self):
+        return "~/c"
+    def ids(self, *a):
+        return self.done
+
+
+w = Width(50, root)
+w.WIDTH_EVERY = 0
+assert w.width_watch() == [] and not w.runs_asked, "0 is never"
+w.WIDTH_EVERY = 20
+w.gens = 55
+assert w.width_watch() == [] and not w.runs_asked, "the count began when the watch was first seen"
+w.gens = 70
+assert w.width_watch() == [] and w.runs_asked[0][0] == "record" and w.runs_asked[0][1]["count"] == 240
+assert w.width_watch() == [], "waits for its recording"
+w.st["r9"] = {"status": "done"}
+job = w.width_watch()
+assert len(job) == 1 and job[0]["id"] == "width-0001" and all("WIDTH=%d " % x in job[0]["cmd"] for x in (32, 64, 128)) and "~/fleet/width1/shards" in job[0]["cmd"]
+assert w.width_watch() == [], "waits for its training"
+d = os.path.join(root, "results", "width-0001", "fleet", "out", "width-0001")
+os.makedirs(d)
+for x, (a, b) in {32: (60.0, 55.0), 64: (66.0, 62.0), 128: (68.0, 63.5)}.items():
+    open(os.path.join(d, "w%d.log" % x), "w").write("  drive    %.1f%% +/- 0.1  (always label 3:  40.0%%)  of 100\n  gun      %.1f%% +/- 0.1  (always label 0:  40.0%%)  of 100\n" % (a, b))
+w.done = {"width-0001"}
+assert w.width_watch() == []
+row = w.state["width"]["history"][0]
+assert row["verdict"] == "widen" and row["gain"] == 1.75 and row["rows"]["128"]["drive"][0] == 68.0, row
+assert "past the bar" in w.flags[-1] and os.path.exists(os.path.join(root, "widths.json"))
+assert not w.state["width"].get("run") and not w.state["width"].get("job")
+assert w.width_watch() == [] and len(w.runs_asked) == 1, "not again for twenty generations"
+w.gens += 20
+w.width_watch()
+assert len(w.runs_asked) == 2 and w.runs_asked[1][1]["run"] == "width2" and w.runs_asked[1][1]["seed0"] != w.runs_asked[0][1]["seed0"]
+_sh.rmtree(root)
+
+print("the temperament's rounds and the width watch: every check holds")

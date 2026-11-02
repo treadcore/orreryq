@@ -91,6 +91,8 @@ pub fn edges() -> Vec<(&'static str, &'static str)> {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Value {
+    /// On Settings, Long run, and not on Queue, Values.
+    pub long: bool,
     pub up: &'static str,
     pub down: &'static str,
     pub key: &'static str,
@@ -108,7 +110,7 @@ pub fn values() -> Vec<Value> {
         .iter()
         .map(|v| {
             let n = |k: &str| v.get(k).and_then(|x| x.as_num()).unwrap_or(0.0);
-            Value { up: word(v, "up"), down: word(v, "down"), key: word(v, "key"), label: word(v, "label"), default: n("default"), min: n("min"), max: n("max"), step: n("step"), unit: word(v, "unit"), what: word(v, "what") }
+            Value { long: v.get("long").and_then(|x| x.as_bool()).unwrap_or(false), up: word(v, "up"), down: word(v, "down"), key: word(v, "key"), label: word(v, "label"), default: n("default"), min: n("min"), max: n("max"), step: n("step"), unit: word(v, "unit"), what: word(v, "what") }
         })
         .collect()
 }
@@ -287,7 +289,7 @@ mod tests {
                     keys.extend(["Results/Candidates", "Results/Found", "Results/Net", "Results/Flags"].map(String::from));
                     keys.extend(crate::analysis::TABS.iter().map(|t| format!("Results/Algorhythm/{}", t)));
                 }
-                View::Settings => keys.extend(["Settings/Keeper", "Settings/Commits"].map(String::from)),
+                View::Settings => keys.extend(["Settings/Keeper", "Settings/Long run", "Settings/Commits"].map(String::from)),
                 other => keys.push(other.title().to_string()),
             }
         }

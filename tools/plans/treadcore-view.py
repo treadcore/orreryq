@@ -20,6 +20,7 @@ orrery's Training view draws this (`--jobs-cmd`). It reads, every time:
 - how good it is: build/fleet-train/best.json (held-out agreement by head,
   the census), with bc1 and the official net beside it.
 """
+import glob
 import json
 import os
 import struct
@@ -336,6 +337,29 @@ def analysis():
         return None
 
 
+def long_run():
+    """The Settings page's Long run: what repeats over many generations, and what it last found."""
+    if not QDIR:
+        return None
+    out = {}
+    try:
+        out["values"] = json.loads(read(os.path.join(QDIR, "plan", "pipeline.json"))).get("values", [])
+    except ValueError:
+        out["values"] = []
+    try:
+        st = json.loads(read(os.path.join(QDIR, "plan", "state.json")))
+    except ValueError:
+        return out
+    far, tp, wd = st.get("far") or {}, st.get("temper") or {}, st.get("width") or {}
+    gens = len([1 for f in glob.glob(os.path.join(QDIR, "runs", "*.json")) if '"promote"' in read(f)])
+    out["far"] = {"game": far.get("game", ""), "left": len(far.get("todo", [])), "total": far.get("total", 0)}
+    out["memory"] = st.get("memory") or {}
+    out["temper"] = {"rounds": tp.get("rounds", 0), "left": len(tp.get("todo", [])), "at_gen": tp.get("at_gen")}
+    hist = wd.get("history", [])
+    out["width"] = {"tests": len(hist), "last": hist[-1] if hist else None, "running": bool(wd.get("run") or wd.get("job")), "at_gen": wd.get("at_gen")}
+    return out
+
+
 def quality():
     q = read(os.path.join(FT, "best.json"))
     if q:
@@ -359,5 +383,5 @@ if __name__ == "__main__":
     run = newest_run()
     qd = queue()
     doc = {"fleet": FLEET, "queue": qd, "project": "treadcore", "at": time.strftime("%H:%M:%S"),
-           "machines": machines(run, qd), "run": run, "loop": loop(), "net": net(), "algorhythm": algorhythm(), "analysis": analysis(), "quality": quality()}
+           "machines": machines(run, qd), "run": run, "loop": loop(), "net": net(), "algorhythm": algorhythm(), "analysis": analysis(), "long_run": long_run(), "quality": quality()}
     print(json.dumps(doc))

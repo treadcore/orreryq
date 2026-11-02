@@ -104,6 +104,8 @@ pub struct State {
     pub zoom: Option<usize>,
     /// The Algorhythm page's tab and views.
     pub analysis: crate::analysis::State,
+    /// "KEY VALUE" for fleet-tune.py, from Settings, Long run, for main to run.
+    pub tune: Option<String>,
     pub operator: bool,
     pub ctl: Option<String>,
     /// What the last control said, shown until the next.
@@ -332,6 +334,8 @@ pub struct Model {
     pub algo: Option<Algo>,
     /// tools/analysis.py's document.
     pub analysis: Option<json::Value>,
+    /// treadcore-view.py's account of what repeats over many generations.
+    pub long_run: Option<json::Value>,
     pub quality: Option<Quality>,
     pub queue: Option<Queue>,
 }
@@ -599,6 +603,7 @@ impl Model {
             });
         }
         m.analysis = v.get("analysis").cloned();
+        m.long_run = v.get("long_run").cloned();
         if let Some(x) = v.get("algorhythm").filter(|x| x.get("dials").is_some()) {
             let num = |v: &json::Value, k: &str| v.get(k).and_then(|n| n.as_num()).unwrap_or(0.0);
             m.algo = Some(Algo {
@@ -702,12 +707,12 @@ fn bar(ui: &mut Ui, r: Rect, frac: f64, c: Rgb) {
 /// Commits), by page number.
 const QUEUE_PAGES: [usize; 2] = [0, 1];
 const RESULTS_PAGES: [usize; 5] = [5, 2, 3, 8, 4];
-const SETTINGS_PAGES: [usize; 2] = [6, 7];
+const SETTINGS_PAGES: [usize; 3] = [6, 9, 7];
 
 /// (page number, name, what it shows). Candidates came after the rest and
 /// keeps the number 5, so ORRERY_FRAME_PAGE and a saved page mean what they
 /// meant.
-const PAGES: [(usize, &str, &str); 9] = [
+const PAGES: [(usize, &str, &str); 10] = [
     (0, "Fleet", "each machine and its job"),
     (1, "Runs", "ask for a run, cancel, accept"),
     (2, "Found", "improvements, by variable and machine"),
@@ -716,6 +721,7 @@ const PAGES: [(usize, &str, &str); 9] = [
     (8, "Algorhythm", "the brain as a patch: dials, switches, transforms"),
     (4, "Flags", "what needs attention; acknowledge it"),
     (6, "Keeper", "is it running as it should: the keeper, its code, its planning, the lanes"),
+    (9, "Long run", "what repeats over many generations: its options, and what it last found"),
     (7, "Commits", "the line the fleet builds, newest first, with the defaults each changed; a row opens it on GitHub"),
 ];
 
@@ -849,6 +855,7 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State, view: nav::View) -> Option<n
             4 => draw_flags_page(ui, page, q, st),
             5 => draw_candidates_page(ui, page, q, st),
             6 => draw_keeper_page(ui, page, q, st),
+            9 => draw_long_run(ui, page, m, st),
             7 => draw_commits_page(ui, page, q, st),
             3 => {
                 if let Some(i) = draw_net(ui, page, m) {
@@ -1478,6 +1485,44 @@ fn wrap(text: &str, w: i32) -> Vec<String> {
 /// nothing it can start, and restarts on new code when that throws away
 /// under ten minutes; the buttons are for doing either sooner, and for the
 /// restart that costs a long job, which asks twice and says what it costs.
+/// Settings, Long run: what repeats over many generations, what it last found and its options.
+fn draw_long_run(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
+    let t = ui.t;
+    let lh = F8X13.height as i32 + 4;
+    let Some(l) = m.long_run.as_ref() else {
+        ui.label_in(at.x, at.y, at.w, "Nothing read yet.", &F8X13, t.dim);
+        return;
+    };
+    let num = |v: Option<&json::Value>, k: &str| v.and_then(|x| x.get(k)).and_then(|x| x.as_num()).unwrap_or(0.0);
+    let (far, mem, tp, wd) = (l.get("far"), l.get("memory"), l.get("temper"), l.get("width"));
+    let last = wd.and_then(|w| w.get("last")).filter(|x| x.get("job").is_some());
+    let width = match last {
+        Some(x) => format!("Net width: {} test(s); last, {}", num(wd, "tests"), x.get("said").and_then(|s| s.as_str()).unwrap_or("")),
+        None if wd.and_then(|w| w.get("running")).and_then(|x| x.as_bool()).unwrap_or(false) => "Net width: the first test is running.".to_string(),
+        None => "Net width: no test yet. It stays off until its row is above 0.".to_string(),
+    };
+    let lines = [
+        format!("Looking far: {} of {} trials left under game {}.", num(far, "left"), num(far, "total"), far.and_then(|x| x.get("game")).and_then(|x| x.as_str()).unwrap_or("?")),
+        format!("The fit's memory: {} older reads, from {} earlier sets of defaults.", num(mem, "rows"), num(mem, "commits")),
+        format!("Temperament: round {}, {} trials left. The grid is at Results, Algorhythm, Temper.", num(tp, "rounds"), num(tp, "left")),
+        width,
+    ];
+    let mut y = at.y;
+    for s in &lines {
+        ui.label_in(at.x + 4, y, at.w - 8, s, &F8X13, t.ink);
+        y += lh;
+    }
+    y += 4;
+    let table: Vec<crate::line::Value> = crate::line::values().into_iter().filter(|v| v.long).collect();
+    let now: Vec<(String, f64, bool)> = l.get("values").and_then(|v| v.as_array()).unwrap_or(&[]).iter().map(|x| (
+        x.get("key").and_then(|s| s.as_str()).unwrap_or("").to_string(),
+        x.get("value").and_then(|s| s.as_num()).unwrap_or(0.0),
+        x.get("moved").and_then(|s| s.as_bool()).unwrap_or(false),
+    )).collect();
+    let operator = st.operator;
+    crate::pipeline::value_rows(ui, rect(at.x, y, at.w, at.bottom() - y), &table, &now, operator, &mut st.tune);
+}
+
 fn draw_keeper_page(ui: &mut Ui, at: Rect, q: &Queue, st: &mut State) {
     let t = ui.t;
     let lh = F8X13.height as i32 + 3;

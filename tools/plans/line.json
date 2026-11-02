@@ -181,7 +181,8 @@
    "unit": "a doubling",
    "what": "An older read counts for less: its error grows by this many points for each doubling the defaults have moved since it was read.",
    "up": "the fit trusts today's reads more",
-   "down": "the fit leans on what it read before"
+   "down": "the fit leans on what it read before",
+   "long": true
   },
   {
    "key": "memory_drift",
@@ -194,7 +195,8 @@
    "unit": "doublings",
    "what": "A read is not used once the defaults have moved this far since it, a switch counting as one, and never across a game. 0 is today's reads alone, as it was.",
    "up": "more reads, older and less like today",
-   "down": "fewer reads, each more like today"
+   "down": "fewer reads, each more like today",
+   "long": true
   },
   {
    "key": "far_share",
@@ -207,7 +209,92 @@
    "unit": "of a top-up",
    "what": "Under each new game, every dial is read alone at a quarter and four times today's value, this share of each top-up until they are done.",
    "up": "the far read finishes sooner, fewer lanes for the fit",
-   "down": "more lanes for the fit, a stale dial stands longer"
+   "down": "more lanes for the fit, a stale dial stands longer",
+   "long": true
+  },
+  {
+   "key": "temper_every",
+   "attr": "TEMPER_EVERY",
+   "label": "Read the temperament",
+   "default": 12,
+   "min": 0,
+   "max": 100,
+   "step": 1,
+   "unit": "generations",
+   "long": true,
+   "what": "Every this many generations, each entry of the waves-to-temperament matrix is read each way alone, with three reads of 400 seeds to fold. 0 never.",
+   "up": "fewer lanes spent, the matrix goes stale",
+   "down": "the matrix follows the brain more closely"
+  },
+  {
+   "key": "temper_share",
+   "attr": "TEMPER_SHARE",
+   "label": "Temperament's share",
+   "default": 0.15,
+   "min": 0.0,
+   "max": 1.0,
+   "step": 0.05,
+   "unit": "of a top-up",
+   "long": true,
+   "what": "How much of each top-up those trials may take until they are done.",
+   "up": "a round finishes sooner",
+   "down": "more lanes for the fit"
+  },
+  {
+   "key": "temper_step",
+   "attr": "TEMPER_STEP",
+   "label": "How hard a wave",
+   "default": 0.5,
+   "min": 0.05,
+   "max": 1.0,
+   "step": 0.05,
+   "unit": "of the dial",
+   "long": true,
+   "what": "Each trial sets one entry to this, plus and minus: at the wave's peak the dial moves by this share.",
+   "up": "easier to see, further from what a good setting is",
+   "down": "closer to a usable setting, harder to see"
+  },
+  {
+   "key": "width_every",
+   "attr": "WIDTH_EVERY",
+   "label": "Test the net's width",
+   "default": 20,
+   "min": 0,
+   "max": 200,
+   "step": 5,
+   "unit": "generations",
+   "long": true,
+   "what": "Every this many generations, counted from now, record new matches and train the same data at widths 32, 64 and 128. 0 never. It changes no net: past the bar it raises a flag for a person.",
+   "up": "less machine time, a later warning",
+   "down": "sooner told if the net has run out of room"
+  },
+  {
+   "key": "width_seeds",
+   "attr": "WIDTH_SEEDS",
+   "label": "Seeds to record for it",
+   "default": 240,
+   "min": 60,
+   "max": 1260,
+   "step": 60,
+   "unit": "seeds",
+   "long": true,
+   "what": "How much new data each width test records. bc2 was trained on 1,260. Too few favours the narrow net, since a wide one needs more to fit.",
+   "up": "a fairer test of the wide net, hours more recording",
+   "down": "a cheaper test that leans narrow"
+  },
+  {
+   "key": "width_bar",
+   "attr": "WIDTH_BAR",
+   "label": "Bar to say widen",
+   "default": 1.0,
+   "min": 0.1,
+   "max": 10.0,
+   "step": 0.1,
+   "unit": "points",
+   "long": true,
+   "what": "How much better 128 must agree than 64 on drive and gun, on held-out seeds, before it raises a flag for a person.",
+   "up": "fewer false alarms, a later warning",
+   "down": "sooner told, more often for nothing"
   },
   {
    "key": "held_seeds",
@@ -791,6 +878,15 @@
    "helps": "Fewer senses mean a faster census and a smaller transform."
   },
   {
+   "key": "Results/Algorhythm/Temper",
+   "does": "What tanks do at each wave's high against its low, and the matrix of how far waves move temperament.",
+   "ties": "Search: the census folds its behaviour over each seat's waves, and the matrix's dials go by the ordinary road.",
+   "drawn": "A grid, waves by behaviours, each cell the difference with its error, because three waves are three separate questions.",
+   "look": "The waves driving nothing first: that row is what chance looks like. A cell past two errors in the others, more than in that one.",
+   "sim": "Real matches, read from the census logs. It shows waves changing behaviour, and only a census says if it wins.",
+   "helps": "It says if a wave reaches a tank's behaviour at all before anything is built on it."
+  },
+  {
    "key": "Results/Algorhythm/Fleet",
    "does": "The road from trial sources to main, with live counts.",
    "ties": "All of the dial track.",
@@ -843,6 +939,15 @@
    "look": "An amber or red lamp, above all search, difficulty and starving lanes.",
    "sim": "Nothing runs here.",
    "helps": "A keeper down means every lane stops within a job."
+  },
+  {
+   "key": "Settings/Long run",
+   "does": "The work that repeats over many generations: its options, and what it last found.",
+   "ties": "Search: looking far, remembering, the temperament matrix, the width test.",
+   "drawn": "Rows of options as on Values, with each watch's last result above them.",
+   "look": "A width test past its bar, and rounds that have stopped finishing. An option at 0 means that work is off.",
+   "sim": "Nothing runs here. A press is live at the next plan, about a minute.",
+   "helps": "Long jobs are set once and read from time to time, without being asked for again."
   },
   {
    "key": "Settings/Commits",

@@ -16,7 +16,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::SystemTime;
 
-pub const TABS: [&str; 6] = ["Patch", "Terrain", "Spectrum", "Matrices", "Senses", "Fleet"];
+pub const TABS: [&str; 7] = ["Patch", "Terrain", "Spectrum", "Matrices", "Senses", "Fleet", "Temper"];
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct State {
@@ -25,6 +25,8 @@ pub struct State {
     /// Quarter-turns of a sixteenth each.
     pub yaw: i32,
     pub hybrid: bool,
+    /// Which of the temperament's trials.
+    pub temper: usize,
     /// Which of the terrains' datasets.
     pub dataset: usize,
     /// The selected region, x0 x1 y0 y1 on the pair's axes, and the corner a drag began at.
@@ -576,6 +578,118 @@ fn draw_terrain(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
     ui.label_in(plot.x, plot.bottom() - lh + 1, plot.w, second, &F8X13, t.dim);
 }
 
+/// The temperament: what tanks do at each wave's high against its low, and the matrix as it stands.
+fn draw_temper(ui: &mut Ui, at: Rect, a: &Value, st: &mut State) {
+    let t = ui.t;
+    let lh = F8X13.height as i32 + 5;
+    let Some(doc) = a.get("temper") else {
+        ui.label_in(at.x, at.y, at.w, "The temperament is being worked out; it takes about a minute.", &F8X13, t.dim);
+        return;
+    };
+    let dials = doc.get("dials");
+    let dial = |k: &str| dials.and_then(|d| d.get(k)).and_then(|x| x.as_num()).unwrap_or(0.0);
+    let groups = arr(doc, "groups");
+    let (waves, metrics) = (words_of(arr(doc, "waves")), arr(doc, "metrics"));
+
+    // The matrix as the line has it, always, whatever has been read.
+    let side = rect(at.right() - 300, at.y, 300, at.h);
+    let mut y = side.y;
+    ui.label_in(side.x, y, side.w, "The matrix on the line", &F8X13, t.ink);
+    y += lh;
+    let cw = 56;
+    for (i, w) in ["60 s", "73 s", "86 s"].iter().enumerate() {
+        ui.label_right(side.x + 96 + (i as i32 + 1) * cw, y, w, &F8X13, t.dim);
+    }
+    y += lh - 2;
+    for row in ["engage", "press", "retreat", "trigger"] {
+        ui.label_in(side.x, y, 92, row, &F8X13, t.dim);
+        for i in 0..3 {
+            let v = dial(&format!("temper_{}_{}", row, i + 1));
+            ui.label_right(side.x + 96 + (i as i32 + 1) * cw, y, &format!("{:+.2}", v), &F8X13, if v != 0.0 { t.warn } else { t.line });
+        }
+        y += lh - 2;
+    }
+    y += 6;
+    let shape = ["off", "sine", "triangle", "square", "saw"].get(dial("bio") as usize).copied().unwrap_or("?");
+    ui.label_in(side.x, y, side.w, &format!("Waves: {}, every {:.0} s at the slowest of its ratio.", shape, dial("bio_period")), &F8X13, if dial("bio") > 0.0 { t.ink } else { t.warn });
+    y += lh;
+    ui.label_in(side.x, y, side.w, &format!("Mood into engage_odds: {:.2}.", dial("bio_amount")), &F8X13, t.dim);
+    y += lh + 4;
+    for l in ["Each row is its dial times (1 plus", "the sum of entry times wave). All", "zero, nothing moves. They go by the", "ordinary road, a round at a time:", "see Settings, Long run."] {
+        ui.label_in(side.x, y, side.w, l, &F8X13, t.dim);
+        y += lh - 3;
+    }
+
+    let main = rect(at.x, at.y, at.w - 316, at.h);
+    if groups.is_empty() {
+        let line = if doc.get("error").is_some() { s(doc, "error") } else { "No census with waves on has been folded yet: the first round is on its way.".to_string() };
+        ui.label_in(main.x, main.y, main.w, &line, &F8X13, t.dim);
+        return;
+    }
+    st.temper = st.temper.min(groups.len() - 1);
+    // The trials.
+    let mut y = main.y;
+    ui.label_in(main.x, y, main.w, "Which read", &F8X13, t.dim);
+    y += lh - 3;
+    let room = ((main.h - 240) / (lh - 1)).max(3) as usize;
+    let first = st.temper.saturating_sub(room - 1);
+    for (i, g) in groups.iter().enumerate().skip(first).take(room) {
+        let r = rect(main.x, y, main.w, lh - 2);
+        let on = i == st.temper;
+        ui.panel(r, if on { t.tile } else { t.base });
+        if on {
+            ui.outline(r, t.up);
+        }
+        ui.label_in(r.x + 5, r.y + 1, r.w - 110, &s(g, "label"), &F8X13, if on { t.ink } else { t.dim });
+        ui.label_right(r.right() - 5, r.y + 1, &format!("{} plays", n(g, "plays")), &F8X13, t.dim);
+        if ui.button_hit(r) {
+            st.temper = i;
+        }
+        y += lh - 1;
+    }
+    y += 6;
+    let g = &groups[st.temper];
+    let control = s(g, "label").contains("nothing");
+    ui.label_in(main.x, y, main.w, &format!("The wave's high less its low: {}, {}% of live seconds in a fight", s(g, "label"), n(g, "fight_share")), &F8X13, t.ink);
+    y += lh - 2;
+    if control {
+        ui.label_in(main.x, y, main.w, "THE CONTROL: these waves drive nothing, so this is what chance looks like.", &F8X13, t.warn);
+    } else {
+        ui.label_in(main.x, y, main.w, "Bright: past two errors. Compare the waves driving nothing: only a read past that means anything.", &F8X13, t.dim);
+    }
+    y += lh + 2;
+    let cells = arr(g, "cells");
+    let cols = metrics.len().max(1) as i32;
+    let head = 64;
+    let cell_w = (main.w - head) / cols;
+    for (j, m) in metrics.iter().enumerate() {
+        let x = main.x + head + j as i32 * cell_w;
+        ui.label_in(x + 3, y, cell_w - 4, &s(m, "name"), &F8X13, t.ink);
+        ui.label_in(x + 3, y + lh - 4, cell_w - 4, &s(m, "unit"), &F8X13, t.dim);
+    }
+    y += lh * 2 - 2;
+    let cell_h = ((main.bottom() - y) / 3).clamp(30, 70);
+    for (i, row) in cells.iter().enumerate() {
+        ui.label_in(main.x, y + cell_h / 2 - 7, head - 4, waves.get(i).map(|x| x.as_str()).unwrap_or(""), &F8X13, t.dim);
+        for (j, c) in row.as_array().unwrap_or(&[]).iter().enumerate() {
+            let r = rect(main.x + head + j as i32 * cell_w, y, cell_w - 2, cell_h - 2);
+            let (d, se) = (n(c, "d"), n(c, "se"));
+            let z = if se > 0.0 { d / se } else { 0.0 };
+            let col = heat(ui, z, 4.0);
+            ui.c.rect(r.x, r.y, r.w, r.h, if z.abs() >= 2.0 { col } else { blend(t.tile, col, 0.35) });
+            ui.label_in(r.x + 4, r.y + 3, r.w - 6, &format!("{:+.2}", d), &F8X13, if z.abs() >= 2.0 { t.ink } else { t.dim });
+            ui.label_in(r.x + 4, r.y + 3 + lh - 4, r.w - 6, &format!("+/- {:.2}", se), &F8X13, t.dim);
+            let name = metrics.get(j).map(|m| s(m, "name")).unwrap_or_default();
+            ui.tip(r, || vec![
+                format!("{} at the {} wave's high less its low: {:+.2} +/- {:.2}", name, waves.get(i).map(|x| x.as_str()).unwrap_or(""), d, se),
+                format!("{:+.1} errors, over {} plays.", z, n(c, "n")),
+                "That a wave reaches behaviour, not that it wins: only a census says that.".to_string(),
+            ]);
+        }
+        y += cell_h;
+    }
+}
+
 /// What a heat map's cell under the pointer is: its row and column by name, its number, and what
 /// the number means. The colours say which are large; only this says how large, and of what.
 fn cell_tip(ui: &mut Ui, r: Rect, cells: &[Vec<f64>], title: &str, rows: &[String], cols: &[String], means: &str) {
@@ -979,6 +1093,7 @@ pub fn draw(ui: &mut Ui, at: Rect, a: Option<&Value>, st: &mut State) -> bool {
         2 => draw_spectrum(ui, at, a, st),
         3 => draw_matrices(ui, at, a),
         4 => draw_senses(ui, at, a),
+        6 => draw_temper(ui, at, a, st),
         _ => draw_fleet(ui, at, a),
     }
     true
