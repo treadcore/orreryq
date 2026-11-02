@@ -2163,6 +2163,72 @@ class Plan:
 
     GENERATION_EVERY_MIN = 30
 
+    # LESS NOISE (Paul, 1 November: "can we get a little less noise promotions"). Of the day's thirteen
+    # generations, nine were noise by any reading: a switch off at +0.10 and back on at +0.08, base_r 16 to
+    # 32 to 8 to 6.15 in four steps, `bio` on at z 1.0. Two kinds of pass get through a bar in errors alone.
+    # A CHANGE THAT BARELY PLAYS DIFFERENTLY HAS A TINY ERROR, so +0.08 +/- 0.04 clears any z and is worth
+    # nothing: a gain must be MIN_GAIN points a seat. And A DIAL STILL MOVING IS NOT SETTLED: one moved in
+    # the last SETTLE_GENS generations moves again only at full z 3, so no dial wanders on luck.
+    MIN_GAIN = 0.25
+    SETTLE_GENS = 2
+
+    def changed_from_line(self, text):
+        """A trial's weights as "name old -> new" lines, against what the fleet builds now."""
+        today, out = self.defaults_at(self.sha()), []
+        for k, v in sorted(parse_weights(text).items()):
+            if k in today and abs(today[k] - v) > 1e-9:
+                out.append("%s %g -> %g" % (k, today[k], v))
+        for l in text.splitlines():
+            m = re.match(r"^\s*caps\s*=\s*(.*)$", l.split("#")[0])
+            for c in (m.group(1).split(",") if m else []):
+                c = c.strip()
+                name = c.lstrip("+-")
+                key = "caps:" + name
+                if c and name != "baseline" and key in today and bool(today[key]) == c.startswith("-"):
+                    out.append("caps %s %s -> %s" % (name, "on" if today[key] else "off", "off" if c.startswith("-") else "on"))
+        return out
+
+    def recently_moved(self):
+        """The dials and switches the last SETTLE_GENS generations moved, by comparing each with its parent."""
+        moved = set()
+        if not self.SETTLE_GENS:
+            return moved
+        for _, _, st_ in self.promotions()[-self.SETTLE_GENS:]:
+            c = st_.get("commit")
+            parent = self.parent_of(c) if c else ""
+            if parent:
+                a, b = self.defaults_at(parent), self.defaults_at(c)
+                moved |= {k for k in set(a) | set(b) if a.get(k) != b.get(k)}
+        return moved
+
+    @staticmethod
+    def trial_moves(text):
+        """What a trial's weights set: its numbers, and the switches on its caps line."""
+        out = set(parse_weights(text))
+        for l in text.splitlines():
+            m = re.match(r"^\s*caps\s*=\s*(.*)$", l.split("#")[0])
+            if m:
+                out |= {"caps:" + c.strip().lstrip("+-") for c in m.group(1).split(",") if c.strip() and c.strip() != "baseline"}
+        return out
+
+    def noise(self, name, v):
+        """Why this candidate should not land, in words, or "". It stays a candidate, and a stronger read lifts it."""
+        held = [h for h in (v.get("held") or []) if h and h[1] > 0]
+        if not held:
+            return ""
+        iw = sum(1 / h[1] ** 2 for h in held)
+        mean = sum(h[0] / h[1] ** 2 for h in held) / iw
+        why = ""
+        if mean < self.MIN_GAIN:
+            why = "gains %+.2f, under the %.2f a seat that is worth a generation" % (mean, self.MIN_GAIN)
+        else:
+            again = self.trial_moves(v.get("weights", "")) & self.recently_moved()
+            if again and mean * math.sqrt(iw) < self.HELD_Z:
+                why = "moves %s again within %d generations, at z %.1f and not %.1f" % (", ".join(sorted(again)), self.SETTLE_GENS, mean * math.sqrt(iw), self.HELD_Z)
+        if why:
+            self.flag("noise", "%s waits: it %s" % (name, why), key="noise:%s" % name, progress=True)
+        return why
+
     def batch(self, ev, name):
         """The strongest candidate's weights and, on top, each other current candidate that moves
         nothing it moves, strongest first: (text, names added). Together they have not been read:
@@ -2227,7 +2293,7 @@ class Plan:
         ev = {k: v for k, v in self.evidence().items()
               if v.get("current") and v["families"] == "holds" and v["held_mean"] is not None and k not in tried
               and "patch" not in parse_weights(v["weights"]) and "bot_style" not in parse_weights(v["weights"])
-              and not self.anchor_short(k, v) and not self.held_by_a_person(v["weights"])}
+              and not self.anchor_short(k, v) and not self.held_by_a_person(v["weights"]) and not self.noise(k, v)}
         if not ev:
             return
         name = max(ev, key=lambda k: ev[k]["held_mean"])
@@ -3007,7 +3073,9 @@ class Plan:
             if r.returncode != 0:
                 self.rsave(rid, {"status": "failed", "why": r.stderr.strip()[-200:]})
                 return []
-            changed = r.stdout.strip().splitlines()
+            # Against the line, not the coordinator's checkout of main: that said "no change" for a switch
+            # flipped back, and "base_r 16 -> 8" for a step from 32.
+            changed = self.changed_from_line(ev["weights"]) or r.stdout.strip().splitlines()
             fmt = lambda c: "%+.2f +/- %.2f" % tuple(c) if c else "?"
             msg = ("promote %s as the brain's defaults -- %s; census %s, held out %s; families %s; prepared by orrery (queue %s, run %s), "
                    "%s\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n") % (

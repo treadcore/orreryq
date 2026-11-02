@@ -113,9 +113,25 @@ Settings, Long run. Each is live at the next plan.
 
 ## VI. Threats and what is open
 
-**A matrix entry can promote itself,** by the ordinary road. `w5490`, `temper_retreat_1` at -0.5, passed its held-out reads at +0.13 with the bar at z 0.95. If it lands, it turns `bio` on across the line, and only the proof stands behind that. **Generations are landing on small reads:** the search has now flipped `escort` off and back on, and those commits' messages say "no change" for a switch, which is wrong and not yet fixed. **The plan was live before the fleet had the dials:** for about two minutes it asked for trials a binary could not read. One was caught in the queue and removed, and a guard now prevents it. **The width watch's 240 seeds lean narrow:** a wide net needs more data than that. **The scheduled watch has not run through once:** its parts have, by hand, on a real GPU, and in checks.
+**A matrix entry can promote itself,** by the ordinary road. `w5490`, `temper_retreat_1` at -0.5, passed its held-out reads at +0.13 with the bar at z 0.95. If it lands, it turns `bio` on across the line, and only the proof stands behind that. **Generations were landing on small reads,** and that is now tightened (Section VIII). **The plan was live before the fleet had the dials:** for about two minutes it asked for trials a binary could not read. One was caught in the queue and removed, and a guard now prevents it. **The width watch's 240 seeds lean narrow:** a wide net needs more data than that. **The scheduled watch has not run through once:** its parts have, by hand, on a real GPU, and in checks.
 
 **Not done:** reading the rest of the first round's trials, a boldness output on the transform, and the two flaky `sftp` tests, which still fail in about one run in three.
+
+## VIII. Less noise (added the same evening)
+
+Paul: "can we get a little less noise promotions." The day's thirteen generations held a switch off at +0.10 and back on at +0.08, and `base_r` going 16, 32, 8, 6.15. Three changes, each a value on Queue, Values:
+
+| Rule | Why |
+|---|---|
+| **A gain of at least 0.25 a seat** | A change that barely plays differently has a tiny error, so +0.08 +/- 0.04 clears a bar in errors and is worth nothing |
+| **A dial moved in the last 2 generations moves again only at z 3** | So nothing wanders on luck |
+| **The generation bar never under z 1.5,** ease and its ceiling both 1.5 | It stood at z 0.95, and four dry hours would have eased it toward z 0.25 |
+
+Replayed against the day's thirteen, these keep four: `mine_plan` at +2.25, the `w4749` set at +0.82, `w_pos_fortify` 1.5 at +1.06, and `base_r` with `advance_band` at +0.30. **It also holds back something good:** `w_pos_fortify` 0.75 at +1.34 would have waited, because its dial had just moved. That is a delay, since a candidate stays a candidate, but it is a cost. **A replay is only a guide:** later generations would have stood on different defaults. The simulator gave no help here: the far read's extreme trials spread its measured trials to N(-0.01, 1.42), which no longer describes the search, and it says every bar is about the same.
+
+Commit messages now say what changed against the line, not against main's checkout: no more "no change" for a switch flipped, or "16 -> 8" for a step from 32. Candidates kept back stay candidates, and a flag says why.
+
+**A `bio` trial lands by the same rules,** so the waves stay off until one gains 0.25 a seat.
 
 ## VII. Reproducing this
 

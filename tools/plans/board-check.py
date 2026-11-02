@@ -501,3 +501,41 @@ l = Long(root, [{"name": "a", "caps": ["cpu", "fast"]}])
 assert l.long_needs() == "cpu", "the only one down"
 _sh.rmtree(root)
 print("long reads: every check holds")
+
+# ---- Less noise: a floor on the gain, a dial that has just moved, and what a commit says it changed.
+class Noise(P):
+    HELD_Z = 3.0
+    def __init__(self):
+        self.state, self.flags = {}, []
+    def flag(self, kind, text, key=None, progress=False):
+        self.flags.append(text)
+    def promotions(self):
+        return [(0, "r1", {"commit": "c1"}), (0, "r2", {"commit": "c2"})]
+    def parent_of(self, c):
+        return c + "^"
+    def defaults_at(self, c):
+        return {"c1^": {"a": 1.0, "caps:escort": 1.0}, "c1": {"a": 2.0, "caps:escort": 1.0}, "c2^": {"a": 2.0, "caps:escort": 1.0}, "c2": {"a": 2.0, "caps:escort": 0.0}, "now": {"a": 2.0, "caps:escort": 0.0, "b": 5.0}}[c]
+    def sha(self):
+        return "now"
+
+
+n = Noise()
+assert n.recently_moved() == {"a", "caps:escort"}
+# Today's: escort back on at +0.08 +/- 0.04, z 2.0.
+assert "under the 0.25" in n.noise("x", {"held": [(0.08, 0.04)], "weights": "caps = baseline, escort\n"})
+# A real gain on a dial at rest.
+assert n.noise("x", {"held": [(1.34, 0.63)], "weights": "b = 3\n"}) == ""
+# A real gain on a dial still moving, under z 3, and over it.
+assert "moves a again" in n.noise("x", {"held": [(0.55, 0.5)], "weights": "a = 8\n"})
+assert n.noise("x", {"held": [(2.0, 0.5)], "weights": "a = 8\n"}) == ""
+assert "moves caps:escort again" in n.noise("x", {"held": [(1.0, 0.5)], "weights": "caps = baseline, escort\n"}), "a switch counts"
+# Two reads pool.
+assert n.noise("x", {"held": [(0.3, 0.2), (0.3, 0.2)], "weights": "b = 3\n"}) == ""
+assert n.noise("x", {"held": [], "weights": "b = 3\n"}) == ""
+n.MIN_GAIN, n.SETTLE_GENS = 0, 0
+assert n.noise("x", {"held": [(0.08, 0.04)], "weights": "a = 8\n"}) == "", "both off, as it was"
+assert n.changed_from_line("a = 8\nb = 5\ncaps = baseline, escort\n") == ["a 2 -> 8", "caps escort off -> on"], "against the line, and only what moves"
+assert n.changed_from_line("a = 2\ncaps = baseline, -escort\n") == []
+assert m.changed_vars(["a 2 -> 8"])["a"]["value"] == 8.0
+
+print("less noise: every check holds")
