@@ -2299,10 +2299,12 @@ class Plan:
                     continue
                 m = re.match(r"\s+team \d( \(trial\))?: score [-\d.]+, (.*)", l)
                 if m and seed:
-                    row = {k: float(v) for k, v in re.findall(r"(kills|deaths|built|road) ([-\d.]+)", m.group(2))}
+                    row = {k: float(v) for k, v in re.findall(r"(kills|deaths|built|road|ore|smelted) ([-\d.]+)", m.group(2))}
                     (trial if m.group(1) else rest).setdefault(seed, []).append(row)
+        # Game 6 (treadcore LR 128) writes ore mined and shells smelted a team; read, not yet a floor.
         sides = {"built": lambda r: r.get("built", 0.0), "road": lambda r: r.get("road", 0.0),
-                 "kd": lambda r: (r.get("kills", 0.0) - r.get("deaths", 0.0)) / 5.0}
+                 "kd": lambda r: (r.get("kills", 0.0) - r.get("deaths", 0.0)) / 5.0,
+                 "ore": lambda r: r.get("ore", 0.0), "smelted": lambda r: r.get("smelted", 0.0)}
         out = {}
         for k, fn in sides.items():
             ds = [sum(map(fn, trial[x])) / len(trial[x]) - sum(map(fn, rest[x])) / len(rest[x]) for x in trial if rest.get(x)]
