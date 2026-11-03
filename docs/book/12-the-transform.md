@@ -31,6 +31,10 @@ Two learned things share the word "net" here, and they must be kept apart:
 
 For each shape: trained by the same method on the same recordings and seeds; read by agreement with the rules on held-out decisions (drive and gun heads), then by census at 400 seeds against today's defaults with the composition read; a shape wins only if it beats the current shape by 1.0 point a seat on the census or by 1.0 on both heads' agreement, and gives up nothing past the trade floors. A tie keeps the smaller shape.
 
+## What was proved on 2 November
+
+The trainer takes `DEPTH` beside `WIDTH`, and the shape watch's list is 32, 64, 128 and 64×3. The road was walked on this Mac the same evening, on the CPU backend (Burn's flex; the trainer's lock wants rustc 1.95, installed beside the Mac's 1.93): a recording of four seeds (36,743 samples, one seed held out); a net of 143 → 64 → 64 → 64 → 47 written, and a two-layer one beside it; Rust's own `Net::forward` on the held-out samples reading the trainer's agreement to the decimal on every head for both (drive 71.1 against 72.1, mortar 76.5 against 77.2, drone 96.6 against 96.5, lead 100 for both); and the gauntlet playing both from `nets/`. None of it is a read of the shape: 36,000 samples teach little, and the deeper net had not left the floor at three epochs where the shallower had (46.6% against 56.2%, the floor being the commonest label's 46.6%). It is the proof that the fleet's first shape-watch job will write a net the brain plays. The read of 64×3 against 64 is that job's, by the test above.
+
 ## Links
 
 [Waves, Width and Waiting](../2026-11-01-waves.html) · [Algorhythm](../2026-10-30-algorhythm.html) · [The Net in Orrery](../2026-10-28-the-net-in-orrery.html) · `patch.rs`, `net.rs`, `tools/bc` · width and depth [98]–[104] · SPSA [9]–[16] · evolution strategies [1]–[8].

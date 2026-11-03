@@ -363,7 +363,7 @@ with `shape(s)` reading `"64x3"` as width 64, depth 3, and the trainer taking th
          self.c.forward(x)
 ```
 
-The net file it writes already carried any number of layers (`TCNET1`: a count, the sizes, then each layer), and `Net::from_bytes` reads them, so nothing downstream changed. This is the one change of the day not compiled where it was written: the trainer's Burn lock wants rustc 1.95 and this Mac has 1.93; the GPU machines build it, and the first shape-watch job's log is its proof.
+The net file it writes already carried any number of layers (`TCNET1`: a count, the sizes, then each layer), and `Net::from_bytes` reads them, so nothing downstream changed. It was compiled where it was written only in the evening: the trainer's Burn lock wants rustc 1.95 and this Mac had 1.93, so 1.95.0 was installed beside it (`cargo +1.95.0`), and the whole road was walked on a recording of four seeds of 120 s (36,743 samples, seed 9,000,003 held out). `WIDTH=64 DEPTH=3 BC_DEVICE=flex` wrote a `TCNET1` of sizes 143, 64, 64, 64, 47 (82,396 bytes), and `DEPTH=2` beside it one of 143, 64, 64, 47; `AGREE=` ran each through Rust's own `Net::forward` on the same held-out samples and read the trainer's figures to the decimal on every head (64×3: drive 71.1, lead 100.0, mortar 76.5, drone 96.6; 64×2: 72.1, 100.0, 77.2, 96.5); and the gauntlet played both from `nets/` beside the milestones (`GAUNTLET_NETS=w64x3,w64x2`, 20 runs: 64×3 passes G3 18 of 20 and G7 11 of 20 and loses G2, where 64×2 keeps 20 of 20; nets of 36,000 samples, which prove the road and say nothing of the shape). At three epochs the deeper net had not left the floor (drive 46.6%, the commonest label's share, against 56.2% for two layers); at twelve the two stand a point apart. The shape watch's job line reads `64x3` as `WIDTH=64 DEPTH=3`, and the trainer takes the shards directory it is given.
 
 The nightly gauntlet is a job the planner asks for once each `gauntlet_every_h` hours, on this Mac's lane, running `GAUNTLET=1 GAUNTLET_RUNS=100 OUT=build/train cargo test -q -p treadcore-brain --release --lib -- --ignored train --nocapture` in the checkout, which writes `build/train/gauntlet.tsv`; the console's Results → Gauntlet page draws it.
 
@@ -427,7 +427,7 @@ and `fleet-tune.py` took the verb, `hold DIAL VALUE | off`, writing `hold.json`,
 
 ## XV. Limits
 
-- The trainer's depth is unverified by a compiler on this machine; the fleet's first shape-watch job decides it.
+- The trainer's depth was proved on this Mac's CPU backend on a small recording; the card's run on the fleet's shards, and the read of 64×3 against 64, are the shape watch's to make.
 - The window's unit tests were not run to the end today (the Bevy test build outran the session's limit twice); `cargo check` passed and the keys' and goal's tests are small, but it is a gap.
 - The persona reads of the afternoon are of game 4; the eight were asked again under game 5 and will overwrite the Personas page's column as they return.
 - The nightly gauntlet runs in this Mac's working checkout, which is also where the work is done; a build in progress and the job could collide on cargo's lock.
