@@ -2423,9 +2423,23 @@ class Plan:
         # tried again because main moved, and stopped every other candidate behind it).
         if (len(last) == 2 and all(x.get("status") == "failed" for x in last) and last[0].get("candidate") != last[1].get("candidate")
                 and self.same_failure([x.get("job") for x in last])):
-            self.flag("auto", "auto promotion paused: %s and %s failed in a row; see their logs, then ask for a promotion by hand"
-                      % (autos[-2]["id"], autos[-1]["id"]), key="paused:%s" % autos[-1]["id"])
-            return
+            # BUT TWO BATCHES THAT CARRIED THE SAME RIDERS FAILED ON THOSE RIDERS (4 November: r0170 and
+            # r0171 led by w7726 and w7616 both carried w8960, w8965 and w8815, one of them kite_turn 1.6,
+            # and the kiting test failed in both; the line paused on one candidate's numbers). What they
+            # share is set aside as the likely cause, and the line goes on; only two batches with nothing
+            # in common pause it.
+            batch = lambda r: {(r.get("params") or {}).get("candidate")} | set((r.get("params") or {}).get("with") or [])
+            shared = (batch(autos[-2]) & batch(autos[-1])) - {None}
+            if not shared:
+                self.flag("auto", "auto promotion paused: %s and %s failed in a row; see their logs, then ask for a promotion by hand"
+                          % (autos[-2]["id"], autos[-1]["id"]), key="paused:%s" % autos[-1]["id"])
+                return
+            tried_ = self.state.setdefault("auto_tried", [])
+            aside = sorted(shared - set(tried_))
+            if aside:
+                tried_.extend(aside)
+                self.flag("auto", "auto promotion goes on: %s and %s failed alike and both carried %s, set aside as the likely cause"
+                          % (autos[-2]["id"], autos[-1]["id"], ", ".join(aside)), key="aside:%s" % autos[-1]["id"], progress=True)
         # ONE GENERATION A WINDOW (Paul, 1 November: half an hour). Faster than this, a generation lands
         # inside the reads of the last, and each one cost the proof, the builds and the fit's freshest
         # rows. What passes meanwhile waits, and goes together.
