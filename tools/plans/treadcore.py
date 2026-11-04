@@ -2314,8 +2314,8 @@ class Plan:
     # nothing read either. Against main the line had gained 1.46 and lost 0.41 of it all but the reward for going
     # forward. So a read that gives up building or fights past noise and past a floor waits for a person.
     # Past noise: two errors, seed by seed. The floors are values, so raising one lets a generation through.
-    GIVE_BUILT = 1.0
-    GIVE_ROAD = 0.5
+    GIVE_BUILT = 0.10
+    GIVE_ROAD = 0.10
     GIVE_KD = 0.10
 
     @staticmethod
@@ -2345,6 +2345,11 @@ class Plan:
             if len(ds) >= 2:
                 mean = sum(ds) / len(ds)
                 out[k] = (mean, math.sqrt(sum((x - mean) ** 2 for x in ds) / (len(ds) - 1) / len(ds)), len(ds))
+        # What the other teams build and lay a team, the level a share of it is measured against.
+        for k in ("built", "road"):
+            lv = [fn_r for x in rest.values() for fn_r in (sides[k](r) for r in x)]
+            if lv:
+                out[k + "_of"] = sum(lv) / len(lv)
         return out
 
     def gives_up(self, dirs, sign=1):
@@ -2354,19 +2359,29 @@ class Plan:
         reads = []
         for d in dirs or []:
             key = os.sep.join(d.rstrip(os.sep).split(os.sep)[-2:])
-            if key not in cache and os.path.exists(os.path.join(d, "pooled.txt")):
+            if (key not in cache or "built_of" not in (cache.get(key) or {})) and os.path.exists(os.path.join(d, "pooled.txt")):
                 cache[key] = self.side_read(d)
             reads.append(cache.get(key) or {})
         while len(cache) > 300:
             del cache[next(iter(cache))]
         out = []
-        for k, word, floor in (("built", "built a team", self.GIVE_BUILT), ("road", "road a team", self.GIVE_ROAD), ("kd", "kills less deaths a seat", self.GIVE_KD)):
+        # BUILDING AND ROAD AS A SHARE OF WHAT THE OTHERS DO (Paul, 4 November: "ajust your floors, keep
+        # what we got, maybe normalize some, but it should worke"). A team builds about 21 things on
+        # the fleet's maps and lays about 8 of road, and far more on some maps than others; a floor of
+        # one thing meant a twentieth on one map and nothing on another. GIVE_BUILT and GIVE_ROAD are
+        # shares of the other teams' own (10%: the trades of 4 November ran 7 to 15% of building, and
+        # the large ones are still held); kills less deaths stays a count a seat.
+        for k, word, floor, share in (("built", "built a team", self.GIVE_BUILT, True), ("road", "road a team", self.GIVE_ROAD, True),
+                                      ("kd", "kills less deaths a seat", self.GIVE_KD, False)):
             rows = [r[k] for r in reads if k in r and r[k][1] > 0]
             if rows:
                 iw = sum(1 / x[1] ** 2 for x in rows)
                 mean, se = sign * sum(x[0] / x[1] ** 2 for x in rows) / iw, 1 / math.sqrt(iw)
-                if mean < -floor and mean < -2 * se:
-                    out.append("%s %+.2f +/- %.2f" % (word, mean, se))
+                level = [r[k + "_of"] for r in reads if r.get(k + "_of")] if share else []
+                of = sum(level) / len(level) if level else None
+                bar = floor * of if share and of else floor if not share else None
+                if bar is not None and mean < -bar and mean < -2 * se:
+                    out.append("%s %+.2f +/- %.2f%s" % (word, mean, se, " (%.0f%% of the %.1f the others do)" % (-100 * mean / of, of) if share and of else ""))
         return out
 
     def trades_away(self, name, v):
