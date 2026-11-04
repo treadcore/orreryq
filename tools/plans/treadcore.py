@@ -2473,7 +2473,8 @@ class Plan:
         ev = {k: v for k, v in self.evidence().items()
               if v.get("current") and v["families"] == "holds" and v["held_mean"] is not None and k not in tried
               and "patch" not in parse_weights(v["weights"]) and "bot_style" not in parse_weights(v["weights"])
-              and not self.anchor_short(k, v) and not self.held_by_a_person(v["weights"]) and not self.noise(k, v) and not self.trades_away(k, v)}
+              and not self.anchor_short(k, v) and not self.held_by_a_person(v["weights"]) and not self.noise(k, v) and not self.trades_away(k, v)
+              and self.guard_holds(k)}
         if not ev:
             return
         name = max(ev, key=lambda k: ev[k]["held_mean"])
@@ -3291,6 +3292,12 @@ class Plan:
                 "grep 'test result' $O/tests.txt\n"
                 "cargo test -q -p treadcore-brain --release -- --ignored every_family_holds_its_floor --nocapture > $O/families-full.txt 2>&1 || { grep -E '^family|panicked|under' $O/families-full.txt; echo 'a family fell under its floor: not committed'; exit 1; }\n"
                 "grep -E '^family' $O/families-full.txt > $O/families.txt; cat $O/families.txt\n"
+                # THE GAUNTLET'S FLOORS (treadcore LR 143): the batch's defaults on the rules, every file on
+                # its floor, or nothing is committed. A commit without GAUNTLET_BRAINS skips it.
+                "if grep -q GAUNTLET_BRAINS source/treadcore-brain/src/learn.rs; then\n"
+                "  GAUNTLET=1 GAUNTLET_RUNS=100 GAUNTLET_BRAINS=scripted OUT=$O THREADS=$(nproc 2>/dev/null || sysctl -n hw.ncpu) cargo test -q -p treadcore-brain --release --lib -- --ignored learn::harness::train --nocapture > $O/gauntlet.txt 2>&1 || true\n"
+                "  python3 -I -c \"import glob,re,sys; f={}; [f.__setitem__(re.search(r'^name\\\\s*=\\\\s*\\\\\\\"([^\\\\\\\"]+)', t, re.M).group(1), float(re.search(r'^floor\\\\s*=\\\\s*([\\\\d.]+)', t, re.M).group(1))) for t in (open(p).read() for p in glob.glob('scenarios/gauntlet/*.toml')) if re.search(r'^floor', t, re.M)]; u=[l.split(chr(9))[0] for l in open(sys.argv[1]).read().splitlines()[1:] if l.split(chr(9))[1]=='scripted' and float(l.split(chr(9))[4]) < f.get(l.split(chr(9))[0], 0)]; print('gauntlet: holds' if not u else 'gauntlet under its floor: ' + '; '.join(u)); sys.exit(1 if u else 0)\" $O/gauntlet.tsv || { echo 'a gauntlet under its floor: not committed'; exit 1; }\n"
+                "fi\n"
                 # Both files set-defaults.py writes: weights.rs alone left
                 # Tactics::default() behind, and main failed its tests from
                 # dc3df01 until d7e8c09 (29 October).
@@ -3999,6 +4006,77 @@ class Plan:
     def crucible_src(self):
         return os.path.expanduser(self.cfg.get("crucible", {}).get("source", "~/code/crucible"))
 
+    # ---- the gauntlet's floors guard a promotion (treadcore LR 143) --------------------------------
+    # Paul, 4 November: "adjust the floors to be what we have now as sucess, so we can create
+    # generations from here forwards", and asked whether the floors should guard every promotion: "Yes,
+    # a guard on promotions". Each candidate that has passed its reads and its families is read on the
+    # gauntlet as the rules with its dials (GAUNTLET_WEIGHTS, the rules alone: a minute), at the fleet's
+    # commit; auto promotion takes only one whose rules stand on every file's floor. The floors are
+    # today's success, so a generation can only go forward. The promotion job reads the gauntlet again
+    # on the batch it commits, beside the tests and the families.
+    GUARD_RUNS = 100
+
+    def guard_ready(self):
+        if not getattr(self, "tc", None):
+            return False
+        src = run(["git", "-C", self.tc, "show", "%s:source/treadcore-brain/src/learn.rs" % self.sha()]).stdout
+        return "GAUNTLET_WEIGHTS" in src
+
+    def guard_verdict(self, tsv):
+        """(holds, the files under their floors) of a gauntlet read's tsv, the rules' rows."""
+        floors, under = self.gauntlet_floors(), []
+        for line in open(tsv).read().splitlines()[1:]:
+            p = line.split("\t")
+            if len(p) >= 5 and p[1] == "scripted" and p[0] in floors and float(p[4]) < floors[p[0]]:
+                under.append("%s %.0f%% under %.0f%%" % (p[0].split(" ")[0], 100 * float(p[4]), 100 * floors[p[0]]))
+        return not under, under
+
+    def guard_holds(self, name):
+        """True when the gauntlet's floors let this candidate through: read at today's commit and every
+        file on its floor, or no guard at this commit yet."""
+        if not getattr(self, "_guard_ready", None):
+            self._guard_ready = (self.guard_ready(),)
+        if not self._guard_ready[0]:
+            return True
+        r = (self.state.get("guard") or {}).get("reads", {}).get(name) or {}
+        return r.get("commit") == self.short() and r.get("verdict") == "holds"
+
+    def guard_jobs(self, n):
+        g = self.state.setdefault("guard", {"n": 0, "reads": {}})
+        if n <= 0 or not self.guard_ready():
+            return []
+        done, gone = self.ids("done"), self.ids("failed", "stopped")
+        for name, r in g["reads"].items():
+            if r.get("verdict") is None and r.get("job") in done | gone:
+                tsv = glob.glob(os.path.join(self.q, "results", r["job"], self.home, "out", r["job"], "gauntlet.tsv"))
+                if tsv:
+                    ok, under = self.guard_verdict(tsv[0])
+                    r.update({"verdict": "holds" if ok else "under", "under": under})
+                    if not ok:
+                        self.flag("guard", "%s waits: its dials put the rules under the gauntlet's floor on %s" % (name, "; ".join(under)),
+                                  key="guard:%s:%s" % (name, self.short()), progress=True)
+                else:
+                    r["verdict"] = "failed"
+        pending = [k for k, r in g["reads"].items() if r.get("verdict") is None]
+        ev = self.evidence()
+        todo = sorted((k for k, v in ev.items() if v.get("current") and v.get("families") == "holds" and v.get("held_mean") is not None
+                       and (g["reads"].get(k) or {}).get("commit") != self.short()), key=lambda k: -ev[k]["held_mean"])
+        jobs = []
+        for k in todo[:max(0, n - len(pending))]:
+            g["n"] += 1
+            jid = "gx%04d" % g["n"]
+            b = base64.b64encode(ev[k]["weights"].encode()).decode()
+            cmd = (
+                "set -o pipefail; Q=~/%s; C=%s; O=$Q/out/%s; rm -rf $O; mkdir -p $O; echo %s | base64 -d > $O/trial.weights\n"
+                "cd $C/wt && GAUNTLET=1 GAUNTLET_RUNS=%d GAUNTLET_BRAINS=scripted GAUNTLET_WEIGHTS=$O/trial.weights OUT=$O "
+                "THREADS=${THREADS:-$(nproc 2>/dev/null || sysctl -n hw.ncpu)} $C/census-bin --ignored learn::harness::train --nocapture > $O/harness.log 2>&1; "
+                "grep '^gauntlet: G' $O/harness.log | tail -40\n"
+            ) % (self.home, self.cdir(), jid, b, self.GUARD_RUNS)
+            jobs.append({"id": jid, "kind": "gauntlet", "title": "the gauntlet's floors: %s's dials on the rules" % k, "needs": "fast", "or": "cpu",
+                         "after_host": self.after_host(), "cmd": cmd, "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 2 * 3600, "priority": "high"})
+            g["reads"][k] = {"commit": self.short(), "job": jid, "verdict": None}
+        return jobs
+
     # ---- the bridge: crucible's world champions read in the game (LR 138) ----------------------
     # Paul, 4 November: "Incorporate GPU as a growth step in the pipeline", and of the Duelist, "yes do
     # step 2, the duelist with world senses". Each new milestone of the world islands is read IN THE
@@ -4502,6 +4580,10 @@ class Plan:
         want = max(0, self.QUEUE_PER_MACHINE * len(self.hosts) - cpu_queued)
         # The families first, a share of the queue: a candidate waits on them.
         jobs += self.family_jobs(max(0, (want - len(jobs) + 1) // 2))
+        try:
+            jobs += self.guard_jobs(2)
+        except Exception as e:  # a read missed is asked again at the next plan
+            print("guard: %s" % e, file=sys.stderr)
         jobs += self.weight_jobs(max(0, want - len(jobs)))
         # The GPU lanes' own work: it takes no treadcore lane.
         jobs += self.crucible_jobs()
