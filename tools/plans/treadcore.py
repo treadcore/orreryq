@@ -616,7 +616,12 @@ class Plan:
         they change: the dials can stand still while the game moves under them (Paul's depots,
         30 October), and a read of the old game is no evidence about the new one."""
         r = run(["git", "-C", self.tc, "show", "%s:source/treadcore-sim/GAME_VERSION" % commit])
-        return r.stdout.strip() if r.returncode == 0 else ""
+        game = r.stdout.strip() if r.returncode == 0 else ""
+        # AND THE SCORE'S (LR 139; Paul, 4 November, of the score counting building and the base:
+        # "Start anew"): source/treadcore-brain/SCORE_VERSION, absent before it, so a read of the old
+        # score is no evidence about the new one, as a read of the old game is not.
+        sv = run(["git", "-C", self.tc, "show", "%s:source/treadcore-brain/SCORE_VERSION" % commit])
+        return game + ("+score%s" % sv.stdout.strip() if sv.returncode == 0 and sv.stdout.strip() else "")
 
     def same_defaults(self, commit):
         """A row's commit read with today's defaults: every weight both
