@@ -191,6 +191,10 @@ def trace(q, chapters, opps, cfg, duels, seed, want_host, work):
     flags += "H=%d" % hw if hw != 32 else ""
     if "WORLD=1" not in flags:
         raise RuntimeError("the montage traces world duels: plan.json's crucible.world is off")
+    # The game's rules as the islands play them now (the planner's world_flags), so the film is their world.
+    rules = ((load(os.path.join(q, "plan", "state.json"), {}) or {}).get("crucible_rules") or {}).get("flags") or ""
+    if re.match(r"^[\w.= -]*$", rules):
+        flags = (flags.strip() + " " + rules).strip()
     for name, target in hosts:
         r = run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", target, "mkdir -p ~/%s/src ~/%s/in && rm -f ~/%s/in/*.bin" % (home, home, home)], 60)
         if r.returncode != 0:

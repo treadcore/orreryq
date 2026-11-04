@@ -3925,6 +3925,55 @@ class Plan:
     def crucible_src(self):
         return os.path.expanduser(self.cfg.get("crucible", {}).get("source", "~/code/crucible"))
 
+    # THE WORLD'S RULES ARE THE GAME'S (Paul, 4 November: "the GPU build always looks like the perfect
+    # world in treadcore"). Read from treadcore-sim's rules.rs at the fleet's commit, each under
+    # crucible's own name, seconds for ticks, and passed to make one variable each (R_VMAX=4.0f): the
+    # .flags stamp holds them, so a rule that moves rebuilds every island at its next segment, and a
+    # flag says what moved. A rule rules.rs no longer has is left at crucible's own number, and said.
+    WORLD_RULES = (("VMAX", "TANK_SPEED", False), ("ACCEL", "TANK_ACCEL", False), ("BRAKE", "TANK_BRAKE", False),
+                   ("TURN", "TANK_TURN", False), ("GUN_RANGE", "DIRECT_RANGE", False), ("SSPEED", "SHELL_SPEED_DIRECT", False),
+                   ("RELOAD", "RELOAD_TICKS", True), ("HP", "TANK_ARMOR", False), ("DAMAGE", "DIRECT_DAMAGE", False),
+                   ("HIT_R", "DIRECT_HIT_RADIUS", False), ("SHELLS", "TANK_SHELLS", False), ("VISION", "TANK_VISION", False),
+                   ("PB_RANGE", "PILLBOX_RANGE", False), ("PB_DAMAGE", "PILLBOX_DAMAGE", False),
+                   ("PB_RELOAD", "PILLBOX_RELOAD_TICKS", True), ("PB_HEALTH", "PILLBOX_HEALTH", False))
+
+    def world_rules(self):
+        """{crucible name: value} from rules.rs at the fleet's commit, and the names it lacked."""
+        sha = self.sha()
+        src = run(["git", "-C", self.tc, "show", "%s:source/treadcore-sim/src/rules.rs" % sha]).stdout
+        lib = run(["git", "-C", self.tc, "show", "%s:source/treadcore-sim/src/lib.rs" % sha]).stdout
+        m = re.search(r"pub const TICK_HZ: \w+ = (\d+);", lib)
+        hz = int(m.group(1)) if m else 20
+        out, lost = {}, []
+        for name, rust, ticks in self.WORLD_RULES:
+            m = re.search(r"pub const %s: \w+ = ([^;]+);" % rust, src)
+            expr = re.sub(r"\bas \w+", "", m.group(1)).replace("TICK_HZ", str(hz)).replace("_", "") if m else ""
+            if not m or not re.match(r"^[\d.\s*+/()-]+$", expr):
+                lost.append(rust)
+                continue
+            v = float(eval(expr, {"__builtins__": {}}, {}))
+            out[name] = v / hz if ticks else v
+        return out, lost
+
+    def world_flags(self):
+        """The rules as make variables, recorded, and a flag when they moved since the last segment."""
+        if getattr(self, "_world_flags", None) is not None:
+            return self._world_flags
+        rules, lost = self.world_rules()
+        if not rules:
+            self._world_flags = ""
+            return ""
+        old = self.state.get("crucible_rules") or {}
+        moved = ["%s %g -> %g" % (k, old["rules"][k], v) for k, v in sorted(rules.items()) if k in (old.get("rules") or {}) and old["rules"][k] != v]
+        if moved or lost and not old.get("lost"):
+            self.flag("crucible", "the world islands now play treadcore's rules at %s: %s%s" % (
+                self.short(), ", ".join(moved) or "nothing moved", "; not in rules.rs, left at crucible's own: %s" % ", ".join(lost) if lost else ""),
+                key="crucible-rules:%s" % self.short())
+        self.state["crucible_rules"] = {"commit": self.short(), "rules": rules, "lost": lost,
+                                        "flags": " ".join("R_%s=%sf" % (k, repr(float(v))) for k, v in sorted(rules.items()))}
+        self._world_flags = self.state["crucible_rules"]["flags"]
+        return self._world_flags
+
     def crucible_jobs(self):
         src = self.crucible_src()
         if not self.cuda or not os.path.exists(os.path.join(src, "src", "crucible.cu")):
@@ -3982,6 +4031,8 @@ class Plan:
                 flag = ("HYBRID=1 " if c.get("hybrid") else "") + ("WORLD=1 " if c.get("world") else "")
                 hw = int(c.get("h") or (48 if c.get("world") else 32))
                 flag += "H=%d " % hw if hw != 32 else ""
+                if c.get("world"):
+                    flag += self.world_flags() + " "
                 parent = self.crucible_parent(kind)
                 send = [{"src": os.path.join(src, f), "dst": "~/%s/%s" % (home, f)} for f in ("src/crucible.cu", "Makefile")]
                 # Read when the keeper dispatches it: the other islands'
