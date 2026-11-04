@@ -4,9 +4,10 @@ Gladiator (treadcore style 17, nets/gladiator.bin).
 
 Paul, 4 November: "yes do step 2, the duelist with world senses". The planner reads each new milestone in
 the game against the shipped one (treadcore.py, bridge_jobs: two censuses on the same seeds, the candidate by
-GLADIATOR=file) and flags the one that reads better by more than two errors. SHIPPING IS A COMMIT TO
-TREADCORE, because the game carries its champion in its binary, so it is a person's press: this verb, or Ship
-on Results, Growth. It never touches the Mac's checkout of treadcore, where a session's work may lie
+GLADIATOR=file) and ships the one that reads better by more than two errors. SHIPPING IS A COMMIT TO
+TREADCORE, because the game carries its champion in its binary: in auto mode with the push allowed the
+planner runs this verb itself, as a promotion commits itself (Paul, 4 November: "Ship itself in auto mode");
+otherwise it is a person's press, this verb or Ship on Results, Growth. It never touches the Mac's checkout of treadcore, where a session's work may lie
 uncommitted: it adds a worktree of origin/main, puts the milestone in nets/gladiator.bin and its row in
 nets/styles.tsv, runs the styles tests there, commits, pushes to main, and removes the worktree. The fleet
 builds the new commit as it builds every commit of main.

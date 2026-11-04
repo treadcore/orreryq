@@ -3279,9 +3279,20 @@ class Plan:
             st["commit"] = open(c[0]).read().strip() if c else ""
             b = glob.glob(os.path.join(self.q, "results", st["job"], self.home, "out", st["job"], "promote.bundle"))
             if b and st["commit"]:
+                # A worktree here that holds the branch refuses the fetch, -f or not: a promotion that
+                # once ran on the Mac left one, and r0156's commit never came home (3 November: auto
+                # promotion paused a night on it). Its work is the bundle's now, so it goes first.
+                self.free_branch(st["branch"])
                 r = run(["git", "-C", self.tc, "fetch", "-q", b[0], "%s:refs/heads/%s" % (st["branch"], st["branch"])])
                 if r.returncode != 0:
                     run(["git", "-C", self.tc, "fetch", "-q", "-f", b[0], "%s:refs/heads/%s" % (st["branch"], st["branch"])])
+                got = run(["git", "-C", self.tc, "rev-parse", "-q", "--verify", "refs/heads/%s" % st["branch"]]).stdout.strip()
+                if got != st["commit"]:
+                    st["status"] = "failed"
+                    st["detail"] = "%s: prepared on its machine as %s, but the bundle did not fetch here (%s)" % (st["branch"], st["commit"][:7], (r.stderr or "").strip()[-160:])
+                    self.rsave(rid, st)
+                    self.flag("promote", st["detail"], key="promote-bundle:%s" % rid)
+                    return []
             elif st["commit"] and run(["git", "-C", self.tc, "cat-file", "-e", st["commit"]]).returncode != 0:
                 st["commit"] = ""
                 st["status"] = "failed"
@@ -3356,6 +3367,35 @@ class Plan:
                 done[name] = sha
                 self.flag("auto", "%s is tried again: its tests failed (%s), and main has moved since (%s)" % (name, a["id"], sha[:7]),
                           key="retry:%s:%s" % (name, sha[:7]), progress=True)
+
+    def promote_worktrees(self):
+        """(path, branch) of every worktree of this checkout that a promotion job made here."""
+        out, path = [], None
+        for line in run(["git", "-C", self.tc, "worktree", "list", "--porcelain"]).stdout.splitlines():
+            if line.startswith("worktree "):
+                path = line[9:]
+            elif line.startswith("branch refs/heads/") and path and "/%s/promote/" % self.home in path:
+                out.append((path, line[18:]))
+        return out
+
+    def free_branch(self, branch):
+        """No worktree here holds this branch: a promotion's own, which its commit has outlived."""
+        for path, b in self.promote_worktrees():
+            if b == branch:
+                run(["git", "-C", self.tc, "worktree", "remove", "--force", path])
+        run(["git", "-C", self.tc, "worktree", "prune"])
+
+    def clear_promote_worktrees(self):
+        """THE MAC'S PROMOTION WORKTREES GO WHEN THEIR RUNS DO. A promotion builds its branch in
+        ~/fleet/q-NAME/promote/RID on whatever machine takes it, and one that ran here left its
+        worktree behind: 39 by 4 November, 3.3 GB, one of them holding r0156's branch so its commit
+        could not come home. The branch stays (removing a worktree keeps it); a run still in flight
+        keeps its worktree."""
+        live = {r["id"] for r in self.runs() if r["kind"] == "promote" and self.rstate(r["id"]).get("status") in ("new", "running")}
+        for path, b in self.promote_worktrees():
+            if os.path.basename(path) not in live:
+                run(["git", "-C", self.tc, "worktree", "remove", "--force", path])
+        run(["git", "-C", self.tc, "worktree", "prune"])
 
     def same_failure(self, jobs):
         """True when two failed promotions failed alike, on today's main:
@@ -3930,9 +3970,10 @@ class Plan:
     # step 2, the duelist with world senses". Each new milestone of the world islands is read IN THE
     # GAME as the Gladiator, style 17, against the champion the game ships, on the same fresh seeds and
     # one fast machine: the candidate by GLADIATOR=file (treadcore styles.rs), the shipped one as it is.
-    # A candidate that reads better by more than two errors of the difference is flagged to ship. The
-    # game carries its champion in its binary, so shipping is a commit to treadcore -- a person's press
-    # (`fleet-queue.py QUEUE bridge ship LABEL`), as treadcore's CLAUDE.md asks of every commit.
+    # A candidate that reads better by more than two errors of the difference ships: by itself in auto
+    # mode with the push allowed, as a promotion does (Paul, 4 November: "Ship itself in auto mode"),
+    # else on a person's press (`fleet-queue.py QUEUE bridge ship LABEL`). The game carries its
+    # champion in its binary, so shipping is a commit to treadcore, tested on a worktree of main.
     BRIDGE_SEEDS = 48
     BRIDGE_SEED0 = 80000000
 
@@ -3971,10 +4012,21 @@ class Plan:
                     diff, se = c[0] - sh[0], math.hypot(c[1], sh[1])
                     cur.update({"cand": [c[0], c[1]], "ship": [sh[0], sh[1]], "diff": round(diff, 3), "se": round(se, 3),
                                 "holds": diff > 2 * se, "on": c[3], "read": time.strftime("%Y-%m-%dT%H:%M:%S")})
+                    # IN AUTO MODE IT SHIPS ITSELF (Paul, 4 November: "Ship itself in auto mode"), as a
+                    # promotion does when the push is allowed; otherwise it waits for the press.
+                    auto = diff > 2 * se and self.auto() and self.push_check()["ok"]
+                    if auto:
+                        tool = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bridge.py")
+                        subprocess.Popen(["sh", "-c", '"$0" -I "$@" > "$LOG" 2>&1', sys.executable, tool, self.q, "ship", cur["label"]],
+                                         env=dict(os.environ, LOG=os.path.join(self.pd, "bridge-ship.log")),
+                                         stdin=subprocess.DEVNULL, start_new_session=True)
+                        cur["shipping"] = "by itself, auto mode"
                     self.flag("bridge", "bridge %d: %s reads %+.2f +/- %.2f a seat as the Gladiator over the shipped %s (%d seeds on %s): %s" % (
                         cur["n"], cur["label"], diff, se, cur["shipped"], cur["seeds"], c[3],
-                        "SHIP IT -- fleet-queue.py QUEUE bridge ship %s, or Ship on Results, Growth" % cur["label"] if diff > 2 * se else "not better outside two errors; the shipped one stays"),
-                        key="bridge:%d" % cur["n"], progress=diff <= 2 * se)
+                        "shipping itself (auto mode): plan/bridge-ship.log says how it went" if auto
+                        else "SHIP IT -- fleet-queue.py QUEUE bridge ship %s, or Ship on Results, Growth" % cur["label"] if diff > 2 * se
+                        else "not better outside two errors; the shipped one stays"),
+                        key="bridge:%d" % cur["n"], progress=diff <= 2 * se or auto)
                 else:
                     cur.update({"holds": None, "why": "a census of the pair failed", "read": time.strftime("%Y-%m-%dT%H:%M:%S")})
                 br["reads"] = (br.get("reads") or [])[-30:] + [cur]
@@ -4211,6 +4263,10 @@ class Plan:
         jobs += self.run_jobs(n)
         jobs = self.prepare_jobs() + jobs
         self.prune_builds()
+        try:
+            self.clear_promote_worktrees()
+        except Exception as e:  # a worktree left is space, not a fault
+            print("promote worktrees: %s" % e, file=sys.stderr)
         self.propagation()
         jobs += self.adopt_jobs()
         jobs += self.line_proof()
