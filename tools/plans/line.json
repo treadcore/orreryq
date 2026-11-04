@@ -443,6 +443,20 @@
    "what": "A behaviour-cloning recording's shards go once the job they were made for is done, their recipe kept in the archive: the binary and the seeds remake every shard byte for byte. 1 keeps every run's shards, for debugging (Paul, 4 November: \"I like the idea of a mechanism to debug if necessary\"); one run is kept alone by Keep for analysis on the Recordings page.",
    "up": "every recording stays on the store",
    "down": "shards dropped once read, the recipe kept"
+  },
+  {
+   "key": "clone_every_h",
+   "attr": "CLONE_EVERY_H",
+   "label": "Clone the rules at most every",
+   "default": 12,
+   "min": 0,
+   "max": 168,
+   "step": 1,
+   "unit": "h",
+   "long": true,
+   "what": "When main moves, the rules are recorded at the new commit, cloned on the GPU from scratch, and the clone judged against the shipped Scholar (style 6) by a census and the gauntlet; it ships into nets/scholar.bin when it holds. At most one round in this many hours (Paul, 4 November: \"Re-clone the rules\"). 0 turns the stage off.",
+   "up": "fewer rounds: less GPU and CPU time, a Scholar further behind the rules",
+   "down": "a round each time main moves"
   }
  ],
  "stages": [
@@ -655,6 +669,20 @@
    "adds": "The menu's team rows, and --bots.",
    "queued": "",
    "screens": "Pipeline/Board"
+  },
+  {
+   "id": "clone",
+   "col": 6,
+   "row": 2,
+   "track": "gpu",
+   "title": "The rules cloned on the card",
+   "input": "the rules at the fleet's newest commit: 120 matches recorded, sixteen seats, five samples a second",
+   "output": "a fresh clone; when it holds, nets/scholar.bin, style 6",
+   "simulates": "The recording plays real matches of the scripted brain; the judge plays the clone and the shipped Scholar as a whole trial team against today's defaults on the same 48 seeds, and both on every gauntlet.",
+   "why": "The Scholar imitates the rules, and the rules move with every promotion: a clone of last week's rules imitates a brain the game no longer plays.",
+   "adds": "Style 6, Scholar, kept a clone of today's rules; the recordings dropped once read, their recipe kept.",
+   "queued": "a record run, a training job on the GPU store, two censuses and a gauntlet on one fast machine",
+   "screens": "Pipeline/Board"
   }
  ],
  "edges": [
@@ -736,7 +764,17 @@
   [
    "bridge",
    "brain",
-   "style 7"
+   "style 17"
+  ],
+  [
+   "build",
+   "clone",
+   "a new commit"
+  ],
+  [
+   "clone",
+   "brain",
+   "style 6"
   ]
  ],
  "methods": [

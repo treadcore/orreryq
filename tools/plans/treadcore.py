@@ -4052,6 +4052,141 @@ class Plan:
         save(os.path.join(self.pd, "bridge.json"), {k: v for k, v in br.items()} | {"home": home, "at": time.strftime("%Y-%m-%dT%H:%M:%S")})
         return out
 
+    # ---- the clone: the rules cloned again on the GPU each time they move (Paul's step 3) -------
+    # Paul, 4 November, of the GPU as a growth step: "GPU trainer as a stage", the net "Re-clone the
+    # rules", judged by "Census + gauntlets". The Scholar (style 6) is a net that learned by imitating the
+    # scripted brain, and the scripted brain moves with every promotion; a clone of last week's rules
+    # imitates a brain the game no longer plays. So when main moves (at most once in CLONE_EVERY_H
+    # hours), a round: RECORD the rules at the new commit (a record run, CLONE_SEEDS matches, shards to the
+    # GPU store), TRAIN a clone from scratch on the card (the fast setting of LR 107), JUDGE it against
+    # the shipped Scholar -- a census of each as the whole trial team on the same seeds and one machine,
+    # better by two errors of the paired difference, AND the gauntlet with both, where no file the
+    # Scholar meets falls under its floor and none drops by two errors -- and SHIP it into
+    # nets/scholar.bin, by itself in auto mode with the push allowed, else on a press. The recording is
+    # read once, by the train job; the recordings sweep drops its shards after, the recipe kept.
+    CLONE_SEEDS = 120
+    CLONE_JUDGE_SEEDS = 48
+    CLONE_SEED0 = 9700000
+    CLONE_JUDGE_SEED0 = 81000000
+    CLONE_EVERY_H = 12
+
+    def shipped_scholar(self):
+        """The file style 6 plays at the fleet's commit, by styles.rs: "bc2.bin" until a clone ships."""
+        src = run(["git", "-C", self.tc, "show", "%s:source/treadcore-brain/src/styles.rs" % self.sha()]).stdout
+        m = re.search(r'name: "Scholar".*?nets/([\w.-]+\.bin)', src)
+        return m.group(1) if m else None
+
+    def gauntlet_floors(self):
+        """{gauntlet's name: its floor} from scenarios/gauntlet at the fleet's commit."""
+        out = {}
+        ls = run(["git", "-C", self.tc, "ls-tree", "--name-only", "%s:scenarios/gauntlet" % self.sha()]).stdout.split()
+        for f in ls:
+            if not f.endswith(".toml"):
+                continue
+            t = run(["git", "-C", self.tc, "show", "%s:scenarios/gauntlet/%s" % (self.sha(), f)]).stdout
+            n, fl = re.search(r'^name\s*=\s*"([^"]+)"', t, re.M), re.search(r"^floor\s*=\s*([\d.]+)", t, re.M)
+            if n and fl:
+                out[n.group(1)] = float(fl.group(1))
+        return out
+
+    def clone_jobs(self):
+        cl = self.state.setdefault("clone", {"n": 0, "rounds": []})
+        every = float(self.CLONE_EVERY_H)
+        gpu = [h for h in self.hosts if "gpu" in h.get("caps", [])]
+        fast = [h["name"] for h in self.hosts if "fast" in h.get("caps", [])] or [h["name"] for h in self.hosts if "cpu" in h.get("caps", [])]
+        scholar = self.shipped_scholar()
+        cur = cl.get("current")
+        jobs = []
+        done, gone = self.ids("done"), self.ids("failed", "stopped")
+        if not cur:
+            due = (self.auto() and every > 0 and gpu and fast and scholar and cl.get("for") != self.short()
+                   and time.time() - cl.get("at", 0) >= every * 3600)
+            if due:
+                n = cl["n"] = cl.get("n", 0) + 1
+                name = "clone%d" % n
+                rid = self.new_run("record", {"run": name, "count": self.CLONE_SEEDS, "per": 12, "secs": 600, "seed0": self.CLONE_SEED0 + 1000 * n}, "clone")
+                cl.update({"for": self.short(), "at": time.time()})
+                cl["current"] = cur = {"n": n, "name": name, "record": rid, "commit": self.short(), "scholar": scholar, "step": "record",
+                                       "asked": time.strftime("%Y-%m-%dT%H:%M:%S")}
+            cl["note"] = ("the next round when main moves past %s and %g h have passed" % (cl.get("for"), every) if cl.get("for")
+                          else "the first round at the next plan in auto mode")
+        elif cur["step"] == "record":
+            rs = self.rstate(cur["record"])
+            if rs.get("status") == "failed":
+                cur.update({"step": "failed", "why": "the recording failed"})
+            elif rs.get("status") == "done" and gpu and self.prepared(gpu[0]["name"]):
+                jid = "clone-%03d-train" % cur["n"]
+                cmd = ("D=~/%s/out/%s; mkdir -p $D\n%s"
+                       "GPU_GB=2 BC_DEVICE=cuda %s/treadcore-bc ~/fleet/%s/shards $D/cand.bin 12 32768 0.01 > $D/train.log 2>&1 || echo 'the training failed'\n"
+                       "grep -v 'DEINIT\\|^thread\\|^note\\|^$' $D/train.log | tail -12\n") % (self.home, jid, self.trainer(), self.cdir(), cur["name"])
+                jobs.append({"id": jid, "kind": "net", "title": "clone %d: the rules at %s cloned on the card" % (cur["n"], cur["commit"]),
+                             "needs": "host:" + gpu[0]["name"], "after": [self.prep_id(gpu[0]["name"])], "cmd": cmd,
+                             "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 4 * 3600})
+                cur.update({"step": "train", "train": jid})
+        elif cur["step"] == "train" and cur["train"] in done | gone:
+            cand = glob.glob(os.path.join(self.q, "results", cur["train"], self.home, "out", cur["train"], "cand.bin"))
+            if not cand:
+                cur.update({"step": "failed", "why": "the training wrote no net"})
+            else:
+                n, seed0, host = cur["n"], self.CLONE_JUDGE_SEED0 + 1000 * cur["n"], fast[0]
+                jc, js, jg = "clone-%03d-c" % n, "clone-%03d-s" % n, "clone-%03d-g" % n
+                jobs += [self.census_job(jc, "clone %d: the new clone as the whole trial team" % n, "", "", self.CLONE_JUDGE_SEEDS, seed0, 900, "all",
+                                         net=cand[0], host=host),
+                         self.census_job(js, "clone %d: the shipped Scholar (%s), the same seeds" % (n, cur["scholar"]), "", "", self.CLONE_JUDGE_SEEDS,
+                                         seed0, 900, "all", host=host, env="CENSUS_NET=$C/wt/nets/%s " % cur["scholar"])]
+                g = self.gauntlet_job(jg)
+                g["send"] = [{"src": cand[0], "dst": "~/%s/trials/%s.bin" % (self.home, jg)}]
+                g["cmd"] = g["cmd"].replace("cd $C/wt && GAUNTLET=1", "cp $Q/trials/%s.bin $C/wt/nets/%s.bin; cd $C/wt && GAUNTLET_NETS=%s,%s GAUNTLET=1"
+                                            % (jg, jg, cur["scholar"][:-4], jg)) + "rm -f $C/wt/nets/%s.bin\n" % jg
+                g["title"] = "clone %d: the gauntlet, the new clone beside the shipped Scholar" % n
+                jobs.append(g)
+                cur.update({"step": "judge", "cand": cand[0], "jobs": [jc, js, jg], "seed0": seed0, "host": host})
+        elif cur["step"] == "judge" and all(j in done | gone for j in cur["jobs"]):
+            c, sh = self.job_census(cur["jobs"][0]), self.job_census(cur["jobs"][1])
+            tsv = glob.glob(os.path.join(self.q, "results", cur["jobs"][2], self.home, "out", cur["jobs"][2], "gauntlet.tsv"))
+            if not (c and sh and tsv):
+                cur.update({"step": "failed", "why": "a judge's job failed"})
+            else:
+                diff, se = c[0] - sh[0], math.hypot(c[1], sh[1])
+                rows = {}
+                for line in open(tsv[0]).read().splitlines()[1:]:
+                    p = line.split("\t")
+                    if len(p) >= 6:
+                        rows.setdefault(p[0], {})[p[1]] = (float(p[4]), float(p[5]))
+                floors, worse = self.gauntlet_floors(), []
+                cn, sn = cur["jobs"][2], cur["scholar"][:-4]
+                for item, b in sorted(rows.items()):
+                    if cn not in b or sn not in b:
+                        continue
+                    (pc, ec), (ps, es) = b[cn], b[sn]
+                    fl = floors.get(item)
+                    if pc < ps - 2 * math.hypot(ec, es):
+                        worse.append("%s %.0f%% for %.0f%%" % (item, 100 * pc, 100 * ps))
+                    elif fl is not None and ps >= fl > pc:
+                        worse.append("%s under its floor %.0f%% (%.0f%% for %.0f%%)" % (item, 100 * fl, 100 * pc, 100 * ps))
+                holds = diff > 2 * se and not worse
+                cur.update({"step": "judged", "cand_read": [c[0], c[1]], "ship_read": [sh[0], sh[1]], "diff": round(diff, 3), "se": round(se, 3),
+                            "gauntlet_worse": worse, "holds": holds, "read": time.strftime("%Y-%m-%dT%H:%M:%S")})
+                auto = holds and self.auto() and self.push_check()["ok"]
+                if auto:
+                    tool = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bridge.py")
+                    subprocess.Popen(["sh", "-c", '"$0" -I "$@" > "$LOG" 2>&1', sys.executable, tool, self.q, "ship-clone", str(cur["n"])],
+                                     env=dict(os.environ, LOG=os.path.join(self.pd, "clone-ship.log")), stdin=subprocess.DEVNULL, start_new_session=True)
+                    cur["shipping"] = "by itself, auto mode"
+                self.flag("clone", "clone %d (the rules at %s): %+.2f +/- %.2f a seat over the shipped Scholar on %d seeds%s: %s" % (
+                    cur["n"], cur["commit"], diff, se, self.CLONE_JUDGE_SEEDS,
+                    "; the gauntlet worse on " + "; ".join(worse) if worse else "; the gauntlet holds",
+                    "shipping itself (auto mode)" if auto else "SHIP IT -- fleet-queue.py QUEUE bridge ship-clone %d" % cur["n"] if holds
+                    else "not shipped"), key="clone:%d" % cur["n"], progress=not holds or auto)
+        if cur and cur.get("step") in ("judged", "failed"):
+            cl["rounds"] = (cl.get("rounds") or [])[-30:] + [cur]
+            cl["current"] = cur = None
+        if cur:
+            cl["note"] = "clone %d: %s (the rules at %s)" % (cur["n"], {"record": "recording %d matches" % self.CLONE_SEEDS, "train": "training on the card",
+                                                                         "judge": "judged: two censuses and the gauntlet on %s" % cur.get("host")}.get(cur["step"], cur["step"]), cur["commit"])
+        save(os.path.join(self.pd, "clone.json"), {k: v for k, v in cl.items()} | {"scholar": scholar, "at": time.strftime("%Y-%m-%dT%H:%M:%S")})
+        return jobs
+
     # THE WORLD'S RULES ARE THE GAME'S (Paul, 4 November: "the GPU build always looks like the perfect
     # world in treadcore"). Read from treadcore-sim's rules.rs at the fleet's commit, each under
     # crucible's own name, seconds for ticks, and passed to make one variable each (R_VMAX=4.0f): the
@@ -4296,6 +4431,11 @@ class Plan:
         jobs += self.weight_jobs(max(0, want - len(jobs)))
         # The GPU lanes' own work: it takes no treadcore lane.
         jobs += self.crucible_jobs()
+        # The rules cloned on the card each time they move (Paul's step 3).
+        try:
+            jobs += self.clone_jobs()
+        except Exception as e:  # a round missed is asked again at the next plan
+            print("clone: %s" % e, file=sys.stderr)
         # Their champions read in the game (the bridge, LR 138): two censuses a new world milestone.
         try:
             jobs += self.bridge_jobs()
@@ -4553,7 +4693,10 @@ class Plan:
              "machines": [(self.state.get("bridge") or {}).get("current", {}).get("host")] if (self.state.get("bridge") or {}).get("current") else [],
              "dur_min": 2 * med("read", 15.0),
              "note": (self.state.get("bridge") or {}).get("note") or "a world champion reads in the game as style 17, Gladiator; style 7 keeps the hybrid"},
-            {"id": "brain", "title": "One brain in treadcore", "track": "brain", "deps": ["main", "slot", "bridge"], "state": "waiting", "machines": [], "dur_min": 0, "note": "rules, dials and learned parts, chosen by name: bot styles 0 to 7"},
+            {"id": "clone", "title": "The rules cloned on the card", "track": "gpu", "deps": ["build"],
+             "state": "running" if (self.state.get("clone") or {}).get("current") else "done", "machines": [h["name"] for h in self.hosts if "gpu" in h.get("caps", [])][:1],
+             "dur_min": 3 * med("read", 15.0), "note": (self.state.get("clone") or {}).get("note") or "a fresh clone of the rules each time main moves, judged against the Scholar"},
+            {"id": "brain", "title": "One brain in treadcore", "track": "brain", "deps": ["main", "slot", "bridge", "clone"], "state": "waiting", "machines": [], "dur_min": 0, "note": "rules, dials and learned parts, chosen by name: bot styles 0 to 7"},
         ]
         self.board(tasks)
         doc = {"checked": time.strftime("%Y-%m-%dT%H:%M:%S"), "commit": short, "difficulty": d, "tasks": tasks, "down": down,

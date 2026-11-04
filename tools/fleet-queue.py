@@ -1659,8 +1659,8 @@ def main(argv):
         # tests and commits on a worktree of origin/main and pushes, minutes: in the background, and a
         # line in events.jsonl says how it went.
         tool = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bridge.py")
-        if argv[2:3] == ["ship"] and argv[3:4]:
-            log = os.path.join(q.d, "plan", "bridge-ship.log")
+        if argv[2:3] in (["ship"], ["ship-clone"]) and argv[3:4]:
+            log = os.path.join(q.d, "plan", "bridge-ship.log" if argv[2] == "ship" else "clone-ship.log")
             subprocess.Popen(["sh", "-c", '"$0" -I "$@" > "$LOG" 2>&1', sys.executable, tool, q.d] + argv[2:4],
                              env=dict(os.environ, LOG=log), stdin=subprocess.DEVNULL, start_new_session=True)
             print("bridge ship %s: begun; plan/bridge-ship.log says how it went" % argv[3])
