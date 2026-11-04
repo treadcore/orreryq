@@ -747,7 +747,9 @@ def _make(q, most, duels, host, seed, work):
             film = Film(tr, ci, cd)
             clip["duel"] = cd
             cap = os.path.join(work, "cap-%02d-%d.png" % (ci, k))
-            label_png(cap, "%s  ·  duel %d of %d, %s" % (clip["what"], cd + 1, tr.nd, "won" if c["outcome"][cd] == 1 else "lost" if c["outcome"][cd] == -1 else "drawn"), 28, font=FONT)
+            o = tr.opp_of[cd]
+            vs = ("a " + ("scripted tank", "Raider", "Castle", "Expander", "Timid")[min(4, -1 - o)]) if o < 0 else opps[o]["name"] if o < len(opps) else "a milestone"
+            label_png(cap, "%s  ·  duel %d of %d against %s, %s" % (clip["what"], cd + 1, tr.nd, vs, "won" if c["outcome"][cd] == 1 else "lost" if c["outcome"][cd] == -1 else "drawn"), 28, font=FONT)
             out = seg_path()
             inputs = ["-i", cap] + (["-i", ttl] if k == 0 else [])
             filt = "[0][1]overlay=24:H-h-24" + ("[a];[a][2]overlay=W-w-24:24:enable='lt(t,%.2f)'" % TITLE_S if k == 0 else "")

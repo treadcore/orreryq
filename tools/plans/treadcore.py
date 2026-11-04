@@ -4175,10 +4175,24 @@ class Plan:
             else:
                 n, seed0, host = cur["n"], self.CLONE_JUDGE_SEED0 + 1000 * cur["n"], fast[0]
                 jc, js, jg = "clone-%03d-c" % n, "clone-%03d-s" % n, "clone-%03d-g" % n
-                jobs += [self.census_job(jc, "clone %d: the new clone as the whole trial team" % n, "", "", self.CLONE_JUDGE_SEEDS, seed0, 900, "all",
-                                         net=cand[0], host=host),
-                         self.census_job(js, "clone %d: the shipped Scholar (%s), the same seeds" % (n, cur["scholar"]), "", "", self.CLONE_JUDGE_SEEDS,
-                                         seed0, 900, "all", host=host, env="CENSUS_NET=$C/wt/nets/%s " % cur["scholar"])]
+                # ONE SEAT BESIDE THE RULES (Paul, 4 November: "One seat beside the rules"): the clone on
+                # the team's last seat, its leader and guard the rules (bot_mix one), as a net would play
+                # in a real side; a whole team of nets loses forty a seat for want of building and crews,
+                # and that gap drowned the first round's difference. It needs SCHOLAR (treadcore LR 140);
+                # a commit without it is judged as a whole team, and the round says so.
+                one = "fn scholar_file" in run(["git", "-C", self.tc, "show", "%s:source/treadcore-brain/src/styles.rs" % self.sha()]).stdout
+                cur["judged_as"] = "one seat beside the rules" if one else "a whole team of nets (no SCHOLAR at this commit)"
+                if one:
+                    trial = "bot_style = 6\nbot_mix = one\n"
+                    jobs += [self.census_job(jc, "clone %d: the new clone on one seat beside the rules" % n, trial, "", self.CLONE_JUDGE_SEEDS, seed0, 900, "all",
+                                             host=host, env="SCHOLAR=$Q/trials/%s.net " % jc, also=[{"src": cand[0], "dst": "~/%s/trials/%s.net" % (self.home, jc)}]),
+                             self.census_job(js, "clone %d: the shipped Scholar on one seat, the same seeds" % n, trial, "", self.CLONE_JUDGE_SEEDS,
+                                             seed0, 900, "all", host=host)]
+                else:
+                    jobs += [self.census_job(jc, "clone %d: the new clone as the whole trial team" % n, "", "", self.CLONE_JUDGE_SEEDS, seed0, 900, "all",
+                                             net=cand[0], host=host),
+                             self.census_job(js, "clone %d: the shipped Scholar (%s), the same seeds" % (n, cur["scholar"]), "", "", self.CLONE_JUDGE_SEEDS,
+                                             seed0, 900, "all", host=host, env="CENSUS_NET=$C/wt/nets/%s " % cur["scholar"])]
                 g = self.gauntlet_job(jg)
                 g["send"] = [{"src": cand[0], "dst": "~/%s/trials/%s.bin" % (self.home, jg)}]
                 g["cmd"] = g["cmd"].replace("cd $C/wt && GAUNTLET=1", "cp $Q/trials/%s.bin $C/wt/nets/%s.bin; cd $C/wt && GAUNTLET_NETS=%s,%s GAUNTLET=1"
@@ -4218,8 +4232,8 @@ class Plan:
                     subprocess.Popen(["sh", "-c", '"$0" -I "$@" > "$LOG" 2>&1', sys.executable, tool, self.q, "ship-clone", str(cur["n"])],
                                      env=dict(os.environ, LOG=os.path.join(self.pd, "clone-ship.log")), stdin=subprocess.DEVNULL, start_new_session=True)
                     cur["shipping"] = "by itself, auto mode"
-                self.flag("clone", "clone %d (the rules at %s): %+.2f +/- %.2f a seat over the shipped Scholar on %d seeds%s: %s" % (
-                    cur["n"], cur["commit"], diff, se, self.CLONE_JUDGE_SEEDS,
+                self.flag("clone", "clone %d (the rules at %s, judged as %s): %+.2f +/- %.2f a seat over the shipped Scholar on %d seeds%s: %s" % (
+                    cur["n"], cur["commit"], cur.get("judged_as", "a whole team"), diff, se, self.CLONE_JUDGE_SEEDS,
                     "; the gauntlet worse on " + "; ".join(worse) if worse else "; the gauntlet holds",
                     "shipping itself (auto mode)" if auto else "SHIP IT -- fleet-queue.py QUEUE bridge ship-clone %d" % cur["n"] if holds
                     else "not shipped"), key="clone:%d" % cur["n"], progress=not holds or auto)
