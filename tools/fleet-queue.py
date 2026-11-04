@@ -1654,6 +1654,21 @@ def main(argv):
         sys.stdout.write(r.stdout)
         sys.stderr.write(r.stderr)
         sys.exit(r.returncode)
+    elif cmd == "bridge":
+        # A world milestone shipped as the game's Gladiator (tools/bridge.py): status, ship LABEL. Ship
+        # tests and commits on a worktree of origin/main and pushes, minutes: in the background, and a
+        # line in events.jsonl says how it went.
+        tool = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bridge.py")
+        if argv[2:3] == ["ship"] and argv[3:4]:
+            log = os.path.join(q.d, "plan", "bridge-ship.log")
+            subprocess.Popen(["sh", "-c", '"$0" -I "$@" > "$LOG" 2>&1', sys.executable, tool, q.d] + argv[2:4],
+                             env=dict(os.environ, LOG=log), stdin=subprocess.DEVNULL, start_new_session=True)
+            print("bridge ship %s: begun; plan/bridge-ship.log says how it went" % argv[3])
+            sys.exit(0)
+        r = subprocess.run([sys.executable, "-I", tool, q.d] + argv[2:], capture_output=True, text=True)
+        sys.stdout.write(r.stdout)
+        sys.stderr.write(r.stderr)
+        sys.exit(r.returncode)
     elif cmd == "montage":
         # The generations since the last film, as a film (tools/montage.py). make goes to the
         # background (minutes: a trace on a GPU island, then the frames), and the Montage page follows

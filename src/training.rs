@@ -360,6 +360,8 @@ pub struct Model {
     pub recordings: Option<json::Value>,
     /// tools/montage.py's state and the films in the archive (montage.rs).
     pub montage: Option<json::Value>,
+    /// The planner's bridge: the Gladiator shipped and the reads of the world milestones (growth.rs).
+    pub bridge: Option<json::Value>,
     pub quality: Option<Quality>,
     pub queue: Option<Queue>,
 }
@@ -635,6 +637,7 @@ impl Model {
         m.growth = v.get("growth").cloned();
         m.recordings = v.get("recordings").cloned();
         m.montage = v.get("montage").cloned();
+        m.bridge = v.get("bridge").cloned();
         if let Some(x) = v.get("algorhythm").filter(|x| x.get("dials").is_some()) {
             let num = |v: &json::Value, k: &str| v.get(k).and_then(|n| n.as_num()).unwrap_or(0.0);
             m.algo = Some(Algo {
@@ -910,7 +913,7 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State, view: nav::View) -> Option<n
             }
             14 => {
                 let operator = st.operator;
-                crate::growth::draw(ui, page, m.growth.as_ref(), &mut st.growth, operator, &mut st.ctl)
+                crate::growth::draw(ui, page, m.growth.as_ref(), m.bridge.as_ref(), &mut st.growth, operator, &mut st.ctl)
             }
             15 => {
                 let operator = st.operator;

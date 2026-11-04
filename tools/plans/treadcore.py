@@ -3925,6 +3925,81 @@ class Plan:
     def crucible_src(self):
         return os.path.expanduser(self.cfg.get("crucible", {}).get("source", "~/code/crucible"))
 
+    # ---- the bridge: crucible's world champions read in the game (LR 138) ----------------------
+    # Paul, 4 November: "Incorporate GPU as a growth step in the pipeline", and of the Duelist, "yes do
+    # step 2, the duelist with world senses". Each new milestone of the world islands is read IN THE
+    # GAME as the Gladiator, style 17, against the champion the game ships, on the same fresh seeds and
+    # one fast machine: the candidate by GLADIATOR=file (treadcore styles.rs), the shipped one as it is.
+    # A candidate that reads better by more than two errors of the difference is flagged to ship. The
+    # game carries its champion in its binary, so shipping is a commit to treadcore -- a person's press
+    # (`fleet-queue.py QUEUE bridge ship LABEL`), as treadcore's CLAUDE.md asks of every commit.
+    BRIDGE_SEEDS = 48
+    BRIDGE_SEED0 = 80000000
+
+    def bridge_ready(self):
+        """Does the fleet's commit play a Gladiator that GLADIATOR can swap?"""
+        src = run(["git", "-C", self.tc, "show", "%s:source/treadcore-brain/src/styles.rs" % self.sha()]).stdout
+        return "fn gladiator_file" in src
+
+    def shipped_gladiator(self, home):
+        """The milestone the fleet's commit ships as the Gladiator, found by its bytes."""
+        b = subprocess.run(["git", "-C", self.tc, "show", "%s:nets/gladiator.bin" % self.sha()], capture_output=True).stdout
+        if not b:
+            return None
+        h = hashlib.sha256(b).hexdigest()
+        for f in sorted(glob.glob(os.path.join(self.crucible_dir("milestones", home=home), "M*.bin"))):
+            with open(f, "rb") as fh:
+                if hashlib.sha256(fh.read()).hexdigest() == h:
+                    return os.path.basename(f)[:-4]
+        return "a champion of no milestone here (%s)" % h[:12]
+
+    def bridge_jobs(self):
+        br = self.state.setdefault("bridge", {"reads": [], "n": 0})
+        home = self.crucible_home()
+        out = []
+        if "world" not in home:
+            br["note"] = "the islands are not world islands: nothing to read as the Gladiator"
+        elif not self.bridge_ready():
+            br["note"] = "the fleet's commit has no Gladiator to swap: treadcore's LR 138 is not on main"
+        else:
+            br["shipped"] = self.shipped_gladiator(home)
+            done, gone = self.ids("done"), self.ids("failed", "stopped")
+            cur = br.get("current")
+            if cur and all(j in done | gone for j in cur["jobs"]):
+                c, sh = self.job_census(cur["jobs"][0]), self.job_census(cur["jobs"][1])
+                if c and sh:
+                    diff, se = c[0] - sh[0], math.hypot(c[1], sh[1])
+                    cur.update({"cand": [c[0], c[1]], "ship": [sh[0], sh[1]], "diff": round(diff, 3), "se": round(se, 3),
+                                "holds": diff > 2 * se, "on": c[3], "read": time.strftime("%Y-%m-%dT%H:%M:%S")})
+                    self.flag("bridge", "bridge %d: %s reads %+.2f +/- %.2f a seat as the Gladiator over the shipped %s (%d seeds on %s): %s" % (
+                        cur["n"], cur["label"], diff, se, cur["shipped"], cur["seeds"], c[3],
+                        "SHIP IT -- fleet-queue.py QUEUE bridge ship %s, or Ship on Results, Growth" % cur["label"] if diff > 2 * se else "not better outside two errors; the shipped one stays"),
+                        key="bridge:%d" % cur["n"], progress=diff <= 2 * se)
+                else:
+                    cur.update({"holds": None, "why": "a census of the pair failed", "read": time.strftime("%Y-%m-%dT%H:%M:%S")})
+                br["reads"] = (br.get("reads") or [])[-30:] + [cur]
+                br["current"] = cur = None
+            if not cur:
+                ms = sorted(glob.glob(os.path.join(self.crucible_dir("milestones", home=home), "M*.bin")))
+                label = os.path.basename(ms[-1])[:-4] if ms else None
+                read = {r.get("label") for r in br.get("reads", [])}
+                fast = [h["name"] for h in self.hosts if "fast" in h.get("caps", [])] or [h["name"] for h in self.hosts if "cpu" in h.get("caps", [])]
+                if label and label != br.get("shipped") and label not in read and fast:
+                    n = br["n"] = br.get("n", 0) + 1
+                    seed0 = self.BRIDGE_SEED0 + 1000 * n
+                    jc, js = "bridge-%03d-c" % n, "bridge-%03d-s" % n
+                    out = [self.census_job(jc, "bridge %d: %s as the Gladiator" % (n, label), "bot_style = 17\n", "", self.BRIDGE_SEEDS, seed0, 900, "all",
+                                           host=fast[0], env="GLADIATOR=$Q/trials/%s.champ " % jc,
+                                           also=[{"src": ms[-1], "dst": "~/%s/trials/%s.champ" % (self.home, jc)}]),
+                           self.census_job(js, "bridge %d: the shipped Gladiator, %s, on the same seeds" % (n, br.get("shipped")), "bot_style = 17\n", "",
+                                           self.BRIDGE_SEEDS, seed0, 900, "all", host=fast[0])]
+                    br["current"] = {"n": n, "label": label, "shipped": br.get("shipped"), "jobs": [jc, js], "seed0": seed0,
+                                     "seeds": self.BRIDGE_SEEDS, "host": fast[0], "asked": time.strftime("%Y-%m-%dT%H:%M:%S")}
+            br["note"] = ("reading %s against the shipped %s on %s" % (br["current"]["label"], br.get("shipped"), br["current"]["host"]) if br.get("current")
+                          else "the game ships %s as the Gladiator; every milestone since has been read" % br.get("shipped"))
+        save(os.path.join(self.pd, "bridge.json"), {k: v for k, v in br.items()} | {"home": home, "at": time.strftime("%Y-%m-%dT%H:%M:%S")})
+        return out
+
     # THE WORLD'S RULES ARE THE GAME'S (Paul, 4 November: "the GPU build always looks like the perfect
     # world in treadcore"). Read from treadcore-sim's rules.rs at the fleet's commit, each under
     # crucible's own name, seconds for ticks, and passed to make one variable each (R_VMAX=4.0f): the
@@ -4165,6 +4240,11 @@ class Plan:
         jobs += self.weight_jobs(max(0, want - len(jobs)))
         # The GPU lanes' own work: it takes no treadcore lane.
         jobs += self.crucible_jobs()
+        # Their champions read in the game (the bridge, LR 138): two censuses a new world milestone.
+        try:
+            jobs += self.bridge_jobs()
+        except Exception as e:  # a read missed is asked again at the next plan
+            print("bridge: %s" % e, file=sys.stderr)
         # The difficulty each plan, whether or not the search was asked.
         note = load(os.path.join(self.pd, "search.json"), {})
         if note:
@@ -4412,8 +4492,11 @@ class Plan:
              "note": "built: styles.rs ships slot 1, as style 5, Overrider; a person chooses it on the menu"},
             {"id": "islands", "title": "GPU islands: crucible", "track": "gpu", "deps": [], "state": state("islands", True), "machines": sorted(h["name"] for h in self.cuda),
              "dur_min": med("islands", 1.0) * 6, "elapsed_min": elapsed("islands"), "note": "its own arena, senses and net"},
-            {"id": "bridge", "title": "Bridge: crucible into treadcore", "track": "gpu", "deps": ["islands"], "state": "done", "machines": [], "dur_min": 0,
-             "note": "built: a champion plays in the game as style 7, Duelist; refreshing it is by hand"},
+            {"id": "bridge", "title": "Bridge: crucible into treadcore", "track": "gpu", "deps": ["islands"],
+             "state": "running" if (self.state.get("bridge") or {}).get("current") else "done",
+             "machines": [(self.state.get("bridge") or {}).get("current", {}).get("host")] if (self.state.get("bridge") or {}).get("current") else [],
+             "dur_min": 2 * med("read", 15.0),
+             "note": (self.state.get("bridge") or {}).get("note") or "a world champion reads in the game as style 17, Gladiator; style 7 keeps the hybrid"},
             {"id": "brain", "title": "One brain in treadcore", "track": "brain", "deps": ["main", "slot", "bridge"], "state": "waiting", "machines": [], "dur_min": 0, "note": "rules, dials and learned parts, chosen by name: bot styles 0 to 7"},
         ]
         self.board(tasks)

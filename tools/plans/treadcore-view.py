@@ -395,6 +395,19 @@ def recordings():
     return doc
 
 
+def bridge():
+    """The planner's bridge (plan/bridge.json): the Gladiator the game ships, the read in flight, the reads
+    done, and the last ship's log line. Results, Growth draws it, and its Ship button."""
+    if not QDIR:
+        return None
+    doc = load_json(os.path.join(QDIR, "plan", "bridge.json"))
+    if isinstance(doc, dict):
+        log = os.path.join(QDIR, "plan", "bridge-ship.log")
+        if os.path.exists(log):
+            doc["ship_log"] = (read(log).strip().splitlines() or [""])[-1][:300]
+    return doc
+
+
 def montage():
     """montage.py's state, and the films in archive/montages, newest first, each with its chapters'
     wins from one start: what the Montage page draws. The newest frame's path while one is made."""
@@ -594,6 +607,6 @@ if __name__ == "__main__":
     qd = queue()
     doc = {"fleet": FLEET, "queue": qd, "project": "treadcore", "at": time.strftime("%H:%M:%S"),
            "machines": machines(run, qd), "run": run, "loop": loop(), "net": net(), "algorhythm": algorhythm(), "analysis": analysis(), "long_run": long_run(), "quality": quality(),
-           "ranges": ranges(), "personas": personas(), "gauntlet": gauntlet(), "nets": nets(), "growth": growth(), "recordings": recordings(), "montage": montage(),
+           "ranges": ranges(), "personas": personas(), "gauntlet": gauntlet(), "nets": nets(), "growth": growth(), "recordings": recordings(), "montage": montage(), "bridge": bridge(),
            "held": (lambda p: (lambda t: json.loads(t) if t.strip() else {})(read(p)))(os.path.join(QDIR, "hold.json")) if QDIR else {}}
     print(json.dumps(doc))

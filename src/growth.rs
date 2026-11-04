@@ -153,8 +153,17 @@ fn sample_line(fields: &[String], island: &str, row: &[Value]) -> String {
 }
 
 /// The page. `ctl` takes a verb for `fleet-queue.py QUEUE growth ...`.
-pub fn draw(ui: &mut Ui, at: Rect, doc: Option<&Value>, st: &mut State, operator: bool, ctl: &mut Option<String>) {
+pub fn draw(ui: &mut Ui, at: Rect, doc: Option<&Value>, bridge: Option<&Value>, st: &mut State, operator: bool, ctl: &mut Option<String>) {
     let t = ui.t;
+    // The bridge, a line on top: the champion the game ships, the read in flight or the last read, and
+    // Ship for the operator when a milestone read better (LR 138; the planner's bridge_jobs).
+    let at = match bridge.filter(|b| !matches!(b, Value::Null)) {
+        Some(b) => {
+            draw_bridge(ui, rect(at.x, at.y, at.w, 22), b, operator, ctl);
+            rect(at.x, at.y + 28, at.w, at.h - 28)
+        }
+        None => at,
+    };
     let Some(doc) = doc.filter(|d| d.get("homes").is_some() || d.get("sizes").is_some()) else {
         ui.label_in(at.x, at.y, at.w, "No record yet: tools/growth.py QUEUE refresh writes plan/growth.json (treadcore-view.py starts it when the file is old, or run it by hand).", &F8X13, t.dim);
         return;
@@ -167,6 +176,45 @@ pub fn draw(ui: &mut Ui, at: Rect, doc: Option<&Value>, st: &mut State, operator
     let (upper, lower) = (rect(at.x, at.y, at.w, at.h - sizes_h - 8), rect(at.x, at.bottom() - sizes_h, at.w, sizes_h));
     draw_growth(ui, upper, doc, st);
     draw_sizes(ui, lower, doc, st, operator, ctl);
+}
+
+/// The bridge's line: what the game ships as the Gladiator, and what the newest read said.
+fn draw_bridge(ui: &mut Ui, at: Rect, b: &Value, operator: bool, ctl: &mut Option<String>) {
+    let t = ui.t;
+    let last = arr(b, "reads").last();
+    let mut right = at.right();
+    if let Some(r) = last.filter(|r| r.get("holds").and_then(|h| h.as_bool()) == Some(true) && s(r, "label") != s(b, "shipped")) {
+        if operator {
+            let label = format!("Ship {}", s(r, "label"));
+            let w = F8X13.measure(&label) as i32 + 24;
+            if ui.button(rect(right - w, at.y, w, 22), &label, true) {
+                *ctl = Some(format!("bridge ship {}", s(r, "label")));
+            }
+            right -= w + 8;
+        }
+    }
+    let read = match last {
+        Some(r) if r.get("diff").is_some() => format!(
+            "; bridge {}: {} read {:+.2} +/- {:.2} a seat over {} ({} seeds on {}){}",
+            n(r, "n"),
+            s(r, "label"),
+            n(r, "diff"),
+            n(r, "se"),
+            s(r, "shipped"),
+            n(r, "seeds"),
+            s(r, "on"),
+            if r.get("holds").and_then(|h| h.as_bool()) == Some(true) { ": it holds" } else { ": not better" }
+        ),
+        Some(r) => format!("; bridge {}: {}", n(r, "n"), s(r, "why")),
+        None => String::new(),
+    };
+    let line = format!("The bridge: {}{}{}", s(b, "note"), read, if s(b, "ship_log").is_empty() { String::new() } else { format!("; last ship: {}", s(b, "ship_log")) });
+    ui.label_in(at.x, at.y + 5, right - at.x - 8, &line, &F8X13, t.ink);
+    let tip = line.clone();
+    ui.tip(rect(at.x, at.y, right - at.x, 22), move || vec![
+        tip,
+        "Each new milestone of the world islands is read in the game as the Gladiator (style 17) against the champion it ships, on the same 48 seeds and one machine. Better by more than two errors of the difference: Ship commits it to treadcore and pushes; the fleet builds it next.".to_string(),
+    ]);
 }
 
 fn draw_growth(ui: &mut Ui, at: Rect, doc: &Value, st: &mut State) {
