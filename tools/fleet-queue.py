@@ -426,6 +426,36 @@ def lane_file(q, name):
         return {}
 
 
+def rehome(q, cfg):
+    """A queued job pinned to a machine (needs host:X) that is paused or no longer in the queue
+    waits for nothing that will come. Paul, 3 November: "when a machine is paused or removed the
+    queue not started on that item should move to another machine queue." A job that says where
+    else it may run ("or": a need, "fast" or "cpu") is rewritten to that and taken by the next
+    lane that fits; one that cannot move (a promotion wants the Mac's checkout and its push) is
+    flagged once, with the way out. Nothing running is touched: that is the lane's job in hand."""
+    active = {h["name"] for h in cfg["hosts"] if not h.get("paused")}
+    moved = 0
+    for j in q.jobs_in("queue"):
+        need = j.get("needs", "cpu")
+        if not need.startswith("host:") or need[5:] in active:
+            continue
+        host = need[5:]
+        if j.get("or"):
+            j["needs"] = j.pop("or")
+            j["moved_from"] = host
+            path = j.pop("_file")
+            tmp = path + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(j, f, indent=1)
+            os.replace(tmp, path)
+            q.event("job moved", job=j["id"], was=host, needs=j["needs"])
+            moved += 1
+        else:
+            q.notice("stranded", "%s waits for %s, which is %s: Resume or Add it on the Queue's Fleet page, or cancel the job" % (
+                j["id"], host, "paused" if any(h["name"] == host for h in cfg["hosts"]) else "not in the queue"), key="stranded:" + j["id"])
+    return moved
+
+
 def starved(q, cfg, idle_s=None):
     """The lanes idle at least idle_s with nothing queued they could start.
 
@@ -818,6 +848,8 @@ def keeper(q):
             if planner and sync_s and now() - last_sync > sync_s:
                 last_sync = now()
                 threading.Thread(target=sync, daemon=True).start()
+            # A job pinned to a machine that left or paused moves where it may, or is flagged.
+            rehome(q, q.config())
             # Keep a lane alive for every host; one that died is started again.
             for h in q.config()["hosts"]:
                 t = threads.get(h["name"])
@@ -1387,7 +1419,8 @@ def machine(q, name, how):
         cfg["bench"] = [h for h in cfg.get("bench", []) if not mine(h)] + ls
         save_config(q, cfg)
         q.event("machine removed", host=name)
-        print("%s leaves the queue after the job in hand; Add brings it back" % name)
+        n = rehome(q, cfg)
+        print("%s leaves the queue after the job in hand; Add brings it back%s" % (name, "; %d queued job(s) pinned to it moved" % n if n else ""))
         return
     for h in ls:
         if how == "resume":
@@ -1398,6 +1431,9 @@ def machine(q, name, how):
             sys.exit("machine NAME pause|stop|resume|remove|add")
     save_config(q, cfg)
     q.event("machine " + how, host=name)
+    n = rehome(q, cfg) if how != "resume" else 0
+    if n:
+        print("%d queued job(s) pinned to %s moved to another machine" % (n, name))
     if how == "resume":
         print("%s takes work again" % name)
     elif how == "stop":

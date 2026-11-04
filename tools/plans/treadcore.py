@@ -1307,8 +1307,10 @@ class Plan:
     # THE GAUNTLET, NIGHTLY (the plan of 2 November, chapter 15): every single-decision file in
     # scenarios/gauntlet, for the rules, the untrained net and every net in nets/, on this Mac's checkout
     # of main, written to build/train/gauntlet.tsv, which Results, Gauntlet reads. Once each
-    # GAUNTLET_EVERY_H hours; 0 turns it off. The Mac, because it is the one machine with the checkout
-    # the people read, and the gauntlet is minutes.
+    # GAUNTLET_EVERY_H hours; 0 turns it off. It ran on the Mac, the one machine with the checkout the
+    # people read; with the Mac's lane set aside (3 November) it waited for nothing, so now it is a job
+    # for any fast machine, run in the queue's own checkout of the commit, its record fetched back to
+    # results/ where treadcore-view.py reads the newest (the Mac's own file beside it).
     GAUNTLET_EVERY_H = 24
 
     def gauntlet_watch(self):
@@ -1324,10 +1326,19 @@ class Plan:
             return []
         jid = "gauntlet-%s" % time.strftime("%m%d-%H%M")
         g["job"] = jid
-        cmd = ("set -o pipefail; [ -f ~/.cargo/env ] && . ~/.cargo/env; export PATH=$HOME/.cargo/bin:/opt/homebrew/bin:$PATH\n"
-               "cd ~/code/treadcore || exit 1\n"
-               "GAUNTLET=1 GAUNTLET_RUNS=100 OUT=build/train cargo test -q -p treadcore-brain --release --lib -- --ignored train --nocapture 2>&1 | tail -60\n")
-        return [{"id": jid, "kind": "gauntlet", "title": "the gauntlet: every single decision, the rules and every net, 100 seeds each", "needs": "host:mac", "cmd": cmd, "timeout_s": 2 * 3600}]
+        return [self.gauntlet_job(jid)]
+
+    def gauntlet_job(self, jid):
+        """The gauntlet as a fleet job: the harness's GAUNTLET read in the queue's checkout, its tsv in
+        the job's out directory, fetched back. Fast machines first, any CPU lane if none is free."""
+        cmd = (
+            "set -o pipefail; [ -f ~/.cargo/env ] && . ~/.cargo/env; export PATH=$HOME/.cargo/bin:$PATH\n"
+            "Q=~/%s; C=%s; O=$Q/out/%s; mkdir -p $O\n"
+            "cd $C/wt && GAUNTLET=1 GAUNTLET_RUNS=100 OUT=$O THREADS=${THREADS:-$(nproc 2>/dev/null || sysctl -n hw.ncpu)} "
+            "$C/census-bin --ignored learn::harness::train --nocapture 2>&1 | tee $O/harness.log | tail -60\n"
+        ) % (self.home, self.cdir(), jid)
+        return {"id": jid, "kind": "gauntlet", "title": "the gauntlet: every single decision, the rules and every net, 100 seeds each",
+                "needs": "fast", "or": "cpu", "after_host": self.after_host(), "cmd": cmd, "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 2 * 3600}
 
     @staticmethod
     def shape(s):

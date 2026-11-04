@@ -468,11 +468,16 @@ def gauntlet():
     """The gauntlet's last record (build/train/gauntlet.tsv, written by `make gauntlet` or the nightly
     job): a row an item, a column a brain, the share passed with its error and the reaction's median;
     the floor from each gauntlet file, so a cell under it can be red (the plan, chapter 15)."""
-    path = os.path.join(TC, "build", "train", "gauntlet.tsv")
-    try:
-        lines = read(path).splitlines()
-    except OSError:
+    # The newest record wherever it was written: `make gauntlet` on this Mac (two places, by the
+    # directory cargo ran in), or a fleet machine's gauntlet job, fetched back under results/.
+    paths = [os.path.join(TC, "build", "train", "gauntlet.tsv"), os.path.join(TC, "source", "treadcore-brain", "build", "train", "gauntlet.tsv")]
+    if QDIR:
+        paths += glob.glob(os.path.join(QDIR, "results", "gauntlet-*", "*", "*", "out", "gauntlet-*", "gauntlet.tsv"))
+    paths = [p for p in paths if os.path.exists(p)]
+    if not paths:
         return None
+    path = max(paths, key=os.path.getmtime)
+    lines = read(path).splitlines()
     if len(lines) < 2:
         return None
     floors = {}
@@ -502,7 +507,7 @@ def gauntlet():
     for r in rows:
         if r["item"] not in items:
             items.append(r["item"])
-    return {"at": time.strftime("%Y-%m-%dT%H:%M", time.localtime(os.path.getmtime(path))), "brains": brains, "items": items, "rows": rows}
+    return {"at": time.strftime("%Y-%m-%dT%H:%M", time.localtime(os.path.getmtime(path))), "source": path, "brains": brains, "items": items, "rows": rows}
 
 
 if __name__ == "__main__":

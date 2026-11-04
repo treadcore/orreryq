@@ -1642,7 +1642,7 @@ fn draw_gauntlet(ui: &mut Ui, at: Rect, m: &Model) {
             ui.tip(rect(x, y, col_w, lh), || vec![
                 format!("{} / {}: {:.1}% +/- {:.1} of {} seeds{}", it, b, 100.0 * share, 100.0 * se, runs, floor.map(|f| format!("; the floor is {:.0}%", 100.0 * f)).unwrap_or_default()),
                 if re.is_empty() { "No reaction timed.".to_string() } else { format!("Reaction, median: {} s.", re) },
-                "Source: build/train/gauntlet.tsv; the files are scenarios/gauntlet/.".to_string(),
+                format!("Source: {}; the files are scenarios/gauntlet/.", g.get("source").and_then(|x| x.as_str()).unwrap_or("build/train/gauntlet.tsv")),
             ]);
         }
         y += lh;
