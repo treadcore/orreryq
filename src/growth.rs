@@ -257,6 +257,17 @@ fn draw_growth(ui: &mut Ui, at: Rect, doc: &Value, st: &mut State) {
     }
 }
 
+/// The generation a frame marks, and the island whose sample it rings: ORRERY_FRAME_GEN and
+/// ORRERY_FRAME_ISLAND, read once. Absent in a window: only `--frame` sets them.
+fn frame_gen() -> Option<(f64, String)> {
+    static G: std::sync::OnceLock<Option<(f64, String)>> = std::sync::OnceLock::new();
+    G.get_or_init(|| {
+        let g = std::env::var("ORRERY_FRAME_GEN").ok()?.parse::<f64>().ok()?;
+        Some((g, std::env::var("ORRERY_FRAME_ISLAND").unwrap_or_default()))
+    })
+    .clone()
+}
+
 fn chart(ui: &mut Ui, r: Rect, m: &(&str, &str, &str), fields: &[String], islands: &[Island], palette: &[Rgb], gmax: f64) {
     let t = ui.t;
     let (key, title, what) = *m;
@@ -310,6 +321,29 @@ fn chart(ui: &mut Ui, r: Rect, m: &(&str, &str, &str), fields: &[String], island
                 None => ui.c.set(q.0, q.1, c),
             }
             last = Some(q);
+        }
+    }
+    // A frame's generation (ORRERY_FRAME_GEN=g, ORRERY_FRAME_ISLAND=name): montage.py's chapter
+    // slides mark the chapter's generation on every chart, and the island's sample there, as the
+    // pointer would -- a picture has no pointer.
+    if let Some((g, island)) = frame_gen() {
+        if g <= gmax {
+            ui.c.vline(px(g), plot.y, plot.h, 0xffffff);
+        }
+        for (k, isl) in islands.iter().enumerate() {
+            if !island.is_empty() && isl.name != island {
+                continue;
+            }
+            let near = isl.rows.iter().filter(|r| val(r, vi).is_some()).min_by(|a, b| {
+                let da = (val(a, gi).unwrap_or(0.0) - g).abs();
+                let db = (val(b, gi).unwrap_or(0.0) - g).abs();
+                da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+            });
+            if let Some(r) = near {
+                let (gx, v) = (val(r, gi).unwrap_or(0.0), val(r, vi).unwrap_or(0.0));
+                ui.c.disc(px(gx), py(v), 5, 0xffffff);
+                ui.c.disc(px(gx), py(v), 3, palette[k % palette.len()]);
+            }
         }
     }
     // The cursor: the pointer's generation, each island's nearest sample marked, all of it in the tip.

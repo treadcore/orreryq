@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""growth.py QUEUE refresh [--sizes] | sizes | purge [--keep-days N] [--do] -- crucible's generations
+"""growth.py QUEUE refresh [--sizes] | sizes | purge [--keep-days N] [--do] | prune-builds -- crucible's generations
 sampled, and the disks the fleet's generations fill.
 
 Paul, 3 November: "the rules and simulation of generations, we want to sample its growth in an
@@ -33,7 +33,8 @@ THE PURGE. `purge` LISTS; `purge --do` REMOVES. Three things go, and only these:
         in MANIFEST.tsv with their sha256), and the new pack read back against its rows before a
         file is removed. The reading itself -- pooled.txt, trial.weights, base.weights, run.env --
         stays, so the terrain, the temperament matrix and the planner read exactly what they did.
-NOT PURGED, said rather than done: training recordings (rec*/shards: data, not rebuilt), a
+NOT PURGED, said rather than done: training recordings (*/shards: recordings.py drops a run's
+shards once nothing reads them, its recipe proved and kept -- not this purge's business), a
 run's results (r*, train-*, gauntlet-*: the reports read their logs), crucible's populations and
 champions, the vault, and anything younger than the keep.
 """
@@ -324,8 +325,8 @@ PARTS = [
     (r"q-[^/]+/promote$", "promotion worktrees", True),
     (r"q-[^/]+/crucible[^/]*$", "an island's population and hall of fame", False),
     (r"q-[^/]+/trials$", "trials' weights files", True),
-    (r"rec\d+/shards$", "training recordings (data: not rebuilt)", False),
-    (r"rec\d+$", "a training recording (data: not rebuilt)", False),
+    (r"(rec|rot|width)\w*/shards$", "training recordings: dropped once read, re-recorded from the recipe", False),
+    (r"(rec|rot|width)\w*$", "a training recording's folder: its binary, checkout and manifest", False),
     (r"target$|target/release$", "the lane's cargo build cache", True),
 ]
 
@@ -509,6 +510,11 @@ def named_commits(q):
             except OSError:
                 pass
     keep |= set(re.findall(r"/c/([0-9a-f]{7})\b", text)) | set(re.findall(r"prep-[\w-]+-([0-9a-f]{7})\b", text))
+    # A recording still on its store whose recipe is not complete: its build holds the binary that
+    # made it, and without that binary its shards cannot be dropped (recordings.py).
+    for r in (load(os.path.join(q, "plan", "recordings.json"), {}) or {}).get("runs", []):
+        if r.get("shards_now") and r.get("recipe") != "complete" and re.match(r"^[0-9a-f]{7}$", r.get("commit") or ""):
+            keep.add(r["commit"])
     return keep
 
 
@@ -518,14 +524,15 @@ REMOTE_LIST = (
 )
 
 
-def plan_purge(q, keep_days):
+def plan_purge(q, keep_days, kinds=None):
     keep_c = named_commits(q)
     done = finished(q)
     items, kept = [], []
+    kinds = kinds or {"logs", "builds", "outs"}
     # The Mac's census logs: finished reads older than the keep.
     cutoff = time.time() - keep_days * 86400
     logs, lbytes = [], 0
-    for jid in os.listdir(os.path.join(q, "results")):
+    for jid in (os.listdir(os.path.join(q, "results")) if "logs" in kinds else []):
         if not CENSUS.match(jid) or jid not in done:
             continue
         d = os.path.join(q, "results", jid)
@@ -596,9 +603,9 @@ def plan_purge(q, keep_days):
     sz = (load(os.path.join(q, "plan", "growth.json"), {}) or {}).get("sizes") or {}
     for p in sz.get("places", []):
         for part in p.get("parts", []):
-            if part.get("rebuilt") is False and part["bytes"] >= 1e9 and re.match(r"rec\d+", part["path"]):
-                kept.append({"place": p["place"], "what": "%s: %s" % (part["path"], part["what"]), "bytes": part["bytes"], "why": "not rebuilt; a person removes a recording by hand"})
-    items = [i for i in items if i["count"]]
+            if part.get("rebuilt") is False and part["bytes"] >= 1e9 and re.match(r"(rec|rot|width)\w*", part["path"]):
+                kept.append({"place": p["place"], "what": "%s: %s" % (part["path"], part["what"]), "bytes": part["bytes"], "why": "recordings.py drops it once nothing reads it, keeping its recipe (Recordings page)"})
+    items = [i for i in items if i["count"] and i["kind"] in kinds]
     return {"at": time.strftime("%Y-%m-%dT%H:%M:%S"), "keep_days": keep_days, "bytes": sum(i["bytes"] for i in items),
             "items": items, "kept": kept, "commits_kept": sorted(keep_c)}
 
@@ -673,10 +680,10 @@ def pack_logs(q, rels):
     return held
 
 
-def purge(q, keep_days, do):
+def purge(q, keep_days, do, kinds=None, by=None):
     gp = os.path.join(q, "plan", "growth.json")
     doc = load(gp, {}) or {}
-    plan = plan_purge(q, keep_days)
+    plan = plan_purge(q, keep_days, kinds)
     if not do:
         doc["purge"] = {k: v for k, v in plan.items()}
         doc["purge"]["items"] = [{k: v for k, v in i.items() if k != "paths"} for i in plan["items"]]
@@ -721,10 +728,10 @@ def purge(q, keep_days, do):
             freed += it["bytes"]
         said.append("%s: %s %s" % (it["place"], it["kind"], "%.1f GB removed" % (it["bytes"] / 1e9) if ok else "failed"))
     doc = load(gp, {}) or {}
-    doc["purge"] = {"at": time.strftime("%Y-%m-%dT%H:%M:%S"), "state": "done", "keep_days": keep_days, "bytes": freed, "items": [], "kept": plan["kept"], "did": said}
+    doc["purge"] = {"at": time.strftime("%Y-%m-%dT%H:%M:%S"), "state": "done", "keep_days": keep_days, "bytes": freed, "items": [], "kept": plan["kept"], "did": said, "by": by or "the Purge button"}
     save(gp, doc)
     with open(os.path.join(q, "events.jsonl"), "a") as f:
-        f.write(json.dumps({"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "event": "purge", "freed": freed, "did": said}) + "\n")
+        f.write(json.dumps({"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "event": "purge", "freed": freed, "did": said, "by": by or "the Purge button"}) + "\n")
     refresh(q, measure=True)
     print("purged %.1f GB: %s" % (freed / 1e9, "; ".join(said) or "nothing"))
 
@@ -778,6 +785,9 @@ def main(a):
         if "--keep-days" in rest:
             keep = int(rest[rest.index("--keep-days") + 1])
         purge(q, max(1, keep), "--do" in rest)
+    elif cmd == "prune-builds":
+        # The planner's, each time main moves: old commit builds alone, no press.
+        purge(q, int(tuning(q, "purge_keep_days", KEEP_DAYS)), True, kinds={"builds"}, by="main moved: builds pruned")
     else:
         print(__doc__)
         sys.exit(2)

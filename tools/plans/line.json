@@ -429,6 +429,20 @@
    "what": "A purge removes old commit builds, finished jobs' outputs on the machines, and census game logs (packed first), but nothing younger than this.",
    "up": "more kept for reading, less freed",
    "down": "more freed, less raw evidence at hand"
+  },
+  {
+   "key": "keep_recordings",
+   "attr": null,
+   "label": "Keep every recording",
+   "default": 0,
+   "min": 0,
+   "max": 1,
+   "step": 1,
+   "unit": "on",
+   "long": true,
+   "what": "A behaviour-cloning recording's shards go once the job they were made for is done, their recipe kept in the archive: the binary and the seeds remake every shard byte for byte. 1 keeps every run's shards, for debugging (Paul, 4 November: \"I like the idea of a mechanism to debug if necessary\"); one run is kept alone by Keep for analysis on the Recordings page.",
+   "up": "every recording stays on the store",
+   "down": "shards dropped once read, the recipe kept"
   }
  ],
  "stages": [
@@ -1114,6 +1128,24 @@
    "look": "A norm that keeps climbing while the exam falls: the net is saturating, not learning. A red bar: a place over the limit, and the purge's list of what it would free.",
    "sim": "Crucible's arena on each card: duels of two tanks, under the game's rules when the island is a world island.",
    "helps": "A champion is worth carrying into the game only if it grew; and nothing learned survives a full disk."
+  },
+  {
+   "key": "Results/Recordings",
+   "does": "Every behaviour-cloning recording: its shards on the store, its recipe (the binary and seeds that make it again), who still reads it; Keep for analysis, Drop, Re-record, and a seed read a tank at a time.",
+   "ties": "The record runs the planner asks (the shape watch, the rotation) and fleet-record.sh's; their shards on the GPU store; the recipes in archive/recordings; Settings, Long run, Keep every recording.",
+   "drawn": "A row a run, its state in words and its size now, because the question is what each costs and whether losing its shards loses anything. The reader: the tanks of one seed down the left, the bot's choices in words, the compass as a grid a sector a column, the other senses as bars.",
+   "look": "A run on the store with a complete recipe and no reader: the sweep drops it within six hours. A recipe not complete: its binary was rebuilt or lost, and its shards stay.",
+   "sim": "Real matches of the scripted brain, 16 seats, five samples a second a living tank: the senses a net would see and what the brain did.",
+   "helps": "Training data that costs nothing to keep, since the recipe remakes it byte for byte; and a way to see what the scripted brain did, a fifth of a second at a time, when a net learns the wrong thing."
+  },
+  {
+   "key": "Results/Montage",
+   "does": "The generations since the last film, as a film: each new milestone's champion in crucible's world duels, kill shots and pillbox fights cut 1 s before and 0.5 s after, the camera on its best won duel and every other duel a ghost; Make, the newest frame while it is made, Play.",
+   "ties": "The world home's ladder (Projects, crucible) and its growth record (Growth); crucible --trace on a GPU island; orrery's own flowchart, history, terrain and spectrogram as the story between the chapters; the films kept in archive/montages.",
+   "drawn": "A film a row, and for the one chosen its chapters, each with a bar of wins, losses and draws from one start against the same opponents, because that bar is the comparison the film makes.",
+   "look": "The won share of the bar growing chapter on chapter: the champions grew. A chapter of draws: a champion that waits rather than fights.",
+   "sim": "Crucible's world arena under treadcore's rules, four neutral pillboxes, a duel of 1,200 steps of 0.1 s; one start, the dice choosing each duel's opponent.",
+   "helps": "Seeing what a generation learned, not only its number: the shot it takes, the pillbox it crosses or takes."
   }
  ]
 }

@@ -359,6 +359,26 @@ class Plan:
     def cdir(self):
         return "~/%s/c/%s" % (self.home, self.short())
 
+    def trainer(self):
+        """The GPU trainer at this commit, built by the job that runs it when the build lacks it: a
+        minute of cargo the first time on that machine and commit, nothing after."""
+        return ("[ -x %(c)s/treadcore-bc ] || ( [ -f ~/.cargo/env ] && . ~/.cargo/env; export PATH=$HOME/.cargo/bin:$PATH; "
+                "cd %(c)s/wt/tools/bc && CARGO_TARGET_DIR=$HOME/code/treadcore/tools/bc/target cargo build -q --release && "
+                "cp $HOME/code/treadcore/tools/bc/target/release/treadcore-bc %(c)s/treadcore-bc ) || { echo 'the trainer did not build'; exit 1; }\n") % {"c": self.cdir()}
+
+    def prune_builds(self):
+        """Each time main moves, the old commit builds on every machine go -- by growth.py's own purge,
+        builds alone, in the background: the current, any a queued or running job names and the two
+        newest stay (Paul, 4 November: "Prune after promotion"). A build is about 50 MB without the
+        trainer, and a prepare makes one again in minutes if it is ever asked for."""
+        short = self.short()
+        if self.state.get("pruned_for") == short or not self.auto():
+            return
+        self.state["pruned_for"] = short
+        tool = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "growth.py")
+        subprocess.Popen([sys.executable, "-I", tool, self.q, "prune-builds"], stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+
     def commits_log(self, n=40):
         """The line the fleet builds, newest first, each commit with the
         weights! defaults it changed (old, new), when the fleet first built
@@ -438,12 +458,9 @@ class Plan:
             if self.state.get("local_line"):
                 job["send"] = [{"src": os.path.join(self.pd, "accepted.bundle"), "dst": "%s/accepted.bundle" % self.cdir()}]
                 job["title"] += " (the local line: %d promotion(s) not on main)" % len(self.state["local_line"]["promotions"])
-            if "gpu" in h.get("caps", []):
-                # The GPU machine also builds the trainer at the commit.
-                job["cmd"] += (
-                    "cd $C/wt/tools/bc && CARGO_TARGET_DIR=$HOME/code/treadcore/tools/bc/target cargo build -q --release\n"
-                    "cp $HOME/code/treadcore/tools/bc/target/release/treadcore-bc $C/treadcore-bc\n"
-                )
+            # THE TRAINER IS NOT BUILT HERE. It was, on every GPU machine at every commit: 207 MB of a
+            # 250 MB build, 72 of them on whitewolf, and only a net job runs it (Paul, 4 November:
+            # "Trainer only when needed"). The net job builds it at its own commit: trainer().
             # Every machine brings back the defaults it built: after a
             # promotion, the proof that its values reached that machine.
             job["fetch"] = "%s/c/%s/defaults.toml" % (self.home, short)
@@ -1291,7 +1308,7 @@ class Plan:
                 for s in self.WIDTHS)
             return [{"id": jid, "kind": "net", "title": "the shape watch: the same data at %s" % ", ".join(str(w) for w in self.WIDTHS),
                      "needs": "host:" + gpu[0]["name"], "after": [self.prep_id(gpu[0]["name"])],
-                     "cmd": "D=~/%s/out/%s; mkdir -p $D\n%sgrep -h 'drive\\|gun' $D/w*.log | tail -8\n" % (self.home, jid, loop),
+                     "cmd": "D=~/%s/out/%s; mkdir -p $D\n%s%sgrep -h 'drive\\|gun' $D/w*.log | tail -8\n" % (self.home, jid, self.trainer(), loop),
                      "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 4 * 3600}]
         # The count begins when the watch is first seen: "in the future", and nothing to measure today.
         if wd.get("at_gen") is None:
@@ -1882,7 +1899,7 @@ class Plan:
             "id": tid, "kind": "net", "title": "round %d: train the best on %s seeds %d to %d" % (r, spec["run"], spec["lo"], spec["lo"] + spec["n"] - 1),
             "needs": "gpu", "after": [self.prep_id(gpu[0]["name"])],
             "send": [{"src": best, "dst": "%s/rounds/%03d.start.bin" % (store_q, r)}],
-            "cmd": data + "cd $D && HELD=9000054-9000059,9001140-9001259 START=%s/rounds/%03d.start.bin BC_DEVICE=cuda %s/treadcore-bc $D/data $D/cand.bin %s > $D/train.log 2>&1\n"
+            "cmd": data + self.trainer() + "cd $D && HELD=9000054-9000059,9001140-9001259 START=%s/rounds/%03d.start.bin BC_DEVICE=cuda %s/treadcore-bc $D/data $D/cand.bin %s > $D/train.log 2>&1\n"
                    "grep -v 'DEINIT\\|^thread\\|^note\\|^$' $D/train.log | tail -14\n" % (store_q, r, self.cdir(), n["train_args"]),
             "fetch": "%s/rounds/%03d" % (self.home, r), "timeout_s": 4 * 3600,
         }
@@ -4067,6 +4084,7 @@ class Plan:
         # What a person asked for comes before the standing search.
         jobs += self.run_jobs(n)
         jobs = self.prepare_jobs() + jobs
+        self.prune_builds()
         self.propagation()
         jobs += self.adopt_jobs()
         jobs += self.line_proof()

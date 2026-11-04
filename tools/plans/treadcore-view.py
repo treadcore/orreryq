@@ -357,6 +357,66 @@ def growth():
         return None
 
 
+def load_json(p):
+    try:
+        with open(p) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def recordings():
+    """recordings.py's list (each half hour: an ssh to every machine) and its SWEEP (each six hours):
+    a run's shards go once nothing reads them and their recipe is proved -- the default Paul chose on 4
+    November -- unless kept for analysis or tuning.json keep_recordings is on."""
+    if not QDIR:
+        return None
+    f = os.path.join(QDIR, "plan", "recordings.json")
+    tool = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "recordings.py")
+    for verb, every, lock in ((["list"], 1800, f + ".lock"), (["sweep", "--do"], 6 * 3600, f + ".sweep")):
+        stamp = lock if verb[0] == "sweep" else f
+        age = time.time() - os.path.getmtime(stamp) if os.path.exists(stamp) else 1e9
+        busy = os.path.exists(lock + ".run") and time.time() - os.path.getmtime(lock + ".run") < 3600
+        if age > every and not busy:
+            open(lock + ".run", "w").close()
+            if verb[0] == "sweep":
+                open(lock, "w").close()
+            subprocess.Popen(["sh", "-c", '"$0" -I "$1" "$2" "$3" "$4"; rm -f "$5"', sys.executable, tool, QDIR] + (verb + [""])[:2] + [lock + ".run"],
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            break
+    try:
+        doc = json.loads(read(f))
+    except ValueError:
+        return None
+    # The reader's last seed: its path, for the page to read itself (two megabytes, not sent here).
+    rj = os.path.join(QDIR, "plan", "recordings-read.json")
+    if os.path.exists(rj) and isinstance(doc, dict):
+        doc["read"] = {"json": rj, "at": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(os.path.getmtime(rj)))}
+    return doc
+
+
+def montage():
+    """montage.py's state, and the films in archive/montages, newest first, each with its chapters'
+    wins from one start: what the Montage page draws. The newest frame's path while one is made."""
+    if not QDIR:
+        return None
+    st = load_json(os.path.join(QDIR, "plan", "montage.json")) or {}
+    adir = os.path.join(QDIR, "archive", "montages")
+    idx = load_json(os.path.join(adir, "index.json")) or {"montages": []}
+    films = []
+    for m in reversed(idx.get("montages", [])[-12:]):
+        md = os.path.join(adir, "%04d" % m.get("n", 0))
+        summ = load_json(os.path.join(md, "summary.json")) or {}
+        chs = [{k: c.get(k) for k in ("name", "label", "island", "gen", "won", "lost", "drawn")} | {"clips": [{"what": k.get("what")} for k in c.get("clips", [])]}
+               for c in summ.get("chapters", [])]
+        poster = os.path.join(md, "poster.ppm")
+        films.append(dict(m, chapters=chs, duels=summ.get("duels"), poster=poster if os.path.exists(poster) else "", path=os.path.join(QDIR, m.get("mp4", ""))))
+    pv = os.path.join(QDIR, "plan", "montage-preview.ppm")
+    lock = os.path.join(QDIR, "plan", "montage.lock")
+    return {"state": st, "films": films, "preview": pv if os.path.exists(pv) else "",
+            "running": os.path.exists(lock) and time.time() - os.path.getmtime(lock) < 3 * 3600}
+
+
 def analysis():
     """analysis.py's document, and a fresh one begun in the background when it is old: it
     takes a minute, and this runs every few seconds."""
@@ -534,6 +594,6 @@ if __name__ == "__main__":
     qd = queue()
     doc = {"fleet": FLEET, "queue": qd, "project": "treadcore", "at": time.strftime("%H:%M:%S"),
            "machines": machines(run, qd), "run": run, "loop": loop(), "net": net(), "algorhythm": algorhythm(), "analysis": analysis(), "long_run": long_run(), "quality": quality(),
-           "ranges": ranges(), "personas": personas(), "gauntlet": gauntlet(), "nets": nets(), "growth": growth(),
+           "ranges": ranges(), "personas": personas(), "gauntlet": gauntlet(), "nets": nets(), "growth": growth(), "recordings": recordings(), "montage": montage(),
            "held": (lambda p: (lambda t: json.loads(t) if t.strip() else {})(read(p)))(os.path.join(QDIR, "hold.json")) if QDIR else {}}
     print(json.dumps(doc))

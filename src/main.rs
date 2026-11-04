@@ -69,6 +69,8 @@ mod sftp;
 mod analysis;
 mod nets;
 mod growth;
+mod montage;
+mod recordings;
 mod orchestrate;
 mod pipeline;
 mod storage;

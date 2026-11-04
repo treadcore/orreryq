@@ -1639,6 +1639,44 @@ def main(argv):
         sys.stdout.write(r.stdout)
         sys.stderr.write(r.stderr)
         sys.exit(r.returncode)
+    elif cmd == "recordings":
+        # The behaviour-cloning recordings (tools/recordings.py): list, recipe, prove, drop [--do],
+        # sweep [--do], keep, unkeep, rerecord, read. Delegated whole, as growth is; the verbs that
+        # take minutes (a re-recording, a sweep's proofs, a dropped shard read) go to the background,
+        # and the page sees their result when the list is written again.
+        tool = os.path.join(os.path.dirname(os.path.abspath(__file__)), "recordings.py")
+        if argv[2:3] and argv[2] in ("sweep", "rerecord", "prove", "read", "recipe"):
+            subprocess.Popen(["sh", "-c", '"$0" -I "$@"; "$0" -I "$1" "$2" list >/dev/null 2>&1', sys.executable, tool, q.d] + argv[2:],
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            print("recordings %s: begun in the background" % argv[2])
+            sys.exit(0)
+        r = subprocess.run([sys.executable, "-I", tool, q.d] + argv[2:], capture_output=True, text=True)
+        sys.stdout.write(r.stdout)
+        sys.stderr.write(r.stderr)
+        sys.exit(r.returncode)
+    elif cmd == "montage":
+        # The generations since the last film, as a film (tools/montage.py). make goes to the
+        # background (minutes: a trace on a GPU island, then the frames), and the Montage page follows
+        # plan/montage.json; open N plays film N in this machine's own player.
+        tool = os.path.join(os.path.dirname(os.path.abspath(__file__)), "montage.py")
+        if argv[2:3] == ["make"]:
+            subprocess.Popen([sys.executable, "-I", tool, q.d] + argv[2:], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, start_new_session=True)
+            print("montage: begun; the Montage page follows it")
+            sys.exit(0)
+        if argv[2:3] == ["open"] and argv[3:4] and argv[3].isdigit():
+            mp4 = os.path.join(q.d, "archive", "montages", "%04d" % int(argv[3]), "montage.mp4")
+            if not os.path.exists(mp4):
+                print("no film %s" % argv[3])
+                sys.exit(1)
+            subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", mp4], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, start_new_session=True)
+            print("playing %s" % mp4)
+            sys.exit(0)
+        r = subprocess.run([sys.executable, "-I", tool, q.d] + argv[2:], capture_output=True, text=True)
+        sys.stdout.write(r.stdout)
+        sys.stderr.write(r.stderr)
+        sys.exit(r.returncode)
     elif cmd == "runs":
         r = subprocess.run(["bash", "-c", "%s runs" % q.config()["planner"]], text=True)
         sys.exit(r.returncode)

@@ -108,6 +108,10 @@ pub struct State {
     pub nets: crate::nets::State,
     /// The Growth page: its home and its armed purge (growth.rs).
     pub growth: crate::growth::State,
+    /// The Recordings page: the run chosen, an armed drop, the reader's place (recordings.rs).
+    pub recordings: crate::recordings::State,
+    /// The Montage page: the film chosen (montage.rs).
+    pub montage: crate::montage::State,
     /// "KEY VALUE" for fleet-tune.py, from Settings, Long run, for main to run.
     pub tune: Option<String>,
     pub operator: bool,
@@ -352,6 +356,10 @@ pub struct Model {
     pub nets: Option<json::Value>,
     /// tools/growth.py's document: crucible's samples a segment, the sizes, the purge's list (growth.rs).
     pub growth: Option<json::Value>,
+    /// tools/recordings.py's list, with the last seed read (recordings.rs).
+    pub recordings: Option<json::Value>,
+    /// tools/montage.py's state and the films in the archive (montage.rs).
+    pub montage: Option<json::Value>,
     pub quality: Option<Quality>,
     pub queue: Option<Queue>,
 }
@@ -625,6 +633,8 @@ impl Model {
         m.gauntlet = v.get("gauntlet").cloned();
         m.nets = v.get("nets").cloned();
         m.growth = v.get("growth").cloned();
+        m.recordings = v.get("recordings").cloned();
+        m.montage = v.get("montage").cloned();
         if let Some(x) = v.get("algorhythm").filter(|x| x.get("dials").is_some()) {
             let num = |v: &json::Value, k: &str| v.get(k).and_then(|n| n.as_num()).unwrap_or(0.0);
             m.algo = Some(Algo {
@@ -727,13 +737,15 @@ fn bar(ui: &mut Ui, r: Rect, frac: f64, c: Rgb) {
 /// the Results' (Candidates, Found, Net, Flags) and the Settings' (Keeper,
 /// Commits), by page number.
 const QUEUE_PAGES: [usize; 2] = [0, 1];
-const RESULTS_PAGES: [usize; 9] = [5, 2, 3, 13, 14, 8, 10, 12, 4];
+const RESULTS_PAGES: [usize; 11] = [5, 2, 3, 13, 14, 15, 16, 8, 10, 12, 4];
 const SETTINGS_PAGES: [usize; 4] = [6, 9, 11, 7];
 
 /// (page number, name, what it shows). Candidates came after the rest and
 /// keeps the number 5, so ORRERY_FRAME_PAGE and a saved page mean what they
 /// meant. Personas (10), Ranges (11) and Gauntlet (12) came on 2 November.
-const PAGES: [(usize, &str, &str); 15] = [
+const PAGES: [(usize, &str, &str); 17] = [
+    (15, "Recordings", "the behaviour-cloning recordings: each run's size on its store, its recipe, who reads it; keep, drop, re-record, and a seed read a tank at a time"),
+    (16, "Montage", "the generations since the last film, as a film: crucible's world duels, the camera on the best winning tank; make, watch it made, play"),
     (14, "Growth", "crucible's generations sampled a segment, the champion's matrices among them; the sizes the fleet's generations fill, red over the limit; measure and purge by request"),
     (13, "Nets", "every learned net the fleet made or keeps: where each has been, what read it, its weights, its notes; capture, promote, expire by request"),
     (10, "Personas", "the roster of styles and personas: what each plays, its dials over today's defaults, and its last census read"),
@@ -899,6 +911,14 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State, view: nav::View) -> Option<n
             14 => {
                 let operator = st.operator;
                 crate::growth::draw(ui, page, m.growth.as_ref(), &mut st.growth, operator, &mut st.ctl)
+            }
+            15 => {
+                let operator = st.operator;
+                crate::recordings::draw(ui, page, m.recordings.as_ref(), &mut st.recordings, operator, &mut st.ctl)
+            }
+            16 => {
+                let operator = st.operator;
+                crate::montage::draw(ui, page, m.montage.as_ref(), &mut st.montage, operator, &mut st.ctl)
             }
             7 => draw_commits_page(ui, page, q, st),
             3 => {
