@@ -1056,7 +1056,7 @@ pub fn machine_buttons(ui: &mut Ui, right: i32, y: i32, r: &Roster, armed: &mut 
         }
         if !r.jobs.is_empty() {
             let is_armed = armed.as_deref() == Some(r.name.as_str());
-            if button(ui, if is_armed { 130 } else { 80 }, if is_armed { "Press: job goes back" } else { "Stop now" }) {
+            if button(ui, if is_armed { 250 } else { 80 }, if is_armed { "Press: back on the queue, progress lost" } else { "Stop now" }) {
                 if is_armed {
                     ask = Some(format!("machine {} stop", r.name));
                     *armed = None;
@@ -1167,7 +1167,7 @@ fn draw_roster(ui: &mut Ui, at: Rect, q: &Queue, m: &Model, st: &mut State) {
         y += row_h + 4;
     }
     if y + lh < at.bottom() {
-        ui.label_in(at.x, y + 4, at.w, "Pause: the job in hand finishes. Stop now: it goes back on the queue. Remove: out after the job in hand. Projects: chapter 2.", &F8X13, t.dim);
+        ui.label_in(at.x, y + 4, at.w, "Pause: the job in hand finishes, nothing new starts. Stop now: the job goes back on the queue and its progress is thrown away. Remove: out after the job in hand; a job pinned to it moves or is flagged. Projects: chapter 2.", &F8X13, t.dim);
     }
 }
 

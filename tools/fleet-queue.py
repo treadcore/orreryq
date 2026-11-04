@@ -178,6 +178,21 @@ class Queue:
     def flag(self, name):
         return os.path.exists(self.p(name))
 
+    def unpin(self, jid, by):
+        """A queued job's needs host:X becomes its "or" need, or cpu: whoever fits takes it."""
+        for j in self.jobs_in("queue"):
+            if j["id"] == jid and j.get("needs", "").startswith("host:"):
+                was = j["needs"]
+                j["needs"] = j.pop("or", None) or "cpu"
+                j["moved_from"] = was[5:]
+                path = j.pop("_file")
+                with open(path + ".tmp", "w") as f:
+                    json.dump(j, f, indent=1)
+                os.replace(path + ".tmp", path)
+                self.event("job unpinned", job=jid, was=was, needs=j["needs"], by=by)
+                return True
+        return False
+
     def notice(self, kind, text, key=None, progress=False):
         """Raise a flag: something a person (or the agent working with them)
         should look at. One a key: a key already flagged is not raised again.
@@ -235,6 +250,11 @@ class Queue:
                     json.dump(j, out)
                 os.replace(f + ".tmp", f)
                 n += 1
+                # Acknowledging a stranded job passes it on: the pin to its machine comes off and
+                # any lane that fits takes it (Paul, 3 November: "create an acknowledge which
+                # passes it on to the queue").
+                if j.get("kind") == "stranded" and not by.startswith("the keeper"):
+                    self.unpin((j.get("key") or "")[len("stranded:"):], by)
         if n:
             self.event("acknowledged", flag=fid, by=by, count=n)
         return n
@@ -435,6 +455,7 @@ def rehome(q, cfg):
     flagged once, with the way out. Nothing running is touched: that is the lane's job in hand."""
     active = {h["name"] for h in cfg["hosts"] if not h.get("paused")}
     moved = 0
+    stranded = set()
     for j in q.jobs_in("queue"):
         need = j.get("needs", "cpu")
         if not need.startswith("host:") or need[5:] in active:
@@ -451,8 +472,20 @@ def rehome(q, cfg):
             q.event("job moved", job=j["id"], was=host, needs=j["needs"])
             moved += 1
         else:
-            q.notice("stranded", "%s waits for %s, which is %s: Resume or Add it on the Queue's Fleet page, or cancel the job" % (
+            stranded.add(j["id"])
+            q.notice("stranded", "%s waits for %s, which is %s: Resume or Add it on the Queue's Fleet page; acknowledge this to let any machine take it; or cancel the job" % (
                 j["id"], host, "paused" if any(h["name"] == host for h in cfg["hosts"]) else "not in the queue"), key="stranded:" + j["id"])
+    # A stranded flag answers itself once the job is no longer stranded (its machine is back, it
+    # moved, it ran, or it was cancelled): a flag that outlives its cause is what Paul saw on 3
+    # November after Add, Resume and Stop, and it said nothing true any more.
+    for f in glob.glob(q.p("flags", "*-stranded.json")):
+        try:
+            fl = json.load(open(f))
+        except (OSError, ValueError):
+            continue
+        jid = (fl.get("key") or "")[len("stranded:"):]
+        if not fl.get("ack") and jid and jid not in stranded:
+            q.ack(fl["id"], "the keeper: no longer stranded")
     return moved
 
 

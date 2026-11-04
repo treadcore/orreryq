@@ -3216,9 +3216,13 @@ class Plan:
             branch = "promote/%s-%s" % (self.name, rid)
             b1 = base64.b64encode(ev["weights"].encode()).decode()
             b2 = base64.b64encode(msg.encode()).decode()
-            # Without push permission the commit must be made where the
-            # local line is: here.
-            host = p.get("host", "mac") if can_push else "mac"
+            # The commit comes back as a git bundle in the job's out directory and is fetched into
+            # this checkout when the job is done (below), so the machine that tests it needs no
+            # push permission and no local line: any CPU lane with ~/code/treadcore (every node has
+            # one, from fleet-node.sh or copal-node.sh). Until 3 November this pinned the Mac, and
+            # a promotion waited for nothing whenever the Mac's lane was set aside (Paul: "there
+            # still is something stranded ... create an acknowledge which passes it on to the queue").
+            host = p.get("host")
             # It is tested on what the fleet runs: the local line, if there is one.
             base = self.LINE if self.state.get("local_line") else "origin/main"
             out = "~/%s/out/%s" % (self.home, jid)
@@ -3240,19 +3244,34 @@ class Plan:
                 # Tactics::default() behind, and main failed its tests from
                 # dc3df01 until d7e8c09 (29 October).
                 "git add source/treadcore-brain/src/weights.rs source/treadcore-brain/src/tactics.rs && echo %s | base64 -d > $O/msg.txt && git commit -q -F $O/msg.txt\n"
-                "%s\n"
+                "git bundle create -q $O/promote.bundle %s..$B && echo 'the commit travels back as promote.bundle'\n"
                 "git rev-parse HEAD > $O/commit.txt; echo \"prepared $(cat $O/commit.txt) on $B\"\n"
-            ) % (self.home, rid, branch, out, base, b1, b2,
-                 "git push -q %s $B" % self.push_target()[0] if can_push else "echo 'the branch is kept here: no push permission'")
+            ) % (self.home, rid, branch, out, base, b1, b2, base)
             st = {"status": "running", "job": jid, "candidate": name, "branch": branch, "changed": changed, "can_push": can_push,
                   "evidence": {k: ev.get(k) for k in ("census", "held", "families")}}
             self.rsave(rid, st)
-            return [{"id": jid, "kind": "promote", "title": "promote %s: tests and families on a branch" % name, "needs": "host:" + host,
-                     "cmd": cmd, "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 4 * 3600}]
-        # Running: the branch is prepared when the job is done.
+            job = {"id": jid, "kind": "promote", "title": "promote %s: tests and families on a branch" % name,
+                   "needs": "host:" + host if host else "cpu", "cmd": cmd, "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 4 * 3600}
+            if host:
+                job["or"] = "cpu"
+            return [job]
+        # Running: the branch is prepared when the job is done, and its commit is fetched from the
+        # bundle into this checkout, where approve pushes it from.
         if st["job"] in self.ids("done"):
             c = glob.glob(os.path.join(self.q, "results", st["job"], self.home, "out", st["job"], "commit.txt"))
             st["commit"] = open(c[0]).read().strip() if c else ""
+            b = glob.glob(os.path.join(self.q, "results", st["job"], self.home, "out", st["job"], "promote.bundle"))
+            if b and st["commit"]:
+                r = run(["git", "-C", self.tc, "fetch", "-q", b[0], "%s:refs/heads/%s" % (st["branch"], st["branch"])])
+                if r.returncode != 0:
+                    run(["git", "-C", self.tc, "fetch", "-q", "-f", b[0], "%s:refs/heads/%s" % (st["branch"], st["branch"])])
+            elif st["commit"] and run(["git", "-C", self.tc, "cat-file", "-e", st["commit"]]).returncode != 0:
+                st["commit"] = ""
+                st["status"] = "failed"
+                st["detail"] = "%s: prepared on its machine, but no bundle came back to fetch the commit from" % st["branch"]
+                self.rsave(rid, st)
+                self.flag("promote", st["detail"], key="promote-bundle:%s" % rid)
+                return []
             st["status"] = "prepared"
             st["detail"] = "%s: prepared (%s)" % (st["branch"], st["commit"][:7])
             self.rsave(rid, st)
