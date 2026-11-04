@@ -1553,6 +1553,14 @@ def main(argv):
             json.dump({"kind": argv[2], "params": params, "asked": time.strftime("%Y-%m-%dT%H:%M:%S")}, f, indent=1)
         q.event("run asked", run=rid, kind=argv[2], params=params)
         print("%s: %s asked; the planner turns it into jobs at its next top-up" % (rid, argv[2]))
+    elif cmd == "nets":
+        # The register of the learned nets and its vault (tools/nets.py): refresh, capture, promote,
+        # demote, expire, note, forget. Delegated whole, so the Nets page's buttons are one verb each.
+        tool = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nets.py")
+        r = subprocess.run([sys.executable, "-I", tool, q.d] + argv[2:], capture_output=True, text=True)
+        sys.stdout.write(r.stdout)
+        sys.stderr.write(r.stderr)
+        sys.exit(r.returncode)
     elif cmd == "runs":
         r = subprocess.run(["bash", "-c", "%s runs" % q.config()["planner"]], text=True)
         sys.exit(r.returncode)

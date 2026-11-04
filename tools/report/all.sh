@@ -30,4 +30,5 @@ terrain|A Terrain for Each Dataset|orrery · the brain · maxima and what works 
 waves|Waves, Width and Waiting|orrery · the brain and the fleet · temperament, capacity, the queue
 economy|The Zero-Sum Economy|treadcore · the game and the brain · ore, oil, workers, supply, trade
 diff|The Day's Difference|orrery · treadcore · 2 November in exact code, flow and UML
+nets|The Nets Explorer|orrery · the brain · every learned net, where it has been, kept by request
 LIST

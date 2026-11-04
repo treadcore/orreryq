@@ -222,6 +222,11 @@ pub struct Canvas<'a> {
     px: &'a mut [u8],
     pub w: usize,
     pub h: usize,
+    /// A window, (x, y, w, h), that every pixel must fall in while it is set: the Nets page
+    /// scrolls cards past the body's edges and the header above them must not take their
+    /// paint. Clipping belongs in the canvas, not in each drawing call, because a label, a disc
+    /// and a rectangle all cross an edge the same way. None is the whole canvas.
+    pub clip: Option<(i32, i32, i32, i32)>,
 }
 
 impl<'a> Canvas<'a> {
@@ -229,7 +234,15 @@ impl<'a> Canvas<'a> {
     /// keeps after a window shrinks is allowed and ignored.
     pub fn new(px: &'a mut [u8], w: usize, h: usize) -> Canvas<'a> {
         assert!(px.len() >= w * h * 4, "the buffer is smaller than {}x{}", w, h);
-        Canvas { px, w, h }
+        Canvas { px, w, h, clip: None }
+    }
+
+    /// The window as pixel bounds: x0, y0, x1, y1, within the canvas.
+    fn bounds(&self) -> (usize, usize, usize, usize) {
+        match self.clip {
+            Some((x, y, w, h)) => (x.max(0) as usize, y.max(0) as usize, ((x + w).max(0) as usize).min(self.w), ((y + h).max(0) as usize).min(self.h)),
+            None => (0, 0, self.w, self.h),
+        }
     }
 
     pub fn clear(&mut self, c: Rgb) {
@@ -245,6 +258,11 @@ impl<'a> Canvas<'a> {
         if x < 0 || y < 0 || x as usize >= self.w || y as usize >= self.h {
             return;
         }
+        if let Some((cx, cy, cw, ch)) = self.clip {
+            if x < cx || y < cy || x >= cx + cw || y >= cy + ch {
+                return;
+            }
+        }
         let i = (y as usize * self.w + x as usize) * 4;
         self.px[i..i + 4].copy_from_slice(&c.to_ne_bytes());
     }
@@ -255,10 +273,11 @@ impl<'a> Canvas<'a> {
         if w <= 0 || h <= 0 {
             return;
         }
-        let x0 = x.max(0) as usize;
-        let y0 = y.max(0) as usize;
-        let x1 = ((x + w).max(0) as usize).min(self.w);
-        let y1 = ((y + h).max(0) as usize).min(self.h);
+        let (bx0, by0, bx1, by1) = self.bounds();
+        let x0 = (x.max(0) as usize).max(bx0);
+        let y0 = (y.max(0) as usize).max(by0);
+        let x1 = ((x + w).max(0) as usize).min(bx1);
+        let y1 = ((y + h).max(0) as usize).min(by1);
         if x0 >= x1 || y0 >= y1 {
             return;
         }

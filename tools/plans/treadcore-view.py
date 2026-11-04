@@ -320,6 +320,24 @@ def algorhythm():
     return {"switches": switches, "dials": dials, "caps": [{"name": n, "on": o == "true"} for n, o in caps], "patches": patches}
 
 
+def nets():
+    """nets.py's register of the learned nets, and a fresh one begun in the background when it is
+    older than five minutes: a refresh is a few seconds, and the Nets page redraws from the file."""
+    if not QDIR:
+        return None
+    f = os.path.join(QDIR, "plan", "nets.json")
+    age = time.time() - os.path.getmtime(f) if os.path.exists(f) else 1e9
+    lock = f + ".lock"
+    if age > 300 and not (os.path.exists(lock) and time.time() - os.path.getmtime(lock) < 120):
+        open(lock, "w").close()
+        tool = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "nets.py")
+        subprocess.Popen([sys.executable, "-I", tool, QDIR, "refresh"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    try:
+        return json.loads(read(f))
+    except ValueError:
+        return None
+
+
 def analysis():
     """analysis.py's document, and a fresh one begun in the background when it is old: it
     takes a minute, and this runs every few seconds."""
@@ -492,6 +510,6 @@ if __name__ == "__main__":
     qd = queue()
     doc = {"fleet": FLEET, "queue": qd, "project": "treadcore", "at": time.strftime("%H:%M:%S"),
            "machines": machines(run, qd), "run": run, "loop": loop(), "net": net(), "algorhythm": algorhythm(), "analysis": analysis(), "long_run": long_run(), "quality": quality(),
-           "ranges": ranges(), "personas": personas(), "gauntlet": gauntlet(),
+           "ranges": ranges(), "personas": personas(), "gauntlet": gauntlet(), "nets": nets(),
            "held": (lambda p: (lambda t: json.loads(t) if t.strip() else {})(read(p)))(os.path.join(QDIR, "hold.json")) if QDIR else {}}
     print(json.dumps(doc))

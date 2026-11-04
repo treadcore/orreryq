@@ -104,6 +104,8 @@ pub struct State {
     pub zoom: Option<usize>,
     /// The Algorhythm page's tab and views.
     pub analysis: crate::analysis::State,
+    /// The Nets page: its scroll, filter, open card and note field (nets.rs).
+    pub nets: crate::nets::State,
     /// "KEY VALUE" for fleet-tune.py, from Settings, Long run, for main to run.
     pub tune: Option<String>,
     pub operator: bool,
@@ -344,6 +346,8 @@ pub struct Model {
     pub personas: Option<json::Value>,
     /// The gauntlet's last record: items by brains (the plan, chapter 15).
     pub gauntlet: Option<json::Value>,
+    /// tools/nets.py's register of every learned net: where held, where been, what read it (nets.rs).
+    pub nets: Option<json::Value>,
     pub quality: Option<Quality>,
     pub queue: Option<Queue>,
 }
@@ -615,6 +619,7 @@ impl Model {
         m.ranges = v.get("ranges").cloned();
         m.personas = v.get("personas").cloned();
         m.gauntlet = v.get("gauntlet").cloned();
+        m.nets = v.get("nets").cloned();
         if let Some(x) = v.get("algorhythm").filter(|x| x.get("dials").is_some()) {
             let num = |v: &json::Value, k: &str| v.get(k).and_then(|n| n.as_num()).unwrap_or(0.0);
             m.algo = Some(Algo {
@@ -717,13 +722,14 @@ fn bar(ui: &mut Ui, r: Rect, frac: f64, c: Rgb) {
 /// the Results' (Candidates, Found, Net, Flags) and the Settings' (Keeper,
 /// Commits), by page number.
 const QUEUE_PAGES: [usize; 2] = [0, 1];
-const RESULTS_PAGES: [usize; 7] = [5, 2, 3, 8, 10, 12, 4];
+const RESULTS_PAGES: [usize; 8] = [5, 2, 3, 13, 8, 10, 12, 4];
 const SETTINGS_PAGES: [usize; 4] = [6, 9, 11, 7];
 
 /// (page number, name, what it shows). Candidates came after the rest and
 /// keeps the number 5, so ORRERY_FRAME_PAGE and a saved page mean what they
 /// meant. Personas (10), Ranges (11) and Gauntlet (12) came on 2 November.
-const PAGES: [(usize, &str, &str); 13] = [
+const PAGES: [(usize, &str, &str); 14] = [
+    (13, "Nets", "every learned net the fleet made or keeps: where each has been, what read it, its weights, its notes; capture, promote, expire by request"),
     (10, "Personas", "the roster of styles and personas: what each plays, its dials over today's defaults, and its last census read"),
     (12, "Gauntlet", "the single-decision tests: a row a gauntlet, a column a brain, the share passed; red under the file's floor"),
     (11, "Ranges", "the brain's RANGES: every number's limits, the decrees, and the reason beside each; only Paul decrees"),
@@ -873,6 +879,10 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State, view: nav::View) -> Option<n
             10 => draw_personas(ui, page, m),
             11 => draw_ranges(ui, page, m, st),
             12 => draw_gauntlet(ui, page, m),
+            13 => {
+                let operator = st.operator;
+                crate::nets::draw(ui, page, m.nets.as_ref(), &mut st.nets, operator, &mut st.ctl)
+            }
             7 => draw_commits_page(ui, page, q, st),
             3 => {
                 if let Some(i) = draw_net(ui, page, m) {

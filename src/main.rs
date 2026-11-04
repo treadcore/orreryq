@@ -67,6 +67,7 @@ mod sessions;
 #[allow(dead_code)]
 mod sftp;
 mod analysis;
+mod nets;
 mod orchestrate;
 mod pipeline;
 mod storage;
@@ -782,6 +783,14 @@ fn write_frame(
                         ..Default::default()
                     },
                     page: std::env::var("ORRERY_FRAME_PAGE").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
+                    // ORRERY_FRAME_SCROLL=px scrolls the Nets page (13); ORRERY_FRAME_OPEN=name opens one card tall.
+                    nets: nets::State {
+                        off: std::env::var("ORRERY_FRAME_SCROLL").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
+                        open: std::env::var("ORRERY_FRAME_OPEN").ok(),
+                        scroll_to: std::env::var("ORRERY_FRAME_OPEN").ok(),
+                        filter: std::env::var("ORRERY_FRAME_FILTER").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
+                        ..Default::default()
+                    },
                     ..training::State::default()
                 };
                 let mut ui_state = ui::UiState::default();
