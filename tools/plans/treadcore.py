@@ -4066,6 +4066,32 @@ class Plan:
         save(os.path.join(self.pd, "bridge.json"), {k: v for k, v in br.items()} | {"home": home, "at": time.strftime("%Y-%m-%dT%H:%M:%S")})
         return out
 
+    # ---- the montage, by itself (Paul, 4 November: "Every 5 new milestones") ----------------------
+    MONTAGE_EVERY = 5
+
+    def montage_watch(self):
+        """A film when the world ladder has gained MONTAGE_EVERY milestones since the last one: tools/
+        montage.py make in the background, as the Montage page's button does. 0 leaves it to the button."""
+        n = int(self.MONTAGE_EVERY)
+        home = self.crucible_home()
+        if n <= 0 or "world" not in home:
+            return
+        idx = load(os.path.join(self.q, "archive", "montages", "index.json"), {}) or {}
+        films = idx.get("montages") or []
+        last = films[-1].get("last") if films else None
+        ms = [os.path.basename(f)[:-4] for f in sorted(glob.glob(os.path.join(self.crucible_dir("milestones", home=home), "M*.bin")))]
+        new = ms[ms.index(last) + 1:] if last in ms else ms
+        lock = os.path.join(self.pd, "montage.lock")
+        busy = os.path.exists(lock) and time.time() - os.path.getmtime(lock) < 3 * 3600
+        if len(new) < n or busy or time.time() - self.state.get("montage_asked", 0) < 3600:
+            return
+        self.state["montage_asked"] = time.time()
+        tool = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "montage.py")
+        subprocess.Popen([sys.executable, "-I", tool, self.q, "make"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+        self.flag("montage", "montage asked: %d new milestones since %s (%s to %s); Results, Montage follows it" % (
+            len(new), last or "the start", new[0], new[-1]), key="montage-asked:%s" % new[-1], progress=True)
+
     # ---- the clone: the rules cloned again on the GPU each time they move (Paul's step 3) -------
     # Paul, 4 November, of the GPU as a growth step: "GPU trainer as a stage", the net "Re-clone the
     # rules", judged by "Census + gauntlets". The Scholar (style 6) is a net that learned by imitating the
@@ -4445,6 +4471,10 @@ class Plan:
         jobs += self.weight_jobs(max(0, want - len(jobs)))
         # The GPU lanes' own work: it takes no treadcore lane.
         jobs += self.crucible_jobs()
+        try:
+            self.montage_watch()
+        except Exception as e:  # a film missed is asked again at the next plan
+            print("montage: %s" % e, file=sys.stderr)
         # The rules cloned on the card each time they move (Paul's step 3).
         try:
             jobs += self.clone_jobs()

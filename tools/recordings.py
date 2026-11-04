@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""recordings.py QUEUE list | recipe RUN | prove RUN | drop RUN [--do] | sweep [--do] | keep RUN | unkeep RUN
+"""recordings.py QUEUE list | recipe RUN | prove RUN | drop RUN [--do] [--without-recipe] | sweep [--do] | keep RUN | unkeep RUN
 | rerecord RUN [SEED0 ...] | read RUN SEED -- the behaviour-cloning recordings, kept only while something reads them, their
 recipe kept for good.
 
@@ -398,12 +398,17 @@ def prove(q, name):
     return doc
 
 
-def drop(q, name, do):
+def drop(q, name, do, without_recipe=False):
     doc = load(recipe_path(q, name), {}) or {}
     ok, why = complete(doc)
-    if not ok:
+    if not ok and not without_recipe:
         print("%s: kept -- %s" % (name, why))
         return 0
+    if not ok:
+        # A person's word, not the sweep's (Paul, 4 November, of rot8 to rot23: "Delete them"): the
+        # shards go though nothing can remake them, and the recipe says so, its hashes kept as the record.
+        doc = doc or {"run": name, "shards": []}
+        doc["unrecoverable"] = "dropped without a complete recipe (%s), by a person's word" % why
     tg = targets(q)
     found = [r for r in scan(q) if r["run"] == name and r["shards"]]
     if not found:
@@ -715,7 +720,7 @@ def main(a):
     elif cmd == "prove" and rest:
         prove(q, rest[0])
     elif cmd == "drop" and rest:
-        drop(q, rest[0], "--do" in rest)
+        drop(q, rest[0], "--do" in rest, without_recipe="--without-recipe" in rest)
         listing(q)
     elif cmd == "sweep":
         sweep(q, "--do" in rest)

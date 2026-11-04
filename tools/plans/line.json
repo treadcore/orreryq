@@ -457,6 +457,20 @@
    "what": "When main moves, the rules are recorded at the new commit, cloned on the GPU from scratch, and the clone judged against the shipped Scholar (style 6) by a census and the gauntlet; it ships into nets/scholar.bin when it holds. At most one round in this many hours (Paul, 4 November: \"Re-clone the rules\"). 0 turns the stage off.",
    "up": "fewer rounds: less GPU and CPU time, a Scholar further behind the rules",
    "down": "a round each time main moves"
+  },
+  {
+   "key": "montage_every",
+   "attr": "MONTAGE_EVERY",
+   "label": "A montage every",
+   "default": 5,
+   "min": 0,
+   "max": 50,
+   "step": 1,
+   "unit": "milestones",
+   "long": true,
+   "what": "A film of crucible's world duels is made by itself when the world ladder has gained this many milestones since the last film (Paul, 4 November: \"Every 5 new milestones\"); Results, Montage plays it. 0 leaves it to the Make montage button.",
+   "up": "fewer films, each of more generations",
+   "down": "a film sooner after each few milestones"
   }
  ],
  "stages": [
