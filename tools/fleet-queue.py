@@ -1630,6 +1630,15 @@ def main(argv):
         sys.stdout.write(r.stdout)
         sys.stderr.write(r.stderr)
         sys.exit(r.returncode)
+    elif cmd == "growth":
+        # crucible's generations sampled, the sizes the fleet's generations fill, and the purge
+        # (tools/growth.py): refresh, sizes, purge [--do]. Delegated whole, as nets is, so the Growth
+        # page's buttons are one verb each.
+        tool = os.path.join(os.path.dirname(os.path.abspath(__file__)), "growth.py")
+        r = subprocess.run([sys.executable, "-I", tool, q.d] + argv[2:], capture_output=True, text=True)
+        sys.stdout.write(r.stdout)
+        sys.stderr.write(r.stderr)
+        sys.exit(r.returncode)
     elif cmd == "runs":
         r = subprocess.run(["bash", "-c", "%s runs" % q.config()["planner"]], text=True)
         sys.exit(r.returncode)

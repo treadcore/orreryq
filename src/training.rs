@@ -106,6 +106,8 @@ pub struct State {
     pub analysis: crate::analysis::State,
     /// The Nets page: its scroll, filter, open card and note field (nets.rs).
     pub nets: crate::nets::State,
+    /// The Growth page: its home and its armed purge (growth.rs).
+    pub growth: crate::growth::State,
     /// "KEY VALUE" for fleet-tune.py, from Settings, Long run, for main to run.
     pub tune: Option<String>,
     pub operator: bool,
@@ -348,6 +350,8 @@ pub struct Model {
     pub gauntlet: Option<json::Value>,
     /// tools/nets.py's register of every learned net: where held, where been, what read it (nets.rs).
     pub nets: Option<json::Value>,
+    /// tools/growth.py's document: crucible's samples a segment, the sizes, the purge's list (growth.rs).
+    pub growth: Option<json::Value>,
     pub quality: Option<Quality>,
     pub queue: Option<Queue>,
 }
@@ -620,6 +624,7 @@ impl Model {
         m.personas = v.get("personas").cloned();
         m.gauntlet = v.get("gauntlet").cloned();
         m.nets = v.get("nets").cloned();
+        m.growth = v.get("growth").cloned();
         if let Some(x) = v.get("algorhythm").filter(|x| x.get("dials").is_some()) {
             let num = |v: &json::Value, k: &str| v.get(k).and_then(|n| n.as_num()).unwrap_or(0.0);
             m.algo = Some(Algo {
@@ -722,13 +727,14 @@ fn bar(ui: &mut Ui, r: Rect, frac: f64, c: Rgb) {
 /// the Results' (Candidates, Found, Net, Flags) and the Settings' (Keeper,
 /// Commits), by page number.
 const QUEUE_PAGES: [usize; 2] = [0, 1];
-const RESULTS_PAGES: [usize; 8] = [5, 2, 3, 13, 8, 10, 12, 4];
+const RESULTS_PAGES: [usize; 9] = [5, 2, 3, 13, 14, 8, 10, 12, 4];
 const SETTINGS_PAGES: [usize; 4] = [6, 9, 11, 7];
 
 /// (page number, name, what it shows). Candidates came after the rest and
 /// keeps the number 5, so ORRERY_FRAME_PAGE and a saved page mean what they
 /// meant. Personas (10), Ranges (11) and Gauntlet (12) came on 2 November.
-const PAGES: [(usize, &str, &str); 14] = [
+const PAGES: [(usize, &str, &str); 15] = [
+    (14, "Growth", "crucible's generations sampled a segment, the champion's matrices among them; the sizes the fleet's generations fill, red over the limit; measure and purge by request"),
     (13, "Nets", "every learned net the fleet made or keeps: where each has been, what read it, its weights, its notes; capture, promote, expire by request"),
     (10, "Personas", "the roster of styles and personas: what each plays, its dials over today's defaults, and its last census read"),
     (12, "Gauntlet", "the single-decision tests: a row a gauntlet, a column a brain, the share passed; red under the file's floor"),
@@ -744,6 +750,11 @@ const PAGES: [(usize, &str, &str); 14] = [
     (9, "Long run", "what repeats over many generations: its options, and what it last found"),
     (7, "Commits", "the line the fleet builds, newest first, with the defaults each changed; a row opens it on GitHub"),
 ];
+
+/// How many places hold more than the size limit (growth.py's warnings).
+fn size_warnings(m: &Model) -> usize {
+    m.growth.as_ref().and_then(|g| g.get("sizes")).and_then(|z| z.get("warnings")).and_then(|w| w.as_array()).map(|a| a.len()).unwrap_or(0)
+}
 
 /// Draw the Queue, the Results or the Settings (`view`). Returns a view to
 /// move to.
@@ -781,6 +792,8 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State, view: nav::View) -> Option<n
                 "Candidates" if found > 0 => (format!("Candidates {}", found), Some(t.up)),
                 "Keeper" if worst == 2 => (name.to_string(), Some(t.alarm)),
                 "Keeper" if worst == 1 => (name.to_string(), Some(t.warn)),
+                // A place over the size limit: the Growth key's lamp, red, wherever the column shows.
+                "Growth" if size_warnings(m) > 0 => (format!("Growth {}", size_warnings(m)), Some(t.alarm)),
                 _ => (name.to_string(), None),
             };
             nav::Key { label, on: st.page == p, lamp }
@@ -882,6 +895,10 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State, view: nav::View) -> Option<n
             13 => {
                 let operator = st.operator;
                 crate::nets::draw(ui, page, m.nets.as_ref(), &mut st.nets, operator, &mut st.ctl)
+            }
+            14 => {
+                let operator = st.operator;
+                crate::growth::draw(ui, page, m.growth.as_ref(), &mut st.growth, operator, &mut st.ctl)
             }
             7 => draw_commits_page(ui, page, q, st),
             3 => {

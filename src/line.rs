@@ -286,7 +286,7 @@ mod tests {
                 View::Queue => keys.extend(["Queue/Fleet", "Queue/Runs"].map(String::from)),
                 View::Pipeline => keys.extend(crate::pipeline::PAGES.iter().map(|p| format!("Pipeline/{}", p))),
                 View::Results => {
-                    keys.extend(["Results/Candidates", "Results/Found", "Results/Net", "Results/Flags"].map(String::from));
+                    keys.extend(["Results/Candidates", "Results/Found", "Results/Net", "Results/Flags", "Results/Growth"].map(String::from));
                     keys.extend(crate::analysis::TABS.iter().map(|t| format!("Results/Algorhythm/{}", t)));
                 }
                 View::Settings => keys.extend(["Settings/Keeper", "Settings/Long run", "Settings/Commits"].map(String::from)),

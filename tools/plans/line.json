@@ -401,6 +401,34 @@
    "what": "How many starting worlds a held-out read plays. The proof is two of them.",
    "up": "a read is surer and takes longer",
    "down": "a read is quicker and noisier"
+  },
+  {
+   "key": "size_warn_gb",
+   "attr": null,
+   "label": "Warn when a place holds more than",
+   "default": 20,
+   "min": 5,
+   "max": 500,
+   "step": 5,
+   "unit": "GB",
+   "long": true,
+   "what": "A place is the queue on the Mac, treadcore's build/ outside it, or one machine's ~/fleet. Over this, the Growth page says so in red and a flag goes up, again at each ten gigabytes more (Paul, 3 November: \"give warnings when sizes get above 20GB\").",
+   "up": "fewer warnings, a fuller disk before one",
+   "down": "earlier warnings"
+  },
+  {
+   "key": "purge_keep_days",
+   "attr": null,
+   "label": "Days a purge leaves alone",
+   "default": 3,
+   "min": 1,
+   "max": 30,
+   "step": 1,
+   "unit": "days",
+   "long": true,
+   "what": "A purge removes old commit builds, finished jobs' outputs on the machines, and census game logs (packed first), but nothing younger than this.",
+   "up": "more kept for reading, less freed",
+   "down": "more freed, less raw evidence at hand"
   }
  ],
  "stages": [
@@ -1077,6 +1105,15 @@
    "look": "How often a commit is a generation, and whether a machine is behind.",
    "sim": "Nothing runs here. The census read each commit's values before it was written.",
    "helps": "This is the brain's history, number by number."
+  },
+  {
+   "key": "Results/Growth",
+   "does": "Crucible's generations, a sample a segment: fitness, yardstick, exam, and the champion's matrices; the sizes every place the fleet's generations fill; Measure and Purge.",
+   "ties": "The islands of the GPU lanes (Pipeline, islands) and their ladder (Projects). The sizes are the queue on the Mac and each machine's ~/fleet; the purge packs into fleet-archive's packs before it removes a log.",
+   "drawn": "Small multiples, one line an island in one colour throughout, because the finding is how the measures move together; the inspector is the sample under the cursor's generation. The sizes are bars against one limit mark, so a full disk is a red bar past the line.",
+   "look": "A norm that keeps climbing while the exam falls: the net is saturating, not learning. A red bar: a place over the limit, and the purge's list of what it would free.",
+   "sim": "Crucible's arena on each card: duels of two tanks, under the game's rules when the island is a world island.",
+   "helps": "A champion is worth carrying into the game only if it grew; and nothing learned survives a full disk."
   }
  ]
 }

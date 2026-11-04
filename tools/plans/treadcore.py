@@ -3728,13 +3728,44 @@ class Plan:
     # queued six ahead still meets the newest milestones.
     LADDER_SLOTS = 8
 
-    def crucible_dir(self, *a):
-        return os.path.join(self.q, self.crucible_home(), *a)
+    def crucible_dir(self, *a, home=None):
+        return os.path.join(self.q, home or self.crucible_home(), *a)
 
     def crucible_home(self):
         """Hybrid islands apart from plain: their nets differ in size, so neither's
-        state, ladder or champions load in the other, and the plain ones stay as they were."""
-        return "crucible-hybrid" if (self.cfg.get("crucible") or {}).get("hybrid") else "crucible"
+        state, ladder or champions load in the other, and the plain ones stay as they were.
+        World islands (Paul, 3 November: "the rules of this world, can we apply them to the
+        simulation expand the matrix dimensions. to the crucible") apart again: the game's rules
+        in the arena and twenty more senses, so crucible-world and crucible-world-hybrid."""
+        c = self.cfg.get("crucible") or {}
+        return "crucible" + ("-world" if c.get("world") else "") + ("-hybrid" if c.get("hybrid") else "")
+
+    def crucible_parent(self, home):
+        """The home a world home's islands begin from: the same kind without the world. Crucible
+        widens a loaded net into the bigger layout with zeros where it had nothing, so the
+        population carries everything it learned and meets the world's senses from nothing."""
+        return home.replace("-world", "") if "-world" in home else None
+
+    def ladder_state(self, home=None):
+        """A home's ladder in the planner's state. Plain and hybrid share the old key, as they always
+        have; a world home has its own, so a milestone is never a file of another home."""
+        home = home or self.crucible_home()
+        key = "crucible_ladder" if home in ("crucible", "crucible-hybrid") else "crucible_ladder:" + home
+        lad = self.state.get(key)
+        if lad is None:
+            lad = self.state[key] = {"milestones": []}
+            parent = self.crucible_parent(home)
+            # A new world home begins with its parent's milestones as its first rungs, copied in
+            # (widened by crucible when a segment loads them): the world islands meet the best the
+            # old arena made, and a world champion must beat the newest of them to be the next.
+            if parent:
+                for m in self.ladder_state(parent).get("milestones", []):
+                    src = self.crucible_dir("milestones", m["id"] + ".bin", home=parent)
+                    if os.path.exists(src):
+                        os.makedirs(self.crucible_dir("milestones", home=home), exist_ok=True)
+                        shutil.copyfile(src, self.crucible_dir("milestones", m["id"] + ".bin", home=home))
+                        lad["milestones"].append(dict(m, carried=parent))
+        return lad
 
     def ladder_rungs(self, ms):
         """At most LADDER_SLOTS milestones, oldest first: the newest half,
@@ -3747,17 +3778,18 @@ class Plan:
         k = n - len(new)
         return [old[round(i * (len(old) - 1) / max(1, k - 1))] for i in range(k)] + new
 
-    def ladder_write(self):
+    def ladder_write(self, home=None):
         """The slot files and ladder.txt (slot, milestone) the segments are sent."""
-        lad = self.state.setdefault("crucible_ladder", {"milestones": []})
-        d = self.crucible_dir("ladder")
+        home = home or self.crucible_home()
+        lad = self.ladder_state(home)
+        d = self.crucible_dir("ladder", home=home)
         os.makedirs(d, exist_ok=True)
         rungs = self.ladder_rungs(lad["milestones"])
         lines = []
         for i in range(self.LADDER_SLOTS):
             dst = os.path.join(d, "slot-%d.bin" % i)
             if i < len(rungs):
-                shutil.copyfile(self.crucible_dir("milestones", rungs[i]["id"] + ".bin"), dst + ".part")
+                shutil.copyfile(self.crucible_dir("milestones", rungs[i]["id"] + ".bin", home=home), dst + ".part")
                 lines.append("slot-%d.bin\t%s" % (i, rungs[i]["id"]))
             else:
                 open(dst + ".part", "wb").close()
@@ -3766,17 +3798,18 @@ class Plan:
             f.write("".join(l + "\n" for l in lines))
         os.replace(os.path.join(d, "ladder.txt.part"), os.path.join(d, "ladder.txt"))
 
-    def crucible_exam(self, name, jid):
-        """A finished segment's champion kept, its exam read: a row for the lineage."""
+    def crucible_exam(self, name, jid, home=None):
+        """A finished segment's champion kept, its exam read: a row for the lineage, in the home
+        the segment ran in (a segment queued before the home changed belongs to the old one)."""
         out = os.path.join(self.q, "results", jid, self.home, "out", jid)
         champ = os.path.join(out, "champ.bin")
         if not os.path.exists(champ):
             return None
-        os.makedirs(self.crucible_dir("champions"), exist_ok=True)
-        os.makedirs(self.crucible_dir("latest"), exist_ok=True)
-        shutil.copyfile(champ, self.crucible_dir("champions", jid + ".bin"))
-        shutil.copyfile(champ, self.crucible_dir("latest", name + ".bin.part"))
-        os.replace(self.crucible_dir("latest", name + ".bin.part"), self.crucible_dir("latest", name + ".bin"))
+        os.makedirs(self.crucible_dir("champions", home=home), exist_ok=True)
+        os.makedirs(self.crucible_dir("latest", home=home), exist_ok=True)
+        shutil.copyfile(champ, self.crucible_dir("champions", jid + ".bin", home=home))
+        shutil.copyfile(champ, self.crucible_dir("latest", name + ".bin.part", home=home))
+        os.replace(self.crucible_dir("latest", name + ".bin.part", home=home), self.crucible_dir("latest", name + ".bin", home=home))
         gen, last_yard = 0, None
         try:
             rows = open(os.path.join(out, "gens.tsv")).read().splitlines()[1:]
@@ -3789,6 +3822,10 @@ class Plan:
         try:
             for line in open(os.path.join(out, "exam.tsv")).read().splitlines()[1:]:
                 o, w, d, l, n = line.split("\t")
+                # THE EXAM NAMES A RUNG BY ITS FILE, M0001-...-g200.bin; THE LADDER BY ITS ID, without
+                # the .bin. Compared as they came, no champion was ever examined against "the newest"
+                # and the ladder stayed at its first milestone in both homes, 28 October to 3 November.
+                o = o[:-4] if o.endswith(".bin") else o
                 exam.append((o, float(w), float(d), float(l), int(n)))
         except (OSError, ValueError):
             pass
@@ -3808,15 +3845,38 @@ class Plan:
         return row
 
     def crucible_ladder(self, fresh):
-        """Finished segments, all islands at once: each kept, and the
+        """Finished segments, all islands at once, each home apart: each kept, and the
         milestone rule applied in order of margin."""
-        lad = self.state.setdefault("crucible_ladder", {"milestones": []})
-        rows = [r for r in (self.crucible_exam(n, j) for n, j in fresh) if r]
+        homes = self.state.setdefault("crucible_homes", {})
+        by = {}
+        for n, j in fresh:
+            by.setdefault(homes.pop(j, None) or self.segment_home(j), []).append((n, j))
+        for home, these in sorted(by.items()):
+            self.crucible_ladder_home(these, home)
+        if not by:
+            self.ladder_write()
+
+    def segment_home(self, jid):
+        """The home a segment ran in, said by its own console (the state file it saved): a segment
+        queued before segments were booked. Taking the configured home instead filed three hybrid
+        segments under crucible-world-hybrid on 3 November, the night the home changed."""
+        try:
+            txt = open(os.path.join(self.q, "results", jid, self.home, "out", jid, "console.txt")).read()
+            m = re.search(r"saved \S*/(crucible[\w-]*)/island\.state", txt)
+            if m:
+                return m.group(1)
+        except OSError:
+            pass
+        return self.crucible_home()
+
+    def crucible_ladder_home(self, fresh, home):
+        lad = self.ladder_state(home)
+        rows = [r for r in (self.crucible_exam(n, j, home=home) for n, j in fresh) if r]
         top = lad["milestones"][-1]["id"] if lad["milestones"] else None
         # Strongest first: the margin over the newest milestone; with no
         # milestone yet, the yardstick's wins.
         rows.sort(key=lambda r: (-(r["margin_se"] if r["margin_se"] is not None else -1e9), -(r["yard"] or 0), r["island"]))
-        os.makedirs(self.crucible_dir("milestones"), exist_ok=True)
+        os.makedirs(self.crucible_dir("milestones", home=home), exist_ok=True)
         for r in rows:
             if top is None:
                 ok = r is rows[0]
@@ -3829,7 +3889,7 @@ class Plan:
                 why = "beat %s by %.1f se, ladder %+.3f" % (top, r["margin_se"], r["ladder_mean"])
             if ok:
                 mid = "M%04d-%s-g%d" % (len(lad["milestones"]) + 1, r["island"], r["gen"])
-                shutil.copyfile(self.crucible_dir("champions", r["job"] + ".bin"), self.crucible_dir("milestones", mid + ".bin"))
+                shutil.copyfile(self.crucible_dir("champions", r["job"] + ".bin", home=home), self.crucible_dir("milestones", mid + ".bin", home=home))
                 lad["milestones"].append({"id": mid, "job": r["job"], "island": r["island"], "gen": r["gen"],
                                           "after": top, "margin_se": r["margin_se"], "made": time.strftime("%Y-%m-%dT%H:%M:%S")})
                 r["result"] = "milestone %s: %s" % (mid, why)
@@ -3837,14 +3897,14 @@ class Plan:
                 self.flag("crucible", "crucible: %s is milestone %s (%s)" % (r["job"], mid, why), key="milestone:%s" % mid, progress=True)
             else:
                 r["result"] = "kept: %s" % why
-            new = not os.path.exists(self.crucible_dir("lineage.tsv"))
-            with open(self.crucible_dir("lineage.tsv"), "a") as f:
+            new = not os.path.exists(self.crucible_dir("lineage.tsv", home=home))
+            with open(self.crucible_dir("lineage.tsv", home=home), "a") as f:
                 if new:
                     f.write("time\tjob\tisland\tgen\tyard_win\tagainst\twin\tdraw\tloss\tmargin_se\tladder_mean\tresult\n")
                 fm = lambda x: "-" if x is None else ("%.4f" % x if isinstance(x, float) else str(x))
                 f.write("\t".join([time.strftime("%Y-%m-%dT%H:%M:%S"), r["job"], r["island"], str(r["gen"])] +
                                   [fm(r[k]) for k in ("yard", "against", "w", "d", "l", "margin_se", "ladder_mean")] + [r["result"]]) + "\n")
-        self.ladder_write()
+        self.ladder_write(home)
     def crucible_src(self):
         return os.path.expanduser(self.cfg.get("crucible", {}).get("source", "~/code/crucible"))
 
@@ -3894,8 +3954,18 @@ class Plan:
             while len(isl["queued"]) < opt["ahead"]:
                 jid = "x-%s-%04d" % (name, isl["next"])
                 isl["next"] += 1
-                home = "%s/%s" % (self.home, self.crucible_home())
-                flag = "HYBRID=1 " if self.crucible_home() != "crucible" else ""
+                kind = self.crucible_home()
+                home = "%s/%s" % (self.home, kind)
+                # The segment is booked to the home it runs in, so its champion and exam go there
+                # even when the home changes while it waits in the queue.
+                self.state.setdefault("crucible_homes", {})[jid] = kind
+                c = self.cfg.get("crucible") or {}
+                # The build's flags. A world net is wider in its hidden layers too (H 48: 55 inputs
+                # and two nets of 48 still fit a Pascal card's 48 KB of shared memory).
+                flag = ("HYBRID=1 " if c.get("hybrid") else "") + ("WORLD=1 " if c.get("world") else "")
+                hw = int(c.get("h") or (48 if c.get("world") else 32))
+                flag += "H=%d " % hw if hw != 32 else ""
+                parent = self.crucible_parent(kind)
                 send = [{"src": os.path.join(src, f), "dst": "~/%s/%s" % (home, f)} for f in ("src/crucible.cu", "Makefile")]
                 # Read when the keeper dispatches it: the other islands'
                 # newest champions, and the ladder as it is then.
@@ -3910,16 +3980,21 @@ class Plan:
                 seed = 1000 + 97 * (sum(map(ord, name)) % 1000)
                 cmd = (
                     "set -e; H=~/%s; O=~/%s/out/%s; mkdir -p $O $H/in\n"
-                    "cd $H && make -s FLAGS_NOW NVCC=${NVCC:-/usr/local/cuda/bin/nvcc} >/dev/null 2>&1 || make FLAGS_NOW NVCC=${NVCC:-/usr/local/cuda/bin/nvcc}\n"
-                    "L=''; [ -f $H/island.state ] && L=\"--load $H/island.state\"\n"
-                    "I='%s'\n"
+                    # make rebuilds when the source changes, not when the flags do: a stamp of them does.
+                    "cd $H && F='FLAGS_NOW'; [ \"$(cat .flags 2>/dev/null)\" = \"$F\" ] || { rm -f crucible; echo \"$F\" > .flags; }\n"
+                    "make -s FLAGS_NOW NVCC=${NVCC:-/usr/local/cuda/bin/nvcc} >/dev/null 2>&1 || make FLAGS_NOW NVCC=${NVCC:-/usr/local/cuda/bin/nvcc}\n"
+                    "L=''; if [ -f $H/island.state ]; then L=\"--load $H/island.state\"; elif [ -n 'PARENT_NOW' ] && [ -f ~/PARENT_NOW/island.state ]; then L=\"--load $(echo ~/PARENT_NOW/island.state)\"; fi\n"
+                    # Double quotes: the imports are $H/in/NAME.bin, and in single quotes $H never
+                    # expanded -- every import since 28 October was "not a champion of this net".
+                    "I=\"%s\"\n"
                     # The milestones by name, oldest first, from their slots.
                     "rm -rf $H/rungs; mkdir -p $H/rungs; R=''\n"
                     "while IFS=\"$(printf '\\t')\" read -r s m; do if [ -n \"$m\" ]; then cp $H/ladder/$s $H/rungs/$m.bin; R=\"$R${R:+,}$H/rungs/$m.bin\"; fi; done < $H/ladder/ladder.txt\n"
                     "./crucible --pop %d --eps %d --gens %d --yard %d --seed %d --lad %s --draw %s $L ${I:+--import $I} ${R:+--ladder $R} "
                     "--save $H/island.state --export $O/champ.bin --out $O/gens.tsv --exam $O/exam.tsv 2>&1 | tee $O/console.txt | grep '^#'\n"
                 ) % (home, self.home, jid, ",".join(imports), opt["pop"], opt["eps"], opt["gens"], opt["yard"], seed, opt["lad"], opt["draw"])
-                cmd = cmd.replace("FLAGS_NOW ", flag)
+                cmd = cmd.replace("FLAGS_NOW ", flag).replace("'FLAGS_NOW'", "'%s'" % flag.strip())
+                cmd = cmd.replace("PARENT_NOW", "%s/%s" % (self.home, parent) if parent else "")
                 job = {"id": jid, "kind": "crucible", "title": "crucible island %s, segment %d" % (name, isl["next"] - 1),
                        "needs": "host:" + name, "cmd": cmd, "send": send, "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 4 * 3600}
                 if isl["queued"]:
@@ -3949,7 +4024,7 @@ class Plan:
                          "generations": max([int(r[0]) + 1 for r in rows] or [0]),
                          "yard": yard[-1] if yard else None, "yard_curve": yard[-40:], "ladder_curve": ladder[-40:],
                          "msteps": max([float(r[4]) / 1e6 for r in rows] or [0])}
-        lad = self.state.get("crucible_ladder", {}).get("milestones", [])
+        lad = self.ladder_state().get("milestones", [])
         lineage = []
         try:
             lines = open(self.crucible_dir("lineage.tsv")).read().splitlines()
