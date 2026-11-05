@@ -10,7 +10,7 @@ Companions: orrery `tools/montage.py`, `src/montage.rs`, `tools/recordings.py`, 
 
 ## Abstract
 
-Treadcore is an MIT-licensed tank game whose computer players are trained by a fleet of ten ordinary computers and three graphics cards. A console named orrery runs that fleet, and a CUDA program named crucible evolves small neural networks on the graphics cards. Until today the learning could be read only as tables of numbers. This report documents the system's visual state on 4 November 2026 and the work of that day. We rebuilt the training montage, a film that follows the best champion of each generation through its duels. Every other duel of the same start now appears as a faded crowd moving with the camera, and the champion's network is drawn thinking in the film's corners: its 55 inputs, its two hidden layers of 48 with the strongest currents lit, an eight-second spectrogram of its decisions, and the generation. A title sequence borrows treadcore.org's brushed metal and phosphor. Every film is copied, with a chapter list ready for upload, to an output folder. The same animation now plays inside orrery, from a 0.55 MB file written beside the film. We photographed every screen of orrery (29 pictures) and of the game (8 pictures), and we describe the redesigned flow by which a change to the brains becomes a promotion: a paired census, a trade guard, and since today a gauntlet guard of 22 single-decision tests. The recordings that once filled 114.5 GB on one machine are now debug material, kept only on request. The film of twelve generations is 99 s long, 4.2 MB, and took 233 s to make.
+Treadcore is an MIT-licensed tank game whose computer players are trained by a fleet of ten ordinary computers and three graphics cards. A console named orrery runs that fleet, and a CUDA program named crucible evolves small neural networks on the graphics cards. Until today the learning could be read only as tables of numbers. This report documents the system's visual state on 4 November 2026 and the work of that day. We rebuilt the training montage, a film that follows the best champion of each generation through its duels. Every other duel of the same start now appears as a faded crowd moving with the camera, and the champion's network is drawn thinking in the film's corners: its 55 inputs, its two hidden layers of 48 with the strongest currents lit, an eight-second spectrogram of its decisions, and the generation. A title sequence borrows treadcore.org's brushed metal and phosphor. Every film is copied, with a chapter list ready for upload, to an output folder. The same animation now plays inside orrery, from a 0.55 MB file written beside the film, and a new page lists every finished film with its data, ready to post. We photographed every screen of orrery (30 pictures) and of the game (8 pictures), and we describe the redesigned flow by which a change to the brains becomes a promotion: a paired census, a trade guard, and since today a gauntlet guard of 22 single-decision tests. The recordings that once filled 114.5 GB on one machine are now debug material, kept only on request. The film of twelve generations is 99 s long, 4.2 MB, and took 233 s to make.
 
 **Index Terms**: neuroevolution, neural network visualization, behaviour cloning, simulation-based testing, game AI, visual analytics, software architecture, immediate-mode graphical user interface.
 
@@ -138,7 +138,7 @@ The redesign rests on determinism. A shard is a function of two things: the prog
 
 - Builds of the game are **pruned** when main moves, except those a recipe still needs.
 
-The result: calber's fleet folder went from 114.5 GB to 6.5 GB, two recording runs worth 87.5 GB were dropped with proved recipes, and the first build prune freed another 45.3 GB. Section VI shows the Recordings page (Fig. 23).
+The result: calber's fleet folder went from 114.5 GB to 6.5 GB, two recording runs worth 87.5 GB were dropped with proved recipes, and the first build prune freed another 45.3 GB. Section VI shows the Recordings page (Fig. 24).
 
 ## V. The montage: a film of the generations
 
@@ -154,7 +154,7 @@ Each chapter is one milestone. Its champion plays 64 duels in **one arena from o
 
 > **Note 13.** **Controlled comparison.** The film holds everything fixed but the champion: the arena, the start, the opponents and their dice. Any difference between chapters is then the champion's doing, the same reasoning as the paired census in Section III.
 
-The camera follows the duel the champion won best. It cuts each kill shot and each pillbox fight from one second before to half a second after, at three frames a step (a step is 0.1 s of game time, so the film runs at real speed). When the generation changes, a title holds the upper right for a quarter of a second. Between chapters, orrery's own pages tell the story: the flowchart of Fig. 14, the Growth page with the chapter's generation marked, and its facts in large type.
+The camera follows the duel the champion won best. It cuts each kill shot and each pillbox fight from one second before to half a second after, at three frames a step (a step is 0.1 s of game time, so the film runs at real speed). When the generation changes, a title holds the upper right for a quarter of a second. Between chapters, orrery's own pages tell the story: the flowchart of Fig. 15, the Growth page with the chapter's generation marked, and its facts in large type.
 
 ### B. The crowd: every other duel, faded
 
@@ -186,7 +186,7 @@ Older champions are drawn too. The first milestones are of the old arena's small
 
 Paul asked for "a history of decisions like a spectrogram of fire, from a bright square display." A spectrogram<sup>17</sup> draws time across and channels down, with brightness for strength. Here the channels are the tank's turn, its speed, its fire, the network's own say (its gate output), and a row of shots. Eight seconds are shown, a column a step, the newest at the right. A glance shows when the champion committed to an attack (speed and fire lit together), when it handed the wheel back to the rules (the gate turns amber), and where its shells landed.
 
-> **Note 17.** **Spectrogram.** In sound, a picture of frequency against time, brightness for loudness [14]. The name is borrowed for any picture of channels against time; orrery already uses one for how each champion's middle layer changes across generations (Fig. 26).
+> **Note 17.** **Spectrogram.** In sound, a picture of frequency against time, brightness for loudness [14]. The name is borrowed for any picture of channels against time; orrery already uses one for how each champion's middle layer changes across generations (Fig. 27).
 
 ### E. Play it here
 
@@ -248,12 +248,17 @@ Champions of crucible's GPU islands, trained by neuroevolution under treadcore's
 MIT licensed: https://treadcore.org  Made by orrery (tools/montage.py) on 2026-11-04.
 ```
 
+Since the evening of 4 November the finished films have their own page in orrery, Results, Videos (Fig. 9): a list with data, not a player, as Paul asked ("its just a list with data, not a player"). Each film in the output folder is a row with when it was made, its length, its size, its chapters and the generations it covers; the one chosen shows its title, its description and its chapter marks, the lines to paste when it is posted to a video site, and where the file and its text are. *Open* plays it in the machine's own player and *Show* finds it in the file browser. The page never plays or moves a file itself, and offers only a plain file name to the command behind the buttons, since that command passes through a shell.
+
+![Orrery's Results, Videos page: the films in the output folder as rows with their date, length, size, chapters and generations, and the chosen film's title, description, file paths and chapter marks](visual/orrery-results-17-videos.png)
+***Fig. 9.** Results, Videos: the films ready to post, their data, and the chosen one's description and chapter marks.*
+
 ### H. Inside orrery: the Mind player
 
-The animation does not need the film. Each film now has a `mind.json` beside it, every step of every clip with its inputs, layers, outputs, shots and currents (0.55 MB). The Montage page draws the corners from it natively, in orrery's own renderer at its six frames a second, paced by the wall clock so a step still lasts 0.1 s (Fig. 9). It has *Play mind*, *Pause* and chapter buttons, and when paused it rests on the first step whose shell hit.
+The animation does not need the film. Each film now has a `mind.json` beside it, every step of every clip with its inputs, layers, outputs, shots and currents (0.55 MB). The Montage page draws the corners from it natively, in orrery's own renderer at its six frames a second, paced by the wall clock so a step still lasts 0.1 s (Fig. 10). It has *Play mind*, *Pause* and chapter buttons, and when paused it rests on the first step whose shell hit.
 
 ![Orrery's Montage page: the Mind player drawn above the list of films, with the chosen film's chapters and their wins at the right](visual/orrery-results-16-montage.png)
-***Fig. 9.** Results, Montage in orrery: the Mind player above the films, each chapter's wins, losses and draws at the right.*
+***Fig. 10.** Results, Montage in orrery: the Mind player above the films, each chapter's wins, losses and draws at the right.*
 
 A recording of the game itself (Section IV) does not yet carry these overlays: the game's nets are a different network from crucible's, and the game's own window does not yet draw them. Section IX lists this as not built.
 
@@ -266,50 +271,50 @@ Orrery is one window with seven tabs along the top (Machines, Projects, Queue, R
 ### A. Machines, Projects and Queue: the fleet at work
 
 ![Machines: every computer in the fleet with its system, and the recipes that make a new one a fleet node](visual/orrery-machines.png)
-***Fig. 10.** Machines. Every computer the fleet knows, with its system, processor, graphics card and disk, and the recipes that turn a fresh install into a fleet node (probe it, apply a recipe, join it). The Mac at the top coordinates: it runs the keeper and pushes.*
+***Fig. 11.** Machines. Every computer the fleet knows, with its system, processor, graphics card and disk, and the recipes that turn a fresh install into a fleet node (probe it, apply a recipe, join it). The Mac at the top coordinates: it runs the keeper and pushes.*
 
 ![Projects: treadcore on the processors and crucible on the graphics cards, each machine's share, and crucible's ladder of milestones](visual/orrery-projects.png)
-***Fig. 11.** Projects. Two projects share the fleet: treadcore on the processors, crucible on the graphics cards. Each machine's row shows what each project is doing on it; the strip at the foot is crucible's ladder of milestones.*
+***Fig. 12.** Projects. Two projects share the fleet: treadcore on the processors, crucible on the graphics cards. Each machine's row shows what each project is doing on it; the strip at the foot is crucible's ladder of milestones.*
 
 ![Queue: jobs queued, running, done and failed, and each machine with its current job](visual/orrery-queue.png)
-***Fig. 12.** Queue, Fleet. The queue at a glance (20 queued, 11 running, 24,317 done) and each machine with the job it holds now, a census pair, a held-out read, or a crucible island.*
+***Fig. 13.** Queue, Fleet. The queue at a glance (20 queued, 11 running, 24,317 done) and each machine with the job it holds now, a census pair, a held-out read, or a crucible island.*
 
 ![Queue, Runs: the kinds of run an operator can ask for, and the recent runs with their states](visual/orrery-queue-1-runs.png)
-***Fig. 13.** Queue, Runs. The kinds of run a person can ask for (search, tune, census, parts, switches, record, gauntlet, families, promote) and the newest runs, failures in red with their reason.*
+***Fig. 14.** Queue, Runs. The kinds of run a person can ask for (search, tune, census, parts, switches, record, gauntlet, families, promote) and the newest runs, failures in red with their reason.*
 
 ![The flowchart: the stages a trial passes through, from a proposal to the line, with counts at each stage and one real trial traced](visual/orrery-pipeline.png)
-***Fig. 14.** Queue, Flow: the flowchart of Fig. 1 as the fleet runs it, with the count at each stage (proposed, first read on 55 seeds, read again on 400, held out, families, tests, promoted) and one real trial traced through it. The montage opens on this page.*
+***Fig. 15.** Queue, Flow: the flowchart of Fig. 1 as the fleet runs it, with the count at each stage (proposed, first read on 55 seeds, read again on 400, held out, families, tests, promoted) and one real trial traced through it. The montage opens on this page.*
 
 ### B. Results: what the search found
 
-Results is where the search reports. Its first line is the same on every page: the candidates found, how many are on today's defaults, the improvements so far, and whether auto mode is on.
+Results is where the search reports. Its first line is the same on every page: the candidates found, how many are on today's defaults, the improvements so far, and whether auto mode is on. Its Videos and Montage pages are in Section V (Figs. 9 and 10).
 
 ![Candidates: trials past both held-out reads, and the promotions with their outcomes](visual/orrery-results-0-fleet.png)
-***Fig. 15.** Candidates. Trials that passed both held-out reads, newest first, and the promotions above them. A failed promotion is red, with the test or guard that stopped it.*
+***Fig. 16.** Candidates. Trials that passed both held-out reads, newest first, and the promotions above them. A failed promotion is red, with the test or guard that stopped it.*
 
 ![Found: improvements by variable and by machine, as bars](visual/orrery-results-2-found.png)
-***Fig. 16.** Found. The 1,110 improvements by the dial they changed and the machine that found them; the list at the right is the newest changes with their sizes.*
+***Fig. 17.** Found. The 1,110 improvements by the dial they changed and the machine that found them; the list at the right is the newest changes with their sizes.*
 
 ![Net: the learned tank's weights drawn as three images, and how much each sense group and each head matters](visual/orrery-results-3-net.png)
-***Fig. 17.** Net. The shipped net's weights as three pictures, one a layer, red for negative and green for positive; under them, how much the net listens to each group of senses and how often each head agrees with the rules.*
+***Fig. 18.** Net. The shipped net's weights as three pictures, one a layer, red for negative and green for positive; under them, how much the net listens to each group of senses and how often each head agrees with the rules.*
 
 ![Flags: what needs attention, each with an acknowledge button](visual/orrery-results-4-flags.png)
-***Fig. 18.** Flags. What needs a person: a montage ready, a disk over its limit, a promotion paused. Each is acknowledged here.*
+***Fig. 19.** Flags. What needs a person: a montage ready, a disk over its limit, a promotion paused. Each is acknowledged here.*
 
 ![Personas: the roster of seventeen styles, what each plays, its dials and its last census read](visual/orrery-results-10-personas.png)
-***Fig. 19.** Personas. The roster of styles (Raider, Castle, Expander, Timid, Scholar, Duelist, Gladiator and the rest): what each plays, its dials against today's defaults, and its last census read.*
+***Fig. 20.** Personas. The roster of styles (Raider, Castle, Expander, Timid, Scholar, Duelist, Gladiator and the rest): what each plays, its dials against today's defaults, and its last census read.*
 
 ![Gauntlet: a row per single-decision test and a column per brain, the share passed, red under the file's floor](visual/orrery-results-12-gauntlet.png)
-***Fig. 20.** Gauntlet. A row a test, a column a brain, the share of 200 seeds passed, red under the file's floor. This is the fleet's last gauntlet record, from 3 November at 19:51, before today's five new files; the next fleet gauntlet adds G18 to G22.*
+***Fig. 21.** Gauntlet. A row a test, a column a brain, the share of 200 seeds passed, red under the file's floor. This is the fleet's last gauntlet record, from 3 November at 19:51, before today's five new files; the next fleet gauntlet adds G18 to G22.*
 
 ![Nets: every learned net the fleet made or keeps, as cards with where each has been and what read it](visual/orrery-results-13-nets.png)
-***Fig. 21.** Nets. Every learned net the fleet made or keeps, one card each: where it has been, what read it, its weights in miniature, its notes. Copies are made only on request.*
+***Fig. 22.** Nets. Every learned net the fleet made or keeps, one card each: where it has been, what read it, its weights in miniature, its notes. Copies are made only on request.*
 
 ![Growth: crucible's islands over their generations: best and mean fitness, yardstick win share, exam, senses shares, pillbox damage, hit rate; and the fleet's disk use](visual/orrery-results-14-growth.png)
-***Fig. 22.** Growth. Crucible's three islands over their generations: best and mean fitness, the share won against a fixed scripted yardstick, an exam on held-out duels, how much the champion listens to its world senses and to the rules, pillbox damage, hit rate. Below, what each machine's generations cost in disk, red over 20 GB.*
+***Fig. 23.** Growth. Crucible's three islands over their generations: best and mean fitness, the share won against a fixed scripted yardstick, an exam on held-out duels, how much the champion listens to its world senses and to the rules, pillbox damage, hit rate. Below, what each machine's generations cost in disk, red over 20 GB.*
 
 ![Recordings: each recording run's size, recipe, and who reads it, with keep, drop and re-record, and a seed read a tank at a time](visual/orrery-results-15-recordings.png)
-***Fig. 23.** Recordings (Section IV). Each run's size on its store, whether its recipe is proved, and who reads it; keep, drop, re-record; and one seed opened a tank at a time.*
+***Fig. 24.** Recordings (Section IV). Each run's size on its store, whether its recipe is proved, and who reads it; keep, drop, re-record; and one seed opened a tank at a time.*
 
 ### C. Algorhythm: the brain as a patch, and six ways to look inside it
 
@@ -318,25 +323,25 @@ Algorhythm is a set of tabs for reading the brain as a whole: its dials and swit
 > **Note 19.** **Why look inside at all.** A census says whether a brain is better, not why. These views suggest where to look next; only a census proves a change. The house rule is printed on the Terrain tab itself.
 
 ![Algorhythm, Patch: the brain's genes, dials, switches and transforms, as a synthesizer's patch](visual/orrery-algorhythm-0-patch.png)
-***Fig. 24.** Patch. The brain drawn as a synthesizer's patch, in order: what it senses, 142 weighted dials (29 moved by training), 15 choices and 18 on-off switches, the rules, a transform of 7 slots that learned nets fill on top of the rules (a residual patch [11]), and the move. Before a dial is turned it is one of 10<sup>14.8</sup> programs.*
+***Fig. 25.** Patch. The brain drawn as a synthesizer's patch, in order: what it senses, 142 weighted dials (29 moved by training), 15 choices and 18 on-off switches, the rules, a transform of 7 slots that learned nets fill on top of the rules (a residual patch [11]), and the move. Before a dial is turned it is one of 10<sup>14.8</sup> programs.*
 
 ![Algorhythm, Terrain: the census results as a landscape over two dials, with peaks marked](visual/orrery-algorhythm-1-terrain.png)
-***Fig. 25.** Terrain. Past census reads drawn as a landscape over two dials at a time<sup>20</sup>, today's defaults marked, local peaks numbered with their heights and errors.*
+***Fig. 26.** Terrain. Past census reads drawn as a landscape over two dials at a time<sup>20</sup>, today's defaults marked, local peaks numbered with their heights and errors.*
 
 ![Algorhythm, Spectrum: a spectrogram of each champion's middle layer, a column a champion, oldest at the left](visual/orrery-algorhythm-2-spectrum.png)
-***Fig. 26.** Spectrum. Each crucible champion's middle layer as a column of singular values, strongest at the top, oldest at the left: how the networks' structure changed over 4,822 champions. Right: their total size and distance from where they began.*
+***Fig. 27.** Spectrum. Each crucible champion's middle layer as a column of singular values, strongest at the top, oldest at the left: how the networks' structure changed over 4,822 champions. Right: their total size and distance from where they began.*
 
 ![Algorhythm, Matrices: the singular values of each weight matrix and a heat map of what each group of senses reaches](visual/orrery-algorhythm-3-matrices.png)
-***Fig. 27.** Matrices. Each of the shipped net's weight matrices read by its singular values<sup>21</sup> (how many directions it really uses), and which sense groups reach which heads.*
+***Fig. 28.** Matrices. Each of the shipped net's weight matrices read by its singular values<sup>21</sup> (how many directions it really uses), and which sense groups reach which heads.*
 
 ![Algorhythm, Senses: the net's listening drawn as the tank's own compass](visual/orrery-algorhythm-4-senses.png)
-***Fig. 28.** Senses. How hard the net listens to each sense, drawn as the tank's own compass of eight sectors, brighter for stronger; the body, instruments and contacts listed beside it.*
+***Fig. 29.** Senses. How hard the net listens to each sense, drawn as the tank's own compass of eight sectors, brighter for stronger; the body, instruments and contacts listed beside it.*
 
 ![Algorhythm, Fleet: the planner's orchestration drawn as a diagram of stages and machines](visual/orrery-algorhythm-5-fleet.png)
-***Fig. 29.** Fleet. The planner's orchestration as a diagram: proposals, first reads, held-out reads, families and tests, the transforms trained on the GPU, and where each machine is in it.*
+***Fig. 30.** Fleet. The planner's orchestration as a diagram: proposals, first reads, held-out reads, families and tests, the transforms trained on the GPU, and where each machine is in it.*
 
 ![Algorhythm, Temper: the temperament matrix, how waves of mood raise or calm engage, press, retreat and trigger](visual/orrery-algorhythm-6-temper.png)
-***Fig. 30.** Temper. The temperament matrix: slow waves that rouse or calm a tank's engage, press, retreat and trigger, and what each row did in measured plays (seconds in a fight, kills, deaths).*
+***Fig. 31.** Temper. The temperament matrix: slow waves that rouse or calm a tank's engage, press, retreat and trigger, and what each row did in measured plays (seconds in a fight, kills, deaths).*
 
 > **Note 20.** **A terrain from scattered reads.** Each census read is a point: two dial values and a score. A smooth surface through them is estimated by kernel regression [15], a weighted average of nearby reads, closer reads weighing more. It shrinks heights where reads are few, which is why the page will not call a peak real without a census.
 
@@ -345,25 +350,25 @@ Algorhythm is a set of tabs for reading the brain as a whole: its dials and swit
 ### D. Watch, Fleet, Storage and Settings
 
 ![Watch, Sessions: a live terminal of a machine, its processors and processes, kept alive in tmux](visual/orrery-watch-sessions.png)
-***Fig. 31.** Watch, Sessions. A terminal for each machine, kept alive in tmux; here this Mac's processors and processes. Click a tile to type into it.*
+***Fig. 32.** Watch, Sessions. A terminal for each machine, kept alive in tmux; here this Mac's processors and processes. Click a tile to type into it.*
 
 ![Fleet: the certificate authority, each machine's certificate and listener, and the verbs the fleet can run on a machine](visual/orrery-fleet.png)
-***Fig. 32.** Fleet. The fleet's own certificate authority<sup>22</sup> (7 of 9 machines listening), each machine's system, load, treadcore commit and certificate, and the verbs a machine answers: message, clip, chat, shot, save, run, scene, power.*
+***Fig. 33.** Fleet. The fleet's own certificate authority<sup>22</sup> (7 of 9 machines listening), each machine's system, load, treadcore commit and certificate, and the verbs a machine answers: message, clip, chat, shot, save, run, scene, power.*
 
 ![Storage: the fleet's disks and shares, each machine's free space and the network shares between them](visual/orrery-storage.png)
-***Fig. 33.** Storage. Each machine's disks and free space, and the network shares between them; a share is made or removed here.*
+***Fig. 34.** Storage. Each machine's disks and free space, and the network shares between them; a share is made or removed here.*
 
 ![Settings, Keeper: is the keeper running as it should, its code, its planning and its lanes](visual/orrery-settings.png)
-***Fig. 34.** Settings, Keeper. Is the keeper (the program that keeps every machine busy) running as it should: its code, its last plan, its lanes, and the one thing that wants a look, here a difficulty the planner raised.*
+***Fig. 35.** Settings, Keeper. Is the keeper (the program that keeps every machine busy) running as it should: its code, its last plan, its lanes, and the one thing that wants a look, here a difficulty the planner raised.*
 
 ![Settings, Ranges: every number's limits, the decrees, and the reason beside each](visual/orrery-settings-11-ranges.png)
-***Fig. 35.** Settings, Ranges. Every dial's limits with the reason beside it. A dial whose minimum equals its maximum is a decree, a constant only Paul may set.*
+***Fig. 36.** Settings, Ranges. Every dial's limits with the reason beside it. A dial whose minimum equals its maximum is a decree, a constant only Paul may set.*
 
 ![Settings, Commits: the line the fleet builds, newest first, with the defaults each commit changed](visual/orrery-settings-7-commits.png)
-***Fig. 36.** Settings, Commits. The line of commits the fleet builds, newest first (today's LR 145 at the top), each with the defaults it changed; a row opens it on GitHub.*
+***Fig. 37.** Settings, Commits. The line of commits the fleet builds, newest first (today's LR 145 at the top), each with the defaults it changed; a row opens it on GitHub.*
 
 ![Settings, Long run: what repeats over many generations, its options and what it last found](visual/orrery-settings-9-longrun.png)
-***Fig. 37.** Settings, Long run. What repeats over many generations and what it last found (here, 222 of 252 far trials left on game 8+score1), with its options: how far the fit looks back, the share of each top-up that looks far, and how often the temperament and the net's width are read.*
+***Fig. 38.** Settings, Long run. What repeats over many generations and what it last found (here, 222 of 252 far trials left on game 8+score1), with its options: how far the fit looks back, the share of each top-up that looks far, and how often the temperament and the net's width are read.*
 
 > **Note 22.** **A fleet certificate authority.** The console signs each machine's key with its own authority, so machines and console can prove who they are to each other without passwords, the way SSH certificates work.
 
@@ -374,30 +379,30 @@ The game's pictures were taken on a virtual machine running the game in a real w
 > **Note 23.** **Autopilot.** The O key hands the player's tank to the same rules that drive the bots, with the player's goal. Everything the coordination screen shows is that brain's own account of what it is doing.
 
 ![The game in play: the island map with tanks, pillboxes and depots; the build orders on the left; the tank's shells, drones, squad, armour and fuel on the right; the newswire at the foot](visual/treadcore-01-play-start.png)
-***Fig. 38.** In play. Top: seat, team, tick, game time, the field's scale and the goal. Left: the orders, each with its key. Right, in brushed metal: the autopilot lamp, shells, the drone bay (recon, strike, longshot, interceptors), the squad and its material, armour and fuel, kills, pillboxes, depots, works, and the map. Foot: the air line and the newswire.*
+***Fig. 39.** In play. Top: seat, team, tick, game time, the field's scale and the goal. Left: the orders, each with its key. Right, in brushed metal: the autopilot lamp, shells, the drone bay (recon, strike, longshot, interceptors), the squad and its material, armour and fuel, kills, pillboxes, depots, works, and the map. Foot: the air line and the newswire.*
 
 ![The game later in the match: a fleet sailing in formation between islands, rings of reach around tanks and pillboxes](visual/treadcore-02-play-fight.png)
-***Fig. 39.** Island hopping. The player's wingmen sail in formation; each ring is a reach: a gun's, a drone's, a pillbox's. The newswire reports a bot boarding a boat.*
+***Fig. 40.** Island hopping. The player's wingmen sail in formation; each ring is a reach: a gun's, a drone's, a pillbox's. The newswire reports a bot boarding a boat.*
 
 ![The coordination screen: the ladder of rungs, the rotation, and every ally's errand in words](visual/treadcore-03-coordination.png)
-***Fig. 40.** Coordination (Space). The brain explains itself: the ladder of rungs (defend the base, fortify, turrets, hunt, expand, guard), the first one whose condition holds being what the tank does; the rotation between defence and push; and each ally's errand in words.*
+***Fig. 41.** Coordination (Space). The brain explains itself: the ladder of rungs (defend the base, fortify, turrets, hunt, expand, guard), the first one whose condition holds being what the tank does; the rotation between defence and push; and each ally's errand in words.*
 
 ![The team's weights page: the switches of the team's bots, on or off](visual/treadcore-04-sliders.png)
-***Fig. 41.** Weights (U, from coordination). The team's switches, on or off: pings, dodge, bridges, rotate, duck, posture and the rest. They are the same dials and switches the fleet searches; a person can set them for their own side.*
+***Fig. 42.** Weights (U, from coordination). The team's switches, on or off: pings, dodge, bridges, rotate, duck, posture and the rest. They are the same dials and switches the fleet searches; a person can set them for their own side.*
 
 ![Key setup over the map: every action in groups with its key](visual/treadcore-05-key-setup.png)
-***Fig. 42.** Key Setup (K). Every action in groups with its key; a key moved onto an action that had one swaps with it, so every action keeps exactly one.*
+***Fig. 43.** Key Setup (K). Every action in groups with its key; a key moved onto an action that had one swaps with it, so every action keeps exactly one.*
 
 ![Later in the match: tanks massed on an island around a depot, a pillbox's ring and shells in the air](visual/treadcore-06-play-later.png)
-***Fig. 43.** A fight for an island. Tanks of two sides massed around a depot; the newswire's line at the foot is a refusal: "PEBKAC: airspace full (the lamps called it)".*
+***Fig. 44.** A fight for an island. Tanks of two sides massed around a depot; the newswire's line at the foot is a refusal: "PEBKAC: airspace full (the lamps called it)".*
 
 ![The game after the goal key: the tank's goal shown in the top line](visual/treadcore-07-goal.png)
-***Fig. 44.** Goals (G). G steps through the goals (auto, hunt pillboxes, defend a depot or the base, hold, fortify, escort, the wheel); the top line names the one in force.*
+***Fig. 45.** Goals (G). G steps through the goals (auto, hunt pillboxes, defend a depot or the base, hold, fortify, escort, the wheel); the top line names the one in force.*
 
 ![Late in the match: a strike on a depot, lines of fire converging](visual/treadcore-08-play-late.png)
-***Fig. 45.** Late in the match: lines of fire converge on a depot, and a wingman reports "slugs out, grunts ready: hitting the depot."*
+***Fig. 46.** Late in the match: lines of fire converge on a depot, and a wingman reports "slugs out, grunts ready: hitting the depot."*
 
-The game's window does not yet draw the mind of a net-driven tank. The rules, which drove every tank above, explain themselves in words on the coordination screen instead (Fig. 40), the counterpart of the film's corners for a hand-written brain.
+The game's window does not yet draw the mind of a net-driven tank. The rules, which drove every tank above, explain themselves in words on the coordination screen instead (Fig. 41), the counterpart of the film's corners for a hand-written brain.
 
 ## VIII. Measurements
 
@@ -411,7 +416,7 @@ The game's window does not yet draw the mind of a net-driven tank. The rules, wh
 | The trace, version 2 | about 299 MB for 12 chapters | 81 floats a step against 22; deleted once the film is made |
 | The mind file | 0.55 MB | kept beside the film for orrery's Mind player |
 | The title sequence | 36 frames, 3.6 s | ImageMagick, in treadcore.org's colours |
-| Screens photographed | 29 of orrery, 8 of the game | orrery by its own `--frame`; the game on a virtual machine |
+| Screens photographed | 30 of orrery, 8 of the game | orrery by its own `--frame`; the game on a virtual machine |
 | Recordings on calber | 114.5 GB to 6.5 GB | 87.5 GB dropped with proved recipes; 45.3 GB of old builds pruned |
 | G21, the rules alone | 24.5% to 35.5% | paired +8.3 ± 2.6 points over 600 seeds |
 | The brain's tests | 165 pass | one new: `alone_the_step_in_stays_shallow` |
@@ -451,7 +456,7 @@ Two readings of Table III, both cautious. The generations are counted on each is
 
 - **The ring sense is parked.** It is proved harmless and was not shown to help imitation; G19's result swings from 0 to 172 of 200 with the training run's random start alone, which is the next problem to solve.
 
-- **Not yet committed.** The orrery and crucible changes described in Section V are in their working trees on the evening of 4 November, awaiting review.
+- **Committed.** Everything in Section V is on the main lines: orrery `d9892ba` and `2b5ad05` (the Videos page), crucible `e09089a` (which has no remote), treadcore `5b2f7c7` (section 146). The ring sense itself is kept off main, in a stash.
 
 ## X. Conclusion
 

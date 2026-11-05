@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>One Queue for the Whole Fleet</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-071</p>
+    <h1>One Queue for the Whole Fleet</h1>
+    <div class="front"><p><strong>Check-in report CI-071.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 28 October 2026. Companion records: <code>LAB-REPORT-BRAIN.md</code> section 110; <code>LAB-REPORT-NET-PICTURES.md</code>; orrery's <code>docs/fleet-train.md</code>.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-071-2026-10-28-one-queue.md">documentation/checkins/CI-071-2026-10-28-one-queue.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>The parts:</p><ul><li><strong>The engine</strong>, orrery's <code>tools/fleet-queue.py</code>: a queue, a lane per machine, and a keeper that keeps them running and stops adding after five failures in a row.</li><li><strong>The planner</strong>, treadcore's <code>scripts/fleet-plan.py</code>, which fills the queue with trials of the scripted brain's 110 weights and rounds of the learned net, in turn.</li><li><strong>The controls:</strong> stop adding, and collect results and stop now. They are commands, and buttons in orrery's Training view.</li></ul><p>The sample run, on calber, columbia, nasser and the Mac:</p><ul><li>It built the queue's commit everywhere.</li><li>It ran a net round: trained on calber's GPU, judged on columbia, candidate +0.64 ± 0.40 over 4 seeds, so the best stays.</li><li>It ran 70 weight trials in five minutes. One read past two errors and was queued for its held-out reads.</li><li>It found two faults on the way.</li></ul></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>Have orrery keep the fleet busy training treadcore, rotating through every variable, with ways to stop that keep the results.</p><h3 id="b-the-prompts">B. The prompts</h3><blockquote><p>can the trainer for treadcore train all the variables, and maybe some feedback placeholders for positive and negative feedback . unsure if its a good idea, is this the right type of network. the orrery should have a treadcore trainer in a way such that It knows to train all the variables and rotate between them. Placing items onto the queue, and keeping these system alive, while allowing a stop adding to the queue button. and a collect results and stop now button.</p></blockquote><blockquote><p>take pictures of orrery and show detailed descriptions of why the picutres of the net look the way they do. describe the user interface and the improvements it would need to show analysis of AI training.</p></blockquote><blockquote><p>impressive lab report . place in documentation . can we get a sample run of orrery filling up its queue. lets see it work . tell me how to use it.</p></blockquote><p>Paul's choices: both kinds of variable in one queue; reward terms as the feedback placeholders.</p></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>"all the variables": two meanings in treadcore</td><td>Asked; Paul chose both in one queue</td><td>Choosing one</td></tr><tr><td>D2</td><td>orrery is the fleet's console; treadcore knows what training is</td><td>The engine in orrery (generic: jobs, lanes, keeper, stops); the planner in treadcore</td><td>One script in either repository</td></tr><tr><td>D3</td><td><code>make converge</code> already rotates through the weights</td><td>The planner calls <code>suggest.py</code> on the queue's own ledger</td><td>A new search</td></tr><tr><td>D4</td><td>Saskatchewan's run is at another commit with other defaults</td><td>The queue keeps its own ledger; merging with saskatchewan's waits for one commit</td><td>Merging ledgers built against different defaults</td></tr><tr><td>D5</td><td>A census is one machine's</td><td>A trial is one census on one host; a judge reads the candidate and the best on one binary</td><td>Pairing across machines</td></tr><tr><td>D6</td><td>"stop now" must not leave jobs running remotely</td><td>A job runs in its own process group with its pid on the host; stop-now kills the group</td><td>Killing the local ssh only</td></tr><tr><td>D7</td><td>Buttons that change the fleet</td><td>Drawn only for an operator with <code>--queue-ctl</code> (orrery's rule: what must not be reachable must not exist)</td><td>Buttons for every viewer</td></tr><tr><td>D8</td><td>"lets see it work"</td><td>A sample queue with small censuses on seeds no real run uses</td><td>The real settings first: an hour before anything showed</td></tr><tr><td>D9</td><td>The sample's 57 instant failures</td><td>The <code>nproc</code> fix, and a breaker: five failures in a row stop the adding</td><td>Retrying failed jobs</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><p>LR 110 A and C: <code>build/queue/sample</code> (config.json, plan.json as in orrery's <code>docs/fleet-train.md</code>), <code>fleet-queue.py ... ensure</code>, orrery <code>--gui --operator ... --queue-ctl ...</code>.</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><tbody><tr><td>builds</td><td>four hosts; calber 171 s with the trainer</td></tr><tr><td>net round 1</td><td>candidate less bc2 +0.64 +/- 0.40 over 4 seeds: the best stays</td></tr><tr><td>weight trials, 5 minutes</td><td>70, none failed after the fixes; one past two errors</td></tr><tr><td>faults</td><td><code>nproc</code> on the Mac (57 failed at once); no breaker. Both fixed</td></tr></tbody></table></div></section><section id="sv"><h2>V. Discussion</h2><p>The fleet can now be left to train treadcore. It keeps itself fed, keeps itself running, and stops when told, with its results kept.</p><p>The sample's numbers say only that it works. Four seeds of 2 minutes cannot tell a weight's effect from luck. The real settings (55 seeds of 900 s, and 400 held out) are what can.</p><p>The reward-term placeholders, and merging this queue's ledger with saskatchewan's run, are next.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

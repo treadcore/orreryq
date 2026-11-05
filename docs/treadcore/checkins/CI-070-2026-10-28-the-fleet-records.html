@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>The Fleet Records, the Card Trains</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-070</p>
+    <h1>The Fleet Records, the Card Trains: Twenty Times the Data</h1>
+    <div class="front"><p><strong>Check-in report CI-070.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 28 October 2026. Companion records: <code>LAB-REPORT-BRAIN.md</code> section 108; <code>LAB-REPORT-FLEET.md</code> (the pipes, the ssh and the time); <code>LEARNING-DESIGN.md</code> VIII and IX.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-070-2026-10-28-the-fleet-records.md">documentation/checkins/CI-070-2026-10-28-the-fleet-records.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>What was done:</p><ul><li>The fleet's spare CPUs (calber, the Mac, columbia; nasser joining) recorded the scripted brain in 1,200 matches in 14 minutes. Every shard was streamed to calber and checked by sha256 at both ends.</li><li>calber's 1080 Ti trained <code>bc2</code> on all 47 million training samples in 226 s, streaming them through the card.</li><li>A batch sweep found the card fastest at batch 32,768; larger batches are slower.</li></ul><p>What was found:</p><ul><li>Twenty times the data moved the drive head's held-out agreement from 65.5% to 66.6%. Rule part 2 passed.</li><li>In the census against bc1, paired on one binary: bc2 is 3.42 +/- 0.41 a seat better than bc1, paired on one binary (rule part 3 passed), and level with the official net map7 (+0.57 +/- 0.37, inside the noise).</li><li>The gauntlet and the match reading show what cloning learns: to survive, not to go anywhere. The clones die once in 40 matches and pass none of the gauntlet's journeys.</li><li>So the senses, not the amount of data, set the clone's ceiling.</li></ul></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>Use every spare CPU to record, train on CUDA, gather the results in one place, plan how jobs are collected and orchestrated, and find the batch size that fills the card.</p><h3 id="b-the-prompts">B. The prompts</h3><blockquote><p>deploy everywhere, even on spare cpus. run on cuda. consolidate results. plan collection and orchestration of batches. increase batch size to fill up cuda capabilities.</p></blockquote><blockquote><p>we also got 192.168.8.121</p></blockquote><blockquote><p>also install copal-tm. unsure why its not.</p></blockquote><blockquote><p>write a lab report explaining the pipe commands, the nested ssh connectivity between these orchestrated partners. how we collectively use our time and report findings back. in order to change the official listing of matrix scalars for the net (or however you store them).</p></blockquote><blockquote><p>what is the hostname of 192.168.8.224 .</p></blockquote><blockquote><p>cool. continue.</p></blockquote><blockquote><p>continue. commit and push when done.</p></blockquote></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>"even on spare cpus"; the load of each machine read first</td><td>calber, columbia, the Mac at <code>nice 19</code> on 5 threads; saskatchewan left out (load 23.8 of 24, <code>make converge</code>)</td><td>Every machine at full width: would slow the run on saskatchewan</td></tr><tr><td>D2</td><td>Recording is CPU work and training GPU work (LEARNING-DESIGN VIII)</td><td>CPUs record, the card trains</td><td>Training on the CPUs: Burn's CPU backend is 8 times slower (LR 107)</td></tr><tr><td>D3</td><td>LR 104 E's fleet design</td><td>Jobs claimed by <code>mv</code>, a manifest, a heartbeat, files as the record</td><td>A server or a message bus first: not on the network yet</td></tr><tr><td>D4</td><td>Only the Mac holds keys to all</td><td>A star: the Mac relays columbia's shards through a pipe</td><td>Host-to-host keys or agent forwarding: trust Paul has not granted (LAB-REPORT-FLEET II)</td></tr><tr><td>D5</td><td>Rehearse a script that touches four machines</td><td>A run of 6 seeds of 20 s first, on far seeds</td><td>The real run first</td></tr><tr><td>D6</td><td>50 million samples will not fit an 11 GB card as LR 107 laid them out</td><td>Compact samples, masks from tables, <code>gather</code>; streamed in chunks assembled on the CPU while the card trains</td><td>f16 senses: Pascal's f16 is slow, and storage alone does not solve 30 GB</td></tr><tr><td>D7</td><td>Two refused allocations of exactly 1,024 bytes a row; one of 3.7 GB refused on an empty card</td><td>Senses uploaded flat; no upload over 2 million samples</td><td>Guessing at memory: the failure said what the card did</td></tr><tr><td>D8</td><td>nasser's login shell is busybox <code>sh</code></td><td>Every remote command under bash, sent as base64</td><td>Requiring bash as every host's login shell: a change to each machine</td></tr><tr><td>D9</td><td>Two edits to the orchestrator while bash was running it</td><td>Original text written back into the same inode; the new version run from a copy, then put in place after the run</td><td>Leaving it: bash would have read a fragment of the new file on exit</td></tr><tr><td>D10</td><td>The rule (LR 108 B.3): pair on one binary, else read bc1 again</td><td>bc1 read again on bc2's binary (<code>f1c24a77</code>)</td><td>Pairing across binaries: CENSUS.md 5</td></tr><tr><td>D11</td><td>"unsure why its not"</td><td>Read first: installed by the Copal Store on columbia and saskatchewan, invisible to a non-login ssh; absent on nasser; installed there as the Store does it; all four on <code>8459277</code></td><td>Running <code>copal-store install</code>: it asks for doas, which needs Paul's password</td></tr><tr><td>D12</td><td>The gauntlet's list is fixed</td><td><code>GAUNTLET_NETS=</code> adds named nets</td><td>Making the clones milestones: they are not</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><p>LR 108 A to D and LAB-REPORT-FLEET III: <code>scripts/fleet-record.sh plan rec1200 9000060 1200 24</code>, <code>prepare</code>, <code>run</code>, <code>consolidate</code>; <code>tools/bc/sweep.sh</code>; <code>treadcore-bc all nets/bc2.bin 12 32768 1e-2</code> with <code>HELD=9000054-9000059,9001140-9001259</code>; <code>make census</code> on columbia with <code>CENSUS_NET=</code> bc2 then bc1; <code>make gauntlet GAUNTLET_NETS=bc1,bc2</code> and <code>make train CHECK=... MATCH=40</code> on the Mac.</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><tbody><tr><td>Recording</td><td>1,200 seeds, 49,807,225 samples, 29.2 GB in 14 min; every hash equal</td></tr><tr><td>The card's batch</td><td>32,768: 3.15 million samples a second; both halving and doubling are slower</td></tr><tr><td>bc2 training</td><td>47 million samples, 12 epochs in 226 s, 2.6 million a second streamed</td></tr><tr><td>Drive held out</td><td>bc2 66.6% +/- 0.1 against bc1 65.5% (bc1's seeds); 67.7% on 120 new seeds</td></tr><tr><td>Census, paired by seed</td><td>bc2 - bc1 +3.42 +/- 0.41 (one binary); bc2 - map7 +0.57 +/- 0.37; bc1 identical on both binaries, seed for seed</td></tr><tr><td>Gauntlet journeys (G5, G6, G7, G9)</td><td>0 to 0.5% for both clones</td></tr><tr><td>Match reading</td><td>deaths 0.03 (bc1, bc2), 0.82 (map7); damage 4, 4, 27</td></tr></tbody></table></div><p>Errors and false starts:</p><ul><li>an equivalence check bound written too tight in LR 107, widened before the run;</li><li><code>pkill -f &quot;nvidia-smi dmon&quot;</code> killed its own ssh session (bc2 was already written);</li><li>the gauntlet run first needed the extra nets;</li><li>the census's binary differed from bc1's because the fleet's worktrees shared columbia's <code>target/</code> (bc1 read again, as the rule said).</li></ul></section><section id="sv"><h2>V. Discussion</h2><p>The fleet works and its time is accounted for. The card, made efficient, reads all the data in four minutes.</p><p>The finding is about cloning. More examples of a choice the net cannot see the reason for teach it the safe guess: stand still, hold fire, survive. The drive label is the sector of a route the scripted brain planned over the whole map. Two ways forward, Paul to choose:</p><ol><li>Give the net the plan as senses: its route's next waypoint and its goal, as a sector and a distance.</li><li>Train on the census's own score (PPO from bc2), which needs no labels at all.</li></ol><p>The official net stays <code>nets/map7.bin</code> until a candidate beats it in the census (LAB-REPORT-FLEET VII).</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

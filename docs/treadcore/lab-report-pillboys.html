@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>Lab report</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../reports.html">lab reports</a> · <a href="../index.html">orrery</a></strong><a href="#1-the-requirement-as-received">1</a><a href="#2-method">2</a><a href="#3-findings">3</a><a href="#4-what-was-done">4</a><a href="#5-conclusion">5</a><a href="#6-not-done">6</a><a href="#references">References</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · lab report · pillboys</p>
+    <h1>Lab report: the Pillboy requirement, checked against the prior art</h1>
+    <div class="front"><p>12 October 2026, evening. A requirement arrived in the form of two documents: a beginner's tutorial for a "Tank Pillboy Game" (a prior-art descendant with pillboxes, depots, momentum driving and boats), and a technical audit of that tutorial against the prior art's original 1980s manual. The audit's verdict: the tutorial matched the prior art's core loop but got three things wrong, and could not, from a manual alone, say anything about the game's code. This report takes the audit's corrections as the requirement for treadcore's Pillboys, checks each against what treadcore already says and does, records what was decided, and says what is and is not done.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/LAB-REPORT-PILLBOYS.md">documentation/LAB-REPORT-PILLBOYS.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#1-the-requirement-as-received">1. The requirement, as received</a></li><li><a href="#2-method">2. Method</a></li><li><a href="#3-findings">3. Findings</a></li><li><a href="#4-what-was-done">4. What was done</a></li><li><a href="#5-conclusion">5. Conclusion</a></li><li><a href="#6-not-done">6. Not done</a></li><li><a href="#references">References</a></li></ol></nav>
+  <main>
+  <section id="1-the-requirement-as-received"><h2>1. The requirement, as received</h2><p>The audit corrected the tutorial on these points:</p><ol><li><strong>Construction is builder-mediated.</strong> In the prior art a click does not make a pillbox. It orders a builder, who leaves the tank, travels to the square, does the work if the material is there, and returns. The builder can be killed while out.</li><li><strong>Refuelling bases are not pillboxes.</strong> Bases replenish shells, mines and armor when the tank drives onto them, and are captured by being driven onto. There is no "repair the base" action; the tutorial had invented one by confusing base maintenance with pillbox repair.</li><li><strong>Range control is a cursor, not a weapon setting.</strong> The player can move an aim cursor nearer or farther; most shots do not need it because a shell hits the first obstacle; its real use is detonating mines at a distance.</li><li><strong>Movement has momentum and terrain-limited speed.</strong> Acceleration and deceleration take time; swamp and water are slow, roads and boats fast; a tank can overshoot a road into swamp.</li><li><strong>Driving is keyboard; clicks are for the builder.</strong> The tutorial's "click anywhere to control the tank" was wrong for the prior art.</li><li><strong>A manual cannot verify code.</strong> Exact update order, whether terrain limits velocity or applies drag, and the boat-boarding rule are unknowable without the source.</li></ol></section><section id="2-method"><h2>2. Method</h2><p>Each point was compared with three things: the brief as recorded (<code>CONCEPT.md</code> sections 1 and 7), the design (<code>DESIGN.md</code>), and the code as it ran this evening (<code>source/treadcore-sim/src/lib.rs</code>, <code>map.rs</code>, <code>rules.rs</code>; the trace from <code>make debug</code>). Where treadcore had no answer, one was decided and written into <code>DESIGN.md</code> before any code, which is what <code>ROADMAP.md</code> step 3 requires.</p></section><section id="3-findings"><h2>3. Findings</h2><div class="table"><table><thead><tr><th>audit point</th><th>The prior art</th><th>treadcore before</th><th>treadcore after</th><th>verdict</th></tr></thead><tbody><tr><td>1. builder</td><td>a unit that leaves the tank on a click, works, returns, can die</td><td>CONCEPT.md section 7 left the control model open: a unit the player moves, or an order the tank gives</td><td>decided: an order the tank gives (<code>Command::Deploy { task }</code>); the squad is state on the tank, walks the world's route to the task, is vulnerable to splash and strikes while out, returns</td><td>matches the prior art's model exactly, with the tank as the one thing driven</td></tr><tr><td>2. bases</td><td>drive on to refuel; drive on to capture; no repair action</td><td>depots: a tank inside 2 tiles of a friendly one resupplies every half second; alone on another's for 10 s captures it; two tanks contest (<code>step_depots</code>)</td><td>unchanged; written down that no Pillboy task touches a depot</td><td>already the prior art's; the tutorial's error is kept out</td></tr><tr><td>3. range cursor</td><td>an aim cursor nearer or farther; shells hit the first obstacle</td><td>the gun fires at a map coordinate (<code>FireIndirect { at }</code>, 12 to 60 tiles) and lands where aimed plus scatter; direct fire needs line of sight through no forest and hits a tank within 0.8 tiles of the aim point</td><td>unchanged</td><td>the coordinate aim is the cursor generalised; indirect fire over obstacles is the premise, so "hits the first obstacle" does not apply to it. Direct fire does not stop at the first tank in its path; noted, not changed</td></tr><tr><td>4. momentum, terrain</td><td>accelerate, decelerate, speed limited by terrain</td><td><code>TANK_ACCEL</code> 3 tiles/s^2 to a maximum of <code>TANK_SPEED / move_cost</code>: terrain limits the maximum velocity, not a drag; water is impassable, no swamp, no boats</td><td>plus a brake: a heading error over 0.6 rad drops the limit to a quarter, so the tank pivots at corners instead of swinging wide of a bridge</td><td>matches the documented behaviour; the audit's open question ("limit or drag?") has an answer here because the code is the specification</td></tr><tr><td>5. click to drive</td><td>keyboard drives; clicks order the builder</td><td>left click orders a destination; the world routes it</td><td>unchanged; written down as a deliberate divergence</td><td>the premise differs: the tank is a mobile command and the player orders it, as the player orders the drones and will order the Pillboys. One interaction model for everything deployed, including the tank</td></tr><tr><td>6. code verification</td><td>not possible from the manual</td><td>every rule is a <code>pub const</code> with a sentence in <code>rules.rs</code>; every step is <code>World::step</code>; <code>make debug</code> writes the match as events</td><td>unchanged</td><td>the audit's complaint about the prior art is a design goal met here: the rules are readable, and the trace shows them running</td></tr></tbody></table></div></section><section id="4-what-was-done"><h2>4. What was done</h2><ul><li><code>DESIGN.md</code> gained "Pillboys and pillboxes: the decision": the control model, the squad's data (<code>strength</code>, <code>aboard</code>, <code>pos</code>, <code>task</code>, <code>progress</code>, <code>material</code>), the four tasks, what a deployed squad risks, what depots remain, what pillboxes are (the prior art's, plus a short-range gun against drones), and what this must not change.</li><li><code>ROADMAP.md</code> step 3 now points at that decision and at this report.</li><li>Nothing in <code>treadcore-sim</code> was written for Pillboys. The roadmap orders the replay (step 1) and the world hash (step 2) first, so the change to the step function that Pillboys bring can be shown to do only what it meant to.</li></ul></section><section id="5-conclusion"><h2>5. Conclusion</h2><p>The requirement is accepted, with the three corrections the audit made taken as given: Pillboys are the prior art's builder (an order, resolved over time, under fire, by a squad that can be lost); depots stay refuelling bases with no repair action; aiming is a coordinate, which is the range cursor made general. Two divergences from the prior art are deliberate and are now written down: the player orders a destination rather than steering, and shells fly over what is between the gun and the aim point because indirect fire is the point of the game.</p><p>The audit's last point is the one worth keeping in mind. It could not tell, from the prior art's manual, how the prior art's movement really worked. treadcore can answer the same questions about itself in one file of constants and one <code>step</code> function, and a trace that shows them running: terrain limits the maximum speed (<code>TANK_SPEED / move_cost</code>), the update order is orders, tanks, drones, shells, depots, swarm, match, and there are no boats. When the Pillboys are built, the same will be true of them.</p></section><section id="6-not-done"><h2>6. Not done</h2><p>The Pillboy, pillbox and build code: roadmap step 3, after steps 1 and 2. A playable test of the decision (does ordering a squad feel like commanding, or like waiting?) needs the window, which this VM cannot yet open (<code>BUILD.md</code>, "The window in this VM").</p></section><section id="references"><h2>References</h2><ul><li>The tutorial and its audit, received 12 October 2026 (the audit cites the prior-art manual as reproduced online, the a Python port of the prior art repository, and the prior art's 2000-era port control guide).</li><li><code>documentation/CONCEPT.md</code> section 7; <code>documentation/DESIGN.md</code>; <code>documentation/ROADMAP.md</code> step 3; <code>documentation/RESEARCH.md</code>, the prior art.</li><li><code>source/treadcore-sim/src/lib.rs</code> (<code>apply</code>, <code>step_tanks</code>, <code>step_depots</code>), <code>rules.rs</code>, <code>map.rs</code> (<code>route</code>).</li></ul></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

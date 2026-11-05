@@ -1,0 +1,147 @@
+<meta charset="utf-8">
+<title>The Posture as Scores</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a><a href="#appendix-a">Appendix A</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-002</p>
+    <h1>The Posture as Scores</h1>
+    <div class="front"><p><strong>Check-in report CI-002.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 18 October 2026. Companion records: journal 0050; <code>LAB-REPORT-BRAIN.md</code> section 25; CI-001 (the step before).</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-002-2026-10-18-the-posture-as-scores.md">documentation/checkins/CI-002-2026-10-18-the-posture-as-scores.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li><li><a href="#appendix-a">Appendix A. Reproducing this report</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>CI-001 found that the team board's posture, which steers the Auto ladder under the <code>posture</code> capability, was a first-match ladder on thresholds, where the design (LR 9) called for scores. This step replaced it with five scores, each from 0 to 1 and each with a weight. A new scalar, <code>posture_scored</code>, blends them with the old ladder, so the old posture stays exactly one setting away. A unit test shows each posture winning on its own case. In three of the five cases the old ladder would have said Fortify. Measured over the same 48 seeds as CI-001, the scored posture read -1.04 ± 0.58 a seat, against -0.81 ± 0.65 for the ladder's: -0.23 ± 0.74 apart, no difference. Together the two read -0.93 ± 0.49. That moves the suspicion from the posture to the lean that overrides the ladder's order. <code>posture</code> stays off.</p><p><strong>Index terms:</strong> utility AI, team posture, influence map, paired comparison, standard error.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>To finish backlog 21, the next item CI-001 set out: the posture scored as LR 9 designed it, measured against the ladder it replaces on the same seeds.</p><h3 id="b-the-prompt">B. The prompt</h3><blockquote><p>commit and push, then start backlog 21</p></blockquote><h3 id="c-state-at-the-start">C. State at the start</h3><p>Commit <code>45641fc</code> (CI-001, journal 0049), pushed to <code>main</code>, with no tag, so no workflow ran. <code>posture</code> off and measured at -0.81 ± 0.65 with the ladder's posture. The standing rules of CI-001 I.C hold.</p></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>The prompt; backlog 21's form (hypothesis, proof, cost)</td><td>Score the five postures from LR 9's table; measure at 48 seeds against LR 24's run</td><td>A new design of postures: LR 9's table already said what each should score on</td></tr><tr><td>D2</td><td>Paul's rule, every either/or a scalar</td><td><code>posture_scored</code> blends the ladder's pick with the scores; each score gets a weight</td><td>Replacing the ladder outright: the register keeps old methods one switch away</td></tr><tr><td>D3</td><td>LR 9 Fortify: "an unfinished fort"; Connect: "road gaps"</td><td><code>Plan::castle_left</code> and <code>Plan::slots_left</code>, passed to the board in <code>Home</code> by the member that rebuilds it</td><td>Reading the plan from the board: the plan belongs to the commander, and the board must not hold a borrow of it</td></tr><tr><td>D4</td><td>LR 9 Economy: "low material"</td><td>Each member posts its squad's material; Economy is the share spent, or 1 when starved</td><td>Material counted from the rebuilding member's <code>obs.tanks</code>: posting is how the board already gathers readiness, so material takes the same path (whether an ally's squad is in every observation was not checked)</td></tr><tr><td>D5</td><td>First draft: no hostile seen gave odds of <code>press_odds</code>, so Expand scored 1 at every quiet start and beat a planned castle</td><td>No hostile seen is no front: even odds, Expand 0 (LR 9: "front odds")</td><td>Keeping it and lowering <code>w_pos_expand</code>: that tunes around a wrong input</td></tr><tr><td>D6</td><td>All seven board tests passed on the first run</td><td>Print each case's scores and the ladder's pick to see that each wins for its reason</td><td>Accepting a first-run pass unread</td></tr><tr><td>D7</td><td>Two measurements on the same seeds</td><td>Compare them seed by seed, as well as each against the baseline</td><td>Comparing the two means alone: the pairing removes the seeds' share of the noise</td></tr><tr><td>D8</td><td>The forms are no different, and both are about a point behind</td><td>Keep the scored posture as the default (LR 9's design, no worse) and <code>posture</code> off; backlog 27 counts which rungs the lean moves</td><td>Tuning <code>w_posture</code> down: the formula and LR 24 show it only stops the lean from acting</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><h3 id="a-apparatus-and-census">A. Apparatus and census</h3><p>As in CI-001 III.A to III.C: naval.map, 900 s, respawns 3, 16 seats, the fair census, and the paired difference over seeds with its standard error. Three ranges of 16 seeds (<code>CENSUS_SEED0</code> 0, 16, 32) ran side by side. The trial was <code>board, posture</code> with <code>w_posture</code> 0.5 and <code>posture_scored</code> 1; the baseline was <code>board</code>.</p><h3 id="b-the-parts-touched-function-by-function">B. The parts touched, function by function</h3><div class="table"><table><thead><tr><th>File</th><th>Function or type</th><th>What it does now</th></tr></thead><tbody><tr><td><code>board.rs</code></td><td><code>Home</code> (new)</td><td>what the rebuilding member knows of the base: <code>starved</code>, <code>castle_left</code>, <code>slots_left</code></td></tr><tr><td><code>board.rs</code></td><td><code>PostureScores</code> (new), <code>PostureScores::of</code></td><td>the five scores; one by posture</td></tr><tr><td><code>board.rs</code></td><td><code>Posture::ALL</code> (new)</td><td>the five in the ladder's order, the order ties go by</td></tr><tr><td><code>board.rs</code></td><td><code>Member.material</code> (new field), <code>TeamBoard::post</code></td><td>each member posts its squad's material as a share of full</td></tr><tr><td><code>board.rs</code></td><td><code>TeamBoard::rebuild</code></td><td>takes <code>Home</code> in place of <code>starved</code>; works out the ladder's pick as before, then the scores, then the blend</td></tr><tr><td><code>board.rs</code></td><td><code>TeamBoard.scores</code>, <code>TeamBoard.ladder</code> (new fields)</td><td>the scores and the ladder's pick, kept for the screen, the census and the tests</td></tr><tr><td><code>fortify.rs</code></td><td><code>Plan::castle_left</code> (new)</td><td>the share of the castle's items not done or skipped</td></tr><tr><td><code>fortify.rs</code></td><td><code>Plan::slots_left</code> (new)</td><td>the share of pillbox slots (turrets, the road slot, posts) still empty</td></tr><tr><td><code>commander.rs</code></td><td>the board block of <code>think_on</code></td><td>builds <code>Home</code> from its plan and base and passes it to <code>rebuild</code></td></tr><tr><td><code>weights.rs</code></td><td><code>posture_scored</code>, <code>w_pos_defend</code>, <code>w_pos_economy</code>, <code>w_pos_fortify</code>, <code>w_pos_connect</code>, <code>w_pos_expand</code></td><td>the blend and the five weights, all 1</td></tr></tbody></table></div><h3 id="c-the-scores">C. The scores</h3><p>With <code>T</code> the hostile worth within the base's 16-tile alarm (a full tank 1), <code>m</code> the members' mean material share, and <code>o</code> the ratio of allied to hostile tank worth in sight (1 if no hostile is seen):</p><div class="code"><span class="lang">latex</span><pre><code>s_D = \min(1, T / 0.5), \quad
+s_E = \begin{cases}1 &amp; \text{starved}\\ 1 - m &amp; \text{else}\end{cases}, \quad
+s_F = \text{castle\_left}, \quad
+s_C = \text{slots\_left}, \quad
+s_X = \operatorname{clamp}\!\left(\frac{o - 1}{\text{press\_odds} - 1}, 0, 1\right)</code></pre></div><div class="code"><span class="lang">latex</span><pre><code>\text{value}(p) = (1 - k)\,[p = \text{ladder}] + k\, w_p\, s_p</code></pre></div><p>The best value wins, ties in the order Defend, Economy, Expand, Connect, Fortify; Fortify if every value is 0.</p><h3 id="d-the-proof">D. The proof</h3><p><code>each_posture_scores_its_own_case</code>: sixteen seats in two teams, ours by the base and theirs 80 tiles off, with full vision (<code>advantage</code>). Five cases are built from the same world, each varying one input, and a sixth puts a hostile tank at the gate. Each case must pick its posture at <code>posture_scored</code> 1 and the ladder's pick at 0. The test prints each case's scores (D6).</p></section><section id="siv"><h2>IV. Results</h2><h3 id="a-the-test">A. The test</h3><div class="table"><table><thead><tr><th>Case</th><th>Picked</th><th>The ladder's</th><th>Scores (D / E / F / C / X)</th></tr></thead><tbody><tr><td>a castle just planned, even odds</td><td>Fortify</td><td>Fortify</td><td>0 / 0 / 1 / 0 / 0</td></tr><tr><td>the castle up, its slots half empty</td><td>Connect</td><td>Fortify</td><td>0 / 0 / 0 / 0.5 / 0</td></tr><tr><td>the castle up, the squads spent</td><td>Economy</td><td>Fortify</td><td>0 / 0.8 / 0 / 0 / 0</td></tr><tr><td>a starved plan</td><td>Economy</td><td>Economy</td><td>0 / 1 / 1 / 0 / 0</td></tr><tr><td>eight of ours against two in sight</td><td>Expand</td><td>Fortify</td><td>0 / 0 / 0 / 0 / 1</td></tr><tr><td>a hostile at the gate</td><td>Defend</td><td>Defend</td><td></td></tr></tbody></table></div><h3 id="b-the-census-48-seeds">B. The census (48 seeds)</h3><div class="table"><table><thead><tr><th>Posture</th><th>d̄ a seat</th><th>SE</th><th>Ranges</th><th>Postures read (E / F / C / X / D)</th></tr></thead><tbody><tr><td>the ladder's (CI-001)</td><td>-0.81</td><td>0.65</td><td>+1.21, -1.30, -2.16, -1.01 (12 each)</td><td>16 / 47 / 19 / 18 / 0.4%</td></tr><tr><td>scored</td><td>-1.04</td><td>0.58</td><td>+0.40, -1.46, -2.07 (16 each)</td><td>37 / 43 / 6 / 15 / 0.5%</td></tr><tr><td>scored less the ladder's</td><td>-0.23</td><td>0.74</td><td></td><td></td></tr><tr><td>both, averaged a seed</td><td>-0.93</td><td>0.49</td><td></td><td></td></tr></tbody></table></div><p>The seed spread was 4.0 a seat. The two runs' per-seed differences correlate at 0.28: a seed's start explains little of either.</p><h3 id="c-tests">C. Tests</h3><p><code>make test</code>, every crate: brain 68 passed and 8 ignored (new: <code>each_posture_scores_its_own_case</code>); client 31; net 14; proto 3; sim</p><ol><li>No warnings.</li></ol></section><section id="sv"><h2>V. Discussion</h2><ol><li><strong>The posture was not the problem.</strong> Two different ways of working it out give the same result within the noise. Finding A3 of CI-001 was a real design fault, and fixing it changed which postures are read (Economy 16% to 37%, Connect 19% to 6%), but not the score.</li><li><strong>The lean is the suspect.</strong> Both forms override the ladder's own order, and both are about a point behind. The ladder's order (DefendBase, Fortify, Turrets, Hunt, Expand, Guard) is the brain of 17 October, tuned by play; a lean that lifts Expand over Fortify whenever material is low may simply be worse play. Backlog 27 measures which rungs gain.</li><li><strong>Ranges read their own luck again.</strong> The last 16 seeds alone were outside two errors (-2.07 ± 0.99); the 48 are not. Only the whole sample counts, and only on seeds chosen before the run.</li><li><strong>On the architecture.</strong> The step added a <code>Home</code> read-out because the board cannot see the plan. That is finding A5 of CI-001 again: the brain's state is spread across the commander, the plan and the board, joined by whoever is first due. A team-level owner of the plan (the fleet commander, <code>crew.rs</code>) would be the natural place for these inputs. That is a larger change, for when the lean pays.</li></ol><p><strong>Next:</strong> backlog 27, which rungs the lean moves; then 23, the honest tuner.</p></section><section id="appendix-a"><h2>Appendix A. Reproducing this report</h2><div class="code" class="diagram"><pre><code>CENSUS_DUMP=scored.toml CENSUS_SEEDS=0 CENSUS_CAPS=board,posture \
+  cargo test -q -p treadcore-brain --release -- --ignored brain_census --nocapture
+for k in 0 16 32; do CENSUS_SEED0=$k CENSUS_SEEDS=16 CENSUS_WEIGHTS=scored.toml \
+  CENSUS_BASE_CAPS=board CENSUS_MAP=$PWD/maps/naval.map CENSUS_RESPAWNS=3 CENSUS_LEDGER=0 \
+  cargo test -q -p treadcore-brain --release -- --ignored brain_census --nocapture &gt; scored-$k.log 2&gt;&amp;1 &amp; done; wait
+cargo test -q -p treadcore-brain --release -- each_posture --nocapture</code></pre></div></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

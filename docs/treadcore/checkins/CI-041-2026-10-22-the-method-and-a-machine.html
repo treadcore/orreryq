@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>The Method, a Machine for It, and Competitions</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-041</p>
+    <h1>The Method, a Machine for It, and Competitions</h1>
+    <div class="front"><p><strong>Check-in report CI-041.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 22 October 2026. Companion records: journal 0098; <code>LAB-REPORT-BRAIN.md</code> sections 71 (final) and 72; <code>CENSUS.md</code>; <code>CLAUDE.md</code>; roadmap backlog 58 to 61.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-041-2026-10-22-the-method-and-a-machine.md">documentation/checkins/CI-041-2026-10-22-the-method-and-a-machine.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>LR 71's census ended at +5.94 +/- 0.38 a seat over 176 seeds, and its section now carries the final numbers. The census's cost was measured: 3.4 CPU-hours and 5 MB a job, with each job given only a third of a core in the guest VM. The census needs cores and nothing else. This check-in prepares it for a dedicated machine. It adds a manual (<code>CENSUS.md</code>), a resume option (<code>RESUME=</code>, checked to replay a job exactly), <code>JOBS</code> defaulting to every core, and <code>CLAUDE.md</code>, so a session on a new clone has the working rules. LR 72 sets out the method behind 71 sections (directed changes tested by paired Monte Carlo censuses, drawn as a loop). It also sets out what a machine opens: profiles of play, their round robin as a payoff matrix that can show rock-paper-scissors, and rotation among them as a meta-strategy (backlog 60, 61).</p><p><strong>Index terms:</strong> brain census, Monte Carlo, paired difference, compute, resumable runs, payoff matrix, mixed strategy.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>To finish LR 71's record, then turn the census from a test that runs overnight in a VM into an instrument a dedicated machine can run and a new session can resume. Then to write down the method and the next question it makes affordable: no single style of play may be best.</p><h3 id="b-the-prompts">B. The prompts</h3><blockquote><p>what other backlog itmes need. should we be testing this on the mac side. seems we are ram and cpu limted. what resources do you need. I can put you on a server. What would speed this up. I got a DDR2 server with 96 GB of ram. or perhaps  64GB DDR4 new pc. Is there an improvement that we can change our testing hardware?</p></blockquote><blockquote><p>its a dual socket supermicro server board, . I think it has 48 threads maybe cores.</p></blockquote><blockquote><p>update section 71 with the final numbers and push. WRite a lab writeup of using the cargo test -p treadcore-brain consensus. With options of resuming this test as a resume prompt . so write memory in a way that git can resume from it when I launch claude on the new machine. Talk about tuning the brain method. Talk about our approach, and this milestone of getting a dedicated compute to dial in the AI battles. So now we can have competitions .</p></blockquote><blockquote><p>update section 71 with the final numbers and push. WRite a lab writeup of using the cargo test -p treadcore-brain consensus. With options of resuming this test as a resume prompt . so write memory in a way that git can resume from it when I launch claude on the new machine. Talk about tuning the brain method. Talk about our approach, and this milestone of getting a dedicated compute to dial in the AI battles. So now we can have competitions, and variations of game attitudes and game play style. We can create profiles in a rock paper scissors like game. Cause there is no single method that works. Perhaps a rotation to strategies is even a meta strategy. when done. draw a diagram on the lab report showing the process of brain improvement using directed changes and testing monty carlo (if thats what we are doing).</p></blockquote></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>"seems we are ram and cpu limted"</td><td>Measure first: <code>ps</code> and <code>free</code> during the run</td><td>Answer from the hardware list: the guess would have been RAM</td></tr><tr><td>D2</td><td>F: 5 MB a job; 44 min of CPU in 2 h 22 min a job</td><td>The census is CPU-bound and the VM is starved; RAM rules out neither box</td><td>—</td></tr><tr><td>D3</td><td>F: a DDR2 board cannot carry 48 threads on two sockets</td><td>Ask for <code>lscpu</code>; estimate both cases</td><td>Choose on "DDR2": the thread count matters more</td></tr><tr><td>D4</td><td>"update section 71 with the final numbers"</td><td><code>pooled.txt</code> replaces the part-way table; the meter recounted from per-match lines only</td><td>F: the jobs' end summaries had doubled the first count</td></tr><tr><td>D5</td><td>"options of resuming this test"</td><td><code>RESUME=DIR</code>: keep finished jobs, replay the rest whole on the frozen binary</td><td>Resume mid-job from the last whole seed: more code, and a job is under an hour on a machine</td></tr><tr><td>D6</td><td>Resuming is only sound if a seed replays exactly</td><td>Checked: a resumed job's log matched the original line for line, timings apart</td><td>Assume it</td></tr><tr><td>D7</td><td>"write memory in a way that git can resume from it"</td><td><code>CLAUDE.md</code> in the tree with the working rules; the resume prompt in <code>CENSUS.md</code></td><td>The agent's memory directory: it stays on this machine</td></tr><tr><td>D8</td><td>"monty carlo (if thats what we are doing)"</td><td>Yes, for the testing half; the changes are directed, not random. Drawn as a loop in LR 72</td><td>Call the whole loop Monte Carlo: the changes are hypotheses, not samples</td></tr><tr><td>D9</td><td>"rock paper scissors ... rotation ... meta strategy"</td><td>The round robin's payoff matrix as the test; its solved mix as rotation; backlog 60, 61</td><td>Build profiles now: Paul asked for the write-up, and one step at a time</td></tr><tr><td>D10</td><td>x86 and ARM may round floats differently</td><td>"One census, one machine" in CENSUS.md and CLAUDE.md</td><td>Pool across machines for speed: the pairing would not hold</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><p><strong>The cost.</strong> During LR 71, <code>ps</code> gave each <code>census-bin</code> job's CPU time and elapsed time (44:06 of CPU in 2:22:30) and its resident memory (4 to 5 MB). <code>free</code> gave the VM's 8 GB. The CPU-hours are the four jobs' CPU time to the end. The machine estimates scale those hours by assumed cores and per-core speed; they are estimates, marked so.</p><p><strong>The final reading.</strong> <code>scripts/pool.sh</code> over the four jobs' logs (<code>pooled.txt</code>). The meter's dodge counts were summed over the lines beginning <code>  meter:</code> only. Each job's closing summary repeats the totals, which doubled the first count.</p><p><strong>The resume check.</strong> <code>SEEDS=2 SECS=20 JOBS=2 make census</code>; one job's <code>test result</code> line removed; <code>RESUME=</code> on the directory. The job was replayed, the old log kept as <code>.partial</code>, and the two compared with timing lines excluded: identical.</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><tbody><tr><td>LR 71, final</td><td>+5.94 +/- 0.38 a seat, 176 seeds; 10 of 11 maps past two errors; fortressisles2 +2.29 +/- 1.15</td></tr><tr><td>Cost of LR 71</td><td>3.4 CPU-hours; 23 s of CPU a match; 5 MB a job; about 1.2 cores used of the VM's 4</td></tr><tr><td>The dodge, read by seed count</td><td>+5.63 +/- 1.80 at 10 seeds of one job, +7.05 +/- 1.24 at 20</td></tr><tr><td>Resume</td><td>a replayed job identical to the original</td></tr></tbody></table></div></section><section id="sv"><h2>V. Discussion</h2><ol><li><strong>The limit was never RAM.</strong> A census is cores. The 96 GB and the 64 GB are equally beside the point. The server's 48 threads, if it has them, are what matter.</li><li><strong>The method is the loop in LR 72.</strong> Directed changes, judged by paired Monte Carlo censuses against a rule written first.</li><li><strong>The machine changes which questions can be asked.</strong> Seeds were rationed, so most parts were read at 12 to 48. The round robin of profiles is a dozen censuses: a night in the VM, a few hours on the server.</li></ol><p><strong>For Paul:</strong> the machine's <code>lscpu</code>, then CENSUS.md section 5 on it. The first run there is LR 71's census again, to time it.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

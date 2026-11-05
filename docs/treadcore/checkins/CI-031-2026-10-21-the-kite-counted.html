@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>The Kite Counted</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-031</p>
+    <h1>The Kite Counted</h1>
+    <div class="front"><p><strong>Check-in report CI-031.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 21 October 2026. Companion records: journal 0088; <code>LAB-REPORT-BRAIN.md</code> section 65; CI-030; roadmap backlog 54, 55.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-031-2026-10-21-the-kite-counted.md">documentation/checkins/CI-031-2026-10-21-the-kite-counted.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>Backlog 54. The kite was the one part left leaning below zero (LR 64, -0.94 +/- 0.77 at 48 seeds), and the meter counted no kiting. A new meter counts each live seat's seconds by kite step. Over 12 seeds of the fair census the trial seat kites 4.7% of its seconds alive, about 114 s a match. Of that, 62% is spent holding past the target's reach, 18% massing, 11% stepping out and 9% stepping in. The kite acts, and mostly waits. The meter changes no play (the per-seed differences are LR 63's). The kite stays on; its hold goes to a duel family, backlog 55.</p><p><strong>Index terms:</strong> kite, meter, census, tuning.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>To learn whether the kite acts on naval.map, and what it does when it does, before any number of it is tuned.</p><h3 id="b-the-prompt">B. The prompt</h3><blockquote><p>continue</p></blockquote></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>The prompt; CI-030 named 54 next</td><td>Backlog 54</td><td>—</td></tr><tr><td>D2</td><td><code>Act::kite()</code> already names the step for all three kites (<code>Kite</code>, <code>WingKite</code>, <code>RallyKite</code>)</td><td>Count the act once a second after the think (<code>think_released</code>)</td><td>Counting inside <code>Tactician::kite</code>: it is also asked by plain RuleBots and in what-ifs, which do not move the tank</td></tr><tr><td>D3</td><td>The question is "how much of a life"</td><td>Seconds by step, out of seconds alive, by group</td><td>Kills won and lost while kiting: needs kill attribution the meter lacks; the time answers the hypothesis's first branch</td></tr><tr><td>D4</td><td>Steps are 8</td><td>Five words in the line (stepping in and holding summed)</td><td>Eight: the reasons inside a hold are for 55</td></tr><tr><td>D5</td><td>F: 4.7% of the life, 62% holding</td><td>The kite stays on; its hold to a duel family (55)</td><td>Tuning <code>kite_spare</code> on the census: a number moved by noise; a family scores a duel</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><p><strong>Code.</strong> <code>meter.rs</code>: <code>Meter::kites: [[u64; 9]; 2]</code>, by group the 8 steps in <code>KiteStep::ALL</code>'s order and seconds alive; <code>kite(step)</code>; summed in <code>add_fronts</code>; the census line. <code>commander.rs</code>: <code>think_released</code>, for a live seat on a whole second, <code>meter::kite(self.act.kite())</code>. Test: <code>a_second_alive_counts_its_kite_step</code>.</p><p><strong>Read.</strong> <code>build/lr65/run.sh</code>: a frozen binary; the fair census, naval.map, 900 s, 3 respawns, seeds 0 to 11 in three jobs of 4; trial the defaults, baseline <code>caps = baseline, -kite</code>. The meter totals from each job's census line, summed.</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th>Measure</th><th>Result</th></tr></thead><tbody><tr><td>Trial seconds alive</td><td>88,122</td></tr><tr><td>Kiting</td><td>4,111 (4.7%), about 114 a trial match</td></tr><tr><td>Holding / massing / stepping out / stepping in / closing</td><td>2,549 / 746 / 433 / 356 / 27</td></tr><tr><td>The rest kiting (kite off)</td><td>0 of 199,437</td></tr><tr><td>Difference a seat, 12 seeds</td><td>-1.76 +/- 1.04 (LR 63's row)</td></tr></tbody></table></div><p>Tests: brain 84 passed and 11 ignored; client 32; net 14; proto 3; sim 50.</p></section><section id="sv"><h2>V. Discussion</h2><ol><li><strong>The kite acts, and waits.</strong> Two minutes a match of a part is not seldom; six tenths of it is a tank past its target's reach, waiting for a window.</li><li><strong>Time is not cost.</strong> Whether those minutes are lost depends on what the tank would do instead, which a census cannot isolate and a duel can.</li></ol><p><strong>For Paul:</strong> none blocking. Backlog 55, the kite's hold in a duel, is next. Commits are local; nothing was pushed.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

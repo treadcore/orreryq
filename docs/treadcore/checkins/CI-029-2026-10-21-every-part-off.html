@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>Every Part Off, One at a Time</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-029</p>
+    <h1>Every Part Off, One at a Time</h1>
+    <div class="front"><p><strong>Check-in report CI-029.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 21 October 2026. Companion records: journal 0086; <code>LAB-REPORT-BRAIN.md</code> section 63; CI-028; roadmap backlog 48, 53.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-029-2026-10-21-every-part-off.md">documentation/checkins/CI-029-2026-10-21-every-part-off.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>Backlog 48, the starting numbers for the brain with every part on. LR 55 read every part on at -0.85 +/- 0.59 a seat against LR 54's defaults, and the hypothesis put that cost on one or two parts, by history the posture's lean and <code>team_rotate</code>. A new tool, <code>make parts</code>, turns each of 31 parts (17 capabilities, 14 weights) off from the all-on brain over the fair census at 12 seeds. One part reads past two standard errors, the dodge, and it pays (+5.20 +/- 1.91). The posture (+1.82) and <code>team_rotate</code> (+0.83) read as paying. The plan's halved weights (<code>w_posture</code> 0.25, <code>swap_gap</code> 0.6) read +0.61 +/- 0.60 at 48 seeds, and the table's lowest row halved (<code>landfall_wait</code> 5) -0.09 +/- 0.46. The hypothesis is not supported; the defaults stand. No brain code changed.</p><p><strong>Index terms:</strong> tuning, ablation, census, every part on.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>To take backlog 48 now that CI-026's feature list is built: find which part, if any, carries the cost of every part on, and set its number.</p><h3 id="b-the-prompts">B. The prompts</h3><blockquote><p>continue. also . good luck claude, you are a force of good.</p></blockquote><blockquote><p>continue</p></blockquote></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>The prompt; CI-028 named 48 next</td><td>Backlog 48</td><td>—</td></tr><tr><td>D2</td><td><code>make switches</code> turns off parts on; every part is on since LR 55</td><td><code>make parts</code>, its reverse, a script beside it</td><td>Reusing <code>switches.sh</code> with a flag: the baseline and trial swap seats and the list differs; two short scripts read plainer</td></tr><tr><td>D3</td><td>A weight has no <code>-name</code></td><td>Each weight off at the value its doc line names as before it</td><td>Halving each: a half-weight measures the number, not the part; the number follows the part</td></tr><tr><td>D4</td><td>Four cores</td><td><code>JOBS=4</code>, 12 seeds a part, about 1.5 h</td><td>48 seeds a part: about 6 h for 31</td></tr><tr><td>D5</td><td>F: no part costs past two errors; the posture and <code>team_rotate</code> read paying</td><td>The plan's halved weights at 48 seeds anyway</td><td>Dropping them: the plan set the proof before the table, and a 12-seed read is not a refutation</td></tr><tr><td>D6</td><td>F: <code>landfall_wait</code> the lowest row</td><td>Halved (5) at 48 seeds beside it</td><td><code>kite</code> off: a yes/no, and the remaining rows go to 53 together</td></tr><tr><td>D7</td><td>F: +0.61 +/- 0.60, -0.09 +/- 0.46</td><td>The defaults kept</td><td>Taking +0.61: one error; LR 54's rule promotes past two</td></tr><tr><td>D8</td><td>The table ranks parts below zero (<code>kite</code>, <code>duck</code>, <code>dodge_fire</code>)</td><td>Backlog 53, each at 48 seeds</td><td>Running them now: the step's proof is done; each is its own question</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><p><strong>Tool.</strong> <code>scripts/parts.sh</code>, <code>make parts</code>. A frozen census binary (<code>census_bin</code>); <code>on.weights</code> is <code>caps = baseline</code>; for each part a weights file with <code>caps = baseline, -name</code> or <code>caps = baseline</code> and <code>name = value</code>. The census <code>brain_census</code> with <code>CENSUS_WEIGHTS</code> the trial (every part on) and <code>CENSUS_BASE_WEIGHTS</code> the part off, <code>CENSUS_LEDGER=0</code>; <code>JOBS</code> at once. A table of the trial and baseline mean, the difference a seat and its error, from each log. Env: <code>PARTS</code>, <code>SEEDS</code> (12), <code>SECS</code> (900), <code>MAP</code> (naval.map), <code>RESPAWNS</code> (3), <code>JOBS</code>.</p><p><strong>Each part off.</strong> <code>JOBS=4 make parts</code>: the 17 capabilities and the 14 weights <code>w_smooth dodge_plan dodge_release dodge_every dodge_fire duck_plan landfall_shy landfall_wait landfall_memory w_front front_memory w_front_post w_front_push w_site_beach</code>, each at 0. naval.map, 900 s, 3 respawns, seeds 0 to 11. <code>build/parts/20261021-085753</code>.</p><p><strong>The candidates.</strong> <code>build/lr63a/run.sh</code>, <code>build/lr63b/run.sh</code>: a frozen binary each; the fair census, naval.map, 900 s, 3 respawns, seeds 0 to 47 in three jobs of 16, run one after the other; trial (a) <code>w_posture = 0.25</code>, <code>swap_gap = 0.6</code>, (b) <code>landfall_wait = 5</code>; baseline the defaults. Pooled: the mean of the 48 per-seed differences, its error their standard deviation over the square root of 48.</p></section><section id="siv"><h2>IV. Results</h2><p>The 31-row table is in section 63. Summary:</p><div class="table"><table><thead><tr><th>Measure</th><th>Result</th></tr></thead><tbody><tr><td>Parts past two errors at 12 seeds</td><td>1 of 31: the dodge, +5.20 +/- 1.91 (pays)</td></tr><tr><td>Parts reading above zero</td><td>21 of 31</td></tr><tr><td>The posture off</td><td>+1.82 +/- 0.94 (pays)</td></tr><tr><td><code>team_rotate</code> off</td><td>+0.83 +/- 0.88 (pays)</td></tr><tr><td>The lowest rows</td><td><code>landfall_wait</code> -2.03 +/- 1.29, <code>kite</code> -1.76 +/- 1.04, <code>duck</code> -1.57 +/- 0.96</td></tr><tr><td><code>escort</code> off</td><td>0.00: no escort arose in 12 seeds on naval.map</td></tr><tr><td>(a) <code>w_posture</code> 0.25, <code>swap_gap</code> 0.6, 48 seeds</td><td>+0.61 +/- 0.60 (1.0 errors)</td></tr><tr><td>(b) <code>landfall_wait</code> 5, 48 seeds</td><td>-0.09 +/- 0.46 (0.2 errors)</td></tr></tbody></table></div><p>Tests: brain 83 passed and 11 ignored; client 32; net 14; proto 3; sim</p><ol><li>Seven families, each above its floor. 101 weights, 17 bits,</li></ol><p>unchanged.</p></section><section id="sv"><h2>V. Discussion</h2><ol><li><strong>The cost is not a part.</strong> LR 55's -0.85 was 1.4 errors. Read with a table in which no part costs past two errors and two thirds read as paying, it is most likely the sum of small effects of both signs, or noise.</li><li><strong>The parts the history blamed pay.</strong> The posture's lean and <code>team_rotate</code> cost in earlier, partial brains; with the board, the front and the dodge beside them they read as gains.</li><li><strong>Twelve seeds rank; 48 decide.</strong> The table is a list of where to spend the night's censuses, which backlog 53 takes.</li><li><strong>A part that never acts.</strong> <code>escort</code> reads exactly 0 on naval.map; its proof needs a map where a builder crosses.</li></ol><p><strong>For Paul:</strong> none blocking. Backlog 53, the bottom of the table at 48 seeds, is next in goal 4. Commits are local; nothing was pushed.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

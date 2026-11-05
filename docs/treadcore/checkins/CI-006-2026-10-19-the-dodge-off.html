@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>The Dodge Off</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-006</p>
+    <h1>The Dodge Off</h1>
+    <div class="front"><p><strong>Check-in report CI-006.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 19 October 2026. Companion records: journal 0054; <code>LAB-REPORT-BRAIN.md</code> section 29; CI-004, CI-005.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-006-2026-10-19-the-dodge-off.md">documentation/checkins/CI-006-2026-10-19-the-dodge-off.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>The shell dodge was the code held last at 43% of deaths (CI-004), and holding it longer cost 1.18 a seat (CI-005). This step turned it off for the trial team over 48 seeds: <strong>-2.45 ± 0.67 a seat</strong>, outside the noise. The dodge pays. A rough counterfactual from the meter shows it nearly halving the dodged shell's hits ashore and changing nothing afloat. Backlog 28 closes. Backlog 31, a weight for dodging afloat, is the next part.</p><p><strong>Index terms:</strong> reflexes, ablation, counterfactual, paired census.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>To finish backlog 28 with the ablation CI-004 set.</p><h3 id="b-the-prompt">B. The prompt</h3><blockquote><p>commit. push. continue backlog</p></blockquote><p>Read as: record the dodge-off run when it lands, commit and push it, and set the next backlog item.</p></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>F: -2.45 ± 0.67, 3.7 errors</td><td>The dodge stays on; backlog 28 done</td><td>Reading the 43% death share as a cost: the ablation says the opposite</td></tr><tr><td>D2</td><td>F: the meter still counted near-null dodges with <code>-dodge</code></td><td>Read the code: <code>order_with</code> meters before <code>dodges</code> drops the order; use it as a would-be count</td><td>Calling the run broken: the trial team's moves were dropped, as the score shows</td></tr><tr><td>D3</td><td>The would-be counts are mixed with the baseline teams'</td><td>Estimate undodged rates as 3 × run − 2 × null, labelled as a direction</td><td>Reporting the mixed rates as the trial team's</td></tr><tr><td>D4</td><td>F: afloat, undodged ≈ dodged</td><td>Backlog 31: <code>dodge_afloat</code>, a weight (1, today's), after the either/or rule</td><td>Turning the boat's dodge off outright: a scalar lets the tuner find the value</td></tr><tr><td>D5</td><td>D3's estimate</td><td>Backlog 31 starts with the meter by team, would-be apart from taken</td><td>Building <code>dodge_afloat</code> on an estimate</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><p><code>CENSUS_CAPS=-dodge</code> (the trial team's <code>dodges</code> false; <code>Commander:: set_settings</code>), the defaults for the baseline teams. <code>CENSUS_SEED0</code> 0, 16, 32 with <code>CENSUS_SEEDS=16</code>, side by side; naval.map, 900 s, respawns 3, the fair census, the ledger off.</p><p>The part: <code>Commander::think_on</code> calls <code>self.dodge.order_with(..)</code> (<code>lib.rs</code>), which starts the watch and meters, and then filters the order by <code>self.dodges</code>; <code>holding</code> is likewise gated by <code>dodges</code>. With the switch off, the meter therefore records each dodge the trial team would have made and its outcome undodged.</p><p>Estimate: with the trial team's share of shells taken as one third, run rate r = r_u / 3 + 2 r_d / 3, so r_u = 3r − 2r_d, with r_d the null run's dodged rate (CI-004).</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th></th><th>d a seat</th></tr></thead><tbody><tr><td><code>dodge_hold</code> 1 (CI-005)</td><td>-1.18 ± 0.55</td></tr><tr><td><code>-dodge</code></td><td><strong>-2.45 ± 0.67</strong></td></tr></tbody></table></div><p>By range of 16 seeds: -4.11 ± 1.10, -1.39 ± 1.14, -1.84 ± 1.19.</p><div class="table"><table><thead><tr><th></th><th>Dodged (null)</th><th>Undodged, estimated</th></tr></thead><tbody><tr><td>Ashore, hit by the shell</td><td>16.6%</td><td>≈30%</td></tr><tr><td>Ashore, killed</td><td>7.4%</td><td>≈11%</td></tr><tr><td>Afloat, hit by the shell</td><td>7.6%</td><td>≈8%</td></tr><tr><td>Afloat, killed</td><td>16.6%</td><td>≈14.5%</td></tr></tbody></table></div></section><section id="sv"><h2>V. Discussion</h2><ol><li><strong>A death census overstates a reflex.</strong> The code most deaths passed through is the part worth most. Before reading any reflex's share of deaths, the ablation has to be run.</li><li><strong>Ashore and afloat are two parts.</strong> The same dodge saves a tank and costs a boat its crossing for nothing. That is an either/or, so it becomes a weight.</li><li><strong>Instrument by team.</strong> The meter's per-world counts forced an estimate; per-team and taken-or-not counts make the next reading exact.</li></ol><p><strong>Next:</strong> backlog 31, the meter first; then backlog 30.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

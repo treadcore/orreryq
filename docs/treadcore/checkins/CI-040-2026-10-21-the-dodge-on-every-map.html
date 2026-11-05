@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>The Dodge on Every Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-040</p>
+    <h1>The Dodge on Every Map</h1>
+    <div class="front"><p><strong>Check-in report CI-040.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 21 October 2026. Companion records: journal 0097; <code>LAB-REPORT-BRAIN.md</code> section 71; CI-001 A8; roadmap backlog 25.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-040-2026-10-21-the-dodge-on-every-map.md">documentation/checkins/CI-040-2026-10-21-the-dodge-on-every-map.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>Every census since LR 11 played naval.map alone (CI-001 A8). The census now plays a list of maps, <code>MAP=all</code> being all eleven, and reads a difference on each beside the pooled one. Its first reading puts the dodge, on against off, over 176 seeds: +5.94 +/- 0.38 a seat, 15.6 errors (read first part-way, 123 seeds, +6.00 +/- 0.48). Ten maps of eleven are past two errors for the dodge, and none against it. The dodge holds by the rule set before the run. Naval.map is mid-table, so the one map did not overstate the part.</p><p><strong>Index terms:</strong> brain census, maps, paired difference, standard error, dodge.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>Backlog 25: does a part's difference on naval.map hold on other maps? The dodge, the largest part (LR 29, LR 63), is the first one asked.</p><h3 id="b-the-prompts">B. The prompts</h3><p>The census was built and launched earlier in the session. Paul then stopped some runs and asked:</p><blockquote><p>i just cancled some drive runs mid process. do you have record o the last run. does it give any insite?</p></blockquote><p>The census in <code>build/census/20261021-193635</code> had not been stopped; it was read part-way (D2). Then:</p><blockquote><p>ok. so update. commit. push. i like this.</p></blockquote><blockquote><p>treadcore build census keeps running. whats its intention.</p></blockquote></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>CI-001 A8: one map</td><td><code>CENSUS_MAP</code> a list or <code>gen</code>; seed n on map n mod k, so jobs keep a seed's map</td><td>A map per job: a job's maps would differ with JOBS</td></tr><tr><td>D2</td><td>Paul asked for insight before the census ended</td><td>Read part-way from the per-match team lines; the census's own <code>pooled.txt</code> stays the record</td><td>Wait an hour, or stop it: he asked for it now</td></tr><tr><td>D3</td><td>"update. commit. push."</td><td>Write LR 71 on 123 seeds, marked part-way, and push</td><td>Hold the write-up for 176 seeds</td></tr><tr><td>D4</td><td>F: MAPS.md's paragraph on how matches end came from one seed a map and is wrong on naval and the fortress isles</td><td>Corrected from the 372 matches</td><td>—</td></tr><tr><td>D5</td><td>F: a comment named <code>scripts/maps.sh</code></td><td>Named <code>scripts/pool.sh</code>, the script that pools</td><td>—</td></tr><tr><td>D6</td><td>A cached <code>.pyc</code> in the tree</td><td>Removed; <code>__pycache__/</code> ignored</td><td>—</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><p><strong>The census.</strong> <code>scripts/census.sh</code>: the fair census (<code>brain_census</code>), trial weights <code>caps = baseline</code> (every part on), baseline <code>caps = baseline, -dodge</code>; <code>MAP=all</code>, which is the five prior-art maps, the two world maps, industry, island, naval and <code>gen</code>. Seeds 1000 to 1175 (16 a map), 900 s, 3 respawns, four jobs of 44 seeds from a binary copied when the run began; ledger off.</p><p><strong>The part-way reading.</strong> For each seed, all three of its matches played (each team in the trial seat once): the trial team's mean score a seat, averaged over the three matches, less the baseline teams' mean. Its mean and standard error over seeds, overall and by map; past two errors is outside the noise. The census weights by seat (teams of 6, 5 and 5). This reading weights by team line, so it may differ from <code>pooled.txt</code> in the second decimal. The meter's dodge counts were summed over every match played.</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th></th><th>Dodge on less off, a seat</th></tr></thead><tbody><tr><td>Every map, 176 seeds</td><td>+5.94 +/- 0.38</td></tr><tr><td>Highest</td><td>island +10.86 +/- 1.48; generated +9.01 +/- 1.19; industry +8.41 +/- 0.95</td></tr><tr><td>naval (16)</td><td>+4.64 +/- 1.37</td></tr><tr><td>Lowest</td><td>atlantic +2.99 +/- 0.53; fortressisles2 +2.29 +/- 1.15 (inside)</td></tr></tbody></table></div><p>Ashore, the dodged shell hits 2.4% of the time with the dodge and 23.0% without. Afloat it hits 0.5% against 4.3%, but deaths after the shell fall less (9.0% against 12.2%). The full table is in LR 71.</p></section><section id="sv"><h2>V. Discussion</h2><ol><li><strong>The dodge holds everywhere.</strong> It is the one part so far past two errors on a single map. On eleven maps it is past fifteen errors.</li><li><strong>Where it pays least.</strong> It pays least on the island-chain maps, where more of the fight is afloat. This matches LR 29: afloat, the dodge changes little (backlog 31).</li><li><strong>The method.</strong> Ten maps cost no more than one at the same seeds. Promotions can now ask for more than one map.</li></ol><p><strong>Update, 22 October:</strong> the census ended; LR 71 and this report carry its <code>pooled.txt</code> (176 seeds), which replaces the part-way reading.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

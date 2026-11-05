@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>The Territory Read</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-037</p>
+    <h1>The Territory Read: the Held Ground</h1>
+    <div class="front"><p><strong>Check-in report CI-037.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 21 October 2026. Companion records: journal 0094; <code>LAB-REPORT-BRAIN.md</code> section 68; CI-036; roadmap backlog 57, 12e.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-037-2026-10-21-the-territory-read.md">documentation/checkins/CI-037-2026-10-21-the-territory-read.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>Goal 4's last open item: the team board built territory every second and nothing read where it was. LR 9's design gave it one job, Defend when there is threat in our territory. The board now keeps the held ground, the influence of the side's pillboxes and depots alone, thresholded at one work's value at 14 tiles. A hostile on it beyond the base's alarm is an incursion: it counts toward Defend at <code>w_defend_ground</code> (1), and the guard goes to the raided outlying work instead of rotating. In a family of a raid on an outlying pillbox while the team is away expanding, the Commander meets the raider in 400 of 400 seeds, none at 0. The census guard reads -0.36 +/- 0.27 a seat over 48 seeds, inside the noise; the read acts about 22 seconds a match. One older family loses 3.7 points and holds its floor.</p><p><strong>Index terms:</strong> territory, influence, team board, Defend, scenario families, census guard.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>Paul's choice: the territory read. Make the board's territory act.</p><h3 id="b-the-prompt">B. The prompt</h3><blockquote><p>territory read. continue.</p></blockquote><blockquote><p>continue.</p></blockquote></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>F: the ladder reads the territory's share; nothing reads where</td><td>Read where, by LR 9's Defend</td><td>Expand by territory: Expand already reads the front (LR 58)</td></tr><tr><td>D2</td><td>LR 24: the sector threat's long tail made Defend fire all match</td><td>The held ground of works alone, tanks left out</td><td>The board's territory with tanks: every tank's ground "held"</td></tr><tr><td>D3</td><td>F: with no hostile works, every sector is "ours"</td><td>A threshold: one work's value at 14 tiles (<code>GROUND_R</code>)</td><td>Influence above 0</td></tr><tr><td>D4</td><td>F: a Defend posture alone keeps the tank home</td><td>The guard's post is the raided work (<code>raided</code>)</td><td>Posture only: the tank went home, not to the raid</td></tr><tr><td>D5</td><td>Either/or is a scalar</td><td><code>w_defend_ground</code> (1) blends the incursion into Defend and gates the post</td><td>Two weights: one read</td></tr><tr><td>D6</td><td>F (three stagings): the gun's reach; a spotter out of sight; Guard held both ways</td><td>The team away at 25 s, the spotter toward the raider, a depot to expand to</td><td>Hits on a raider in gun range: the read is not needed there</td></tr><tr><td>D7</td><td>F: the guarded-base raid fell 85.5 to 81.8%; a teammate's depot by the raider</td><td>Kept: an outlying work raided is defended, as designed</td><td>Excluding allies' works: their ground is the team's</td></tr><tr><td>D8</td><td>F: at first the base's own depot became the post</td><td>Only an outlying work (past <code>BASE_R</code>)</td><td>—</td></tr><tr><td>D9</td><td>The census binary predated D8</td><td>Stopped and run again on the final code</td><td>Reporting the first run</td></tr><tr><td>D10</td><td>F: -0.36 +/- 0.27</td><td>On, by Paul's rule of 20 October</td><td>Off until tuned</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><p><strong>Code.</strong> <code>board.rs</code>: <code>GROUND_R</code>; <code>TeamBoard::ground</code>, <code>incursion</code>, <code>incursion_at</code>; in <code>rebuild</code>, the ground from pillboxes and depots, the incursion beyond <code>BASE_ALARM</code>, Defend's threat plus <code>w_defend_ground</code> times it; <code>meter::ground</code>. <code>commander.rs</code>: <code>defend_base</code> takes <code>raided(obs, base)</code>. <code>weights.rs</code>: <code>DefendGround</code>. <code>meter.rs</code>: <code>grounds</code>. <code>scenario.rs</code>: a pillbox's <code>toward</code>; a move event's <code>toward</code> and <code>step</code>. Test: <code>a_hostile_on_the_held_ground_is_an_incursion</code>.</p><p><strong>Family.</strong> As section 68; <code>make scenario S=... RUNS=400 SET=&quot;w_defend_ground=v&quot;</code> for v in 0, 0.25, 0.5, 1; the guarded-base raid at 0 and 1.</p><p><strong>Guard.</strong> <code>build/lr68/run.sh</code>, the fair census as LR 62, trial the defaults, baseline <code>w_defend_ground = 0</code>; pooled over 48 per-seed differences.</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th>Measure</th><th>Result</th></tr></thead><tbody><tr><td>The family</td><td>0% at 0; 95.0% at 0.25; 100% at 0.5 and 1</td></tr><tr><td>The guarded-base raid</td><td>85.5% at 0; 81.8% at 1 (floor 75%)</td></tr><tr><td>Incursion seconds, trial / rest</td><td>3,125 (2,694 defended for it alone) / 6,097 (none)</td></tr><tr><td>The guard, 48 seeds</td><td>-0.36 +/- 0.27 a seat</td></tr></tbody></table></div><p>Tests: brain 86 passed and 12 ignored; client 32; net 14; proto 3; sim</p><ol><li>Nine families above their floors.</li></ol></section><section id="sv"><h2>V. Discussion</h2><ol><li><strong>Territory needs eyes.</strong> A pillbox sees nothing; the held ground is defended only where a teammate or a drone sees it.</li><li><strong>Where, not how much.</strong> The share of the map was already read; what the board lacked was the place, and the guard's post is where it acts.</li><li><strong>Every part of 12e is read.</strong></li></ol><p><strong>For Paul:</strong> none blocking. Commits are local until you say push.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

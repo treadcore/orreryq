@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>The Front Read, the Families Held to Floors, and the Crews</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-026</p>
+    <h1>The Front Read, the Families Held to Floors, and the Crews Tested</h1>
+    <div class="front"><p><strong>Check-in report CI-026.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 20 October 2026. Companion records: journal 0083; <code>LAB-REPORT-BRAIN.md</code> sections 58 to 60; CI-025; roadmap backlog 26, 47, 49 to 52.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-026-2026-10-20-the-front-read.md">documentation/checkins/CI-026-2026-10-20-the-front-read.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>Four backlog items, in order. The team board's front, built every second since LR 24 and read by nothing, now leans the Expand rung's choice of depot (<code>w_front</code>, 0.5): a depot's cost is half its distance to the base and half its distance to the front, and the pick is kept until taken. The meter showed the front known at only 2.5 of Expand's picks a match, since the board counts only hostiles in sight, so the board now remembers hostile tanks for <code>front_memory</code> (30) seconds, for the front alone: 3.2 picks a match with a front, 14% without. A scenario holds with the part and fails at 0; the guard census reads -0.14 +/- 0.42 a seat over 48 seeds. Each scenario family now carries a floor, and <code>make families</code> runs all five at 1,000 seeds in 31 s; each falls under its floor with its part broken. Allies' goals on the coordination screen were found already shown by a hosting window and are now proven by a test; a joining window needs the wire. The crews' hand-out and the hop's bridge choice have tests of their own, and 22 functions got doc comments (121 undocumented to 99).</p><p><strong>Index terms:</strong> team board, influence front, sighting memory, guard census, scenario floors, fleet command.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>To go on through the backlog after CI-025, each item proven by a test that fails without it, and the testing made faster where it can be.</p><h3 id="b-the-prompt">B. The prompt</h3><blockquote><p>read backlog and roadmap. and approparate documenttation to remind yourself of the code goals. continue working on backlg itmes. and continue using testing to verify improvements and additions work as directed, you can also run at faster spaeed.</p></blockquote></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>"continue working on backlg itmes"; CI-025 named 49 next</td><td>Backlog 49 first, Expand's depot only; the guard posts split off as 51</td><td>Both at once: one step at a time (Paul, 18 October)</td></tr><tr><td>D2</td><td>Paul's rule of 20 October</td><td><code>w_front</code> on at 0.5, the blend's middle; old method at 0</td><td>A sweep first: tuning follows the features</td></tr><tr><td>D3</td><td>Scenario Commanders had no board</td><td><code>board = true</code>, <code>rungs</code>, <code>[[depot]] at</code>, <code>depot_first</code> in scenario.rs</td><td>A Rust test: scenarios are the form for new behaviours (LR 48)</td></tr><tr><td>D4</td><td>F: the hostile 36 tiles off was never seen, so no front</td><td>A teammate placed to see it, as a team shares sight</td><td>Putting the hostile in the tank's own sight: the case is the team's picture</td></tr><tr><td>D5</td><td>F: the tank turned back at 4% of a capture when its arrival erased the front</td><td>The pick kept until taken or given up, with <code>w_front</code> on</td><td>Hysteresis on the cost: one more number, and the flip is the front's, not the cost's</td></tr><tr><td>D6</td><td>F: 2.5 picks a match with a front known, 60 matches in</td><td>The census stopped; <code>front_memory</code> added</td><td>Finishing it: it could only read zero</td></tr><tr><td>D7</td><td>LR 35: the board forgets each second</td><td>Memory for the front only (<code>known</code>), the influence, threat, points, posture and rotation as before</td><td>Remembering in the influence: it moves five parts at once</td></tr><tr><td>D8</td><td>"you can also run at faster spaeed"</td><td>Families at 1,000 seeds (6 ms each); the census frozen and in three jobs, other steps worked beside it</td><td>More census jobs: four cores</td></tr><tr><td>D9</td><td>Backlog 47</td><td><code>runs</code>, <code>floor</code>, <code>make families</code>; floors 99% for the dodge families, 80% for the ready gun</td><td>Floors at today's rate: one seed's luck would fail them</td></tr><tr><td>D10</td><td>Backlog 50: the hosting window already shows FLEET lines</td><td>A test of it; the joining half to 52</td><td>A wire change: version 16 is fixed under goal 4</td></tr><tr><td>D11</td><td>Backlog 26</td><td>Tests for <code>FleetCommand::think</code> and the hop's choice; doc comments for crew.rs, hop.rs, board.rs</td><td>All 121 doc comments: 22 now in the files touched</td></tr><tr><td>D12</td><td>F: the hop's priced test sailed at 7 tiles on a bare map</td><td>Forest put behind the tank; the scarcity rule written into the test's comment</td><td>Changing the price: the rule is LR 6.2's, the test was wrong</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><p><strong>Parts explored.</strong> board.rs: <code>TeamBoard::rebuild</code> (the influence, the new <code>seen</code> and <code>known</code>), <code>front</code> (now on <code>known</code>), <code>front_dist</code>, <code>sector_centre</code>. commander.rs: <code>Commander::expand</code> (the open depots, the nearest, the kept target, the blended cost), the ladder's holds (<code>auto</code>), <code>defend_base</code> and <code>post</code> (read, for 51). weights.rs: <code>Front</code>, <code>FrontMemory</code>. meter.rs: <code>fronts</code>, <code>front</code>, <code>add_fronts</code>. scenario.rs: <code>run_seeded</code> (boards per team, <code>rungs</code>, depots moved, <code>depot_owned</code>), <code>check</code> (<code>depot_owned_by</code>, <code>depot_first</code>), <code>every_family_holds_its_floor</code>. crew.rs: <code>FleetCommand::think</code>, <code>failed</code>, <code>job_tile</code>, <code>job_for</code>. hop.rs: <code>Hop::send</code>, <code>think</code> (the bridge before a boat), <code>bridging</code>, and facts.rs <code>crossing_prices</code>, <code>bridge_it</code>, <code>scarcity</code>. The client: goal.rs <code>Pilot::screen</code>, session.rs <code>step_host</code> (the FLEET lines).</p><p><strong>Scenario.</strong> <code>an-expanding-tank-takes-the-depot-at-the-front.toml</code>, run by <code>make scenario S=... [SET=&quot;w_front=0&quot;]</code>; in <code>make test</code> with every file of <code>scenarios/</code>.</p><p><strong>Families.</strong> <code>make families</code>, and <code>SET=&quot;dodge_plan=0 duck_plan=0&quot;</code> and <code>make scenario S=... RUNS=1000 SET=&quot;dodge_release=0&quot;</code> for the breaks.</p><p><strong>Guard.</strong> <code>build/lr58/run.sh</code>: a frozen binary; the fair census on naval.map, 900 s, 3 respawns, seeds 0 to 47 in three jobs of 16; trial <code>caps = baseline</code> (the defaults), baseline the same with <code>w_front = 0</code> and <code>front_memory = 0</code>. The stopped first run (no memory) is in <code>build/lr58/no-memory</code>.</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th>Step</th><th>Measure</th><th>Before</th><th>After</th></tr></thead><tbody><tr><td>LR 58, <code>w_front</code></td><td>the scenario</td><td>nearest depot first</td><td>the depot at the front first; fails at 0</td></tr><tr><td></td><td>fresh picks with a front, a trial match</td><td>2.5 (no memory, 60 matches)</td><td>3.2, 14% with none (memory, 144 matches)</td></tr><tr><td></td><td>the guard, 48 seeds</td><td></td><td>-0.14 +/- 0.42 a seat over 48 seeds</td></tr><tr><td>LR 59, floors</td><td>five families, 1,000 seeds</td><td>run by hand</td><td>31 s, each under its floor broken</td></tr><tr><td>LR 59, allies' goals</td><td>client test</td><td>none</td><td><code>the_screen_shows_an_allys_rung_and_target</code></td></tr><tr><td>LR 60, tests and docs</td><td>brain tests; undocumented</td><td>78; 121</td><td>81; 99</td></tr></tbody></table></div><p>Tests: brain 81 passed and 11 ignored; client 32; net 14; proto 3; sim</p><ol><li>98 weights, 17 bits; ten scenario files, five families with floors.</li></ol></section><section id="sv"><h2>V. Discussion</h2><ol><li><strong>A front of what is in sight is a flicker.</strong> The board reads one member's observation a second; LR 35 found it for the landfall, and the front needed the same memory.</li><li><strong>Count before you census.</strong> Expand picks about four depots a match. The meter said in the first minutes of a 45-minute census that the part barely acted.</li><li><strong>Floors make families a regression suite.</strong> Five families in 31 s now stand guard over the reflexes the census cannot resolve.</li></ol><p><strong>For Paul:</strong> none blocking. Next: backlog 51 (the guard posts toward the front), then 20 (<code>island_site</code> where a naval start chooses).</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

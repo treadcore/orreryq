@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>Game 6</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-085</p>
+    <h1>Game 6: Ore, the Smelter and the Harvester</h1>
+    <div class="front"><p><strong>Check-in report CI-085.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Fable 5.1) as the pair. 2 November 2026, evening. Companion records: <code>LAB-REPORT-BRAIN.md</code> section 128; CHANGELOG, game 6; the plan's chapter 13 (<code>reports/2026-11-02-the-plan/13-economy-and-logistics.html</code>), stage 2; <code>HOW-TO-PLAY.md</code> section 6b, the ore; <code>MAPS.md</code>, the <code>deposit</code> line.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-085-2026-11-02-game-6-ore-the-smelter-and-the-harvester.md">documentation/checkins/CI-085-2026-11-02-game-6-ore-the-smelter-and-the-harvester.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#si">I. Intent</a></li><li><a href="#sii">II. What was built</a></li><li><a href="#siii">III. What was read</a></li><li><a href="#siv">IV. What is not built</a></li><li><a href="#sv">V. Paul's decisions</a></li></ol></nav>
+  <main>
+  <section id="si"><h2>I. Intent</h2><p>Paul: "continue. implement the economy. commit and push." The plan of 2 November named four stages of a zero-sum economy and built the first in the afternoon (game 5: a hit pillbox loses its stock and refills from its depot). This check-in is the second stage, the large one: ore as a finite thing on the map, a works that turns it into shells, a depot that no longer makes shells from nothing, and a brain that runs the supply.</p></section><section id="sii"><h2>II. What was built</h2><p><strong>The simulator (game 6).</strong> <code>Deposit { id, pos, stock }</code> on the world and in the observation; <code>deposit x y [stock]</code> in a map file, and <code>Map::seed_deposits</code> for a map that places none (one for every second start, six tenths of the way to the centre, on open ground, 120 ore). <code>Scenario.ore</code>, on unless said otherwise; <code>treadcore-server --no-ore</code>. On an ore map <code>DepotStock::make_from(true)</code> passes over shells and the refinery's stop gives fuel alone. <code>PillboyTask::Harvest</code> on a deposit's tile mines it (six seconds, four ore, eight aboard, <code>Event::Mined</code> with what is left). A tank within three tiles of a working smelter of its side unloads (<code>Event::OreUnloaded</code>); a smelter makes a shell a second into the nearest depot of its side within thirty tiles that has room (<code>Event::Smelted</code>). <code>StructureKind::Smelter</code> and <code>::Harvester</code> stand at their resource on open ground (<code>at_resource</code>, <code>works_site_refused</code>), need no plant, and are built with the works order like the rest. A harvest within eight tiles of a working harvester yields six and the tree returns in a minute. The chair knows the new refusals. <code>GAME_VERSION</code> is 6.</p><p><strong>The brain.</strong> <code>ore_low</code> (10 shells) and <code>ore_reach</code> (40 tiles) in RANGES; <code>Commander::ore_run</code> with <code>Act::OreRun</code> (to the deposit, the squad mines, to the smelter, unload; or first the side's nearest tank with the material builds the smelter beside the ore, <code>Cycle::smelter_site</code>); the base's guard runs whenever the depot is short, every other tank once after each fill-up; the cycle's improvement offers the smelter at <code>w_works</code>. A tank at a depot with nothing to give leaves after ten seconds and does not come home for shells for a minute (<code>FILL_PATIENCE</code>, <code>DRY_FOR</code>, <code>needs_home</code> takes the tick). The census ledger counts ore mined and shells smelted a seat and writes them on the composition line; a scenario's <code>reward</code> may name <code>ore</code> and <code>smelted</code>.</p><p><strong>The window.</strong> The deposit as a heap that lowers as it is worked out, labelled <code>ore N</code>; the smelter and the harvester as their own voxel shapes with names on the wire; the ORE lamps beside MATERIAL; a ring round a working smelter of your side; the wire says what was mined and unloaded.</p><p><strong>Records.</strong> CHANGELOG; LR 128; HOW-TO-PLAY (the farm and works rows, the industry section's ore paragraph); MAPS.md; the book's chapter 13 marks stage 2 built and says what was read; orrery reads <code>ore</code> and <code>smelted</code> from the composition line (not yet a floor).</p></section><section id="siii"><h2>III. What was read</h2><ul><li><code>the_bots_build_a_smelter_mine_and_smelt</code> (brain, new): nine seats in three teams on the naval map for ten minutes, the fleet's team brains: 5 smelters built, 40 ore mined, 9 unloads, 36 shells smelted, the longest wait at a dry depot 8 s.</li><li>A two-seed census of 300 s on the generated island: two teams mined and smelted 12 and 20; the team that did neither scored between them. The economy is not yet the score; that is the trade guard's floor to add once the fleet has read game 6.</li><li>Tests: simulator 64 (four new), brain 153 (one new), the workspace and its tests compile. Game 5 under <code>ore: false</code> still holds.</li><li>An old fault, exposed by the new rule and fixed: the hunter lobbed one blind shell at a neutral pillbox its squad was about to take (<code>shell_boxes</code>), and the depot's free shell replaced it before the test looked. A live target keeps the gun now.</li></ul></section><section id="siv"><h2>IV. What is not built</h2><p>Workers as stock in transit, the city's four shapes and the quartermaster (stage 3); oil, the well and the refinery's source; trade (stage 4). Map authors' own deposits in <code>maps/*.map</code> (the rule seeds them). A page of the window for the side's stocks. The thirty-minute shape and the halving of shells a match are the fleet's censuses to read; every read before this is of the old game.</p></section><section id="sv"><h2>V. Paul's decisions</h2><p>The decrees named in CI-084 stand open (<code>tree_material</code> 4, <code>strikes_max</code> 3, <code>coming_r</code>). New today: whether a deposit's 120 ore, a shell an ore, and one smelter a base are the numbers; whether <code>ore_low</code> and <code>ore_reach</code> should be decrees or the search's.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

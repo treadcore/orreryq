@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>The Queue at Full Settings</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-072</p>
+    <h1>The Queue at Full Settings: What Four Hours Played</h1>
+    <div class="front"><p><strong>Check-in report CI-072.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 28 October 2026. Companion records: <code>LAB-REPORT-BRAIN.md</code> section 111; <code>scripts/fleet-count.py</code>; orrery's <code>docs/fleet-train.md</code>.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-072-2026-10-28-full-queue-counts.md">documentation/checkins/CI-072-2026-10-28-full-queue-counts.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>The fleet queue ran at full settings on calber, columbia, nasser and the Mac. Its first 4 hours 10 minutes, counted from the logs it fetched back:</p><ul><li>37,905 games of 15 minutes, which is 9,476 hours of play;</li><li>1.46 billion decisions (thinks), 10.4 billion seat-ticks and 381 million planned moves;</li><li>416 million training sample-steps on calber's GPU, in two net rounds.</li></ul><p>The results so far:</p><ul><li>144 weight trials, 6 of them past two errors. None has passed both held-out reads.</li><li><code>castle_inside</code> 8 leads: ten 55-seed censuses all at or above zero, and 2 of 5 held-out reads passed.</li><li>Both net rounds left bc2 the best.</li></ul></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>Keep the fleet's census running at the settings that can tell a weight from luck, then say how much it has computed.</p><h3 id="b-the-prompts">B. The prompts</h3><blockquote><p>continue running census on the fleet.</p></blockquote><blockquote><p>also cafinate this mac</p></blockquote><blockquote><p>hows it going.</p></blockquote><blockquote><p>how many computations have been ran. over a million?</p></blockquote><blockquote><p>add castle_inside = 8 to the converge candidates. and add lab report about these counts.</p></blockquote><p>Paul's choices:</p><ul><li>"Replace with full queue", which stopped the sample.</li><li>"Wait for the 3 reads": castle_inside 8 joins the candidates only with the verdict of its held-out reads.</li></ul></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>The sample's 4-seed, 2-minute censuses cannot tell a weight from luck (CI-071 V)</td><td>Replace it with the full settings of <code>docs/fleet-train.md</code></td><td>Leaving the sample running</td></tr><tr><td>D2</td><td><code>stop-now</code> kills jobs on three remote hosts; the permission check stopped it</td><td>Asked Paul; he chose to replace</td><td>Draining with <code>stop-adding</code> (slower; the sample's results matter little)</td></tr><tr><td>D3</td><td>saskatchewan's load was about 20 of 24 on <code>make converge</code></td><td>Left it out of the queue</td><td>Giving it fleet work (CLAUDE.md, memory)</td></tr><tr><td>D4</td><td>Seeds must not overlap saskatchewan's run</td><td>Trials from 6,000,000, held out from 7,000,000; converge uses 2,000,000 and 3,000,000</td><td>Sharing a seed range</td></tr><tr><td>D5</td><td>"cafinate this mac"</td><td><code>caffeinate -dimsu</code> in the background</td><td>Changing the Mac's power settings</td></tr><tr><td>D6</td><td>"how many computations": a count must name its unit</td><td>Games, seat-ticks, thinks, moves and training sample-steps, each from the logs' own lines</td><td>Estimating from seat-ticks / 288,000 (net games have other sizes; the first reply's 32,000 games was that estimate)</td></tr><tr><td>D7</td><td>A count must be repeatable</td><td><code>scripts/fleet-count.py</code> reads only fetched results and <code>events.jsonl</code></td><td>A one-off shell line</td></tr><tr><td>D8</td><td>castle_inside 8 had passed 1 of 3 reads, not both of a pair</td><td>Asked Paul before adding it; he chose to wait</td><td>Adding it as a CANDIDATE, against LR 92's rule</td></tr><tr><td>D9</td><td>The first report said three trials passed their re-checks</td><td>Corrected to Paul and recorded (LR 111 C)</td><td>Leaving it</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><ol><li><code>python3 ~/code/orrery/tools/fleet-queue.py build/queue/sample stop-now</code>.</li><li><code>build/queue/full-1/config.json</code> is the sample's, with the planner's path changed. Its <code>plan.json</code>: ``<code>json {&quot;commit&quot;: &quot;8e5df8827fb680aa28ad3aad00e4fbb5308acfe0&quot;, &quot;census_host&quot;: &quot;columbia&quot;, &quot;weights&quot;: {&quot;seeds&quot;: 55, &quot;secs&quot;: 900, &quot;map&quot;: &quot;all&quot;, &quot;seed0&quot;: 6000000, &quot;held_seeds&quot;: 400, &quot;held_seed0&quot;: 7000000}, &quot;net&quot;: {&quot;rounds&quot;: [{&quot;run&quot;: &quot;rec2400&quot;, &quot;lo&quot;: 9001260, &quot;n&quot;: 1200}, {&quot;run&quot;: &quot;rec2400&quot;, &quot;lo&quot;: 9002460, &quot;n&quot;: 1200}], &quot;train_args&quot;: &quot;4 32768 3e-3&quot;, &quot;census&quot;: {&quot;seeds&quot;: 110, &quot;seed0&quot;: 500000, &quot;secs&quot;: 900, &quot;map&quot;: &quot;all&quot;}}} </code>``</li><li><code>fleet-queue.py build/queue/full-1 ensure</code>; <code>caffeinate -dimsu &amp;</code>.</li><li>At 06:26:56: <code>python3 -I scripts/fleet-count.py build/queue/full-1</code>. The held-out reads come from <code>plan/ledger.tsv</code> and the job titles in <code>done/</code>.</li></ol></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th>Kind</th><th>Games</th><th>Seat-ticks</th><th>Thinks</th><th>Moves</th></tr></thead><tbody><tr><td>weight trials</td><td>24,585</td><td>6,757,079,968</td><td>957,738,999</td><td>250,016,569</td></tr><tr><td>held-out reads</td><td>12,000</td><td>3,285,884,736</td><td>463,260,527</td><td>120,723,097</td></tr><tr><td>net judging</td><td>1,320</td><td>364,327,056</td><td>36,308,633</td><td>9,769,679</td></tr><tr><td>all</td><td>37,905</td><td>10,407,291,760</td><td>1,457,308,159</td><td>380,509,345</td></tr></tbody></table></div><p><strong>Net training:</strong></p><ul><li>Round 1: 52,067,105 samples × 4 epochs, in 90.6 s.</li><li>Round 2: 51,962,086 samples × 4 epochs, in 87.8 s.</li></ul><p><strong>Hours busy:</strong> calber 4.1, the Mac 4.1, columbia 3.8, nasser 3.3. No job failed.</p><div class="table"><table><thead><tr><th>Trial</th><th>Weights</th><th>Held-out read 1</th><th>Read 2</th></tr></thead><tbody><tr><td>w0011</td><td>advance_band 0.675, alpha 0.513, answer_cap 2.51</td><td>+0.56 ± 0.24</td><td>−0.11 ± 0.24</td></tr><tr><td>w0095</td><td>castle_inside 8</td><td>−0.02 ± 0.16</td><td>+0.56 ± 0.21</td></tr><tr><td>w0113</td><td>base_r 8, beta 0.6, bridge_keep 360, castle_inside 8</td><td>+0.19 ± 0.19</td><td>+0.40 ± 0.19</td></tr><tr><td>w0116</td><td>column_gap 1</td><td>−0.02 ± 0.17</td><td>−0.20 ± 0.12</td></tr><tr><td>w0117</td><td>castle_inside 8</td><td>running</td><td>+0.28 ± 0.21</td></tr><tr><td>w0128</td><td>castle_inside 8</td><td>+0.80 ± 0.21</td><td>running</td></tr></tbody></table></div><p><strong>Net rounds,</strong> candidate less bc2 over 110 seeds:</p><ul><li>Round 1: −0.77 ± 0.36.</li><li>Round 2: +0.18 ± 0.35.</li></ul><p><strong>Errors:</strong></p><ul><li>Each count is a lower bound at its moment: running jobs are left out.</li><li>The per-host games come from the ledger, which lags the logs by a census or two.</li></ul></section><section id="sv"><h2>V. Discussion</h2><ul><li><strong>Yes, over a million,</strong> in every unit but whole games:<ul><li>1.46 billion decisions;</li><li>10.4 billion seat-ticks;</li><li>416 million training sample-steps.</li></ul></li></ul><p>Whole games, at about 9,100 an hour, would reach a million in about 4.6 days.</p><ul><li><strong>What the play bought so far:</strong><ul><li>No weight trial yet passes the two-read rule. The defaults are near</li></ul><p>the top of most curves, as saskatchewan's run found (journal 0103).</p><ul><li><code>castle_inside</code> 8 is the one direction both runs point to.</li></ul></li><li><strong>19 trials changed no score at all.</strong> On these maps those weights are inert. They are cheap to drop from the screen, or worth a scenario that exercises them.</li><li><strong>Next:</strong><ul><li>castle_inside 8's last two reads, then its line in saskatchewan's</li></ul><p><code>candidates.txt</code>;</p><ul><li>the queue goes on.</li></ul></li></ul></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

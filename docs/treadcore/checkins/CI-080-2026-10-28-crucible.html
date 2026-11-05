@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>crucible</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-080</p>
+    <h1>crucible: Training Inside the GPU</h1>
+    <div class="front"><p><strong>Check-in report CI-080.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 28 October 2026. Companion records: <code>LAB-REPORT-BRAIN.md</code> section 121; crucible <code>docs/LAB-REPORT-GPU.md</code> (the full lab report), <code>src/crucible.cu</code>, <code>runs/</code>.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-080-2026-10-28-crucible.md">documentation/checkins/CI-080-2026-10-28-crucible.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>A second project for the fleet's GPUs: a self-learning loop that runs entirely on the card.</p><ul><li><strong>On the card:</strong> the arena, the sensors, the population of nets, the play, selection and mutation, and a hall of fame of past champions.</li><li><strong>Speed:</strong> 581, 462 and 419 M tank-steps a second on the GTX 1080 Ti, 1080 and 1070 Ti.</li><li><strong>The decisive setting:</strong> limiting registers to 128 doubled the speed.</li><li><strong>Learning:</strong><ul><li>self-play against the hall alone did not learn to beat a scripted</li></ul><p>yardstick (8.2 %);</p><ul><li>with sparring bots it did on whitewolf (21.9 %, 3.4 standard</li></ul><p>errors);</p><ul><li>its replicate on calber fell short of the bar (14.3 %, 1.8).</li></ul></li></ul><p>orrery's steps since CI-079 are also recorded here.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>Answer, with a working program and measured numbers:</p><ul><li>whether a self-contained learning AI with sensors fits these cards;</li><li>how much fits;</li><li>how fast it runs;</li><li>how it scales.</li></ul><p>Then the interface redesign, which needs this project to orchestrate.</p><h3 id="b-the-prompt">B. The prompt</h3><blockquote><p>we need to consider the interface from treadcore . the styling. thr rows and columns of brushed metal. Can we redesign all tabs all sub tabs and rethink about the interface progression. tell a story, help us orchestrate and add comptuers to configure in the orchestration. For example, we want to create a second project to run in cuda. Perhaps we can size something for the 8GB cards we have. Is there a neural net that we can train and retrain to keep its generations within itself. We need sensor data and a self contained loop is there a way to create a different style of self learning ai on these cards. specifically targeted for CUDA program that will stress the cards and we can use them to their maximum, at their fastest. How much of this simulation can be ran fully in cuda itself. If we can do that, can we write a lab report about general purpose traing and scaling up. and inside the gpu. we have an assessment of our fleet, we have 1070ti , 1080, 1080ti.</p></blockquote></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not chosen</th></tr></thead><tbody><tr><td>D1</td><td>One step at a time; the redesign's story needs the second project</td><td>The GPU project and its report first; the interface next</td><td>The redesign first, with a project that did not exist</td></tr><tr><td>D2</td><td>"keep its generations within itself", "self contained loop"</td><td>Evolution with a hall of fame on the card; <code>--save</code> and <code>--load</code> for retraining</td><td>Gradient methods, which need the world differentiable or a replay buffer on the host</td></tr><tr><td>D3</td><td>"sensor data"</td><td>Twelve rays per tank, plus bearing and own state</td><td>Full observation of the world</td></tr><tr><td>D4</td><td>"stress the cards ... at their fastest"</td><td>One block per individual, one thread per duel, nets in shared memory (a broadcast read)</td><td>One thread per individual, weights read from DRAM</td></tr><tr><td>D5</td><td>190 registers gave 12 % occupancy</td><td>Measured limits of 190, 128, 80 and 64; 128 was fastest, the default</td><td>The highest occupancy</td></tr><tr><td>D6</td><td>Pascal: FP16 at 1/64 rate, no tensor cores</td><td>FP32</td><td>Half precision</td></tr><tr><td>D7</td><td>CUDA 13 drops Pascal</td><td>Built with 12.9 for <code>sm_61</code>; noted in the Makefile</td><td>Upgrading</td></tr><tr><td>D8</td><td>Self-play alone stalled at 8 % against the yardstick</td><td>Half the games against sparring bots of drawn skill; the rule written before the run</td><td>Changing the score</td></tr><tr><td>D9</td><td>One seed proves little</td><td>A replicate on calber with another seed</td><td>One run</td></tr><tr><td>D10</td><td>"How much of this simulation"</td><td>Assessed treadcore-sim and the brain part by part</td><td>Porting treadcore's sim</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><ol><li><strong>Build:</strong> <code>make</code> on each GPU node (<code>nvcc -O3 -use_fast_math -gencode arch=compute_61,code=sm_61 -DHID=32 -DMINB=2</code>).</li><li><strong>Throughput:</strong> <code>./crucible --pop 2048 --gens 4 --bench</code>.<ul><li>whitewolf at MINB 1 to 4, and at H 48 and 64;</li><li>calber and boburner at the default.</li></ul></li><li><strong>Learning:</strong> <code>--pop 2048 --eps 128 --yard 10</code>, with <code>nvidia-smi</code> logged every 2 s:<ul><li>whitewolf, seed 7, 300 generations, hall only;</li><li>whitewolf, seed 7, 400 generations, sparring 0.5;</li><li>calber, seed 8, 400 generations, sparring 0.5.</li></ul></li><li><strong>The rule:</strong> the last five yardstick reads (4,096 duels each) more than two standard errors above the hall-only run's last five.</li><li><strong>The records:</strong><ul><li>crucible <code>docs/LAB-REPORT-GPU.md</code>, with every table;</li><li>the run files in crucible <code>runs/</code>.</li></ul></li></ol></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th>Card</th><th>Mtank-steps/s</th><th>Net GFLOP/s</th><th>Power under load</th></tr></thead><tbody><tr><td>GTX 1080 Ti</td><td>581</td><td>2,494</td><td>165 W of 250</td></tr><tr><td>GTX 1080</td><td>462</td><td>1,983</td><td>118 W of 215</td></tr><tr><td>GTX 1070 Ti</td><td>419</td><td>1,797</td><td>not logged</td></tr></tbody></table></div><div class="table"><table><thead><tr><th>Register limit</th><th>190</th><th>128</th><th>80</th><th>64</th></tr></thead><tbody><tr><td>GTX 1080, Mtank-steps/s</td><td>236</td><td>462</td><td>238</td><td>185</td></tr></tbody></table></div><div class="table"><table><thead><tr><th>Learning (last five reads)</th><th>Yardstick wins</th><th>Against hall only</th></tr></thead><tbody><tr><td>hall only, whitewolf</td><td>8.2 % ± 2.7 %</td><td>—</td></tr><tr><td>sparring, whitewolf</td><td>21.9 % ± 3.0 %</td><td>+3.4 se, confirmed</td></tr><tr><td>sparring, calber</td><td>14.3 % ± 2.1 %</td><td>+1.8 se, short</td></tr></tbody></table></div><p><strong>Errors.</strong></p><ul><li><code>-DH</code> broke Thrust's headers; the macro is now <code>HID</code>.</li><li>A zsh <code>$h:c</code> turned an rsync target into three local folders; they were removed.</li><li>H = 64 does not launch (51.7 KB of shared memory against 48 KB). It is measured and kept as a result.</li></ul></section><section id="sv"><h2>V. Discussion</h2><p>It can be done, and the cards are fast at it. They are not yet at their maximum: 22 % of peak, and 55–66 % of their power. The report's VII.B orders where the rest is:</p><ul><li>more duels per thread;</li><li>fewer transcendentals;</li><li>a warp sharing a net;</li><li>INT8 <code>dp4a</code>.</li></ul><p>The learning is real but slow. Sparring opponents mattered more than the hall of fame alone. One replicate fell short, so the effect is smaller than the first run says.</p><p>treadcore's own simulation is a poor fit as a whole, and a good one in its combat core and its learned net.</p><p><strong>Next:</strong></p><ol><li>orrery's interface redesign, with treadcore and crucible as projects.</li><li>crucible's islands across the three cards.</li></ol></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

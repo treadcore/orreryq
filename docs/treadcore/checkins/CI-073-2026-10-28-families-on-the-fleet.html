@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>Families on the Fleet</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-073</p>
+    <h1>Families on the Fleet</h1>
+    <div class="front"><p><strong>Check-in report CI-073.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 28 October 2026. Companion records: <code>LAB-REPORT-BRAIN.md</code> section 112; orrery's <code>tools/fleet-queue.py</code>.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-073-2026-10-28-families-on-the-fleet.md">documentation/checkins/CI-073-2026-10-28-families-on-the-fleet.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>This is step 1 of six that move treadcore's training from make to orrery's fleet queue.</p><ul><li><strong>Families is a job of the queue.</strong> <code>make families</code>'s test runs for 8 candidates a job, side by side on a host's cores, and each family's share is recorded.</li><li><strong>42 candidates ran on the fleet in 3 minutes:</strong> the defaults, the queue's two of <code>castle_inside</code> 8, and saskatchewan's 39. All hold every floor.</li><li><strong>gen64/best is the strongest:</strong><ul><li>census +2.97 ± 0.71 over 55 seeds;</li><li>held out +2.40 ± 0.28 and +2.32 ± 0.28 over 400 seeds each;</li><li>the duel family from 76.2% to 84.0%.</li></ul></li><li><strong>A fault, fixed:</strong> a host that dropped off the network failed eleven jobs and stopped the queue. Lanes now wait for a lost host, and requeue its job.</li></ul></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>Begin moving every training and measurement command from treadcore's Makefile into orrery's fleet queue. Families comes first, because 38 candidates were waiting on it.</p><h3 id="b-the-prompts">B. The prompts</h3><blockquote><p>commit the orrery lab report. and what needs to be done with make families.  we want orrery to take over all make training commands. We want to use orrery to orchestrate training as a fleet. We no longer start training from a make command. Remove the training from make, and insert them all into orrery. Make sure all aspects are accomplished, including collecting the data and incorporating the updates into treadcore itself.</p></blockquote><p>Paul's choices:</p><ul><li>"All 13": every training and measurement target leaves the Makefile.</li><li>"Prepare, you approve": a candidate is prepared for treadcore, and it lands only on his word.</li><li>"Newest first, all 38": families reads every candidate.</li></ul></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>The move is large; Paul works a step at a time</td><td>Six steps, each recorded; families first</td><td>One change for all 13 targets</td></tr><tr><td>D2</td><td>saskatchewan's candidates came from 7d0af54, the queue builds 8e5df88</td><td>Compared the dumped defaults: 111 weights, identical; families runs at the queue's commit</td><td>Building 7d0af54 on every host</td></tr><tr><td>D3</td><td>The families test is one thread; a host has 4 to 24</td><td>A job is a batch of 8 candidates side by side</td><td>A job a candidate (a 16-thread host would run one core)</td></tr><tr><td>D4</td><td>The test fails when a family is under its floor, and the breaker counts failures</td><td>The exit status becomes a verdict in the output; the job succeeds</td><td>Letting a weak candidate trip the breaker</td></tr><tr><td>D5</td><td>The command is new, and five failures stop the queue</td><td>Tested once on the Mac (defaults: 55 s, holds) before switching it on</td><td>Trying it on the live queue first</td></tr><tr><td>D6</td><td>nasser went down; its lane failed 11 jobs in 31 s; the breaker stopped the queue</td><td>Lanes wait for an unreachable host; a job lost to ssh's 255 goes back on the queue; a host removed from the config ends its lane</td><td>Raising the breaker's count; a retry count per job</td></tr><tr><td>D7</td><td>The running keeper has the old code</td><td>nasser parked (its build record set aside); the fix applies at the keeper's next start</td><td>Restarting the keeper now (running jobs would run twice)</td></tr><tr><td>D8</td><td>castle_inside 8 passed both reads twice (w0170, w0182)</td><td>Added to saskatchewan's candidates.txt as Paul chose (LR 111 D)</td><td>—</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><ol><li><strong><code>scripts/fleet-plan.py</code>:</strong><ul><li><code>family_candidates()</code>, <code>family_jobs()</code> and <code>families()</code>;</li><li>in <code>plan()</code>, families take up to half of each top-up;</li><li><code>collect</code> includes them.</li></ul></li><li><strong><code>plan.json</code>:</strong> <code>&quot;families&quot;: {&quot;converge&quot;: [&quot;build/saskatchewan/converge/20261026-181011&quot;], &quot;queue&quot;: true, &quot;batch&quot;: 8}</code>.</li><li><strong>The local test:</strong> the rendered job command, with only the defaults, run on the Mac against <code>~/fleet/q-full-1/census-bin</code>.</li><li><strong>Reading the results:</strong> <code>python3 -I scripts/fleet-plan.py build/queue/full-1 families</code> writes <code>plan/families.json</code>.</li><li><strong>orrery's <code>tools/fleet-queue.py</code>:</strong><ul><li><code>reachable()</code>;</li><li>in <code>lane()</code>, the removed-host and unreachable-host checks;</li><li>in <code>work()</code>, the requeue on 255.</li></ul></li></ol><p>Tested on a scratch queue <code>{here: &quot;-&quot;, gone: nasser}</code> with six 3-second jobs, then with <code>gone</code> removed from its config.</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><tbody><tr><td>Local test, defaults</td><td>holds every floor, 55 s</td></tr><tr><td>Families on the fleet</td><td>6 jobs (Mac 4, boburner 2), 42 candidates, 09:12 to 09:16, 38 to 46 s a candidate</td></tr><tr><td>Verdicts</td><td>42 of 42 hold every floor</td></tr><tr><td>Tightest</td><td>a tank under a ready gun: 82.5% at worst (gen53/best), floor 80%</td></tr><tr><td>Widest spread</td><td>a duel in the open: 75.2% to 84.0%, defaults 76.2%</td></tr><tr><td>Scratch queue, host down</td><td>6 of 6 jobs done on the other host, 0 failed; <code>host unreachable</code></td></tr><tr><td>Scratch queue, host removed</td><td><code>lane left</code> within a probe</td></tr></tbody></table></div><p><strong>Errors:</strong> a family's share has the error the test prints, for example ±1.8% on the duel's 400 seeds. Every candidate's margin over its floor is larger than three of its errors, except the ready gun, which is 2.5 points over at worst, with an error of ±1.2%.</p></section><section id="sv"><h2>V. Discussion</h2><p><code>make families</code> was a gate a person ran by hand on one machine. In the queue it costs three minutes of the fleet, and it reads every candidate as soon as it exists. The families never stopped a candidate here.</p><p>What decides now is the census, and Paul. gen64/best is the strongest candidate, and it is what step 5 (promotion) will be built and tried on.</p><p>The nasser fault shows the queue must treat a machine's absence as an event, not as a failure. It now does.</p><p><strong>Next, step 2:</strong> one ledger of every census, saskatchewan's included.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

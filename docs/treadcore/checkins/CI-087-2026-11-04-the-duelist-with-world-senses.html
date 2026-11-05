@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>The Duelist with World Senses</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a><a href="#svi">VI</a><a href="#svii">VII</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-087</p>
+    <h1>The Duelist with World Senses: the Gladiator, Style 17, and the Bridge That Reads Each New World Champion</h1>
+    <div class="front"><p><strong>Check-in report CI-087.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 4 November 2026. Companion records: <code>LAB-REPORT-BRAIN.md</code> section 138; CHANGELOG; ROADMAP backlog 80; journal 0114; <code>nets/styles.tsv</code>; in orrery, the bridge stage (<code>tools/plans/treadcore.py</code> <code>bridge_jobs</code>, <code>tools/bridge.py</code>) and the world build of crucible (<code>src/crucible.cu</code>, WORLD).</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-087-2026-11-04-the-duelist-with-world-senses.md">documentation/checkins/CI-087-2026-11-04-the-duelist-with-world-senses.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Intent</a></li><li><a href="#sii">II. Decision log</a></li><li><a href="#siii">III. Method</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li><li><a href="#svi">VI. What is not built</a></li><li><a href="#svii">VII. Paul's decisions</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>crucible's GPU islands have trained under the game's rules since the evening of 3 November, with 55 inputs and two hidden layers of 48. The game's bridge to crucible (style 7, the Duelist, LR 126) read only the old arena's 35-input hybrid. The bridge now reads a world champion with its twenty world inputs built from what a tank in the game sees, as crucible builds them, and drives as crucible's world tank: a heading error, no reverse. It ships as a new style, 17, the Gladiator (world milestone M0015), beside the hybrid Duelist. On the same 48 seeds the Gladiator reads +4.99 ± 2.08 a seat over the Duelist on every map (+11.56 ± 1.75 on the generated maps). The fleet reads a champion not yet shipped by <code>GLADIATOR=file</code>, and orrery's bridge reads each new world milestone against the shipped one; shipping it is a commit, pressed.</p></section><section id="si"><h2>I. Intent</h2><p>Paul, of orrery's question that morning ("You wrote: 'the GPU build always looks like the perfect world in treadcore. Incorporate GPU as a growth step in the pipeline.' Which do you mean?"), chose all three: crucible follows treadcore, champions enter the line, the GPU trainer as a stage. The first was built in orrery and crucible. For the second, orrery said what it would cost (treadcore's Duelist taught 20 world senses and the larger net, a new champion shipped in the game, a commit that changes how a style plays) and asked. Paul, word for word:</p><blockquote><p>yes do step 2, the duelist with world senses</p></blockquote></section><section id="sii"><h2>II. Decision log</h2><div class="table"><table><thead><tr><th>Decision</th><th>Cause</th></tr></thead><tbody><tr><td>A world champion is read by its size (5,236 floats), a hybrid by its (2,340); a plain build's (no gate) is refused</td><td>crucible writes champions as bare floats; a Duelist's net must carry the gate (section 126), or it takes every fight</td></tr><tr><td>The twenty inputs built as crucible.cu's <code>sense</code> under WORLD builds them, index for index</td><td>a champion hears only what it was trained on; any other order is noise to it</td></tr><tr><td>The eyes end at <code>TANK_VISION</code> for the rays; the bearing and the enemy's armour stay</td><td>crucible does the same: its rays stop at VISION, its 28th to 30th inputs do not</td></tr><tr><td>A pillbox "that would fire on it" is a live neutral one or an enemy's</td><td>crucible's pillboxes are neutral and fire on either tank; in the game a side's own fires on nobody of it</td></tr><tr><td>The incoming shell is the nearest hostile direct shell where it is now along its flight</td><td>crucible's 31st input is the enemy shell's position, not its landing point</td></tr><tr><td>The turn is a heading error of up to a half turn, the throttle has no reverse (under a twentieth: <code>Stop</code>)</td><td>crucible's world driver, which is treadcore's driver</td></tr><tr><td>The gun stays the rules'</td><td>section 126: the champion's fire output means its hull is on the enemy</td></tr><tr><td>A new slot, 17, not style 7's file replaced</td><td>"a slot once given keeps its meaning" (styles.rs); and one binary then reads both on the same seeds</td></tr><tr><td><code>nets/gladiator.bin</code> is M0015</td><td>the world ladder's newest milestone that morning: judged better than every one before it by crucible's ladder</td></tr><tr><td><code>GLADIATOR=file</code> for the fleet's reads</td><td>the champion is in the binary (SHIPPED, NOT LOCATED), and a read must not wait for a commit; it is the hook <code>CENSUS_WEIGHTS</code> is for dials</td></tr><tr><td>Shipping is a press, not automatic</td><td>CLAUDE.md: commit only when Paul asks; a shipped champion changes how style 17 plays</td></tr><tr><td>The rule written before the run</td><td>CLAUDE.md, "the rule before the run"</td></tr></tbody></table></div></section><section id="siii"><h2>III. Method</h2><p>Code in <code>source/treadcore-brain/src/styles.rs</code>: <code>Champion { nin, h, w }</code> and <code>Champion::world</code>; <code>world_senses</code>, <code>scripted_world</code>, <code>shell_at</code>; the world branch of <code>Duelist::duel</code>; slot 17 in <code>ROSTER</code>; <code>gladiator_file</code>. <code>weights.rs</code>: <code>bot_style</code>'s choices end in <code>gladiator</code>. Seven tests new (the sizes, the arithmetic at 55-48-48-4, the world yardstick, eyes past <code>TANK_VISION</code>, a pillbox that has the tank and one of the side's own, an open gate with no throttle holding the tank). The brain crate's 178 tests pass.</p><p>The rule, before either census: the Gladiator is better than the Duelist if, on the same 48 seeds, its read against the defaults is higher by more than two standard errors of the paired difference.</p><p>Censuses: <code>scripts/census.sh</code> on this Mac, <code>JOBS=8</code>, <code>SEEDS=48</code>, <code>SEED0=0</code>, <code>SECS=900</code>, <code>RESPAWNS=3</code>, <code>TRIAL</code> a file of one line (<code>bot_style = 17</code>, then <code>bot_style = 7</code>), the defaults as the base. The pair is read seed by seed from each job's <code>a seed:</code> list (the jobs split the seeds alike). The first pair's <code>MAP=all</code> played the generated map only: BSD <code>paste</code> needs a <code>-</code>, which orrery's census jobs supply and a census by hand on a Mac does not. The second pair ran with that shim and played every map.</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th>Read, a seat against the defaults</th><th>generated maps</th><th>every map</th></tr></thead><tbody><tr><td>Gladiator (style 17, world M0015)</td><td>−2.25 ± 0.99</td><td>−2.53 ± 1.21</td></tr><tr><td>Duelist (style 7, hybrid)</td><td>−13.80 ± 1.35</td><td>−7.52 ± 1.60</td></tr><tr><td>Gladiator less Duelist, paired</td><td><strong>+11.56 ± 1.75</strong></td><td><strong>+4.99 ± 2.08</strong></td></tr></tbody></table></div><p>The rule is met on both pairs: 6.6 errors on the generated maps, 2.4 on every map. By map (every map, 4 or 5 seeds each, inside the noise one by one): island +3.16 against −15.95, big-lizard +2.59 against −12.26, industry −1.10 against −11.66, atlantic −3.57 against −12.25; the other way, fortressisles2 −8.93 against +3.43 and europe −7.83 against +3.12.</p></section><section id="sv"><h2>V. Discussion</h2><p>A champion of the toy arena, read in the game, cost its team 7.5 a seat on every map (13.8 on the generated maps); a champion of the world arena, read through the same gate, costs it 2.5 (2.3). The world islands trained against pillboxes and inside the game's own reach and speed, and the bridge now tells it the same things: that is the whole of the change, and the read says it was most of the gap. What remains is the Gladiator's own gap to the rules (it still reads under the defaults), which is the islands' to close and the bridge's to measure each time a milestone is taken.</p></section><section id="svi"><h2>VI. What is not built</h2><p>crucible's own <code>sense</code> run on a game state, for parity to the decimal (it runs only on a card); the bridge's first reads on the fleet (they need this commit on main); the GPU behaviour-cloning stage (Paul's step 3), its net and its judge not yet chosen.</p></section><section id="svii"><h2>VII. Paul's decisions</h2><p>Whether to commit and push this (CLAUDE.md); whether a candidate that reads better should ship by itself in auto mode, as a promotion does, or stay a press; which net the GPU behaviour-cloning stage trains and how it is judged.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

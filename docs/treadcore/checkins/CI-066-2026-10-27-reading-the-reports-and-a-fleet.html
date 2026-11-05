@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>Reading the Reports, What a Read May Adjust, and a Fleet of</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-066</p>
+    <h1>Reading the Reports, What a Read May Adjust, and a Fleet of Census Machines</h1>
+    <div class="front"><p><strong>Check-in report CI-066.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 27 October 2026. Companion records: <code>LAB-REPORT-BRAIN.md</code> section 104; <code>CENSUS.md</code> section 5a; <code>build/school/</code> on the Mac; <code>build/converge/20261026-181011/</code> on the census machine.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-066-2026-10-27-reading-the-reports-and-a-fleet.md">documentation/checkins/CI-066-2026-10-27-reading-the-reports-and-a-fleet.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>The two training loops' reports are now read by a written procedure: alive, what it decided, whether that holds, what it costs. The school's first eight rounds learned maps 9 and 10 in a round each and kept every passed course at its floor, but open maps slip between their turns (map 8 from 78% to 55%) and the gauntlet, unguarded, swings (G8 from 93% to 32.5%). Two guards are proposed for Paul: a high-water mark for each open map and the gauntlet as a guard. The read of the census machine found the run's candidate of generation 36 (dodge_horizon 1.08, w_in_range 1.4; held out +1.20 +/- 0.30 and +1.34 +/- 0.27), which goes to families and then to Paul. A fleet of Copal machines is designed: workers pull whole censuses from a queue of files on saskatchewan over ssh, join only after an identity check, and the learned tank grows from islands to one evolution over the fleet.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>Record how the reports are read and what a read may change; say how a fleet of Copal machines would be orchestrated.</p><h3 id="b-the-prompts">B. The prompts</h3><blockquote><p>check the school results</p></blockquote><blockquote><p>write a lab report describing what you read and adjsut when reading these reports. if I was to install copal on more CPUs, Can I get a fleet of these working tandom. How do we orchestrate this.</p></blockquote></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>"what you read"</td><td>A fixed order for each loop: alive, decided, true, cost; the files named</td><td>A free read: misses the slippage between a map's rounds</td></tr><tr><td>D2</td><td>"and adjust"</td><td>A table of what a read may and may not change; the keep rule never changes mid-run without Paul</td><td>Applying the two guards now: changes the rule after the run started</td></tr><tr><td>D3</td><td>Map 8 78% to 55%, map 6 16% to 2%</td><td>Propose a high-water mark for each open map</td><td>Train one map until it passes: the passed maps' guard would still hold, but the queue would stall on map 6</td></tr><tr><td>D4</td><td>G8 93% to 32.5%; G4, G6 swing</td><td>Propose the gauntlet as a guard before the keep; G9 a test only</td><td>Train on the gauntlet's files: it would stop measuring (CI-065, D2)</td></tr><tr><td>D5</td><td>Map 5 at 95.2% against 99%</td><td>Floor unchanged</td><td>Lowering it after seeing the result</td></tr><tr><td>D6</td><td><code>candidates.txt</code> on this read</td><td>Report the candidate; families, then Paul</td><td>Adopt it: a default is Paul's</td></tr><tr><td>D7</td><td>"a fleet ... working tandom"</td><td>Whole censuses from a queue of files over ssh, pulled by workers, an atomic <code>mv</code> to claim, heartbeats, the coordinator's frozen binary by hash</td><td>Jobs of one census over machines: breaks CENSUS.md rule 1; Slurm, Nomad, Kubernetes: schedulers that know nothing of the census's rules, for a few machines; Ray: Python</td></tr><tr><td>D8</td><td>Determinism across machines</td><td>A reference census must match saskatchewan's to the character before a machine joins; one Copal release across the fleet</td><td>Trust the binary: musl links dynamically, so libm comes from each machine</td></tr><tr><td>D9</td><td>The learned tank on a fleet</td><td>Islands, then specialists, then one shared-seed evolution, each when the one before plateaus</td><td>One evolution first: needs bit-identical updates and a long-lived connection</td></tr><tr><td>D10</td><td>No second machine yet</td><td>Design written, code built when the first machine is on the network</td><td>Building it untested</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><p>The school: <code>rounds.tsv</code>, <code>state.txt</code>, <code>log.txt</code>, <code>run.log</code> and every <code>gauntlet-round*.tsv</code> in <code>build/school/</code> on the Mac at 11:03, the gauntlets tabulated side by side. The run: <code>progress.txt</code>, <code>candidates.txt</code>, the candidate's <code>.weights</code> and <code>defaults.toml</code> over ssh on saskatchewan at 11:05. The build flags read in <code>.cargo/config.toml</code> (no <code>target-cpu=native</code>; <code>-crt-static</code> on musl).</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th>Round</th><th>Map</th><th>Before</th><th>After +/- error</th><th>Kept</th></tr></thead><tbody><tr><td>0</td><td>09</td><td>11.3%</td><td>100.0% +/- 0.0</td><td>passed</td></tr><tr><td>1</td><td>05</td><td>93.7%</td><td>95.2% +/- 0.7</td><td>no</td></tr><tr><td>2</td><td>07</td><td>15.3%</td><td>51.3% +/- 2.9</td><td>yes</td></tr><tr><td>3</td><td>08</td><td>56.7%</td><td>78.3% +/- 2.4</td><td>yes</td></tr><tr><td>4</td><td>06</td><td>0.0%</td><td>16.0% +/- 2.1</td><td>yes</td></tr><tr><td>5</td><td>10</td><td>10.7%</td><td>97.7% +/- 0.9</td><td>passed</td></tr><tr><td>6</td><td>08</td><td>54.7%</td><td>77.0% +/- 2.4</td><td>yes</td></tr><tr><td>7</td><td>06</td><td>2.0%</td><td>29.7% +/- 2.6</td><td>yes</td></tr></tbody></table></div><p>Gauntlet, round 0 to round 7: G1 100 to 86.5; G4 95 to 97.5 (low 34); G6 70 to 70 (low 0); G7 43 to 27; G8 93 to 32.5; G9 7 to 0 (%, 200 seeds each). Rounds took 460 to 909 seconds.</p><p>The run: generation 39, about 540 censuses, no failure. Candidate gen36/again-dodge_horizon--w_in_range+: +1.92 +/- 0.71 (55 seeds), +1.20 +/- 0.30 and +1.34 +/- 0.27 (400 each); one weight out at a time, both inside the noise.</p></section><section id="sv"><h2>V. Discussion</h2><p>The school's rule protects what is passed and nothing else, and the reports show the cost of that exactly where it was not looked for: open maps and single decisions. The guards are cheap; whether to change the rule mid-run is Paul's. The run's candidate is its first since dodge_horizon 2, and partly undoes it; families will say whether the scenarios agree. A fleet needs no new infrastructure, only a worker script and the run reading a queue, because the census was already built of whole, independent, machine-labelled readings.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>The Sequential Census with a Re-read</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-043</p>
+    <h1>The Sequential Census with a Re-read</h1>
+    <div class="front"><p><strong>Check-in report CI-043.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 25 October 2026. Companion records: <code>LAB-REPORT-BRAIN.md</code> section 79; CI-042 and section 78; roadmap backlog 59; <code>CENSUS.md</code>; <code>scripts/census.sh</code>, <code>scripts/sequential.py</code>.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-043-2026-10-25-the-sequential-census-with-a-re-read.md">documentation/checkins/CI-043-2026-10-25-the-sequential-census-with-a-re-read.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>LR 78's sequential census was not adopted because one early stop (LR 73's <code>-column</code>) was false and final. This check-in builds the form LR 78 left to Paul: an early stop is read again, sequentially, on fresh seeds, and counts only if the re-read agrees. <code>LOOKS=8 make census</code> follows the census as it plays, from its match lines, which match the census's own seed lists to 0.01 over 976 seeds. The two stages hold the false alarm rate to 2.8%, below the fixed census's 4.8%, and <code>-column</code> now reads as the fixed census does 81% of the time. They cost seeds, though: 106% of the fixed census over LR 78's 44 censuses, and less power at the effects the census mostly reads (z 2.5: 53% against 68%). No re-read size beats the fixed census on both counts. By the rule set first it is an option for large expected effects, and the fixed census stays the default. A live test on the Mac exercised both paths, the end and the early stop with its re-read.</p><p><strong>Index terms:</strong> brain census, sequential testing, O'Brien-Fleming, confirmation, statistical power, false alarm rate.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>To build what LR 78 proposed and test it against a rule written before the build, while the profiles' round robin plays on the machine.</p><h3 id="b-the-prompt">B. The prompt</h3><blockquote><p>commit and push. then build the re-read version</p></blockquote></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>"commit and push"</td><td>LR 78 committed and pushed on main (<code>732fde3</code>)</td><td>—</td></tr><tr><td>D2</td><td>A stop must happen while the census plays; jobs print their seed lists only at the end</td><td>Rebuild each seed's difference from the match lines (<code>team t (trial): score</code>), checked against the finished lists</td><td>Change fleet.rs to print a line a seed: the round robin plays the machine's tree, and a census binary should not change mid-study</td></tr><tr><td>D3</td><td>The round robin runs <code>scripts/census.sh</code> from the machine's tree</td><td>Change it on the Mac only; the machine pulls after the round robin and the team_rotate re-read</td><td>Pull now: bash reads a running script as it goes</td></tr><tr><td>D4</td><td>"Either/or is a scalar"</td><td><code>LOOKS</code> opt-in; unset, <code>make census</code> is as it was</td><td>Make it the default before its reading</td></tr><tr><td>D5</td><td>A stop at the last look is the fixed census</td><td>Only a stop before the last look is re-read</td><td>Re-read every outside verdict: it would also re-read the fixed census's own</td></tr><tr><td>D6</td><td>The rule before the build</td><td>(a) read as it plays, (b) false alarms at or below 4.55%, (c) LR 78's verdicts as often as not on fewer seeds</td><td>—</td></tr><tr><td>D7</td><td>F: (c) fails, 106% of the seeds</td><td>Not the default; kept as an option for large effects</td><td>Shrink the re-read until it saves seeds: then it loses the close calls (the size table)</td></tr><tr><td>D8</td><td>The re-read size explored after the verdict</td><td>Reported as exploration, no rule changed</td><td>Pick a size and call it adopted</td></tr><tr><td>D9</td><td>A live test needs an early stop for sure</td><td>A rookie trial (<code>skill = 0</code>) at 120 s; a bare brain (<code>caps =</code>) read inside, so it tested the end path</td><td>A fake census binary: it would test the plumbing, not the census</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><p><strong>Reading as it plays.</strong> <code>sequential.py watch DIR BIN</code> every 20 s: each job's match lines, a seed finished when its three plays' nine team lines are read; its difference the trial team's mean score a seat less the baseline's (fleet.rs <code>brain_census</code>). The whole rounds across jobs, interleaved by first seed, are the census so far. At each look (round(j N / K)) the reading and the bound go to <code>sequential.txt</code>; past the bound before the last look, exit 3. <code>census.sh</code> then marks the directory <code>stopped</code>, kills the jobs by their frozen binary's path, and plays a second stage into <code>reread/</code>, its <code>run.env</code> SEED0 + SEEDS. <code>sequential.py verdict</code> reads both.</p><p><strong>The check of (a).</strong> Four finished censuses from the machine (LR 72's dodge on every map, LR 76 <code>-posture</code> and <code>-dodge</code>, the board's <code>nofront</code>): the rebuilt differences against each job's "a seed:" list.</p><p><strong>(b) and (c).</strong> <code>sequential.py twostage</code> over LR 78's 44 censuses: the simulation (N = 200 a stage, unit spread, 4 000 censuses a row, expected z 0 to 10) and the replay (stage one on the census's own seeds in order; the re-read drawn from them with replacement, 200 times). The size table, a quarter, a half and the whole as the re-read, 3 000 censuses a cell.</p><p><strong>The live test.</strong> On the Mac, <code>LOOKS=4 SEEDS=32 SEED0=900 SECS=120 JOBS=8 make census</code>, naval.map, first <code>TRIAL</code> with every capability off, then a rookie (<code>skill = 0</code>).</p></section><section id="siv"><h2>IV. Results</h2><p>In LR 79: (a) 976 seeds, the largest difference 0.01; (b) false alarms 2.8%; (c) 44 verdicts of 44 as often as not, 106% of the seeds; the power and size tables; the live test.</p></section><section id="sv"><h2>V. Discussion</h2><p>Confirmation is not free. An early stop is cheap only when the effect is large enough to stop at the first looks of both stages. For the mid-sized effects most of this brain's parts have, the first stage stops at look four to six and the re-read then costs a census more. Each re-read also has a chance to miss a real effect, which is where the power goes. LR 78's single stage saved seeds by trusting the stop; LR 79's two stages are honest but spend the saving. The fixed census, with its rule before the run, was already the efficient instrument for the close calls this tuning makes. The sequential census earns its place as a fast screen for a large effect.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

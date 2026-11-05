@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>Every Make Target a Run of the Fleet</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-075</p>
+    <h1>Every Make Target a Run of the Fleet</h1>
+    <div class="front"><p><strong>Check-in report CI-075.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 28 October 2026. Companion records: <code>LAB-REPORT-BRAIN.md</code> sections 114, 115 and 116; orrery's <code>tools/plans/treadcore.py</code>, <code>tools/fleet-queue.py</code>, <code>src/training.rs</code>, <code>src/sessions.rs</code>.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-075-2026-10-28-every-target-a-run.md">documentation/checkins/CI-075-2026-10-28-every-target-a-run.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>This report covers steps 3 to 6 of the move from make to orrery.</p><ul><li><strong>Runs.</strong> Each of the 13 training and measurement targets is now a run of orrery's fleet queue, asked for by a button or by <code>fleet-queue.py Q new KIND</code>.<ul><li>Censuses are played a machine each.</li><li>spsa and tune advance a step or a generation at a time, by their</li></ul><p>scripts' rules.</p><ul><li>The learning harness runs as one job.</li><li>Recordings are delivered to the store, hashed.</li></ul></li><li><strong>The test.</strong> A tiny run of eight kinds worked end to end.</li><li><strong>The Training view</strong> is in four pages (Fleet, Runs, Found, Net), with the newest change in one line and Found Improvement leaderboards, after Paul's word on the first version.</li><li><strong>Sessions</strong> puts a resumable tmux session a machine in a grid, in 6×10.</li><li><strong>Promotion</strong> is prepared on a branch, tested, its families read, and reaches main only on Paul's Approve.</li><li><strong>The Makefile</strong> has no training.</li></ul><p>The first promotion stopped at a test. Every strong candidate trades focus fire for shooting the near tank in range. That is Paul's decision.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>Finish moving training to orrery:</p><ul><li>every target a run;</li><li>every activity a button;</li><li>results brought into treadcore by a promotion Paul approves;</li><li>the Makefile cleared.</li></ul><h3 id="b-the-prompts">B. The prompts</h3><blockquote><p>write an orrery user guide. this fleet organization. take pictures. show the concept of training treadcore, show samples of maps. show tables of example signal input, inner matrix and output, we can show that our contribed training of programming an AI manually in functions can accelerate training, although biased to perform like the function, we can then have a working generational set of coefficients for the neural net. we want to show our goal in associate with this specific training of tank pathing and fighting. by using a best practice time shart scripted AI, to be the metric which the neural net ai is judged. In general any sort of AI inteligence does not appear until it has lots of test data. Our test data is the simulation running in treadcore. We adjust the scalars that need adjusting in the scripted brainz ai . but we clearly need faster testing to get generational improvements in the net. Describe a way to keep track o making sure all matrix and variables are potential canidates for refinement. Also. Perhaps in the training mode showing us the transform information. Can you highlight, or allow the mouse to show more detail on hover of pixle on grid. Also a section, bar maybe (slim) . to show the newest coefficient to change. Stream them like tickers and marquee them show the variable name and modified value and its offset and which comptuer win the calculation. in fact a leader board of number of sucessfull scalar modified in the net or in the weights , a learder board of counts of the computer that submitted the results. "Found Improvment" . The user guide will be long, in html. It describes the projects of treadcore and how we need a CUDA and a CPU cluster to make good time. I expect it to be very long, IEEE master thesis. Describe writing a shell clustering program to destribute the values of the matrix to refine during neural net training, and training weights of rewards and its custom coded brinz. give convergence appromixations, considering we have our current run rate. annotate your uses. make sure all activities you ahve area available from an interface button, show user guide diagram of each button and when to use it. If it applies to our treadcore purpose, or if its just part of general orchesetration. Also, it would be nice to launch a text subshell perhaps starting with copal-tm . We ca run the subshells in a grid. Would be nice if we can have resumable sessions in tmux or screen. This changes the rust application layout, please consider UI and the progress of a user adding and stopping tasks. For example Orrery will have more types of training tasks, treadcore is just our first template. As we find more tasks, we will then make it more generic, right now consider the user guide and flow of technical explanation and live screen like a bunch of screen and sessions of copal. (also in tiny fony so they fit, like pt8).</p></blockquote><blockquote><p>the scrolling marquee is too much. we need a way to show new items. less space, perahps just show the latest. take a look at the screen we ahve some text overflow. lets try to get your text to fit. add more screens or dropdown for information not neseaary all the time. Also the progress bars, I'm a bit confused what they do, are they CPU meters? Unsure.</p></blockquote><p>The user guide is the step after the fleet management test.</p></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>"all orchestration coded in orrery"; the science stays treadcore's</td><td>Treadcore lists the censuses (<code>LIST=1</code>); orrery decides where they run</td><td>Copying the parts and switches lists into orrery</td></tr><tr><td>D2</td><td>A census is one machine's</td><td>A run's censuses are a job each, on whichever machine is free; never split</td><td>Splitting one census's seeds across machines</td></tr><tr><td>D3</td><td>spsa and tune results must read as before</td><td>Their rules carried over; tune's children side by side (recorded as the one difference)</td><td>A new optimiser</td></tr><tr><td>D4</td><td>A run asked for should not wait behind the standing search</td><td>Priority for a run's jobs; a top-up as soon as a run is asked</td><td>First come, first served</td></tr><tr><td>D5</td><td>A crash mid top-up left a run "running" with no jobs (the dry test)</td><td>Run state written only when the top-up succeeds</td><td>—</td></tr><tr><td>D6</td><td>Runs waited for a new commit's builds</td><td>Runs advance without them; only new jobs wait</td><td>—</td></tr><tr><td>D7</td><td>"every activity ... from an interface button"</td><td>A button a kind on the Runs page; Cancel, Approve, Sync now, Shut the fleet down</td><td>Command-line only</td></tr><tr><td>D8</td><td>"the scrolling marquee is too much ... text to fit ... more screens"</td><td>One line, the newest change; four pages; checked by review frames at 1280 × 760</td><td>A smaller font in the same crowded layout</td></tr><tr><td>D9</td><td>"are they CPU meters?"</td><td>Bars labelled CPU and GPU with what they measure; the queue bar keyed (jobs done, running, queued)</td><td>Removing the bars</td></tr><tr><td>D10</td><td>Full-screen programs need a terminal emulator</td><td>tmux draws (<code>capture-pane</code>), orrery shows and types (<code>send-keys</code>)</td><td>A VT100 emulator in Rust</td></tr><tr><td>D11</td><td>"tiny font ... like pt8"</td><td>6×10 from misc-fixed on a Copal node, padded to the table's 20 rows</td><td>Scaling 8×13 down</td></tr><tr><td>D12</td><td>"Prepare, you approve"</td><td>Branch, tests, families, commit with the evidence, pushed as the branch; Approve pushes it to main as a fast-forward</td><td>Committing to main</td></tr><tr><td>D13</td><td>Only the Mac can push</td><td>Promotion runs on the Mac (<code>host:mac</code>)</td><td>Any machine</td></tr><tr><td>D14</td><td>The first promotion failed <code>default_weights_are_todays_constants</code></td><td><code>set-defaults.py</code> writes <code>Tactics::default()</code> too</td><td>Deleting the test</td></tr><tr><td>D15</td><td>Every strong candidate fails the focus-fire test</td><td>Nothing promoted; the choice put to Paul</td><td>Changing the test without asking</td></tr><tr><td>D16</td><td>"Remove the training from make"</td><td>The 13 targets and their help gone; the scripts stay, their usage lines name them</td><td>Deleting the scripts (one machine without the fleet still uses census.sh)</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><ol><li><strong>treadcore:</strong> <code>LIST=1</code> in <code>scripts/parts.sh</code>, <code>switches.sh</code> and <code>roundrobin.sh</code>; <code>scripts/set-defaults.py</code>; the Makefile; CENSUS.md sections 2, 4 and 4a; PROCESS.md.</li><li><strong>orrery <code>tools/plans/treadcore.py</code>:</strong><ul><li>the runs: <code>run_jobs</code>, <code>census_run</code>, <code>spsa_run</code>, <code>tune_run</code>,</li></ul><p><code>harness_run</code>, <code>record_run</code>, <code>promote_run</code>;</p><ul><li><code>approve</code>, <code>evidence</code> and <code>strongest</code>;</li><li>the ticker: <code>tick</code> and <code>ticker_scan</code>.</li></ul></li><li><strong>orrery <code>tools/fleet-queue.py</code>:</strong> <code>new</code>, <code>runs</code>, <code>cancel</code> and <code>approve</code>; priority; planning when <code>runs/</code> changes.</li><li><strong>orrery <code>src/</code>:</strong><ul><li><code>training.rs</code>: the pages, <code>draw_latest</code>, the matrix hover;</li><li><code>sessions.rs</code>;</li><li><code>font.rs</code>: F6X10;</li><li><code>nav.rs</code>: Sessions;</li><li><code>main.rs</code>: <code>--queue</code>, <code>--frame-view sessions</code>, <code>ORRERY_FRAME_PAGE</code>.</li></ul></li><li><strong>The test runs:</strong> r0001 to r0008 as in LR 114 C; the promotion r0009; the scratch worktree for the candidates' unit tests.</li></ol></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><tbody><tr><td>Run kinds tested</td><td>census, parts, switches, spsa, tune, gauntlet, record, roundrobin: all ran (LR 114 C)</td></tr><tr><td>Record</td><td>2,812,816 bytes to calber, sha256 checked at both ends</td></tr><tr><td>orrery tests</td><td>337 passed</td></tr><tr><td>Review frames</td><td>every Training page fits at 1280 × 760; Sessions shows six machines in 6×10</td></tr><tr><td>Promotion r0009</td><td>stopped at <code>default_weights_are_todays_constants</code> (fixed), then <code>focus_fire_picks_the_wounded_tank_a_teammate_is_on</code></td></tr><tr><td>Candidates, held out</td><td>grove/w0003 +2.65; gen62/best +2.54; gen64/best +2.36; the best with <code>w_near</code> 1.0, gen58/best-less-w_near, +2.08</td></tr><tr><td>Makefile</td><td><code>make census</code>: "No rule to make target"</td></tr></tbody></table></div><p><strong>Errors:</strong></p><ul><li>The test runs were 1 to 4 seeds. Their numbers show that the machinery works, not facts about the brain.</li><li>The held-out means are of two reads of 400 seeds, each with about ±0.28.</li></ul></section><section id="sv"><h2>V. Discussion</h2><p>The fleet can now be driven from orrery alone:</p><ul><li>the standing search;</li><li>every kind of run, by a button;</li><li>the families;</li><li>gathering, and shutting down;</li><li>promotion.</li></ul><p>The first promotion found what the census cannot. The search's best weights change a behaviour the brain was built to have. The census, the families and the unit tests each catch a different thing, and here the unit test caught it. What happens to focus fire is Paul's choice.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

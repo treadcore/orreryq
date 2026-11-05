@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>The Run for the Beach</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-008</p>
+    <h1>The Run for the Beach</h1>
+    <div class="front"><p><strong>Check-in report CI-008.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 19 October 2026. Companion records: journal 0056; <code>LAB-REPORT-BRAIN.md</code> section 31; CI-004, CI-007.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-008-2026-10-19-the-run-for-the-beach.md">documentation/checkins/CI-008-2026-10-19-the-run-for-the-beach.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>CI-004 found 20% of the trial team's deaths on <code>landfall</code>, the boat's run for a beach, most of them sunk by direct fire. This step added a weight, <code>landfall_shy</code> (default 0, Paul's choice), that prices the tiles of the run inside a seen hostile gun's reach. At 1 over 48 seeds it reads +0.65 ± 0.69 a seat, and the landfall deaths did not change (169 against 165 on the same 16 seeds). The hypothesis is not confirmed. Sight and direct range are both 10 tiles, so a boat sees the gun that sinks it only once it is in its reach. Backlog 32 prices the guns the team has seen instead.</p><p><strong>Index terms:</strong> partial observability, utility scoring, boats, weights.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>Backlog 30, as proposed at CI-007's close: a weight that turns a boat off a gun's range.</p><h3 id="b-the-prompts">B. The prompts</h3><blockquote><p>yes 0. commit. push. continue backlog</p></blockquote><p>The answer to "I'd start it at 0 ... Is that the default you want?"</p></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>Paul: "yes 0"</td><td><code>landfall_shy</code> 0; play unchanged</td><td></td></tr><tr><td>D2</td><td>The either/or rule (memory, 18 October)</td><td>A weight blending the old price and the exposure</td><td>A switch: a scalar lets the tuner find the value</td></tr><tr><td>D3</td><td>Reading the code: <code>danger</code> and <code>toward</code> already avoid a seen gun</td><td>Price what they miss, the run's exposure, and test it</td><td>Abandoning the step before measuring: approved, and cheap to measure</td></tr><tr><td>D4</td><td>The weight placed among the dodge's</td><td>Moved after <code>dodge_hold</code></td><td></td></tr><tr><td>D5</td><td>F: +0.65 ± 0.69; landfall deaths unchanged</td><td>Not confirmed; the weight stays 0; backlog 30 closed</td><td>Tuning <code>landfall_shy</code>: the deaths did not move at 1</td></tr><tr><td>D6</td><td>The duck's note: sight = direct range = 10</td><td>Backlog 32: the team's remembered guns, read first</td><td>Building it now: one step at a time, and the read may show no gun was seen</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><h3 id="a-the-part">A. The part</h3><p><code>RuleBot::landfall_order</code> (lib.rs) scores each reachable shore tile <code>b</code> as <code>dist(me, b) + danger(b) + toward(b) + 4 × shy × exposed(b)</code>. <code>exposed(b)</code> cuts the line from the boat to <code>b</code> into ⌈dist⌉ steps and counts, in tiles, the steps within <code>DIRECT_RANGE + 4</code> of a seen hostile tank or <code>PILLBOX_RANGE + 2</code> of a hostile pillbox. It returns 0 at once when <code>shy</code> is 0, so default play is unchanged by construction. <code>Commander::set_settings</code> copies <code>W::LandfallShy</code> into the inner RuleBot.</p><h3 id="b-the-test">B. The test</h3><p><code>a_shy_boat_runs_for_the_beach_clear_of_the_guns</code>: a beach 30 tiles away whose run passes a gun 12 tiles off the line, and one 40 away with a gun 15 beyond it. Scores at 0: 66 and 82, the near beach chosen. At 1, 15 exposed tiles add 60: 126 and 82, the far beach chosen.</p><h3 id="c-the-census">C. The census</h3><p>The defaults dumped with <code>landfall_shy = 1</code>, 48 seeds in three ranges, naval.map, 900 s, respawns 3, the fair census, <code>CENSUS_ACTS</code> on.</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th></th><th>d a seat</th><th>Deaths (seeds 0–15)</th><th>On landfall</th><th>Direct, sunk, landfall</th></tr></thead><tbody><tr><td>Null (CI-004)</td><td>0</td><td>819</td><td>165</td><td>132</td></tr><tr><td><code>landfall_shy</code> 1</td><td>+0.65 ± 0.69</td><td>821</td><td>169</td><td>133</td></tr></tbody></table></div><p>All 48 seeds: 2,522 deaths, 548 on landfall (21.7%). Tests: brain 71 passed and 8 ignored; client 31; net 14; proto 3; sim 50; no warnings. 354 functions, 121 undocumented, 79 tests.</p></section><section id="sv"><h2>V. Discussion</h2><ol><li><strong>What the code already does should come before the hypothesis.</strong> The old score already steered boats off every gun they could see. The step's own first reading showed it, and the census confirmed it.</li><li><strong>The limit is the information, not the decision.</strong> A gun is seen at its own range. Better choices need better knowledge: what a teammate saw, kept for a while. That is the team board's job (CI-001 A1), and the first use for it that a death count supports.</li></ol><p><strong>Next:</strong> backlog 32's read, then its part.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

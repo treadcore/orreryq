@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>The Circle at the Edge of Sight, and a Dodge into Water</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-023</p>
+    <h1>The Circle at the Edge of Sight, and a Dodge into Water</h1>
+    <div class="front"><p><strong>Check-in report CI-023.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 20 October 2026. Companion records: journals 0077 to 0079; <code>LAB-REPORT-BRAIN.md</code> sections 49 to 52; CI-022.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-023-2026-10-20-a-dodge-into-water.md">documentation/checkins/CI-023-2026-10-20-a-dodge-into-water.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>Scenario files grew from three ported tests into a fast instrument, and in four steps they found three things the census could not. First, the mechanism of the landfall memory's gain: without memory a boat circles at the edge of a gun's sight for 39 s and lands beside it, and with any memory over 2 s it lands on the safe coast in 5. Second, a Commander built directly ran the landfall's weights at 0; this is fixed, and dealt play is unchanged to the hundredth. Third, a dodge could choose a point in the water, be refused, and leave the tank under the shell. The fix, measured before and after on the same 48 seeds, gives 7.1% fewer deaths. One claim made on the way was wrong and is withdrawn: that a Commander at sea never prices a beach.</p><p><strong>Index terms:</strong> scenario testing, partial observability, limit cycles, reflexes, before-and-after measurement.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>To make the landfall testable in seconds (LR 48's next step), then to run scenarios over many seeds.</p><h3 id="b-the-prompt">B. The prompt</h3><blockquote><p>commit. push. continue backlog</p></blockquote><p>(Five times across the four steps.)</p></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>The landfall needs sea and coasts</td><td><code>[[terrain]]</code>, <code>[[tank]]</code>, teams, weights, <code>lands_near</code></td><td>Map files per scenario: carving in the file keeps it one page</td></tr><tr><td>D2</td><td>Three versions held with memory on and off</td><td>Run each broken before trusting it; each failure traced</td><td>Accepting a passing test</td></tr><tr><td>D3</td><td>A 5 s trace showed <code>fortify</code> throughout</td><td>Claimed "never prices a beach" (LR 49)</td><td></td></tr><tr><td>D4</td><td>A 1 s trace showed <code>landfall</code> from 1.9 s</td><td>D3 withdrawn; <code>trace_every</code>, positions in the trace</td><td>Leaving the claim</td></tr><tr><td>D5</td><td>Identical runs: no <code>set_settings</code></td><td><code>Commander::new</code> applies the defaults; dealt play checked unchanged</td><td>Fixing only the runner: the trap is in the constructor</td></tr><tr><td>D6</td><td>F: the circle</td><td>A scenario that fails without memory</td><td></td></tr><tr><td>D7</td><td>A pass or fail on one seed says little</td><td><code>many</code>: a share over seeds with its error</td><td></td></tr><tr><td>D8</td><td>F: 97 of 100, "refused: water"</td><td><code>Dodge::order_on</code> with the map, four candidate points</td><td>A retry on refusal: a tick late, and only after failing</td></tr><tr><td>D9</td><td>A shared reflex cannot be paired</td><td>Before and after nulls, frozen binaries, the same seeds</td><td>A switch only to measure it: a bug fix has no "off" worth keeping</td></tr><tr><td>D10</td><td>F: water-only made boats worse</td><td>Water or a beach afloat</td><td>Shipping the first fix</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><p>The scenario runner (<code>scenario.rs</code>): placements, <code>trace_every</code>, <code>run_seeded</code>, <code>many</code>, <code>set_weights</code>, <code>scenario_many</code>, <code>scenario_one</code> with <code>SEED</code> and <code>SCENARIO_SET</code>, brains thinking with the map. The dodge (<code>lib.rs</code> <code>Dodge::order_on</code>; callers <code>RuleBot::think_map</code>, <code>Commander::think_map</code>). Before and after: <code>git stash</code> the fix, build a frozen census binary, <code>git stash pop</code>, build another; nulls on seeds 0 to 47 with <code>CENSUS_ACTS</code>, naval.map, 900 s, respawns 3, the fair census.</p></section><section id="siv"><h2>IV. Results</h2><p>Circling, 100 seeds: memory 0 holds 0; memory 2 to 60 s holds 100. Ashore at 6 s with memory, 40 s without (seed of the file). Dealt play after the <code>Commander::new</code> fix: LR 46's 16 per-seed differences identical. Shell scenario: 97 of 100, then 1,000 of 1,000.</p><div class="table"><table><thead><tr><th>Same 48 seeds</th><th>Before</th><th>After</th></tr></thead><tbody><tr><td>Deaths</td><td>2,472</td><td>2,297</td></tr><tr><td>Dead share</td><td>42.5%</td><td>40.6%</td></tr><tr><td>Ashore: by own shell, killed</td><td>15.7%, 6.5%</td><td>10.4%, 5.1%</td></tr><tr><td>Afloat: killed</td><td>14.8%</td><td>14.0%</td></tr></tbody></table></div><p>Tests: brain 77 passed and 10 ignored; client 31; net 14; proto 3; sim 50; no warnings.</p></section><section id="sv"><h2>V. Discussion</h2><ol><li><strong>A run that cannot fail tests nothing.</strong> Three versions of the landfall scenario passed with the memory on and off. Breaking each found a real behaviour: the binding first choice, a drone seeing for its tank, and the circle.</li><li><strong>A trace must sample faster than what it watches.</strong> A 5 s trace reported the state after a 5 s crossing and produced a wrong claim.</li><li><strong>Many seeds find what one seed hides.</strong> The dodge's water bug sat under every census since LR 27, averaged into the meter. Three failing seeds in a hundred pointed straight at it.</li></ol><p><strong>Next:</strong> backlog 42 (<code>duck</code>), or the boat's dodge (31) with a scenario.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

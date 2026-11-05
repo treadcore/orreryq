@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>The Duelist&#x27;s Gate a Dial, a Clone Judged Beside the Rules</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a><a href="#svi">VI</a><a href="#svii">VII</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-089</p>
+    <h1>The Duelist's Gate a Dial, a Clone Judged Beside the Rules, and crucible's Partners in the Game's Styles</h1>
+    <div class="front"><p><strong>Check-in report CI-089.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 4 November 2026. Companion records: <code>LAB-REPORT-BRAIN.md</code> section 140; CHANGELOG; ROADMAP backlog 82; journal 0116; crucible <code>cab1adf</code>; orrery <code>7b3bf3c</code>.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-089-2026-11-04-the-gate-a-dial-the-clone-beside-the-rules.md">documentation/checkins/CI-089-2026-11-04-the-gate-a-dial-the-clone-beside-the-rules.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Intent</a></li><li><a href="#sii">II. Decision log</a></li><li><a href="#siii">III. Method</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li><li><a href="#svi">VI. What is not built</a></li><li><a href="#svii">VII. Paul's decisions</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>The Gladiator read 2.5 a seat under the game's defaults, and the clone stage's first round could not tell a clone from the Scholar as a whole team of nets. The Duelist's gate is now a dial the census can read (<code>duel_gate</code>); the clone is judged on one seat beside the rules (<code>SCHOLAR=file</code>, <code>bot_mix = one</code>); and crucible's world islands spar against the game's styles. The gate swept at 0, 0.3 and 0.6 leaves the default at 0: 0.6 leans better by +1.61 ± 1.50, inside two errors.</p></section><section id="si"><h2>I. Intent</h2><p>orrery asked what should close the Gladiator's gap and how a clone should be judged. Paul chose, word for word: "Islands meet the game's styles", "The gate as a dial", and "One seat beside the rules".</p></section><section id="sii"><h2>II. Decision log</h2><div class="table"><table><thead><tr><th>Decision</th><th>Cause</th></tr></thead><tbody><tr><td><code>duel_gate</code>, default 0, range −1 to 1</td><td>CLAUDE.md, "either/or is a scalar"; 0 is the gate as trained; the confidence is a tanh</td></tr><tr><td>The gate read from the rules' settings</td><td>every dial of a seat lives there; the Duelist wraps the rules</td></tr><tr><td>The gate for both styles 7 and 17</td><td>one bridge, one rule</td></tr><tr><td><code>SCHOLAR=file</code> for slot 6</td><td>a census of one seat beside the rules needs the style, not <code>CENSUS_NET</code>'s whole team</td></tr><tr><td>The gate's default not moved</td><td>the rule before the run: no gate past two errors</td></tr><tr><td>crucible's styles only under WORLD, style 0 the script</td><td>the yardstick and the hybrid's answer must stay what they were measured on</td></tr></tbody></table></div></section><section id="siii"><h2>III. Method</h2><p>weights.rs <code>DuelGate</code>; RANGES; styles.rs <code>Duelist::gate</code>, <code>scholar_file</code>, a test that a confidence of 0.54 passes gates 0 and 0.5 and not 0.6. 164 brain tests. Three censuses on this Mac, every map (the BSD paste shim), 48 seeds, 900 s, respawns 3, <code>JOBS=8</code>, the trial <code>bot_style = 17</code> with <code>duel_gate</code> 0, 0.3, 0.6; paired seed by seed.</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th>Gate</th><th>Read, a seat against the defaults</th><th>Less gate 0, paired</th></tr></thead><tbody><tr><td>0</td><td>−2.58 ± 1.27</td><td></td></tr><tr><td>0.3</td><td>−2.50 ± 1.16</td><td>+0.08 ± 1.37</td></tr><tr><td>0.6</td><td>−0.97 ± 1.52</td><td>+1.61 ± 1.50</td></tr></tbody></table></div></section><section id="sv"><h2>V. Discussion</h2><p>A champion kept to the fights it is surest of costs its team less: at 0.6 the Gladiator reads inside the noise of the rules. One error is not two, and 48 seeds are a tenth of a held-out read; the fleet's 400 will say whether 0.6 is the line.</p></section><section id="svi"><h2>VI. What is not built</h2><p>The gate's read on the fleet; the clone's first one-seat judgement (it waits for this commit); champions trained against the styles, which the bridge reads as they come.</p></section><section id="svii"><h2>VII. Paul's decisions</h2><p>Whether to commit and push this; whether the fleet reads the gate at 0.6 on 400 seeds.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

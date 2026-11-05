@@ -1,0 +1,145 @@
+<meta charset="utf-8">
+<title>Which Rungs the Lean Moves, and Where the Time Goes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a><a href="#appendix-a">Appendix A</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-003</p>
+    <h1>Which Rungs the Lean Moves, and Where the Time Goes</h1>
+    <div class="front"><p><strong>Check-in report CI-003.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 18 October 2026. Companion records: journal 0051; <code>LAB-REPORT-BRAIN.md</code> section 26; CI-001, CI-002.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-003-2026-10-18-where-the-time-goes.md">documentation/checkins/CI-003-2026-10-18-where-the-time-goes.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li><li><a href="#appendix-a">Appendix A. Reproducing this report</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>CI-002 found that leaning the Auto ladder by the team's posture costs about a point a seat, whichever way the posture is computed. This step instrumented the brain to show which rungs the lean moves and where a team's time goes, with no change to play. The lean moves tanks from Fortify to Expand (84% of changed picks), and turret time falls 88%. Economy's score feeds back on building: the castle spends material, and spent material reads as Economy. Turning Economy off restores half the turret time but none of the score (+0.13 ± 0.47), so the hypothesis is not confirmed. The larger finding: on naval.map the ladder decides only 5.6% of a team's seat-seconds; the island hop takes 19%, and 46.7% is spent dead. The census as set measures attrition, and the levers worth pulling are survival and the crossings, not the ladder.</p><p><strong>Index terms:</strong> instrumentation, time budget, utility AI, attrition, experimental design.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>To finish backlog 27: show which rungs the lean moves, test the hypothesis that Economy's lean costs the point, and decide what the leanings should become.</p><h3 id="b-the-prompt">B. The prompt</h3><blockquote><p>yes. commit. push. start backlog</p></blockquote><p>"Start backlog" was read as the next item CI-002 named, backlog 27, as CI-002 section V and its "Next" line set out.</p><h3 id="c-state-at-the-start">C. State at the start</h3><p>Commit <code>61d0c41</code> (CI-002, journal 0050), pushed, no tag. <code>posture</code> off; scored posture -1.04 ± 0.58, ladder's posture -0.81 ± 0.65, on the same 48 seeds.</p></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>Backlog 27's proof: "seat-seconds on each rung, with the lean and without"</td><td><code>Brain::rung</code> and a per-rung count in the census, plus the meter's from-to matrix of changed picks</td><td>Inferring rungs from status words: LR 22 made codes the only thing logic and measurement read</td></tr><tr><td>D2</td><td>A rung kept from an earlier think would be counted when the ladder was not reached</td><td><code>rung_now</code>, cleared at the start of every think, set only when the ladder picks</td><td>Reading <code>Commander::rung</code>: it is the last rung taken, kept across reflexes and jobs</td></tr><tr><td>D3</td><td>The first launcher passed its label to <code>env</code> as a command, and nothing ran</td><td>A small script taking the label apart from the variables</td><td>Re-reading results from a run that never happened</td></tr><tr><td>D4</td><td>The summary line printed no moves: the census total did not add the new matrix</td><td>Add it to the total; sum this run's per-match lines for the report</td><td>Re-running 144 matches for a figure the per-match lines already held</td></tr><tr><td>D5</td><td>F: Fortify to Expand 84%, Turrets -88%, Economy causing two thirds</td><td>A causal test with no code: <code>w_pos_economy</code> 0 in a weights file, the same 48 seeds</td><td>Changing Economy's score first: the weight answers whether Economy matters at all, for free</td></tr><tr><td>D6</td><td>F: Economy off restores half the turret time and none of the score</td><td>Hypothesis not confirmed; the leanings stay as they are</td><td>Tuning the 5 x 6 leanings: the census cannot see the point they might be worth</td></tr><tr><td>D7</td><td>F: the ladder held under 7% of seat-seconds by the per-rung count</td><td>Count every seat-second by status code (<code>CENSUS_ACTS</code>)</td><td>Assuming the rest was fleet slots: measuring was cheaper than guessing</td></tr><tr><td>D8</td><td>F: 46.7% dead, 19% hop, 5.6% ladder</td><td>Backlog 28 (survival) and 29 (a census where late parts act) ahead of the tuner</td><td>More ladder work: it can move at most 5.6% of the time</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><h3 id="a-census">A. Census</h3><p>As in CI-001 III and CI-002 III.A: naval.map, 900 s, respawns 3, the fair census, 48 seeds in three ranges of 16 (<code>CENSUS_SEED0</code> 0, 16, 32) side by side, <code>board</code> on for every team. The three runs:</p><div class="table"><table><thead><tr><th>Run</th><th>Trial</th><th>Settings file</th></tr></thead><tbody><tr><td>no lean</td><td><code>board</code> (a null run)</td><td>none, <code>CENSUS_CAPS=</code></td></tr><tr><td>lean</td><td><code>board, posture</code>, <code>w_posture</code> 0.5, scored</td><td><code>scored.toml</code> (CI-002)</td></tr><tr><td>lean, Economy off</td><td>as lean, <code>w_pos_economy</code> 0</td><td><code>noecon.toml</code></td></tr></tbody></table></div><p>The time-share run was a null run with <code>CENSUS_ACTS=1</code>, 16 seeds in ranges of 6, 6 and 4.</p><h3 id="b-the-instruments-function-by-function">B. The instruments, function by function</h3><div class="table"><table><thead><tr><th>File</th><th>Function or field</th><th>What it does</th></tr></thead><tbody><tr><td><code>lib.rs</code></td><td><code>Brain::rung</code> (new, default None)</td><td>the Auto rung this think took, if it reached the ladder</td></tr><tr><td><code>commander.rs</code></td><td><code>Commander.rung_now</code> (new), <code>think_on</code>, <code>auto</code>, <code>impl Brain::rung</code></td><td>cleared at each think, set when the ladder picks, returned to the census</td></tr><tr><td><code>meter.rs</code></td><td><code>Meter.moved</code> (new), <code>meter::posture(p, first, taken)</code></td><td>each changed pick by the rung that held first and the rung taken; printed most common first</td></tr><tr><td><code>fleet.rs</code></td><td><code>brain_census</code>: <code>rungs</code>, <code>rungs_total</code>, <code>rung_line</code>; <code>CENSUS_ACTS</code></td><td>the trial team's seat-seconds a rung, per match and in total; every seat-second by <code>Act::code</code>, dead seats apart, ladder thinks marked <code>[ladder]</code></td></tr></tbody></table></div><p>Sampling is once a second of game time, for each trial seat, after the world steps. A seat whose tank is not alive counts as dead whatever its last code.</p><h3 id="c-the-causal-test-d5">C. The causal test (D5)</h3><p>If Economy's feedback on building caused the point, then removing Economy, which changes only which posture is read, must recover it. The test compares Economy on and off seed by seed, on the same seeds, against the same baseline.</p></section><section id="siv"><h2>IV. Results</h2><h3 id="a-rungs-48-seeds-trial-team-seat-seconds">A. Rungs (48 seeds, trial team seat-seconds)</h3><div class="table"><table><thead><tr><th>Rung</th><th>No lean</th><th>Lean</th><th>Lean, Economy off</th></tr></thead><tbody><tr><td>DefendBase</td><td>609</td><td>381</td><td>422</td></tr><tr><td>Fortify</td><td>14,262</td><td>9,967</td><td>10,609</td></tr><tr><td>Turrets</td><td>8,427</td><td>1,026</td><td>3,961</td></tr><tr><td>Hunt</td><td>14</td><td>245</td><td>151</td></tr><tr><td>Expand</td><td>9,197</td><td>11,034</td><td>8,928</td></tr><tr><td>Guard</td><td>0</td><td>31</td><td>34</td></tr><tr><td>Picks changed</td><td>0</td><td>131,278</td><td>44,975</td></tr><tr><td>d̄ a seat</td><td>0</td><td>-1.04 ± 0.58</td><td>-0.92 ± 0.54</td></tr></tbody></table></div><p>Changed picks under the lean: Fortify to Expand 84.4%, Turrets to Expand 11.6%, Fortify to Hunt 3.6%, Fortify to Guard 0.3%. Economy off against on, seed by seed: +0.13 ± 0.47.</p><h3 id="b-time-16-seeds-null-run-205-537-trial-s">B. Time (16 seeds, null run, 205,537 trial seat-seconds)</h3><p>Dead 46.7%; the island hop 18.9%; rotation 7.3%; the ladder 5.6%; dodging 4.5%; the fleet's wedge 4.2%; rallies and kiting 3.9%; taking depots and pillboxes outside the ladder 2.4%; crew jobs 1.7%. The full table is LR 26. The trial team died 17.1 times a match, 3.4 a seat, against 3 respawns and a 20 s respawn wait.</p><h3 id="c-tests">C. Tests</h3><p><code>make test</code>, every crate: brain 68 passed and 8 ignored; client 31; net 14; proto 3; sim 50. No warnings.</p></section><section id="sv"><h2>V. Discussion</h2><ol><li><strong>The mechanism was found; the cost was not.</strong> The lean takes tanks off the castle, and Economy's feedback on building is a real design fault. But removing it does not recover the point. Either the point is noise shared by runs on the same seeds, or it comes from the Fortify-to-Expand moves that the Expand posture still makes. Neither can be told apart at 48 seeds.</li><li><strong>Measure the budget before tuning a part.</strong> The ladder was the object of three steps of work (LR 24 to 26), and it holds 5.6% of the time. A time budget by status code should be the first measurement of any part, and is now one switch away.</li><li><strong>The census measures attrition.</strong> With half the seat-time dead, parts that pay late are cut off, and every census since LR 11 has been about who dies first. Backlog 29 tests this directly.</li><li><strong>On the architecture (CI-001 A1).</strong> Over 90% of a team's living time is decided by the chain of branches above the ladder: the hop, rotation, the dodge, the wedge, rallies. Those are where weights, blends and censuses will pay, and where the first-match order of the chain is itself a design question.</li></ol><p><strong>Next:</strong> backlog 28, what a seat was doing when it went down; then 29, the census with unlimited respawns.</p></section><section id="appendix-a"><h2>Appendix A. Reproducing this report</h2><div class="code" class="diagram"><pre><code># lean, Economy off, and the null: r27.sh LABEL VARS..., three ranges of 16 seeds
+./r27.sh null CENSUS_CAPS=
+./r27.sh lean CENSUS_WEIGHTS=scored.toml
+sed &#x27;s/^w_pos_economy = 1/w_pos_economy = 0/&#x27; scored.toml &gt; noecon.toml
+./r27.sh noecon CENSUS_WEIGHTS=noecon.toml
+# the time budget
+CENSUS_ACTS=1 CENSUS_SEEDS=16 CENSUS_BASE_CAPS=board CENSUS_MAP=$PWD/maps/naval.map \
+  CENSUS_RESPAWNS=3 CENSUS_LEDGER=0 cargo test -q -p treadcore-brain --release -- --ignored brain_census --nocapture</code></pre></div><p><code>r27.sh</code> runs <code>brain_census</code> three times side by side with <code>CENSUS_SEED0</code> 0, 16 and 32, <code>CENSUS_SEEDS=16</code>, <code>CENSUS_BASE_CAPS=board</code>, naval.map, respawns 3, 900 s, the ledger off.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

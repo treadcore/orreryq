@@ -1,0 +1,210 @@
+<meta charset="utf-8">
+<title>treadcore</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../reports.html">lab reports</a> · <a href="../index.html">orrery</a></strong><a href="#1-status-first">1</a><a href="#2-the-shape-six-crates-one-direction">2</a><a href="#3-treadcore-sim-the-world">3</a><a href="#4-treadcore-proto-the-wire-vocabulary">4</a><a href="#5-treadcore-net-finding-each-other-elect">5</a><a href="#6-treadcore-brain-the-controller-interfa">6</a><a href="#7-treadcore-server-the-trace">7</a><a href="#8-treadcore-client-the-window">8</a><a href="#9-the-build-system">9</a><a href="#10-what-the-rust-style-here-is-in-one-pa">10</a><a href="#11-what-to-do-next">11</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · lab report · the game</p>
+    <h1>treadcore: lab report</h1>
+    <div class="front"><p>A walk through the code as it stands on 2026-10-12: what each section is, what it looks like, how it is used, and the Rust technique behind it. Source: <a href="https://github.com/treadcore/treadcore">github.com/treadcore/treadcore</a>. Site: <a href="https://treadcore.org">treadcore.org</a>.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/LAB-REPORT.md">documentation/LAB-REPORT.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#1-status-first">1. Status, first</a></li><li><a href="#2-the-shape-six-crates-one-direction">2. The shape: six crates, one direction</a></li><li><a href="#3-treadcore-sim-the-world">3. treadcore-sim: the world</a></li><li><a href="#4-treadcore-proto-the-wire-vocabulary">4. treadcore-proto: the wire vocabulary</a></li><li><a href="#5-treadcore-net-finding-each-other-elect">5. treadcore-net: finding each other, electing, relaying</a></li><li><a href="#6-treadcore-brain-the-controller-interfa">6. treadcore-brain: the controller interface</a></li><li><a href="#7-treadcore-server-the-trace">7. treadcore-server: the trace</a></li><li><a href="#8-treadcore-client-the-window">8. treadcore-client: the window</a></li><li><a href="#9-the-build-system">9. The build system</a></li><li><a href="#10-what-the-rust-style-here-is-in-one-pa">10. What the Rust style here is, in one paragraph</a></li><li><a href="#11-what-to-do-next">11. What to do next</a></li></ol></nav>
+  <main>
+  <section id="1-status-first"><h2>1. Status, first</h2><p>As of 13 October 2026 (the earlier tables are in the history; journal 0002 has the chronology, 0009 the backlog, 0011 prediction):</p><div class="table"><table><thead><tr><th>crate</th><th>lines</th><th>compiled</th><th>tests</th></tr></thead><tbody><tr><td>treadcore-sim</td><td>~4700</td><td>yes</td><td>24 pass (determinism, prediction drives the tank as the host does, a team shares recon and spares its own, alliances form and break and teams end the match, proposals change sides under the three-way rule, hash follows state, a replay reproduces the world and a tampered one is caught, launch validation, shell flight, swarm vs bubble, a Move routed across the river, a pillbox kills a tank and routes bend round it, Pillboys capture a pillbox, the squad harvests, walls and mines, mines chain and shells clear them, retask moves a recon and recalls one drone, a forest block conceals a tank, game types set the start, sixteen seats, a world from a map file, map determinism, every start reaches the centre, a map survives the file round trip, bad map files are refused with a line)</td></tr><tr><td>treadcore-proto</td><td>~330</td><td>yes</td><td>3 pass (round trip, snapshot split and reassembly, big packets chunk and reassemble)</td></tr><tr><td>treadcore-net</td><td>~2000</td><td>yes</td><td>9 pass (4 election, 1 loopback session, 1 prediction under 200 ms of lag: the predicted tank moves 250 ms before the snapshot shows it, zero mismatches; 1 rejoin: a dropped client's seat given back at a later tick; 2 introducer: two silent peers meet through one, the identity file round-trips)</td></tr><tr><td>treadcore-brain</td><td>~1150</td><td>yes</td><td>4 pass (sixteen bots fight to a result; <code>pillboys_pay</code>: over twenty seeds, bots that capture pillboxes outscore and outlive the same doctrine without the squad; <code>fortification_pays</code>: a fortified depot outlives a bare one against a scripted attack; <code>defenders_hold</code>: twelve Defenders against four attackers, ten seeds, every match to the time limit, the defenders outliving the attackers and keeping their depots)</td></tr></tbody></table></div><div class="table"><table><thead><tr><th>treadcore-server</th><th>~800</th><th>yes; <code>make debug</code> and <code>make lobby-test</code> run (<code>LAG=200</code> for the lagged one, <code>INTRODUCER=1</code> to meet through an introducer alone, <code>REJOIN=1</code> to kill a seat and bring it back)</th><th>none</th></tr></thead><tbody><tr><td>treadcore-warm</td><td>~45</td><td>yes; the window panics in this VM for want of a Vulkan driver (BUILD.md)</td><td>none</td></tr></tbody></table></div><p>The round of small fixes the morning predicted was three, and none of them was a compile error: the compiler accepted every crate first time. They were a UDP receive buffer too small for <code>Welcome</code> (found by the loopback test), a straight-line <code>Move</code> that could not cross the river (found by the first trace), and the Makefile's <code>SECONDS</code> colliding with bash's own (found by reading the trace header). The rule bot was rewritten after the first trace showed a twenty-second melee with no indirect fire.</p></section><section id="2-the-shape-six-crates-one-direction"><h2>2. The shape: six crates, one direction</h2><div class="code" class="diagram"><pre><code>treadcore-client (Bevy)      treadcore-server (headless)
+        \                        /
+         treadcore-brain  treadcore-net
+                   \        /
+                treadcore-proto
+                      |
+                 treadcore-sim</code></pre></div><p>Every arrow points down. The sim knows nothing of sockets, engines or bots; the proto crate knows the sim's types and nothing else; net knows packets and the sim's <code>World</code>; the two binaries know everything. That is the whole architecture, and the Cargo workspace enforces it: a crate cannot import something it does not list in its manifest, and a cycle is a build error.</p><p>The practical payoff is in the server's <code>run_local</code> and the client's solo mode: both drive the same <code>Host</code> with no socket. The server runs a full match in a few seconds and writes the trace; the window plays the same code at 20 ticks a second. There is no "simulation for the game" and "simulation for the tests". There is one.</p></section><section id="3-treadcore-sim-the-world"><h2>3. treadcore-sim: the world</h2><h3 id="3-1-plain-data-plain-functions">3.1 Plain data, plain functions</h3><div class="code"><span class="lang">rust</span><pre><code>pub struct World {
+    pub tick: Tick,
+    pub map: Map,
+    pub players: Vec&lt;Player&gt;,
+    pub tanks: Vec&lt;Tank&gt;,
+    pub drones: Vec&lt;Drone&gt;,
+    pub shells: Vec&lt;Shell&gt;,
+    pub depots: Vec&lt;Depot&gt;,
+    pub rng: Rng,
+    ...
+    #[serde(skip)]
+    pub events: Vec&lt;Event&gt;,
+}
+
+impl World {
+    pub fn step(&amp;mut self, orders: &amp;[Order]) { ... }
+    pub fn observe(&amp;self, p: PlayerId) -&gt; Observation { ... }
+}</code></pre></div><p>Two methods matter. <code>step</code> advances one tick with the orders for that tick. <code>observe</code> returns what one player is allowed to see. Everything else is detail.</p><p>The technique is deliberate plainness. No entity-component system, no trait objects, no <code>Rc&lt;RefCell&lt;&gt;&gt;</code>: entities are <code>Vec</code>s of structs with an <code>id</code>, looked up by linear search. At four tanks, forty drones and thirty shells a linear search is faster than a hash map and the code reads as what it does. <code>#[serde(skip)]</code> on <code>events</code> says that events are the output of a step, not part of the state; a snapshot of a world does not carry them.</p><h3 id="3-2-determinism-as-a-property-not-a-hope">3.2 Determinism as a property, not a hope</h3><p>Since journal 0003 the property has a number: <code>World::hash()</code> is FNV-1a over the bincode bytes of the world, and a <code>Replay</code> (scenario, every tick's orders, a hash every hundred ticks) plays back to the same hashes or names the first tick where it does not. <code>make debug</code> records one beside every trace; <code>make replay</code> checks it. That is the regression test for every later change to <code>step</code>.</p><div class="code"><span class="lang">rust</span><pre><code>pub struct Rng(pub u64);          // xorshift64*
+impl Rng {
+    pub fn f32(&amp;mut self) -&gt; f32 { ... }
+    pub fn disc(&amp;mut self) -&gt; V2 { ... }
+}</code></pre></div><p>The random source is the world's own, seeded from the scenario, advanced only inside <code>step</code>. The host ticks orders sorted by player. The test:</p><div class="code"><span class="lang">rust</span><pre><code>#[test]
+fn deterministic() {
+    let mut a = world(); let mut b = world();
+    for i in 0..400 { let o = if i == 3 { orders.clone() } else { vec![] }; a.step(&amp;o); b.step(&amp;o); }
+    assert_eq!(a.rng.0, b.rng.0);
+    ...
+}</code></pre></div><p>Determinism is what makes host-authority honest (a client could, in principle, run the same world and check), what makes a trace replayable, and what makes a bot testable.</p><h3 id="3-3-commands-are-validated-events-are-th">3.3 Commands are validated, events are the record</h3><div class="code"><span class="lang">rust</span><pre><code>pub enum Command { Move { to: V2 }, FireIndirect { at: V2 }, Launch { kind, task }, SetBubble { radius }, ... }
+pub struct Order { pub player: PlayerId, pub cmd: Command }
+pub enum Event { Rejected { player, cmd, why: String }, ShellLaunched { .. }, Intercepted { .. }, TankDestroyed { .. }, ... }</code></pre></div><p><code>apply</code> is a long match over <code>Command</code>. Every arm checks before it acts (<code>reloading</code>, <code>no shells</code>, <code>beyond maximum range</code>, <code>bay empty for that kind</code>) and a failure is not a panic or an <code>Err</code> but an <code>Event::Rejected</code> with the reason. The caller does not need a result type: the reason goes to the player's HUD and the bot's log through the same channel as everything else. Nothing a client sends can put the world in a bad state; the worst it can do is be refused.</p><h3 id="3-4-the-step-and-the-borrow-checker">3.4 The step, and the borrow checker</h3><p><code>step_drones</code> is the densest function and shows the technique Rust pushes you toward when many things move and interact in one tick:</p><div class="code"><span class="lang">rust</span><pre><code>// 3. Motion. Positions of everything, read before anything moves.
+let drone_pos: Vec&lt;(EntityId, V2)&gt; = self.drones.iter().map(|d| (d.id, d.pos)).collect();
+let tank_pos:  Vec&lt;(EntityId, V2, bool)&gt; = ...;
+let mut lost = Vec::new(); let mut rams = Vec::new(); let mut strikes = Vec::new();
+for d in self.drones.iter_mut() { ... push decisions into those vecs ... }
+// 4. Resolve rams, strikes, recoveries, losses -- then remove.</code></pre></div><p>Read a snapshot of positions, mutate each drone once with that snapshot, collect the consequences into lists, then apply the consequences in a second pass. The borrow checker will not let you hold <code>&amp;mut</code> to one drone while reading another, and the shape that satisfies it is also the shape that gives order-independent results. The constraint is the design.</p><h3 id="3-5-the-numbers-live-in-one-file">3.5 The numbers live in one file</h3><p><code>rules.rs</code> is nothing but <code>pub const</code> with a sentence each:</p><div class="code"><span class="lang">rust</span><pre><code>/// Circular error, in tiles, blind and spotted. The whole reason to fly
+/// recon: a blind shot is a suppression round, a spotted one is a kill.
+pub const CEP_BLIND: f32 = 4.0;
+pub const CEP_SPOTTED: f32 = 0.6;</code></pre></div><p>A balance change is a one-line diff with its reason beside it. The HUD, the bot and the docs all read the same constants, so "12 tiles" is never typed twice.</p><h3 id="3-6-the-map">3.6 The map</h3><p><code>map.rs</code>: a <code>Vec&lt;u8&gt;</code> of terrain, row-major, with <code>Terrain::from_u8</code>, sized by the map (<code>w</code>, <code>h</code>): the generator makes 128 x 128, a map file declares its own <code>size</code>, and the converted prior-art maps are 256 x 256. The map is also a text file (<code>to_text</code>, <code>from_text</code>, documentation/MAPS.md): one glyph per tile and then the places, which any text editor edits.</p><p>Since the evening of day one the world calls <code>route</code> itself when it applies a <code>Move</code>, keeps the waypoints on the tank, brakes the tank to a crawl for corners, and plans again from where it stands if water is in front of it. The reason is in the first trace: a bot drove the straight line from its start to the centre, met the river a tile from the bridge, and sat there for the whole match. Neither a client nor a Brain has the map in its observation, so the pathfinding has to be the world's. <code>u8</code> rather than <code>Vec&lt;Terrain&gt;</code> because the map crosses the wire once in <code>Welcome</code> and 16 KiB is the right size for it. Generation is value noise for forest, a wandering line for the river, and roads walked from each start to the centre that become bridges over water. <code>route</code> is A* with terrain cost and no diagonal corner-cutting, simplified to corners.</p><p>The one bug found by test so far was here: a road walked across the river in two-thirds-tile steps could lay a bridge that was only diagonally connected, which A* correctly refused to cross. The fix was to lay a plus of tiles at each water crossing, and the test that found it (<code>every_start_can_reach_the_centre</code>) stays.</p></section><section id="4-treadcore-proto-the-wire-vocabulary"><h2>4. treadcore-proto: the wire vocabulary</h2><div class="code"><span class="lang">rust</span><pre><code>pub enum Packet {
+    Beacon { peer, name, game },
+    Hello { peer, name, game, known: Vec&lt;(PeerId, String, String)&gt; },
+    Ping { peer, seq, sent_us }, Pong { .. },
+    RttRow { peer, epoch, rtts: Vec&lt;(PeerId, Option&lt;u32&gt;)&gt; },
+    Elect { peer, epoch, host, route: Vec&lt;(PeerId, PeerId)&gt; },
+    Join, Welcome { player, scenario, tick, map_cells }, Refuse,
+    Command { peer, seq, cmd }, CommandAck { seq },
+    Snapshot { tick, part, parts, bytes }, Events { seq, tick, events }, EventsAck,
+    Heartbeat, Leave,
+    Relay { from, to, hops, inner: Vec&lt;u8&gt; },
+}</code></pre></div><p>One enum is everything that crosses a socket. <code>encode</code> prefixes four magic bytes and a version; <code>decode</code> refuses at the first wrong byte. A packet from a different build is dropped, never misread.</p><p>Two small techniques. <code>Relay</code> carries its payload as <code>Vec&lt;u8&gt;</code>, not <code>Box&lt;Packet&gt;</code>: a forwarding peer does not decode what it forwards, so a relay node can be on a different minor version of the inner message and still be useful. And <code>SnapshotAssembler</code> reassembles an observation split across datagrams by tick, keeping only the newest: UDP's reordering and loss handled in thirty lines, with no retransmission, because a snapshot that is late is worthless and the next one is coming.</p><p>The Rust style here is the one the language is best at: a closed enum with named fields, <code>serde</code> deriving everything, <code>bincode</code> for bytes. The wire format is the type definition. There is no schema file to keep in sync.</p></section><section id="5-treadcore-net-finding-each-other-elect"><h2>5. treadcore-net: finding each other, electing, relaying</h2><h3 id="5-1-the-election-is-a-pure-function">5.1 The election is a pure function</h3><div class="code"><span class="lang">rust</span><pre><code>pub fn elect(peers: &amp;[PeerId], rows: &amp;BTreeMap&lt;PeerId, Row&gt;) -&gt; Option&lt;Decision&gt;</code></pre></div><p>No sockets, no clocks: a latency matrix in, a host and a route out. For each candidate, Dijkstra from it; candidates that cannot reach everyone (even by relay) are out; the winner has the smallest worst-case path latency, ties by total then by id. The route is the Dijkstra tree: each peer's next hop toward the host is its parent.</p><p>Because it is pure, it has four tests that take microseconds (a central peer hosts; a peer reachable only through a neighbour is routed through it; a line of four picks the middle; alone, you host) and the lobby can call it on every peer with the confidence that identical input gives identical output. That is the entire trick of a serverless election: do not vote, compute, and compare.</p><p><code>BTreeMap</code> rather than <code>HashMap</code> everywhere in this file is not taste. Iteration order is part of the result (ties, "the lowest id wins"), and a <code>BTreeMap</code> iterates the same on every machine.</p><h3 id="5-2-the-lobby-is-a-state-machine-with-ti">5.2 The lobby is a state machine with timers</h3><div class="code"><span class="lang">rust</span><pre><code>pub enum Phase { Discover, Probe, Share, Decide, Done }
+pub fn poll(&amp;mut self, sock: &amp;mut Socket) -&gt; Option&lt;LobbyResult&gt;</code></pre></div><p><code>poll</code> drains the socket, dispatches each packet to <code>handle</code>, then runs the current phase's timer logic. It is called from whoever owns the loop: a <code>while</code> in the server, a Bevy system in the client. No threads. The simulation's clock stays the only clock, and the lobby's behaviour is the same in a 20 Hz loop and a 2000 Hz one.</p><p><code>Hello</code> carrying the sender's known peers with their addresses is what makes a lobby of four converge in one round when broadcast only reaches some of them, and what lets <code>--peer</code> seed a lobby across a router.</p><h3 id="5-3-host-and-client">5.3 Host and Client</h3><div class="code"><span class="lang">rust</span><pre><code>pub struct Host { pub world: World, pub seats: Vec&lt;Seat&gt;, pub routes: RouteTable, sock: Option&lt;Socket&gt;, inbox: Vec&lt;Order&gt;, .. }
+impl Host {
+    pub fn poll(&amp;mut self)                         // joins, orders, acks, heartbeats, relays
+    pub fn tick(&amp;mut self, local: Vec&lt;Order&gt;) -&gt; &amp;[Event]   // step, snapshot, events out
+}</code></pre></div><p><code>sock: Option&lt;Socket&gt;</code> is the line that makes solo play and the debug trace the same code as LAN play. With <code>None</code>, <code>poll</code> returns at once and <code>tick</code> skips the send loop. There is no <code>trait Transport</code> with two implementations; there is one struct and one <code>if let</code>.</p><p>Reliability is three small mechanisms, not a protocol library:</p><ul><li>orders: per-client sequence, resend every 120 ms until acked, host applies each once in order (a <code>BTreeMap&lt;u32, Command&gt;</code> buffers early arrivals);</li><li>events: per-seat sequence, resend the head of a <code>VecDeque</code> until acked, client delivers once;</li><li>snapshots: fire and forget, newest wins.</li></ul><p>The <code>RouteTable</code> with <code>direct</code> and <code>via</code> maps is shared by both ends; <code>send</code> wraps in <code>Relay</code> when <code>via</code> says so, and <code>relay</code> either unwraps (for me) or forwards (not for me, hops &lt; 8). Neither <code>Host</code> nor <code>Client</code> knows which packets were relayed.</p><p>The <code>poll</code> method's first line, <code>let Some(mut sock) = self.sock.take() else { return };</code>, and its last, <code>self.sock = Some(sock)</code>, are the borrow checker again: taking the socket out of <code>self</code> lets the method mutate seats and routes while holding it, then puts it back. It is a common Rust idiom for "I need two mutable things from one struct", and it costs nothing.</p><h3 id="5-4-prediction-is-a-partial-world-and-on">5.4 Prediction is a partial world and one function</h3><div class="code"><span class="lang">rust</span><pre><code>pub struct Predictor { pub world: World, pub me: PlayerId, in_flight: Vec&lt;(u32, Command)&gt;, history: VecDeque&lt;..&gt;, .. }
+impl Predictor {
+    pub fn order(&amp;mut self, seq: u32, cmd: &amp;Command)           // applied now, remembered
+    pub fn tick(&amp;mut self)                                      // one tick, at the tick rate
+    pub fn reconcile(&amp;mut self, obs: &amp;Observation, acked: u32)  // check, adopt, re-apply, re-drive
+}</code></pre></div><p>The copy is a real <code>World</code> built from the <code>Welcome</code>, with every list but the map, the pillboxes, the known mines and the players left empty or overwritten from each snapshot. It never calls <code>World::step</code>: the sim exposes <code>World::predict</code>, which applies one player's hull orders and calls the same <code>drive_tank</code> the host's <code>step_tanks</code> calls, so the two cannot disagree by construction. The check that they do not is <code>Tank::tick_state</code>, a tuple of float bits compared whenever nothing of the client's is in flight; <code>prediction_hides_the_lag_and_matches_the_host</code> runs host and client on loopback with <code>Socket::set_lag(100 ms)</code> each way and asserts zero mismatches and a 250 ms lead. The transport's lag queue (<code>TREADCORE_LAG_MS</code>) is what stands in for <code>tc netem</code> on a machine without root.</p><h3 id="5-5-the-introducer-is-a-map-and-a-timer">5.5 The introducer is a map and a timer</h3><div class="code"><span class="lang">rust</span><pre><code>pub struct Introducer { entries: BTreeMap&lt;(String, PeerId), Entry&gt;, last_push: Instant, .. }
+pub fn poll(&amp;mut self, sock: &amp;mut Socket)      // registrations in, introductions out, lapses
+pub struct Registration { pub addr: SocketAddr, .. }
+pub fn poll(&amp;mut self, sock: &amp;mut Socket, every: Duration, hosting: bool)</code></pre></div><p>Step 7's service (<code>introducer.rs</code>) is the same shape as everything else in the crate: a struct with a <code>poll</code>, no thread, no blocking, so the server runs it in a loop and the test runs it in the same thread as the two lobbies it introduces. Its whole state is a map from (lobby name, peer) to the two addresses and a timestamp; an entry lapses at thirty seconds. It has no idea what a game is.</p><p>The lobby's side is three small additions: <code>candidates</code>, the addresses a peer might be at (the introducer's two, and any a third party's <code>Hello</code> named); <code>heard</code>, the peers a packet has come from directly; and <code>targets(id)</code>, which is the one known address once heard and every candidate until then. <code>punch</code> sends a <code>Hello</code> (or a <code>Ping</code>, to a host, which runs no lobby) to every target of every unheard peer every 250 ms, and the probe's <code>Ping</code>s go to the targets too. The packet that comes back settles the address in <code>heard_from</code>. That is all hole punching is, once the introducer has told each side what to aim at.</p><p>Rejoin rides on the same pieces plus one number: <code>Join { session }</code>, random per process. The host's seat remembers it; a Join with another session is a restart, and the seat's <code>next_seq</code>, <code>pending</code>, <code>events_out</code> go back to the start. The alternative, resetting on any Join from a seat that was already joined, breaks under lag: two Joins from one process can be in flight at once, and the second would wipe sequences the client had already used. <code>identity_from_file</code> is sixteen hex digits in a file, made the first time; the host's seat is keyed by that id, so the returning process is the same player.</p></section><section id="6-treadcore-brain-the-controller-interfa"><h2>6. treadcore-brain: the controller interface</h2><div class="code"><span class="lang">rust</span><pre><code>pub trait Brain: Send {
+    fn name(&amp;self) -&gt; &amp;str;
+    fn think(&amp;mut self, obs: &amp;Observation) -&gt; Vec&lt;Command&gt;;
+}</code></pre></div><p>This is the prior art's Brain. Observation in, commands out, and the world validates the commands exactly as a human's. A Brain cannot cheat because it has no more access than a keyboard: <code>Observation</code> is what the host already filtered.</p><p><code>RuleBot</code> is a doctrine written as a function: keep the bubble up, keep a recon out, shoot what the recon sees, move after firing, resupply when low, strike a thin bubble. It thinks four times a second, by comparing ticks, so four bots cost the host almost nothing.</p><p><code>JsonBrain</code> is the same trait over a child process: one JSON observation per line on stdin, one JSON array of commands per line on stdout, read by a thread into an <code>mpsc</code> channel so a slow bot never stalls the tick. <code>Observation</code> and <code>Command</code> serialise with <code>serde</code> as they are, so the schema for an external bot is the Rust type, printed by <code>treadcore-server --brain-schema</code>.</p><p><code>Box&lt;dyn Brain&gt;</code> is the one trait object in the project, and it is where one belongs: the set of controllers is open, and a seat does not care which it has.</p></section><section id="7-treadcore-server-the-trace"><h2>7. treadcore-server: the trace</h2><p>Hand-parsed flags (the loop is forty lines and reads top to bottom), <code>env_logger</code>, and <code>narrate</code>:</p><div class="code"><span class="lang">rust</span><pre><code>Event::ShellLaunched { owner, kind, spotted, eta_ticks, .. } =&gt;
+    log::info!(&quot;[{:&gt;6} {:&gt;6.1}s] p{} fires {:?} {} eta {:.1}s&quot;, t, s, owner, kind,
+               if *spotted { &quot;SPOTTED&quot; } else { &quot;blind&quot; }, *eta_ticks as f32 * DT),</code></pre></div><p>Every event at <code>info</code> as a sentence with tick and seconds in front; every tank's state once a second at <code>debug</code>; <code>--trace</code> writes the same events as JSON lines. <code>make debug</code> runs this at <code>RUST_LOG=trace</code> with backtraces on and captures everything under <code>build/logs/</code>. The log is meant to be read by a person, or handed to an AI with the source beside it, which is why it is prose with numbers and not numbers alone.</p><p>The same binary is the LAN host (<code>--net</code>, elected) and a LAN bot seat (<code>--net</code>, not elected), so <code>make lobby-test</code> runs four of them on one machine and checks that exactly one says <code>hosting:</code>.</p></section><section id="8-treadcore-client-the-window"><h2>8. treadcore-client: the window</h2><p>Bevy, four plugins, each a file:</p><div class="table"><table><thead><tr><th>file</th><th>owns</th><th>pattern</th></tr></thead><tbody><tr><td>session.rs</td><td><code>Session</code> enum (Lobby / Hosting / Client / Ended), <code>View</code> resource</td><td><code>FixedUpdate</code> at 20 Hz steps the host, or the client's predicted tank; <code>Update</code> polls the net</td></tr><tr><td>render.rs</td><td>tile sprites, entity sprites keyed by id, the gizmo overlay</td><td>sprites synced from the observation; everything else is lines</td></tr><tr><td>hud.rs</td><td>four text panels</td><td>one <code>String</code> per panel rebuilt each frame</td></tr><tr><td>input.rs</td><td>keys and mouse to <code>Orders</code>, the camera</td><td>click to drive via the sim's own A*</td></tr></tbody></table></div><p>The engine never touches the world directly. <code>View</code> holds the last <code>Observation</code> and the map; render and HUD read <code>View</code>; input writes <code>Orders</code>; session moves orders to the host or the client and observations back. Bevy's resources and systems give the plumbing; the game stays in the sim. A client's own tank is the exception that proves it: <code>View.predicted</code> is the tank from treadcore-net's <code>Predictor</code>, run one tick ahead in <code>FixedUpdate</code>, and render draws it in place of the snapshot's; the HUD's NET panel shows how far ahead, what is in flight, and the mismatch count (section 5.4).</p><p>The overlay is the game's look and it is all <code>Gizmos</code>: the bubble as a ring, the detection margin as a fainter ring, each drone's link as a line coloured by <code>link_color(d.link)</code>, the recon's vision as a disc, each shell as an arc with an impact circle growing with progress. No assets. A tank is a rotated rectangle with a line for a barrel.</p><p>Pinned to Bevy 0.17 on purpose: it is the API this crate is written against, and it moves with every minor. <code>Time::&lt;Fixed&gt;::from_hz(20.0)</code> gives the host's tick; <code>AccumulatedMouseScroll</code> is zoom; <code>Camera2d</code> with an <code>OrthographicProjection</code> scale is the camera.</p></section><section id="9-the-build-system"><h2>9. The build system</h2><p><code>Makefile</code> is the front door and prints its own targets; <code>scripts/*.sh</code> do the work; <code>cargo</code> is what they call. <code>configure.sh</code> checks the toolchain and the display libraries and writes <code>build/config.env</code>; every other script <code>need_config</code>s and refuses to run without it. <code>build.sh</code> builds headless automatically when the display libraries are missing. <code>debug.sh</code> is the trace. All output goes to the terminal and to a stamped file under <code>build/logs/</code> both, so nothing lives only in scrollback.</p></section><section id="10-what-the-rust-style-here-is-in-one-pa"><h2>10. What the Rust style here is, in one paragraph</h2><p>Data is plain structs and closed enums with <code>serde</code> derives; behaviour is functions on them. The one trait object is where the set is open (Brains). Mutation follows the shape the borrow checker wants: read a snapshot, decide, apply. Determinism is a test, not an aspiration. Failure of input is an event, not a panic; failure of the machine (a bind error) is a log line and a fallback. Every tuning number has a sentence. Every layer can be run without the layer above it, and the workspace makes that a compile-time fact.</p></section><section id="11-what-to-do-next"><h2>11. What to do next</h2><ol><li>The window: <code>doas apk add mesa-vulkan-swrast</code>, then <code>target/debug/treadcore-warm</code>, then <code>make run</code>. Or build the window on a machine with a GPU; the headless crates do not care.</li><li><code>make warm</code> for the release profile, measured, so <code>make run</code> is a link and not an hour.</li><li><code>make lobby-test</code> on two machines.</li><li>The backlog in ROADMAP.md: the interceptor-versus-interceptor decision, tank speed, drone retasking, the match report.</li><li>Then roadmap steps 1 and 2 (replay, hash), and the Pillboys (step 3) whose design is now written.</li></ol></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

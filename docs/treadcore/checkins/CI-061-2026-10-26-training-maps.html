@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>Training Maps</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-061</p>
+    <h1>Training Maps: Scenario Files Teach the Learned Tank, a Guarded Depot Taken, and a Census That Asks for Survival</h1>
+    <div class="front"><p><strong>Check-in report CI-061.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 26 October 2026. Companion records: <code>LAB-REPORT-BRAIN.md</code> section 99; <code>AI-BRAINZ-PLAN.md</code> sections 7 to 9; <code>scenarios/training/</code>; <code>build/train/</code> on the Mac; <code>~/code/treadcore-net/build/net4/</code> on the census machine.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-061-2026-10-26-training-maps.md">documentation/checkins/CI-061-2026-10-26-training-maps.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>The guided-training plan of CI-060 is built. A scenario file now carries a <code>[reward]</code> and a <code>kind = &quot;net&quot;</code> seat, so one file is read by the scripted brain and by the trainer on the same seeds. The trainer mixes courses, rehearsing old skills as it learns new ones. Three training maps were written and read before training:</p><div class="table"><table><thead><tr><th>Map</th><th>Scripted brain</th><th>Untrained net</th></tr></thead><tbody><tr><td>4. the guarded depot</td><td>100%</td><td>0%</td></tr><tr><td>5. under a shell</td><td>99.8%</td><td>79.3%</td></tr><tr><td>6. an enemy that fires back</td><td>20.3%</td><td>0%</td></tr></tbody></table></div><p>The net learned map 4 (93.7% of 300 held-out seeds) and kept phases 1 and 3. It did not pass maps 5 and 6 (92.9%; no duel won), even after 800 more generations. A census of the map 4 net read -24.29 +/- 0.45. The match logs show every net team dying 18 to 19 times of a possible 20 and killing about once, so the census cannot yet tell nets apart. Survival is next; one net head inside the scripted brain is proposed beside it.</p><p><strong>Index terms:</strong> curriculum, rehearsal, scenario files, evolution strategies, transfer.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>Implement the guided training of LR 98: training maps as scenario files, maps 4 to 6, trained and read.</p><h3 id="b-the-prompt">B. The prompt</h3><blockquote><p>ok. and for this dev version. lets continue to develop. impliment .</p></blockquote></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>LR 98: one file a behaviour</td><td><code>[reward]</code> and <code>kind = &quot;net&quot;</code> in the scenario format; <code>run_net</code>, <code>reward</code></td><td>A second format for training: two situations would not compare</td></tr><tr><td>D2</td><td>LR 97: a net forgets what it does not rehearse</td><td>A generation's episodes take the courses in turn</td><td>Train each map alone</td></tr><tr><td>D3</td><td>Map 4 needs the guard killed</td><td>The gun head also takes a live hostile pillbox in reach</td><td>Leave pillboxes to the mortar: its minimum reach is 12, past the ring</td></tr><tr><td>D4</td><td>The rule: a map whose untrained net reaches its floor is no test</td><td>Each map read on the scripted brain and the untrained net first; all under their floors</td><td>—</td></tr><tr><td>D5</td><td>Map 6's scripted reading is 20%</td><td>Floor kept at the plan's 50%</td><td>Lower it to the scripted brain's: the plan asks for half the duels</td></tr><tr><td>D6</td><td>Map 4 passed</td><td><code>nets/map4.bin</code> kept; its census on LR 97's seeds, beside the run in a worktree</td><td>Stop the run: Paul left it running all day</td></tr><tr><td>D7</td><td>Maps 5 and 6 plateaued; phase 1's enemy fell to 89%</td><td>The longer run not kept</td><td>Keep the newest net</td></tr><tr><td>D8</td><td>Every net team dies nearly all its 20 times</td><td>Survival maps next, one at a time; a hybrid proposed for Paul</td><td>More attacking skill: the census says it does not count yet</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><p>On the Mac (M1, 8 threads): <code>make train</code> with <code>GROUND=phase1,phase3,scenarios/training/04-the-guarded-depot.toml</code>, <code>START=nets/phase3.bin</code>, <code>SEEDS=15</code>, 400 generations. Then all five courses, <code>SEEDS=20</code>, 500 generations, then 800 more with maps 5 and 6 listed twice. Held out from seed 9,000,000. On the census machine at 5a10af0, in a worktree: <code>CENSUS_NET=nets/map4.bin SEEDS=110 SEED0=500000 MAP=all JOBS=24 make census</code>. Deaths, kills and held are summed from the trial team's lines in every <code>g-*.log</code>, and the same for LR 97's two censuses.</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th>Read</th><th>Result</th></tr></thead><tbody><tr><td>Map 4, trained</td><td>93.7% +/- 1.4 (281 of 300); phase 1 99.1 to 100%, phase 3 99.7 to 100%</td></tr><tr><td>Maps 4 to 6 after 500 generations</td><td>98.7%, 92.1%, 0%</td></tr><tr><td>After 800 more</td><td>99.3%, 92.9%, 0%; phase 1 enemy 89.2%</td></tr><tr><td>Census, nets/map4.bin</td><td>-24.29 +/- 0.45</td></tr><tr><td>Deaths, kills, held a match (random; phase 3; map 4)</td><td>18.3, 0.8, 1.8; 19.0, 1.0, 1.9; 18.6, 0.9, 1.9</td></tr><tr><td>Brain tests</td><td>104 pass</td></tr></tbody></table></div></section><section id="sv"><h2>V. Discussion</h2><p>Training maps work as designed. The situation is placed predictably, both brains are read on it, and a net learns what the map rewards and keeps what it rehearses. What a map rewards is not yet what a match rewards. A match is first of all about staying alive, and no map has taught that.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

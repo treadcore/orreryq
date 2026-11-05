@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>Faster, and the Run</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-056</p>
+    <h1>Faster, and the Run: The Census 3 Times Quicker With the Same Matches, and a Learner That Runs Until Stopped</h1>
+    <div class="front"><p><strong>Check-in report CI-056.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 26 October 2026. Companion records: <code>LAB-REPORT-BRAIN.md</code> sections 91, 92 and 93; roadmap backlog 69 and 71; <code>build/converge/</code>, <code>build/route/</code> and <code>build/day/</code> on the census machine.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-056-2026-10-26-faster-and-the-run.md">documentation/checkins/CI-056-2026-10-26-faster-and-the-run.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>A profile of the census found one function, <code>World::visible_to</code>, taking 58% of its time. Four changes make the census 2.6 times faster with every match the same: the old and new binaries were compared match for match on the Mac and on the census machine, and with <code>make families</code>. They are deployed, mid-day, to the census machine. The day's queue and a planned night were folded into one run, <code>make converge</code>. Each generation it reads every census into a ledger, fits each weight's curve, and plays the trials the fit suggests. A trial past two errors is read twice more on fresh seeds. A faster forecast for the dodge (<code>dodge_own_route</code>) saved 1.2 times more but read −6.48 ± 1.56 on big-lizard, so it ships off. CUDA would not speed the census; the GPU is for training a network later. Paul set that aside.</p><p><strong>Index terms:</strong> profiling, determinism, response surface, successive halving, brain census.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>Make the census faster where it can be done without changing a match. Turn the census into a learner that runs day and night and suggests its own next trials. Test a route-search speed-up that does change matches with a census. Answer the CUDA question.</p><h3 id="b-the-prompts">B. The prompts</h3><blockquote><p>we ahve lots of unexplored variables. Is there a way to write the make census write lots that give suggestions that can be picked up and used to adjsut the next generation of runs. We essentially want a method to just start computing at night time which runs concenus to converge the values. We have CPU . but we can also install some CUDA on Copal and perhaps adjust the brain to simulate much faster. If it won't be faster, then just keep with CPU, and create a more swarm based analysis that we can collect all the logs and merge them into better data, to converge the bets values.  Right now we got the remove PC with GPU. I think you should commit. We have a working version. I want to consider making this fater, and what we can do. Eventually I want a parallel training of a neural network. For a tank game that arms its gun, gets ammo, in this universe.</p></blockquote><blockquote><p>nice findings and reductions. Continue to refactor. I like these speedups.</p></blockquote><blockquote><p>yes. all your askss. 1,2,3. make night. consus. faster route search with consusus.</p></blockquote><blockquote><p>look at the logs. import all good analysis. recompile. build. push. commit. all the above. jget thsese new speed ups computing.</p></blockquote><blockquote><p>what commands shall I input in the copal on with the nvidia with cuda. I want to target the dev newest version, even if we have to build it, within reason. i have a 4060ti. so it must support that.</p></blockquote><blockquote><p>ok. so night and day need to be consolidated. we just want to have a run. a way for it to choose eventually from all of the variables . doing your methods of analyzing them . i also have a question about why sthese consus are going very quick and some are ending right after the batch starts. Why would a simulation go so fast. is this our improvement?</p></blockquote><blockquote><p>start the run and do the route search. thanks for the explanation of CUDA. I'll side that for now.</p></blockquote></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>"I think you should commit"</td><td>fcbce9e: the morning's and the day's records in one commit (their edits share files)</td><td>Two commits: needs hunk staging, which this session cannot do</td></tr><tr><td>D2</td><td>"simulate much faster"; a GPU on the census machine</td><td>Profile first (macOS <code>sample</code>), on the Mac</td><td>Guess at the cost</td></tr><tr><td>D3</td><td><code>visible_to</code> 58%, each check searching the players</td><td>Gather a side's eyes once an observation</td><td>—</td></tr><tr><td>D4</td><td>The census is the instrument</td><td>A speed-up must keep every match the same: 18 matches compared line for line, the timer apart</td><td>Accept small drifts: every comparison since LR 71 would be in doubt</td></tr><tr><td>D5</td><td>Regions joined in place, danger marked once: no gain measured</td><td>Taken out</td><td>Keep them: code without a gain</td></tr><tr><td>D6</td><td>The ring read's exactness rests on a bound</td><td>A test against the old scan over 3000 points, and the bound broken on purpose to see the test fail</td><td>—</td></tr><tr><td>D7</td><td>The census machine runs x86, the Mac ARM</td><td>A row of the day played on both binaries there: the same</td><td>Trust the Mac's check alone</td></tr><tr><td>D8</td><td>"push. commit."</td><td>Pushed d4181b2 and later; the census machine pulled between censuses</td><td>Pull mid-build: a half-updated tree</td></tr><tr><td>D9</td><td>GitHub Actions paused</td><td>Pushes to main only; no tag</td><td>—</td></tr><tr><td>D10</td><td>"suggestions ... next generation of runs"</td><td>A ledger (one row a census) and a fit (each weight's curve, a response surface)</td><td>SPSA alone: one direction a step, blind to what the screens already read</td></tr><tr><td>D11</td><td>"night and day need to be consolidated"</td><td>One run, <code>make converge</code>, until stopped; the day's queue stopped after stage 1's half ends</td><td>Keep both: two queues racing for one machine</td></tr><tr><td>D12</td><td>The day's stage 2 and SPSA</td><td>Folded into the run: reads again of z past 1.5, the double ends, Thompson draws</td><td>—</td></tr><tr><td>D13</td><td>Many censuses read 0.00</td><td>Checked: the smoothing weights act above <code>w_smooth</code> 0.5 (LR 86); proven identical binaries, not a fault</td><td>Assume</td></tr><tr><td>D14</td><td>The run died at its first census (exit 141)</td><td><code>ls … \| head</code> under <code>pipefail</code> on many folders; fixed with <code>sed -n 1p</code>, resumed</td><td>—</td></tr><tr><td>D15</td><td>A route change moves the defaults under the run</td><td><code>dodge_own_route</code> ships at 0 until the census reads it</td><td>Ship on (the 20 October habit): the run's table would mix two brains</td></tr><tr><td>D16</td><td>The route census and the run would both take "the newest census"</td><td>Queued one after the other on the machine</td><td>Run both at once: the run could read the wrong census</td></tr><tr><td>D17</td><td>Big-lizard −6.48 ± 1.56</td><td>Off, by the rule written first</td><td>Promote on the whole's reading</td></tr><tr><td>D18</td><td>CUDA on Alpine (musl, NVK)</td><td>Ubuntu on the spare disk recommended; the census does not need a GPU</td><td>Install a driver on the census machine unasked</td></tr><tr><td>D19</td><td>The sim's route search is the same for every team</td><td>Not changed: the census cannot pair it</td><td>—</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><p><strong>The profile</strong> (Mac): a census run in the background, sampled with <code>sample PID 20</code>, its call tree attributed by caller. A build with the linker's symbol merging off did not name the merged symbol. Its caller in the tree (<code>route_kept</code>) did.</p><p><strong>The identity check</strong>, after each change:</p><p>CENSUS_MAP=&lt;eleven maps&gt;,gen CENSUS_RESPAWNS=3 CENSUS_SEED0=170000 \ CENSUS_SEEDS=6 CENSUS_SECS=300 cargo test -q -p treadcore-brain \ --release -- --ignored brain_census --nocapture</p><p>stderr compared with <code>diff</code>, the "us a seat-tick" figures and the harness's "running for over 60 seconds" lines taken out. On the census machine: the census binaries of 20261026-102652 (before) and 20261026-104153 (after), <code>CENSUS_WEIGHTS</code> column_past=1, 4 seeds of 300 s.</p><p><strong>The run</strong> on the census machine: <code>nohup setsid make converge</code>; resumed after the route census with <code>RESUME=build/converge/STAMP</code>. <strong>The route census</strong>: <code>TRIAL=build/route/own.weights SEEDS=110 SEED0=170000 MAP=all JOBS=24 make census</code>, its rule in <code>build/route/NOTES.txt</code> first.</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th>Read</th><th>Result</th></tr></thead><tbody><tr><td>Before (the test census)</td><td>125.8 s; bots 64.5 µs a seat-tick</td></tr><tr><td>The eyes, rings, heap, sites and radar</td><td>48.7 s; bots 20.2 µs; every match the same (Mac and census machine); families the same counts</td></tr><tr><td>On the census machine</td><td>a 55-seed census 3:55 → 1:50</td></tr><tr><td><code>dodge_own_route</code> 1, every team</td><td>38.9 s; bots 15.8 µs</td></tr><tr><td><code>dodge_own_route</code> 1 against the defaults, 110 seeds</td><td>−0.53 ± 0.48; big-lizard −6.48 ± 1.56: <strong>off</strong></td></tr><tr><td>The arms (LR 89)</td><td>w_exposure 0.15 −0.37 ± 0.36; w_mine 2 +0.04 ± 0.14; w_flank 1.5 +0.17 ± 0.41: all act, all inside the noise</td></tr><tr><td>The day's screen, stage 1</td><td>dodge_horizon half +2.71 ± 0.82 (z 3.3, 55 seeds), being read again by the run</td></tr></tbody></table></div><p>Errors: two tries with no gain, taken out. A false alarm on x86 (the harness's timing line), caught before any claim was made. The run died once (exit 141) and was resumed.</p></section><section id="sv"><h2>V. Discussion</h2><p>Every change was measured against a census that matches to the character, and that check is what made a 2.6 times speed-up safe on a machine running a day of results. The two tries that bought nothing show the profile alone was not enough; each change had to be timed. The route change is the reverse case: a real saving that alters play, and the census found what a forecast that looks more faithful costs on one map. The run now does on its own, generation after generation, what the last three days did by hand.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

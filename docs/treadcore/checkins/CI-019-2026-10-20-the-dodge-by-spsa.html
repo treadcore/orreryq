@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>The Dodge&#x27;s Numbers by SPSA</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a><a href="#addendum-the-second-batch">Addendum: the </a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-019</p>
+    <h1>The Dodge's Numbers by SPSA: Promising, Not Confirmed</h1>
+    <div class="front"><p><strong>Check-in report CI-019.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 19 and 20 October 2026. Companion records: journals 0069 and 0070; <code>LAB-REPORT-BRAIN.md</code> section 43; CI-016 to CI-018.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-019-2026-10-20-the-dodge-by-spsa.md">documentation/checkins/CI-019-2026-10-20-the-dodge-by-spsa.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li><li><a href="#addendum-the-second-batch">Addendum: the second batch</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>With every team on the landfall defaults, half the deaths are in the dodge ashore (CI-016), and its numbers were first guesses. SPSA tuned <code>dodge_horizon</code>, <code>dodge_margin</code> and <code>dodge_clear</code> over 16 steps of 24 fresh seeds. It ended at 2.05 s, 1.52 and 3.73 tiles (defaults 4, 0.8, 2.5): start later, count more near misses, clear further. On 48 seeds the search never saw, that reads +1.24 ± 0.75 a seat, positive in every range. The trial team's dodges killed it 6.4% of the time, against 7.4% for the defaults. At 1.65 errors this is not past the two-error rule. A second fixed batch of 48 seeds decides, by a rule stated before it runs.</p><p><strong>Index terms:</strong> SPSA, confirmation, optional stopping, reflexes.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>Tune the dodge with the tool CI-018 proved, and confirm the result honestly.</p><h3 id="b-the-prompts">B. The prompts</h3><blockquote><p>commit. push. continue backlog</p></blockquote><p>(Several times during the run; progress was committed each time: <code>d39f3b2</code>, <code>405a54e</code>, <code>4e85133</code>.)</p><blockquote><p>hey claude. you are doing very well at this bot design. I want to bake you a cupcake. What do you want yours to say?</p></blockquote></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>CI-018: SPSA crawls on the largest effect</td><td>24 seeds a step, 16 steps, A 1.0, C 0.5</td><td>12 seeds: too noisy for smaller effects</td></tr><tr><td>D2</td><td>Steps 5 and 6 hit the cap on noise</td><td>Let the run finish; note A too high</td><td>Restarting: six steps of readings lost</td></tr><tr><td>D3</td><td>The end point is a hypothesis</td><td>Confirm on seeds 0–47, unseen by the search</td><td>Reading the search's own seeds</td></tr><tr><td>D4</td><td>F: +1.24 ± 0.75</td><td>Not promoted; defaults stay</td><td>Promoting on 1.65 errors and a favourable meter</td></tr><tr><td>D5</td><td>Optional stopping</td><td>One more fixed batch, 48 to 95, the rule stated first</td><td>Adding seeds until it crosses</td></tr><tr><td>D6</td><td>F: the walk rough at A 1.0</td><td>Next tuner runs at A 0.3, 32 seeds a step for three weights</td><td></td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><p><code>STEPS=16 SEEDS=24 SEED0=2000 A=1.0 C=0.5 TUNE=&quot;dodge_horizon dodge_margin dodge_clear&quot; make spsa</code>. Confirmation: the end point (<code>theta.toml</code>) as <code>CENSUS_WEIGHTS</code>, the defaults for the baselines, <code>CENSUS_SEED0</code> 0, 16, 32 with <code>CENSUS_SEEDS=16</code>, <code>CENSUS_ACTS</code>; naval.map, 900 s, respawns 3, the fair census. Dodge rates from the meter by team (CI-007), summed over the three ranges.</p></section><section id="siv"><h2>IV. Results</h2><p>End point: horizon 2.05 s, margin 1.52, clear 3.73. Steps outside their errors: 9 (−2.49 ± 0.94) and 11 (−2.35 ± 0.72); in both, the larger margin won.</p><div class="table"><table><thead><tr><th>Confirmation</th><th>d a seat</th></tr></thead><tbody><tr><td>48 seeds</td><td>+1.24 ± 0.75</td></tr><tr><td>By range</td><td>+0.36 ± 1.59, +1.96 ± 1.24, +1.39 ± 1.06</td></tr></tbody></table></div><div class="table"><table><thead><tr><th>Ashore dodges</th><th>Begun</th><th>Hit</th><th>By the shell</th><th>Killed</th></tr></thead><tbody><tr><td>End point</td><td>8,730</td><td>29.0%</td><td>20.2%</td><td>6.4%</td></tr><tr><td>Defaults</td><td>17,457</td><td>35.0%</td><td>16.9%</td><td>7.4%</td></tr></tbody></table></div></section><section id="sv"><h2>V. Discussion</h2><ol><li><strong>A later dodge is a shorter detour.</strong> At 4 s a tank leaves its errand early and meets other fire. At 2 s it is caught by its own shell a little more often, but hit and killed less overall.</li><li><strong>The rule holds even for a good lead.</strong> All three ranges are positive and the meter agrees, but 1.65 errors is not two. The second batch is fixed in size and rule before it runs.</li></ol><p><strong>Next:</strong> seeds 48 to 95.</p></section><section id="addendum-the-second-batch"><h2>Addendum: the second batch</h2><p>Seeds 48 to 95: +0.53 ± 0.69. The 96 pooled: +0.88 ± 0.51, 1.74 errors. By the rule in D5, not promoted; the defaults stay, and the end point gets no more seeds. Journal 0071.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

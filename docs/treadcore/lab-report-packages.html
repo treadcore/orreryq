@@ -1,0 +1,318 @@
+<meta charset="utf-8">
+<title>Lab report</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../reports.html">lab reports</a> · <a href="../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a><a href="#svi">VI</a><a href="#svii">VII</a><a href="#sviii">VIII</a><a href="#six">IX</a><a href="#sx">X</a><a href="#sxi">XI</a><a href="#sxii">XII</a><a href="#references">References</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · lab report · packages</p>
+    <h1>Lab report: packages for every platform, from a git hook to a release</h1>
+    <div class="front"><p class="note">A Cargo and Rust tutorial, written from treadcore's own release pipeline. 13 October 2026, versions 0.1.0-rc.2 and rc.3.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/LAB-REPORT-PACKAGES.md">documentation/LAB-REPORT-PACKAGES.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. What you need</a></li><li><a href="#sii">II. The Bevy template</a></li><li><a href="#siii">III. The multi-target build</a></li><li><a href="#siv">IV. Packages that bring what they need</a></li><li><a href="#sv">V. Test every package where its users are</a></li><li><a href="#svi">VI. The git hook</a></li><li><a href="#svii">VII. The release check: documentation is part of the build</a></li><li><a href="#sviii">VIII. The publishing limit</a></li><li><a href="#six">IX. API usage</a></li><li><a href="#sx">X. The build grid</a></li><li><a href="#sxi">XI. Results</a></li><li><a href="#sxii">XII. What to take from this</a></li><li><a href="#references">References</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>A Rust game built with Bevy should reach its players the way each of their systems expects: a <code>.deb</code> for Debian, Ubuntu and Linux Mint, an <code>.rpm</code> for Fedora, an <code>.msi</code> for Windows, an app for macOS, a flake for Nix, <code>make install</code> where building from source is the custom, and <code>cargo install</code> everywhere. This report builds that, step by step, as it was built for treadcore, with the code that does each step. The chain is: a <strong>git hook</strong> that refuses to push a release tag until the release check passes; the <strong>release check</strong>, which holds the documentation to the build (the pictures must be of this version, and every one must be shown); a <strong>GitHub Actions workflow</strong> that builds every package on its own platform, <strong>installs each one on the systems it is for and plays a match there</strong>, and only then puts them on a draft release; a <strong>one-day limit</strong> between the tag and anything public; and <strong>API discipline</strong>, so that neither the pipeline nor the website spends rate limits that are not ours. The first run found a broken <code>.rpm</code> before anyone downloaded it; the gate held, and the next candidate fixed it.</p></section><section id="si"><h2>I. What you need</h2><div class="table"><table><thead><tr><th>piece</th><th>what it is</th><th>where in treadcore</th></tr></thead><tbody><tr><td>a Cargo workspace</td><td>the game's crates, one version</td><td><code>Cargo.toml</code></td></tr><tr><td>a Bevy dependency block</td><td>the engine, with only the features used</td><td><code>Cargo.toml</code>, <code>[workspace.dependencies.bevy]</code></td></tr><tr><td>package metadata</td><td>what cargo-deb and cargo-generate-rpm need</td><td><code>source/treadcore-client/Cargo.toml</code></td></tr><tr><td>a WiX source</td><td>the Windows installer</td><td><code>packaging/windows/treadcore.wxs</code></td></tr><tr><td>a desktop entry and icon</td><td>shared by every Linux route</td><td><code>packaging/</code></td></tr><tr><td>a release check</td><td>the procedure as a script</td><td><code>scripts/release.sh</code>, <code>make release</code></td></tr><tr><td>a git hook</td><td>runs the check before a tag leaves</td><td><code>.githooks/pre-push</code>, <code>make hooks</code></td></tr><tr><td>a workflow</td><td>builds, tests, drafts</td><td><code>.github/workflows/packages.yml</code></td></tr><tr><td>a publish script</td><td>crates.io, a day after the tag</td><td><code>scripts/publish.sh</code>, <code>make publish</code></td></tr><tr><td>a build table</td><td>what is published, for the site</td><td><code>scripts/builds.sh</code>, <code>make builds</code></td></tr></tbody></table></div><p>Rust from rustup or the distribution, either: nothing here pins a toolchain beyond <code>rust-version</code> in the workspace.</p></section><section id="sii"><h2>II. The Bevy template</h2><p>Bevy's default features pull in a 3D renderer, audio, glTF, animation and more. A 2D game that turns them off builds faster, links smaller and has fewer system dependencies to package. Define Bevy <strong>once</strong>, in the workspace, so every crate that uses it resolves to the same features and the same artifacts:</p><div class="code"><span class="lang">toml</span><pre><code># Cargo.toml (workspace root)
+[workspace]
+resolver = &quot;2&quot;
+members = [&quot;source/treadcore-sim&quot;, &quot;source/treadcore-client&quot;, &quot;...&quot;]
+
+[workspace.package]
+version = &quot;0.1.0-rc.3&quot;          # the one version: crates, packages, tags
+edition = &quot;2021&quot;
+rust-version = &quot;1.85&quot;           # what the code needs; any newer toolchain builds it
+license = &quot;MIT&quot;
+repository = &quot;https://github.com/treadcore/treadcore&quot;
+homepage = &quot;https://treadcore.org&quot;
+
+[workspace.dependencies]
+# Internal crates with a version as well as a path: crates.io refuses a
+# package whose dependency has only a path.
+treadcore-sim = { path = &quot;source/treadcore-sim&quot;, version = &quot;0.1.0-rc.3&quot; }
+
+[workspace.dependencies.bevy]
+version = &quot;0.17&quot;
+default-features = false
+features = [
+    &quot;std&quot;, &quot;multi_threaded&quot;, &quot;bevy_log&quot;, &quot;bevy_asset&quot;, &quot;bevy_color&quot;, &quot;bevy_state&quot;,
+    &quot;bevy_window&quot;, &quot;bevy_winit&quot;, &quot;wayland&quot;, &quot;x11&quot;, &quot;bevy_input_focus&quot;,
+    &quot;bevy_render&quot;, &quot;bevy_core_pipeline&quot;, &quot;bevy_sprite&quot;, &quot;bevy_sprite_render&quot;,
+    &quot;bevy_text&quot;, &quot;default_font&quot;, &quot;bevy_ui&quot;, &quot;bevy_ui_render&quot;, &quot;bevy_gizmos&quot;,
+]</code></pre></div><p>A crate takes it with <code>bevy = { workspace = true }</code>. Two things about this list matter for packaging:</p><ul><li><strong><code>wayland</code> and <code>x11</code> are both on.</strong> The window runs native on Wayland and under X11 alike. On Windows and macOS these two features compile to nothing, so the same list builds everywhere: the Windows and macOS jobs of the workflow use it unchanged.</li><li><strong>No <code>bevy_audio</code>.</strong> So no ALSA library is linked into the window, and no package has to require one. (The build still wants ALSA's headers on Linux, through a dependency's build script; the packages do not.)</li></ul><p>Profiles sized for the machine the game is developed on, and one for release binaries:</p><div class="code"><span class="lang">toml</span><pre><code>[profile.release]
+opt-level = 3
+lto = false
+codegen-units = 16      # the link stays under a gigabyte on a 6 GB machine
+
+[profile.dist]          # for a binary to hand to someone, when time allows
+inherits = &quot;release&quot;
+lto = &quot;thin&quot;
+codegen-units = 1</code></pre></div><p>The window's <code>name</code> is the Wayland app id and the X11 window class. It must match the desktop entry's file name, or launchers and taskbars cannot give the window its name and icon:</p><div class="code"><span class="lang">rust</span><pre><code>// source/treadcore-client/src/main.rs
+let mut window = Window {
+    title: &quot;treadcore&quot;.into(),
+    name: Some(&quot;org.treadcore.treadcore&quot;.into()),   // = org.treadcore.treadcore.desktop
+    present_mode: PresentMode::AutoVsync,
+    ..default()
+};</code></pre></div></section><section id="siii"><h2>III. The multi-target build</h2><p><strong>Native runners, not cross-compilation.</strong> A Bevy window links system libraries (Wayland, xkbcommon, the GPU stack) whose headers and <code>.so</code> files must be the target's. Cross-compiling that is possible and fragile; GitHub gives free native runners for x86-64 and ARM64 Linux, Windows and Apple-silicon macOS, so each package is built where it runs:</p><div class="table"><table><thead><tr><th>target triple</th><th>runner</th><th>packages</th></tr></thead><tbody><tr><td><code>x86_64-unknown-linux-gnu</code></td><td><code>ubuntu-22.04</code></td><td><code>.deb</code> amd64</td></tr><tr><td><code>aarch64-unknown-linux-gnu</code></td><td><code>ubuntu-22.04-arm</code></td><td><code>.deb</code> arm64</td></tr><tr><td><code>x86_64-unknown-linux-gnu</code></td><td><code>fedora:41</code> container</td><td><code>.rpm</code> x86_64</td></tr><tr><td><code>aarch64-unknown-linux-gnu</code></td><td><code>fedora:41</code> on <code>ubuntu-22.04-arm</code></td><td><code>.rpm</code> aarch64</td></tr><tr><td><code>x86_64-pc-windows-msvc</code></td><td><code>windows-latest</code></td><td><code>.msi</code>, zip</td></tr><tr><td><code>aarch64-apple-darwin</code></td><td><code>macos-14</code></td><td>zip of <code>Treadcore.app</code></td></tr><tr><td><code>x86_64-linux</code>, <code>aarch64-linux</code> (Nix)</td><td><code>ubuntu-latest</code> + Nix</td><td>the flake</td></tr><tr><td><code>aarch64-unknown-linux-musl</code></td><td>Copal (by hand)</td><td><code>make install</code></td></tr></tbody></table></div><p><strong>Build where the glibc is oldest you want to support.</strong> A binary linked on Ubuntu 22.04 needs glibc 2.35 or newer, so one <code>.deb</code> serves Debian 12, Ubuntu 22.04 and 24.04 and Mint 21 and 22. Built on 24.04 it would refuse Debian 12. The <code>.rpm</code> is built in a Fedora container for the same reason, the other way round: Fedora's own libraries and its own dependency generator.</p><p>The build job, for one row of the table:</p><div class="code"><span class="lang">yaml</span><pre><code>deb:
+  strategy:
+    matrix:
+      include:
+        - { runner: ubuntu-22.04, arch: amd64 }
+        - { runner: ubuntu-22.04-arm, arch: arm64 }
+  runs-on: ${{ matrix.runner }}
+  steps:
+    - uses: actions/checkout@v4
+    - name: system packages (scripts/deps.sh, Debian line)
+      run: sudo apt-get update &amp;&amp; sudo apt-get install -y build-essential pkg-config
+           libwayland-dev libxkbcommon-dev libasound2-dev libudev-dev libvulkan1 mesa-vulkan-drivers
+    - uses: dtolnay/rust-toolchain@stable
+    - run: cargo build --release --locked -p treadcore-client -p treadcore-server
+    - run: cargo install --locked cargo-deb
+    - run: cargo deb -p treadcore-client --no-build -o &quot;treadcore-$VERSION-linux-${{ matrix.arch }}.deb&quot;</code></pre></div><p><code>--locked</code> builds what <code>Cargo.lock</code> says, so the package is the code that was tested. The system packages are the same list <code>make deps</code> prints for a user on that distribution, from <code>scripts/deps.sh</code>: one source for "what does this need", used by people and by CI alike.</p></section><section id="siv"><h2>IV. Packages that bring what they need</h2><p>A package must install everything the program needs at run time, and nothing it does not. Rust itself is <strong>never</strong> a dependency of a binary package; users who build from source bring their own toolchain, from rustup or their distribution.</p><p>Two kinds of runtime dependency, handled two ways:</p><ul><li><strong>Linked</strong> libraries appear in the binary's <code>NEEDED</code> list. Let the tools read them: cargo-deb's <code>$auto</code> runs <code>dpkg-shlibdeps</code>, and cargo-generate-rpm's <code>auto-req</code> runs RPM's own generator.</li><li><strong>Loaded at run time</strong> (<code>dlopen</code>) libraries are invisible to those tools. winit loads Wayland and xkbcommon this way, and wgpu loads the Vulkan loader, which loads a driver. Name them by hand.</li></ul><div class="code"><span class="lang">toml</span><pre><code># source/treadcore-client/Cargo.toml
+[package.metadata.deb]
+name = &quot;treadcore&quot;
+section = &quot;games&quot;
+depends = &quot;$auto, libwayland-client0, libwayland-cursor0, libxkbcommon0, libvulkan1, mesa-vulkan-drivers&quot;
+recommends = &quot;libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libxkbcommon-x11-0&quot;
+assets = [
+    [&quot;target/release/treadcore&quot;, &quot;usr/bin/&quot;, &quot;755&quot;],
+    [&quot;target/release/treadcore-server&quot;, &quot;usr/bin/&quot;, &quot;755&quot;],
+    [&quot;../../packaging/org.treadcore.treadcore.desktop&quot;, &quot;usr/share/applications/&quot;, &quot;644&quot;],
+    [&quot;../../packaging/treadcore.svg&quot;, &quot;usr/share/icons/hicolor/scalable/apps/&quot;, &quot;644&quot;],
+]
+
+[package.metadata.generate-rpm]
+name = &quot;treadcore&quot;
+auto-req = &quot;auto&quot;     # RPM&#x27;s own generator where rpm-build is installed
+assets = [
+    { source = &quot;target/release/treadcore&quot;, dest = &quot;/usr/bin/treadcore&quot;, mode = &quot;755&quot; },
+    # ...
+]
+[package.metadata.generate-rpm.requires]
+libwayland-client = &quot;*&quot;
+libxkbcommon = &quot;*&quot;
+vulkan-loader = &quot;*&quot;
+mesa-vulkan-drivers = &quot;*&quot;</code></pre></div><p><code>mesa-vulkan-drivers</code> carries <strong>lavapipe</strong>, Vulkan on the CPU, so a machine with no GPU still opens the window. X11 libraries are <em>recommended</em>, not required: they matter only in an X11 session.</p><p><strong>Version strings differ by format.</strong> Cargo's <code>0.1.0-rc.3</code> is a pre-release; Debian spells that <code>0.1.0~rc.3</code> (cargo-deb converts it), and RPM refuses a <code>-</code> in a version outright:</p><div class="code"><span class="lang">sh</span><pre><code>cargo generate-rpm -p source/treadcore-client \
+    --set-metadata &#x27;version = &quot;0.1.0~rc.3&quot;&#x27;      # ~ sorts before the release</code></pre></div><p>An MSI version is three numbers, so a candidate installs as its release's number and <code>AllowSameVersionUpgrades</code> lets the next candidate replace it:</p><div class="code"><span class="lang">xml</span><pre><code>&lt;!-- packaging/windows/treadcore.wxs, built with WiX 5 --&gt;
+&lt;Package Name=&quot;Treadcore&quot; Manufacturer=&quot;Paul Richeson&quot; Version=&quot;$(var.Version)&quot;
+         UpgradeCode=&quot;e85be08f-f494-5999-bac3-8b89ec9ef3cb&quot; Scope=&quot;perMachine&quot;&gt;
+  &lt;MajorUpgrade AllowSameVersionUpgrades=&quot;yes&quot; DowngradeErrorMessage=&quot;A newer Treadcore is already installed.&quot; /&gt;
+  &lt;StandardDirectory Id=&quot;ProgramFiles64Folder&quot;&gt;&lt;Directory Id=&quot;INSTALLFOLDER&quot; Name=&quot;Treadcore&quot; /&gt;&lt;/StandardDirectory&gt;
+  &lt;StandardDirectory Id=&quot;ProgramMenuFolder&quot; /&gt;
+  &lt;Feature Id=&quot;Main&quot;&gt;
+    &lt;Component Directory=&quot;INSTALLFOLDER&quot;&gt;
+      &lt;File Id=&quot;treadcore.exe&quot; Source=&quot;$(var.BinDir)\treadcore.exe&quot; KeyPath=&quot;yes&quot; /&gt;
+      &lt;Shortcut Id=&quot;StartMenuShortcut&quot; Directory=&quot;ProgramMenuFolder&quot; Name=&quot;Treadcore&quot;
+                Target=&quot;[#treadcore.exe]&quot; Arguments=&quot;--solo&quot; WorkingDirectory=&quot;INSTALLFOLDER&quot; /&gt;
+      &lt;Environment Id=&quot;PathEntry&quot; Name=&quot;PATH&quot; Value=&quot;[INSTALLFOLDER]&quot; Part=&quot;last&quot; Action=&quot;set&quot; System=&quot;yes&quot; /&gt;
+    &lt;/Component&gt;
+  &lt;/Feature&gt;
+&lt;/Package&gt;</code></pre></div><div class="code"><span class="lang">powershell</span><pre><code>dotnet tool install --global wix --version 5.0.2
+wix build packaging/windows/treadcore.wxs -arch x64 -d Version=0.1.0 -d BinDir=target/release -o treadcore.msi</code></pre></div><p>The <code>UpgradeCode</code> never changes; it is how Windows knows a newer treadcore replaces an older one. treadcore's is a UUID derived from the project's domain, so it can be regenerated and checked: <code>uuid.uuid5(uuid.NAMESPACE_DNS, &quot;upgrade.treadcore.org&quot;)</code>.</p><p><strong>Nix</strong> builds from <code>Cargo.lock</code> with no extra hashes, because there are no git dependencies, and wraps the window with the libraries it loads at run time, since NixOS has no global library path:</p><div class="code"><span class="lang">nix</span><pre><code>default = pkgs.rustPlatform.buildRustPackage {
+  pname = &quot;treadcore&quot;;
+  version = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).workspace.package.version;
+  src = ./.;
+  cargoLock.lockFile = ./Cargo.lock;
+  cargoBuildFlags = [ &quot;-p&quot; &quot;treadcore-client&quot; &quot;-p&quot; &quot;treadcore-server&quot; ];
+  nativeBuildInputs = with pkgs; [ pkg-config makeWrapper ];
+  buildInputs = with pkgs; [ alsa-lib udev wayland libxkbcommon vulkan-loader ];
+  postFixup = &#x27;&#x27;
+    wrapProgram $out/bin/treadcore --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath (runtimeLibs pkgs)}
+  &#x27;&#x27;;
+};</code></pre></div></section><section id="sv"><h2>V. Test every package where its users are</h2><p>A package that builds is not a package that installs. Each one is installed on a fresh copy of the system it is for, with that system's own package manager resolving the dependencies, and then run:</p><div class="code"><span class="lang">yaml</span><pre><code>test-deb:
+  needs: [version, deb]
+  strategy:
+    fail-fast: false
+    matrix:
+      include:
+        - { image: &quot;debian:12&quot;, arch: amd64, runner: ubuntu-latest }
+        - { image: &quot;linuxmintd/mint22-amd64&quot;, arch: amd64, runner: ubuntu-latest }
+        - { image: &quot;debian:12&quot;, arch: arm64, runner: ubuntu-22.04-arm }
+        # ...
+  runs-on: ${{ matrix.runner }}
+  container: ${{ matrix.image }}
+  steps:
+    - uses: actions/download-artifact@v4
+      with: { name: &quot;deb-${{ matrix.arch }}&quot; }
+    - shell: bash
+      run: |
+        check() {   # run a test; if it fails, its output becomes a public annotation
+          if &quot;$@&quot; &gt; out.log 2&gt;&amp;1; then rc=0; else rc=$?; fi; tail -5 out.log
+          if [ $rc -ne 0 ]; then echo &quot;::error title=$1 failed (exit $rc)::$(tail -c 1500 out.log | tr &#x27;\n\r&#x27; &#x27;  &#x27;)&quot;; exit 1; fi
+        }
+        check apt-get update
+        check env DEBIAN_FRONTEND=noninteractive apt-get install -y ./treadcore-*-linux-${{ matrix.arch }}.deb
+        check treadcore --help
+        check sh -c &#x27;! ldd /usr/bin/treadcore | grep &quot;not found&quot;&#x27;
+        check test -f /usr/share/applications/org.treadcore.treadcore.desktop
+        check sh -c &#x27;treadcore-server --local --seconds 60 --swarm 0 2&gt;&amp;1 | grep &quot;match over&quot;&#x27;</code></pre></div><p>The window cannot open without a display on a runner, so three things stand in for it: <code>--help</code> proves the binary loads, <code>ldd</code> proves every linked library was brought by the package, and a sixty-second bot match from the installed server proves the game itself runs.</p><p>Two details are earned, not obvious:</p><ul><li><strong><code>if &quot;$@&quot;; then ... else rc=$?</code>.</strong> GitHub runs bash with <code>-e</code>, which exits on the first failed command, before a plain <code>&quot;$@&quot;; rc=$?</code> could record anything.</li><li><strong>The failure as an annotation.</strong> A job's log needs a login to read, even on a public repository; its annotations do not. The first run's Fedora failure said only "exit code 1" in public. Now it says why.</li></ul><p><strong>The gate.</strong> The release job needs every test:</p><div class="code"><span class="lang">yaml</span><pre><code>release:
+  needs: [version, deb, rpm, windows, macos, test-deb, test-rpm, test-windows, test-macos]
+  steps:
+    - uses: actions/download-artifact@v4
+      with: { path: out, merge-multiple: true }
+    - run: cd out &amp;&amp; sha256sum * &gt; SHA256SUMS
+    - uses: softprops/action-gh-release@v2
+      with:
+        draft: true
+        prerelease: ${{ contains(needs.version.outputs.version, &#x27;-&#x27;) }}
+        files: out/*</code></pre></div><p>If one package fails anywhere, there is no draft at all. The Nix build runs beside them but is not in <code>needs</code>: it is the newest route, and a failure there should not hold the others back.</p></section><section id="svi"><h2>VI. The git hook</h2><p>Nothing above runs unless a tag reaches GitHub, so the last check belongs before the tag leaves the machine. A <code>pre-push</code> hook reads the refs being pushed on standard input:</p><div class="code"><span class="lang">bash</span><pre><code>#!/usr/bin/env bash
+# .githooks/pre-push
+ROOT=&quot;$(git rev-parse --show-toplevel)&quot;
+VERSION=&quot;$(sed -n &#x27;s/^version = &quot;\(.*\)&quot;/\1/p&#x27; &quot;$ROOT/Cargo.toml&quot; | head -1)&quot;
+status=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+    case &quot;$remote_ref&quot; in refs/tags/v*) ;; *) continue ;; esac   # branches pass
+    tag=&quot;${remote_ref#refs/tags/}&quot;
+    if [ &quot;$tag&quot; != &quot;v$VERSION&quot; ]; then
+        echo &quot;pre-push: tag $tag is not v$VERSION, the version in Cargo.toml&quot; &gt;&amp;2
+        status=1; continue
+    fi
+    if [ &quot;$(git rev-parse &quot;$local_sha^{commit}&quot;)&quot; != &quot;$(git rev-parse HEAD)&quot; ]; then
+        echo &quot;pre-push: check out $tag first, so the check runs on what it names&quot; &gt;&amp;2
+        status=1; continue
+    fi
+    &quot;$ROOT/scripts/release.sh&quot; &gt;&amp;2 || { echo &quot;pre-push: release check failed&quot; &gt;&amp;2; status=1; }
+done
+exit &quot;$status&quot;</code></pre></div><p>The hook must also refuse a working tree with uncommitted changes. The check runs on the files on disk, and the tag names a commit: the first tag for rc.4 was pushed from a tree whose release commit had silently not been made, the check passed the tree, and the tag named rc.3's code. The workflow's version job refused it, but the hook should have:</p><div class="code"><span class="lang">bash</span><pre><code>if [ -n &quot;$(git -C &quot;$ROOT&quot; status --porcelain)&quot; ]; then
+    echo &quot;pre-push: the working tree has uncommitted changes; commit them so the check runs on what $tag names&quot; &gt;&amp;2
+    status=1; continue
+fi</code></pre></div><p>Why had the release commit not been made? Every script read the version as <code>sed -n &#x27;s/^version = .../p&#x27; Cargo.toml | head -1</code>. <code>Cargo.toml</code> has two lines that match, the workspace's version and Bevy's <code>version = &quot;0.17&quot;</code>; <code>head</code> exits after the first, and when <code>sed</code> writes the second after that, <code>sed</code> dies of SIGPIPE. Under <code>set -o pipefail</code> the script then exits 141 with no message, sometimes: a race. Read the first match and stop, so nothing writes into a closed pipe:</p><div class="code"><span class="lang">bash</span><pre><code>VERSION=&quot;$(awk -F&#x27;&quot;&#x27; &#x27;/^version *= /{print $2; exit}&#x27; Cargo.toml)&quot;</code></pre></div><p>Hooks are not cloned with a repository; each checkout turns them on:</p><div class="code"><span class="lang">make</span><pre><code>hooks:
+	@git config core.hooksPath .githooks</code></pre></div><p><code>git push --no-verify</code> skips a hook, which is the point: skipping it is deliberate and visible, not an accident.</p></section><section id="svii"><h2>VII. The release check: documentation is part of the build</h2><p><code>scripts/release.sh</code> (<code>make release</code>) is the procedure as code. It changes nothing but build output, and stops at the first failure:</p><ol><li>the version agrees in <code>Cargo.toml</code>, the path dependencies and a <code>CHANGELOG.md</code> heading;</li><li><code>make test</code> passes and <code>make build</code> prints <strong>no warnings</strong>;</li><li><strong>the pictures are of this version</strong>: <code>make shoot</code> drives the window through a fixed match and writes <code>reports/images/MANIFEST-&lt;version&gt;.txt</code>; every listed frame must exist, be non-empty, be newer than the window's newest source file, and be shown by the player's guide or the site;</li><li>the documents name the guide, and every image they show is a file;</li><li><code>cargo publish --dry-run</code> packages the first crate.</li></ol><p>The picture rule is the one that pays. The first candidate's gallery held three zero-byte frames for half a day; a frame older than the code shows a window that no longer exists. Both now stop a release:</p><div class="code"><span class="lang">bash</span><pre><code>since=&quot;$(stat -c %Y &quot;$ROOT&quot;/source/treadcore-client/src/*.rs | sort -n | tail -1)&quot;
+while read -r f; do
+    [ -s &quot;$IMG/$f&quot; ] || { bad &quot;$f missing or empty&quot;; continue; }
+    [ &quot;$(stat -c %Y &quot;$IMG/$f&quot;)&quot; -ge &quot;$since&quot; ] || { bad &quot;$f is older than the window: shoot again&quot;; continue; }
+    grep -q &quot;$f&quot; &quot;$GUIDE&quot; &quot;$ROOT/index.html&quot; || bad &quot;$f is taken but no document shows it&quot;
+done &lt; &quot;$MAN&quot;</code></pre></div><p><strong>Capture the window, not the screen.</strong> The first frames for rc.3 were taken as a region of the screen where the game window stood, and a terminal the author was typing in sat over it: the pictures showed the terminal, and every check above passed, because the files were there, fresh and shown. The shoot now captures the game window by its compositor id, whatever is on screen, and refuses any frame that is not the window's size or lacks the bezel's grey down its left edge:</p><div class="code"><span class="lang">bash</span><pre><code>sid_of() { hyprctl clients -j | python3 -c &quot;import json,sys; c=[c for c in json.load(sys.stdin) if c[&#x27;pid&#x27;]==$1]; print(c[0][&#x27;stableId&#x27;] if c else &#x27;&#x27;)&quot;; }
+frame() { grim -T &quot;$(sid_of &quot;$PID&quot;)&quot; &quot;$S/$1.png&quot;; }    # the toplevel, not a region</code></pre></div><p>A check that a file exists is not a check of what it shows; a check of what it shows can be cheap: one column of pixels.</p><p>A feature is not done until the guide shows it: its frame is added to <code>scripts/shoot.sh</code>, the guide's section is written against the frame, and from then on the check holds the two together.</p></section><section id="sviii"><h2>VIII. The publishing limit</h2><p>Two things cannot be undone: a version on crates.io (it can be yanked, never removed) and a published GitHub release that people have downloaded. Both wait <strong>at least a day after the tag</strong>. The tagged build is lived with for a day; anything found in it makes a new candidate, not a published version. The script enforces it:</p><div class="code"><span class="lang">bash</span><pre><code># scripts/publish.sh (make publish)
+tagged=&quot;$(git for-each-ref --format=&#x27;%(taggerdate:unix)%(committerdate:unix)&#x27; &quot;refs/tags/v$VERSION&quot; | cut -c1-10)&quot;
+age=$(( $(date +%s) - tagged ))
+if [ &quot;$age&quot; -lt 86400 ]; then
+    die &quot;v$VERSION was tagged $((age / 3600)) h ago; publish no sooner than $(date -d &quot;@$((tagged + 86400))&quot;)&quot;
+fi
+for c in treadcore-sim treadcore-proto treadcore-net treadcore-brain treadcore-client; do
+    cargo publish -p &quot;$c&quot;      # in dependency order; cargo waits for each to reach the index
+done</code></pre></div><p>The crates go in dependency order because crates.io will not accept a crate whose dependency is not yet in its index. <code>make token</code> stores the crates.io token through <code>cargo login</code>, in <code>~/.cargo/credentials.toml</code>, never in the repository.</p></section><section id="six"><h2>IX. API usage</h2><p>Two rate limits shape the pipeline:</p><ul><li><strong>GitHub's REST API allows 60 unauthenticated requests an hour per IP address</strong> (5,000 with a token). Watching a workflow from a script by polling every few seconds would spend that in minutes; the polling in this work was once a minute, against one endpoint, and stopped when the run finished. When one endpoint returned 502 for a while, the same results were read from another (<code>/commits/&lt;tag&gt;/check-runs</code>) rather than retried in a loop.</li><li><strong>A web page that calls the API spends the visitor's quota</strong>, and every visitor behind one office NAT shares it. treadcore's download page first did exactly that. It no longer calls any API.</li></ul><p>Instead, the maintainer asks once, at publish time:</p><div class="code"><span class="lang">bash</span><pre><code>make builds      # scripts/builds.sh: at most three requests</code></pre></div><p>It reads the newest published release and its assets, the check runs of the release commit (which package passed its test where), and the crate's version from crates.io, then writes <code>builds.json</code> and embeds the same data in <code>index.html</code> and <code>download.html</code>:</p><div class="code"><span class="lang">html</span><pre><code>&lt;script type=&quot;application/json&quot; id=&quot;builds&quot;&gt;&lt;!-- BUILDS: written by make builds --&gt;{...}&lt;/script&gt;</code></pre></div><p>The pages render their links and the build grid from that block. A visitor costs no API request; the data is as fresh as the last release, which is exactly as fresh as it can usefully be. The script prints the remaining quota after each call, and honours <code>GITHUB_TOKEN</code> if set.</p></section><section id="sx"><h2>X. The build grid</h2><p><code>index.html</code>, under "Where it is built, and for what", shows one row per target: the system, the architecture, the form (<code>.deb</code>, <code>.rpm</code>, <code>.msi</code>, zip, flake, <code>make install</code>, <code>cargo install</code>), checkboxes for <strong>built</strong>, <strong>tested there</strong> and <strong>published</strong>, and the runtime dependencies, with the release, its build date and the crate's version underneath. Each box is read from the data <code>make builds</code> wrote: built if the release has the file, tested if that system's job in the workflow passed, published if the release is public. Source routes show "by hand" where the author tests them on his own machine (Copal, Alpine) and a dash where nobody has yet.</p></section><section id="sxi"><h2>XI. Results</h2><p><strong>0.1.0-rc.2</strong>, the first run of the workflow:</p><div class="table"><table><thead><tr><th>job</th><th>result</th></tr></thead><tbody><tr><td>build: .deb amd64, .deb arm64, .rpm x86_64, .rpm aarch64, Windows, macOS</td><td>all passed</td></tr><tr><td>.deb installed and played: Debian 12, Debian 13, Ubuntu 22.04, Ubuntu 24.04, Linux Mint 22</td><td>all passed</td></tr><tr><td>.rpm installed and played: Fedora 41, Fedora 42</td><td><strong>both failed</strong></td></tr><tr><td>Windows zip run, macOS app verified and run</td><td>passed</td></tr><tr><td>Nix flake built and run</td><td>passed</td></tr><tr><td>draft release</td><td><strong>not made</strong>: the gate held</td></tr></tbody></table></div><p>The <code>.rpm</code> failed on both Fedoras, so the package, not one release of Fedora, was at fault. Its logs needed a login; its annotations said only "exit code 1". Inspecting a locally built <code>.rpm</code> with <code>rpm -qp --requires</code> showed the builtin dependency reader's output, faithful to that (musl) binary but not something to trust blind. rc.3 makes the <code>.rpm</code> with RPM's own generator inside the Fedora build container, and every test now publishes its failing output.</p><p><strong>0.1.0-rc.3</strong>:</p><div class="table"><table><thead><tr><th>job</th><th>result</th></tr></thead><tbody><tr><td>build: .deb amd64 and arm64, .rpm x86_64 and aarch64, macOS</td><td>all passed</td></tr><tr><td>.deb installed and played: Debian 12 (amd64, arm64), Debian 13, Ubuntu 22.04, Ubuntu 24.04 (amd64, arm64), Linux Mint 22</td><td>all seven passed</td></tr><tr><td>.rpm installed and played: Fedora 41, Fedora 42 (x86_64, aarch64)</td><td><strong>all three passed</strong>: RPM's own generator fixed it</td></tr><tr><td>macOS app verified and run; Nix flake built and run</td><td>passed</td></tr><tr><td>Windows: build</td><td><strong>failed</strong>, in the new MSI step</td></tr><tr><td>draft release</td><td>not made: the gate held again</td></tr></tbody></table></div><p>The Windows failure is the lesson of rc.2 again, one step over: the tests now published their errors, the build steps did not, so the public record said "exit code 1". The likely cause is that <code>dotnet tool install --global</code> puts <code>wix</code> in a folder that joins PATH only in the next step. rc.4 calls WiX by its path and publishes any build error as an annotation. WiX itself cannot be tried off Windows: on Linux it warns that it supports only Windows and then misreads every backslash.</p><p><strong>0.1.0-rc.4</strong> was tagged on the wrong commit (section VI) and refused by the workflow's version job. <strong>0.1.0-rc.5</strong> carries its changes. Every .deb, .rpm, macOS and Nix job passed again; the Windows build failed, and this time the public record said exactly why, because the MSI step now publishes WiX's own error:</p><div class="code" class="diagram"><pre><code>treadcore.wxs(44) : error WIX0367: The Component/@Guid attribute&#x27;s value &#x27;*&#x27; is not
+valid for this component ... Components with more than one file cannot use an
+automatically generated guid unless a versioned file is the keypath ...</code></pre></div><p>The guide and the licence had shared a component. A Rust <code>.exe</code> carries no version resource, so nothing in that component was "versioned", and WiX could not derive its id. One file a component fixes it. The PATH fix of rc.4 was right: WiX ran.</p><p><strong>0.1.0-rc.6</strong>: every job passed, 21 of 21, and the draft release was made.</p><div class="table"><table><thead><tr><th>job</th><th>result</th></tr></thead><tbody><tr><td>builds: .deb amd64 and arm64, .rpm x86_64 and aarch64, Windows (.msi and zip), macOS</td><td>passed</td></tr><tr><td>.deb installed and played: Debian 12 (amd64, arm64), Debian 13, Ubuntu 22.04, Ubuntu 24.04 (amd64, arm64), Linux Mint 22</td><td>passed</td></tr><tr><td>.rpm installed and played: Fedora 41, Fedora 42 (x86_64, aarch64)</td><td>passed</td></tr><tr><td>Windows: the .msi installed silently, Start Menu and PATH checked, a match from Program Files, uninstalled; the zip run</td><td>passed</td></tr><tr><td>macOS: signature verified, a match played; Nix: built, a match played</td><td>passed</td></tr><tr><td>draft release with SHA256SUMS</td><td><strong>made</strong></td></tr></tbody></table></div><p>Five candidates to get there, and each failure was found before anything was public: the <code>.rpm</code> (rc.2), the Windows PATH (rc.3), a tag on the wrong commit (rc.4), the MSI's components (rc.5). The draft is published, and <code>make publish</code> run, no sooner than a day after the tag.</p></section><section id="sxii"><h2>XII. What to take from this</h2><ol><li>Build each target natively, on the oldest system you support.</li><li>Let the tools read linked libraries; name what is loaded at run time.</li><li>Test the package, not the binary: install it where its users are, with their package manager, and run it.</li><li>Gate the release on those tests, and make failures readable in public.</li><li>Put the check before the tag leaves the machine: a hook.</li><li>Treat the documentation as part of the build: pictures of this version, every one shown.</li><li>Wait a day before anything that cannot be undone.</li><li>Spend API calls once, at release time, never per page view.</li></ol></section><section id="references"><h2>References</h2><ol><li>cargo-deb, https://github.com/kornelski/cargo-deb</li><li>cargo-generate-rpm, https://github.com/cat-in-136/cargo-generate-rpm</li><li>WiX Toolset, https://wixtoolset.org</li><li>GitHub REST API rate limits, https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api</li><li>GitHub Actions workflow commands (annotations), https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions</li><li>treadcore, <code>documentation/RELEASE.md</code> sections 4 and 6; journals 0018 to 0021.</li></ol></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

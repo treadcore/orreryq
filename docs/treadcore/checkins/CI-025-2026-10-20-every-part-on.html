@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>Every Part On, a Dodge Against Every Shell, and the Duck</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-025</p>
+    <h1>Every Part On, a Dodge Against Every Shell, and the Duck Foreseen</h1>
+    <div class="front"><p><strong>Check-in report CI-025.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 20 October 2026. Companion records: journals 0081 and 0082; <code>LAB-REPORT-BRAIN.md</code> sections 54 to 57; CI-024; roadmap backlog 45 to 50.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-025-2026-10-20-every-part-on.md">documentation/checkins/CI-025-2026-10-20-every-part-on.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>Paul changed goal 4's rule: new behaviours land on, with sensible starting numbers, the census guards that the brain still works, and tuning comes after the features. The planned dodge went on (LR 54); then the eleven parts built and still off went on together, -0.85 +/- 0.59 a seat against them off, inside the noise, at about 30% more brain time (LR 55). Three new parts followed, each found by a scenario family and proved by a test that fails without it: the dodge planned against every shell in flight (two shells 76.5% to 100%, four 56.6% to 99.7%; LR 56), the duck foreseen to the gun's ready tick (76.6% to 83.4%), and a shot held when its turn of the hull would carry the tank into a splash, since a tank has no turret (LR 57). The guard for the three: +0.21 +/- 0.68; dodges caught by their own shell ashore 6.1% to 1.6%.</p><p><strong>Index terms:</strong> defaults policy, guard census, motion foresight, reflexes, scenario families.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>To finish the brain's features before tuning: turn on what was built, keep adding behaviours with starting numbers, and keep the brain working.</p><h3 id="b-the-prompt">B. The prompt</h3><blockquote><p>yes. keep all the new behavior. keep adding. we need to finish writing the brain. but ofcourse it still must work. even if slightly less. We will continue to adjsut scalars after all features are added. but we need to add them wile finding a sensible starting numbers.</p></blockquote><p>It answered CI-024's question (the planned dodge on by default, and commit and push).</p></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>"yes" to CI-024's two questions</td><td><code>dodge_plan</code>, <code>dodge_release</code> 1; committed and pushed (61c368b)</td><td></td></tr><tr><td>D2</td><td>"keep all the new behavior ... it still must work. even if slightly less"</td><td>A new rule: parts land on; the census guards; saved as a memory and in ROADMAP goal 4</td><td>Keeping the promotion gate: Paul replaced it</td></tr><tr><td>D3</td><td>"all the new behavior"</td><td>The eleven parts built and off turned on together</td><td>One at a time: eleven censuses for parts already measured alone near zero</td></tr><tr><td>D4</td><td>Two tests read <code>Caps::BASELINE</code> as "off"</td><td>Their off cases name the part off</td><td>Weakening the tests</td></tr><tr><td>D5</td><td>The guard: -0.85 +/- 0.59</td><td>Accepted as "slightly less"; the likely carriers (posture, team_rotate) recorded for the tuning phase (backlog 48)</td><td>Hunting them now: tuning follows the features</td></tr><tr><td>D6</td><td>"keep adding"; backlog 45</td><td><code>dodge_every</code>, <code>drive_path</code></td><td></td></tr><tr><td>D7</td><td>Backlog 46</td><td>A ready-gun family; RuleBot gunner</td><td></td></tr><tr><td>D8</td><td>F: the hull turned 123 degrees in a tick</td><td>Read the sim: a shot turns the hull; <code>dodge_fire</code></td><td>Calling it a steering bug in <code>drive_to</code></td></tr><tr><td>D9</td><td>F: the duck re-picks each think</td><td><code>duck_plan</code> holds its point, and foresees the ready tick</td><td></td></tr><tr><td>D10</td><td>The family said 0.4 to 1.4 s and set 0.9</td><td><code>reload = [lo, hi]</code> and the file corrected</td><td>Leaving the comment wrong</td></tr><tr><td>D11</td><td>The seed-4 test held broken after <code>duck_plan</code></td><td>Searched for a seed that fails broken (261)</td><td>Keeping a test that cannot fail</td></tr><tr><td>D12</td><td>"add them while finding a sensible starting numbers"</td><td>The new weights are thresholded switches at 1, the families their evidence; continuous numbers (<code>dodge_margin</code>, <code>duck_ready</code>) kept</td><td>A sweep per weight now: after the features</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><p><strong>Parts explored.</strong> <code>weights.rs</code>: <code>caps!</code> (every bit on), the new <code>DodgeEvery</code>, <code>DodgeFire</code>, <code>DuckPlan</code>. lib.rs: <code>Dodge::threats</code> (every hostile indirect shell in flight landing within <code>dodge_horizon</code>, beside the one dodged), <code>Dodge::clearance</code> (the least, over the landings, of the distance at each landing tick less the splash and <code>dodge_margin</code>), <code>Dodge::planned</code> (now over the threats), <code>Dodge::release</code> (over the threats), <code>Dodge::hold_fire</code> (each <code>FireDirect</code> or <code>FireIndirect</code> foreseen with the hull turned to it), <code>drive_path</code> (the per-tick form of <code>drive_to</code>). commander.rs: <code>think_released</code> (release unless the act is the dodge; hold_fire always), <code>Commander::duck</code> (the guns seen and remembered, the readiness test, the ring of sixteen; with <code>duck_plan</code> the held point and the foreseen choice), the duck's call site (re-sent when the point moves a tile or a second passes). The sim, read: <code>FireIndirect</code> and <code>FireDirect</code> set the hull's heading; <code>drive_tank</code>. scenario.rs: <code>[[tank]] around</code>, <code>reload</code>; trace fields; hits with damage and drones; <code>set_weights</code> and RuleBots.</p><p><strong>Families</strong> (<code>scenarios/families/</code>), 1,000 seeds each, <code>make scenario S=file RUNS=1000 SET=...</code>: one shell and two shells, rolling and standing; a tank under a ready gun (a RuleBot 9 tiles off, ready in 0.4 to 1.4 s; the tank's own gun at 2.5 s). Three and four shells from copies in <code>build/lr55</code>.</p><p><strong>Guards.</strong> Frozen binaries; the fair census on naval.map, 900 s, 3 respawns, seeds 0 to 47, <code>CENSUS_ACTS</code>; LR 55: <code>caps = baseline</code> against the eleven off (<code>build/lr55</code>); LR 56 and 57: the defaults against <code>dodge_every</code>, <code>dodge_fire</code>, <code>duck_plan</code> 0 (<code>build/lr57</code>). Pooled by <code>build/lr53/pool.py</code>.</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th>Step</th><th>Family or census</th><th>Before</th><th>After</th></tr></thead><tbody><tr><td>LR 55, every part on</td><td>census, 48 seeds</td><td></td><td>-0.85 +/- 0.59 a seat; 38 us a seat-tick (27 to 30)</td></tr><tr><td>LR 56, <code>dodge_every</code></td><td>two shells, rolling / standing</td><td>76.5% / 79.9%</td><td>100% / 100%</td></tr><tr><td></td><td>three / four shells, rolling</td><td>67.7% / 56.6%</td><td>100% / 99.7%</td></tr><tr><td>LR 57, <code>duck_plan</code> and <code>dodge_fire</code></td><td>ready gun</td><td>76.6% (no duck 63.7%)</td><td>83.4%</td></tr><tr><td>LR 56 and 57</td><td>census, 48 seeds</td><td></td><td>+0.21 +/- 0.68; own shell ashore 6.1% to 1.6%, afloat 4.0% to 0.5%</td></tr></tbody></table></div><p>Tests: brain 78 passed and 10 ignored; client 31; net 14; proto 3; sim 50; no warnings. 386 functions, 121 undocumented; 96 weights, 17 bits; nine scenario files and five families.</p></section><section id="sv"><h2>V. Discussion</h2><ol><li><strong>On by default changes what the census is for.</strong> At 48 seeds it resolves about a point a seat; most parts move less. As a guard it answers the question it can: did the brain break.</li><li><strong>The hull is the gun.</strong> Treating the guns as free while dodging was a turret's habit in a game without turrets.</li><li><strong>Three questions, one model.</strong> Where to dodge, when to go back, whether to shoot: <code>drive_to</code> answered each, and each family went to or near 100%.</li></ol><p><strong>For Paul:</strong> none blocking. The next features are backlog 49 (the front read: Expand and the guard posts toward the contested sectors) and 50 (allies' goals on the coordination screen).</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

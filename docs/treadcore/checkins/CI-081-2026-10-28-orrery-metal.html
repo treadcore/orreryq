@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>orrery in treadcore&#x27;s Brushed Metal</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-081</p>
+    <h1>orrery in treadcore's Brushed Metal</h1>
+    <div class="front"><p><strong>Check-in report CI-081.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 28 October 2026. Companion record: <code>LAB-REPORT-BRAIN.md</code> section 122; orrery <code>src/draw.rs</code>, <code>src/ui.rs</code>, <code>src/nav.rs</code>.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-081-2026-10-28-orrery-metal.md">documentation/checkins/CI-081-2026-10-28-orrery-metal.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>orrery's window now wears treadcore's look:</p><ul><li>brushed steel plates, from the same recipe as treadcore-client's <code>metal.rs</code>;</li><li>metal keys with lamps and digits;</li><li>black readout wells for the content.</li></ul><p>All five views share one header. The look is the default; the flat palettes remain behind <code>--light</code> and <code>--dark</code>. The story of the views, and crucible as grove's second job, are the next steps.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>Make orrery look like treadcore, first, as the ground the redesigned progression will stand on.</p><h3 id="b-the-prompts">B. The prompts</h3><blockquote><p>we need to consider the interface from treadcore . the styling. thr rows and columns of brushed metal. Can we redesign all tabs all sub tabs and rethink about the interface progression. tell a story, help us orchestrate and add comptuers to configure in the orchestration. For example, we want to create a second project to run in cuda. [...]</p></blockquote><blockquote><p>Amazing. Do a backflip! [with the report's Next list: the interface redesign; islands across the three cards; the headroom in VII.B]</p></blockquote><blockquote><p>and incorporate orrery and crucible into its second job. we want to complement and use our fleet to run to improve the canidates and allow fleet processing of the queue in the grove.</p></blockquote></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not chosen</th></tr></thead><tbody><tr><td>D1</td><td>One step at a time</td><td>The look first; the story and crucible's queue work next</td><td>All three in one change</td></tr><tr><td>D2</td><td>orrery draws in software, with no textures</td><td>treadcore's recipe drawn at the size asked, cached</td><td>Slicing a stored texture</td></tr><tr><td>D3</td><td>"rows and columns of brushed metal"</td><td>Steel frame and columns; the content in black readouts</td><td>Steel under the text</td></tr><tr><td>D4</td><td>Text on steel and text in a readout need opposite inks</td><td><code>engrave</code> (dark, for steel) beside <code>ink</code> (light, for readouts)</td><td>One ink</td></tr><tr><td>D5</td><td>Five views each drew their own header</td><td><code>nav::header</code>, shared</td><td>Restyling five copies</td></tr><tr><td>D6</td><td>Features on by default</td><td><code>METAL</code> is the default; <code>--light</code>, <code>--dark</code> kept</td><td>An opt-in flag</td></tr><tr><td>D7</td><td>A cache bounded by entries could hold gigabytes after a resize</td><td>Bounded at 12 M pixels</td><td>512 entries</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><ol><li><strong><code>draw.rs</code>:</strong><ul><li><code>Theme.metal</code> and <code>Theme.engrave</code>;</li><li><code>METAL</code>;</li><li><code>Finish</code> (Plate, Button, Pressed), <code>finish_pixels</code>, the cache;</li><li><code>Canvas::metal</code> and <code>Canvas::well</code>.</li></ul></li><li><strong><code>ui.rs</code>:</strong> in metal, <code>panel</code> draws a plate, <code>button</code> a capsule (pressed while held), and <code>rail_item</code> a key; <code>well</code> is new.</li><li><strong><code>nav.rs</code>:</strong> <code>header</code> (frame, name, keys, status strip, body well), <code>width_for</code>, <code>HEADER_H</code> 40.</li><li><strong>The views:</strong> Training, Machines, Sessions and Media use <code>nav::header</code>. Lab's header, rail, bar and status are drawn on the steel. Training's pages are keys.</li><li><strong><code>main.rs</code>:</strong> <code>--light</code>; <code>METAL</code> otherwise.</li><li><strong>Checks:</strong> <code>cargo test</code> (344 pass); frames of every view; installed and relaunched; memory read twice, 20 s apart.</li></ol></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><tbody><tr><td>Tests</td><td>344 passed, 1 ignored</td></tr><tr><td>Orrery.app memory</td><td>389 MB, steady (368 MB before)</td></tr><tr><td>Frames</td><td>all five views; see <code>reports/images/orrery-metal-training.png</code>, <code>orrery-metal-sessions.png</code></td></tr></tbody></table></div><p><strong>Errors.</strong></p><ul><li>The first build left the strip's width computed before the theme was known, and Lab's fleet name drew over the Sessions key. Fixed: <code>width_for(theme)</code>.</li><li>Plates drawn twice made a seam in Lab's rail. Fixed: the rail is the frame's own steel.</li><li>Sessions' tile titles were pale on steel. Fixed: engraved.</li></ul></section><section id="sv"><h2>V. Discussion</h2><p>The look carries over without touching what each page says. The pages already drew their rows as tiles on a base, and those became readouts on steel. What the step does not yet do is the story: the views are still in the order they were built.</p><p><strong>Next:</strong></p><ol><li>The views in the order the work goes, with a Projects view.</li><li>crucible as a second job in grove's queue.</li></ol></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

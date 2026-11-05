@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>The Learned Tank Drives and Shoots</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-059</p>
+    <h1>The Learned Tank Drives and Shoots: Periscope Senses, Calls to Friends, Evolution in Rust, the Census's Verdict, and Release 0.2.0</h1>
+    <div class="front"><p><strong>Check-in report CI-059.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 26 October 2026. Companion records: <code>LAB-REPORT-BRAIN.md</code> section 97; <code>AI-BRAINZ-PLAN.md</code>; roadmap backlog 69 and 70 and goal 6; <code>build/train/</code> on the Mac; <code>build/net3/</code> and <code>build/converge/20261026-181011/</code> on the census machine; the page <code>reports/2026-10-26-the-learned-tank.html</code> (https://claude.ai/artifact/2vzTNKcmB71GYLodeZLTjS).</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-059-2026-10-26-the-learned-tank-drives-and-shoots.md">documentation/checkins/CI-059-2026-10-26-the-learned-tank-drives-and-shoots.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Decision Log</a></li><li><a href="#siii">III. Methods</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>The learned tank was taught, by evolution strategies in Rust on eight cores, to drive to an enemy, a depot or a pillbox (999 of 999 held-out grounds) and to kill a still enemy with the direct gun while still going to the other two (999 of 999). Its senses grew from 101 to 133: instruments, a periscope of four exact contacts, and a channel for a friend's call; a team's shared queue of calls (help, attack, take) lets learned tanks ask one another for help, and speaks to scripted teammates as pings. With the periscope, phase 1 passed by generation 67 where the compass alone needed 500. Two of phase 3's rules were found empty by reading the untrained net first, and amended before training; a shoot-only net forgot how to go to a depot, so phase 3 trains all three grounds. In the census a team of the trained net reads -23.52 +/- 0.38, below a random net (-20.35 +/- 0.25): the rule fails, and says what to teach next. dodge_horizon 2 became the default after ten more held-out reads. Release 0.2.0 was prepared.</p><p><strong>Index terms:</strong> evolution strategies, sensor interface, curriculum, catastrophic forgetting, multi-agent communication, release.</p></section><section id="si"><h2>I. Introduction</h2><h3 id="a-intent">A. Intent</h3><p>Teach the network tank to drive and shoot at an enemy, a depot and a pillbox; give it tank-like sensors and a way to call friends; write the AI Brainz plan with diagrams and a page to show it; accept the new defaults; release the next minor version.</p><h3 id="b-the-prompts">B. The prompts</h3><blockquote><p>write a lab report. and lest go to the next . teach to network tank to drive and shoot, and enemy a depot a pillbox.</p></blockquote><blockquote><p>can you create documentation and show the html about the new design of the sensors. add more sensors if approporate. give tank like sensors. like pariscope tank controls. almost like a submarine, what kind of general positioning and relative sensors can we provide the neural net to use as input data, so we can still be performant. We want to train.  Thanks. Write documentation describing the current model of brainz, and how we are using a sensor network to compare. Also give general request commands to the training to it can cally friends through shared requests queues. Make diagrams and update the graphics for the entire treadcore. in fact during this it seems we want to write a full relaese version. Fully tag. It runs so well. This is the next minor version. Tag it. Marge for deploy. Do all the make targets for release. I want to show off the html and the new ai learning. Our current methods and proposed upgrades. write them out in the AI Brainz Plan,. Also grab the results from the copal census runs. Accept the new defaults.</p></blockquote></section><section id="sii"><h2>II. Decision Log</h2><div class="table"><table><thead><tr><th>#</th><th>Cause</th><th>Decision</th><th>Not taken, and why</th></tr></thead><tbody><tr><td>D1</td><td>"teach to network tank to drive and shoot"</td><td>Phase 1 (go to) first, then phase 3 (aim) from it; evolution strategies in <code>learn.rs</code>, an ignored test as the census is, <code>make train</code></td><td>A new crate: the census's own pattern does it with none</td></tr><tr><td>D2</td><td>A tank sees 10 tiles; targets 10 to 20 off</td><td>The ground's enemy felt at any range (<code>advantage</code>): phase 1 is going to, not searching</td><td>Targets inside sight only: too near to learn steering</td></tr><tr><td>D3</td><td>A one-seat world ran past its end (hung test)</td><td>A guard on <code>over</code> in <code>play</code></td><td>—</td></tr><tr><td>D4</td><td>"pariscope ... almost like a submarine"</td><td>A periscope of four contacts with exact bearings (sine, cosine), the enemy's closing and aspect; instruments; a Call channel</td><td>A picture of the map: a convolution and a GPU, and a different size each map</td></tr><tr><td>D5</td><td>"call friends through shared requests queues"</td><td><code>Calls</code>, a team's queue (help, attack, take), each also a <code>Ping</code>; pings heard come back as calls</td><td>A new wire command: a wire change for a brain's idea</td></tr><tr><td>D6</td><td>The net's shape changed (133 in, 46 out)</td><td>Phase 1 retrained from scratch on the new senses; the first-senses run kept as the comparison</td><td>Graft the old weights: a different input layer</td></tr><tr><td>D7</td><td>Phase 3's first rule met by an untrained net (99.8%, the mortar)</td><td>Amended before training: the direct gun only</td><td>Train against an empty rule</td></tr><tr><td>D8</td><td>RuleBot fires nothing on the grounds; a still tank is never missed</td><td>Hits a shot moved to phase 3b (a mover); 3a's bar a direct hit on 95%</td><td>Compare with a baseline of zero</td></tr><tr><td>D9</td><td>The shoot-only net forgot the going (depot 9.3%)</td><td>Phase 3 trains all three grounds in turn</td><td>Keep a net per task: Paul asked for one tank that does both</td></tr><tr><td>D10</td><td>"grab the results from the copal census runs"</td><td>Read the run: dodge_horizon 2 best in five generations, ten held-out reads</td><td>—</td></tr><tr><td>D11</td><td>"Accept the new defaults"</td><td>dodge_horizon 2 only: the three other passing trials were it plus random draws</td><td>Take the draws too: never read alone</td></tr><tr><td>D12</td><td>A default changed under the run</td><td>The run stopped, families read, restarted on the new defaults after the net censuses</td><td>—</td></tr><tr><td>D13</td><td>Is the trained net a better tank?</td><td>A census of it and of a random net of its shape, same seeds, rule first</td><td>Report the grounds only</td></tr><tr><td>D14</td><td>"the next minor version. Tag it."</td><td>0.2.0; PROTOCOL.md to wire 16 first (ROADMAP goal 6); CLAUDE.md's pause lifted for this release</td><td>0.1.0: Paul said the next minor</td></tr><tr><td>D15</td><td><code>make shoot</code> needs Hyprland, xdotool, grim</td><td>Run on the census machine, in a worktree, so the run's tree is untouched</td><td>The Mac: no Hyprland</td></tr><tr><td>D16</td><td>"show off the html"</td><td>A page in the site's own look, as the release's report page and as a shared page</td><td>A Markdown page: nothing to drag</td></tr><tr><td>D17</td><td>Publish to crates.io a day after the tag</td><td>Handed to Paul</td><td>—</td></tr></tbody></table></div></section><section id="siii"><h2>III. Methods</h2><p>On the Mac (M1, 8 threads): <code>make train</code> (ES: 48 pairs, 12 grounds a generation, sigma 0.05, Adam 0.02, decay 0.0005); held out: 999 grounds from seed 9,000,000. Rules in <code>build/train/NOTES.txt</code> before each run, amendments dated in place. On the census machine at 7d0af54: <code>build/net3/run.sh</code>, two censuses (110 seeds from 500,000, every map, 24 jobs), then <code>make converge</code> with <code>SINCE</code> now. <code>make families</code> and <code>make test</code> on the Mac before the default commit.</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th>Read</th><th>Result</th></tr></thead><tbody><tr><td>dodge_horizon 2, the run's held-out reads</td><td>+2.66, +1.71, +1.61, +1.44, +1.09, +1.98, +2.44, +1.84, +2.00, +1.73 (each +/- 0.26 to 0.30, 400 seeds)</td></tr><tr><td>make families at 2</td><td>all nine hold</td></tr><tr><td>Phase 1, first senses, 500 generations</td><td>enemy 99.7%, depot 100%, pillbox 95.2% +/- 1.2</td></tr><tr><td>Phase 1, untrained, 133 senses</td><td>13.2%, 1.8%, 0.3%</td></tr><tr><td>Phase 1, 133 senses, 500 generations (130 s)</td><td>999 of 999</td></tr><tr><td>Phase 3, shoot only (83 s)</td><td>a direct hit 999 of 999; then depot 9.3%, pillbox 23.7%</td></tr><tr><td>Phase 3, drive and shoot (98 s)</td><td>enemy killed 333 of 333, depot 333 of 333, pillbox 333 of 333</td></tr><tr><td>Census, nets/phase3.bin</td><td>-23.52 +/- 0.38 (island -28.91, fortressislesx -18.02)</td></tr><tr><td>Census, random net of its shape</td><td>-20.35 +/- 0.25</td></tr><tr><td>make test</td><td>passes</td></tr></tbody></table></div></section><section id="sv"><h2>V. Discussion</h2><p>The grounds taught what they held: an exact bearing makes going to a point easy, and a curriculum keeps what it rehearses. They held nothing that shoots back, and the census measured the cost of that precisely: a net that charges is worse in a match than one that wanders. The next phase is the one the census asks for: live.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>

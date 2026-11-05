@@ -1,6 +1,8 @@
 #!/bin/sh
 # Every lab report in docs/ as its page: REPORT SHORT-TITLE EYEBROW.
-# Add a line for a new report, run it, and link the page from docs/index.html.
+# Add a line for a new report, run it, and link the page from docs/index.html. Then every report of
+# orrery and of treadcore is collected as HTML and listed in docs/reports.html (collect.py), so the
+# collection keeps up with both repositories.
 set -eu
 cd "$(dirname "$0")/../../docs"
 while IFS='|' read -r name short eyebrow; do
@@ -32,3 +34,4 @@ economy|The Zero-Sum Economy|treadcore · the game and the brain · ore, oil, wo
 diff|The Day's Difference|orrery · treadcore · 2 November in exact code, flow and UML
 nets|The Nets Explorer|orrery · the brain · every learned net, where it has been, kept by request
 LIST
+python3 ../tools/report/collect.py
