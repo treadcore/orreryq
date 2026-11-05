@@ -1064,3 +1064,46 @@ cm = P.chain_marks([{"id": "h0012-p2", "title": "held-out piece 2 of 4 of read 1
 assert cm[0].get("replan") and not cm[1].get("replan")
 _sh.rmtree(hq)
 print("the held-out read in pieces, and the background job: every check holds")
+
+# THE WRITER'S FAILURE TRIED AGAIN (5 November, w10839: set-defaults.py could not write `wing_leash`,
+# whose default was a constant's name, and no job was ever asked): once main has moved since, as a
+# failed test is. And a held-out piece goes to the fast machines while one is up.
+wq = tempfile.mkdtemp()
+
+
+class Writer(Fault):
+    def __init__(self):
+        super().__init__("")
+        self.q = wq
+    def rdir(self, rid):
+        return os.path.join(wq, "runs", rid)
+    def rstate(self, rid):
+        return {"status": "failed", "candidate": "grove/w1", "why": "no such weight in weights.rs: wing_leash (nothing written)"}
+
+
+os.makedirs(os.path.join(wq, "runs", "r1"))
+st_file = os.path.join(wq, "runs", "r1", "state.json")
+open(st_file, "w").write("{}")
+os.utime(st_file, (1, 1))  # failed long before the commit main is at now
+wr = Writer()
+wr.tc = os.path.dirname(os.path.abspath(__file__))
+wr.auto_promote()
+assert wr.asked == [{"candidate": "grove/w1"}] and any("could not be written" in f for f in wr.flags), (wr.asked, wr.flags)
+_sh.rmtree(wq)
+
+
+class Fast(Held):
+    LONG_ON_FAST = True
+    def __init__(self, q):
+        super().__init__(q)
+        self.hosts = [{"name": "slow", "caps": ["cpu"]}, {"name": "quick", "caps": ["cpu", "fast"]}]
+
+
+fq_ = tempfile.mkdtemp()
+fp = Fast(fq_)
+pieces = fp.held_read("w0060", 1, "w_e = 5\n")
+assert {j["needs"] for j in pieces} == {"fast"}, [j["needs"] for j in pieces]
+fp.seq = {"w0061": {"status": "read on", "stage": 3, "z": 2.0, "text": "w_f = 6\n"}}
+assert [j["needs"] for j in fp.ahead_jobs()] == ["cpu"], "the background job's go anywhere"
+_sh.rmtree(fq_)
+print("the writer's failure tried again, and pieces to the fast machines: every check holds")

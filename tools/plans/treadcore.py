@@ -1849,7 +1849,10 @@ class Plan:
         tries = rec["tries"].get(str(i), 0)
         pid = "%s-p%d" % (hid, i) + ("" if tries == 0 else "r%d" % tries)
         rec["slots"][str(i)] = pid
-        job = {"id": pid, "kind": "weights", "needs": "cpu", "after_host": self.after_host(),
+        # To the fast machines while one is up, as a whole read was: a piece is as slow as its machine,
+        # and the read as its slowest piece (5 November: macmini read 100 seeds in 2.0 minutes,
+        # columbia in 10.1, and h0802 waited on columbia). The background job's go anywhere.
+        job = {"id": pid, "kind": "weights", "needs": "cpu" if background else self.long_needs(), "after_host": self.after_host(),
                "title": "held-out piece %d of %d of read %d of %s (%d seeds)" % (i, rec["n"], rec["k"], rec["trial"], rec["per"]),
                "cmd": self.census_cmd(rec["text"], rec["per"], rec["seed0"] + (i - 1) * rec["per"], pid),
                "fetch": "%s/out/%s" % (self.home, pid), "timeout_s": 6 * 3600}
@@ -1877,6 +1880,7 @@ class Plan:
             else:
                 j.pop("priority", None)
             j["replan"] = True
+            j["needs"] = self.long_needs()
             new = os.path.join(self.q, "queue", "%d-%s" % (int(time.time() * 1000) - (10 ** 11 if high else 0), rest))
             # Out of the lanes' sight first (they read *.json): a lane that has claimed it keeps it,
             # and the job is never in the queue twice.
@@ -3808,19 +3812,26 @@ class Plan:
                     self.flag("auto", "%s is tried again: its promotion %s failed before it was judged (%s)" % (name, a["id"], why),
                               key="fault-retry:%s:%s" % (name, a["id"]), progress=True)
                     continue
-            if st_.get("status") != "failed" or name not in tried or done.get(name) == sha or "tests failed" not in st_.get("why", ""):
+            # Its tests failed, or the writer could not write it (set-defaults.py: 5 November, w10839's
+            # `wing_leash`, whose default was a constant's name): main moving may have mended either.
+            why = st_.get("why", "")
+            if st_.get("status") != "failed" or name not in tried or done.get(name) == sha or not (
+                    "tests failed" in why or "nothing written" in why):
                 continue
             # Only its newest try counts.
             if any(self.rstate(b["id"]).get("candidate") == name for b in autos[autos.index(a) + 1:]):
                 continue
             try:
-                failed = os.path.getmtime(os.path.join(self.q, "logs", st_["job"] + ".log"))
+                # The writer fails before a job is asked: then the run's own record says when.
+                failed = os.path.getmtime(os.path.join(self.q, "logs", st_["job"] + ".log")) if st_.get("job") else \
+                    os.path.getmtime(os.path.join(self.rdir(a["id"]), "state.json"))
             except (OSError, KeyError):
                 continue
             if when > failed:
                 tried.remove(name)
                 done[name] = sha
-                self.flag("auto", "%s is tried again: its tests failed (%s), and main has moved since (%s)" % (name, a["id"], sha[:7]),
+                self.flag("auto", "%s is tried again: %s (%s), and main has moved since (%s)" % (
+                    name, "its tests failed" if "tests failed" in why else "it could not be written", a["id"], sha[:7]),
                           key="retry:%s:%s" % (name, sha[:7]), progress=True)
 
     def promote_worktrees(self):
