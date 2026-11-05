@@ -54,6 +54,10 @@ CARDS = {
                    "Eight CPU machines idle for 54 minutes: the line replayed twice, by the keeper and by a report that only reads, "
                    "two records of one commit that disagreed, and a failed build never asked again. Three guards now; and what "
                    "restarting Orrery costs, the app (nothing) and the keeper (7.7 machine-hours a week), with four changes to stop it."),
+    "duty-cycle": ("Fleet · the duty cycle",
+                   "The machines are 98% busy and wait on no one; the work waits, in the GPU islands' buffer, at the planner's "
+                   "five-minute pass, and in the CPU's last two percent. A round table to see it, four changes with their "
+                   "estimates (the transform 3.8 h to 1.6, a trial's path 36 minutes to 17), and a background job that asks for nothing."),
     "x8dt3": ("Fleet · a server",
               "An old dual-Xeon Supermicro computes again: one jumper moved (the SAS controller off), every BIOS setting from "
               "photographs of Setup, and Copal booting from a USB stick on a board with no UEFI, from the stick make sd-pc writes."),

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Orrery — the fleet that trains treadcore's bots</title>
+<meta name="description" content="Orrery is the console and the fleet that train treadcore's bots: one queue across a room of machines, a planner that decides what to read next, and a line from a guessed number to a commit in the game. Rust with no crates, a brushed-metal console on macOS, Linux nodes, CUDA islands.">
+<link rel="canonical" href="https://vonglurt.github.io/orrery/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Orrery — the fleet that trains treadcore's bots">
+<meta property="og:description" content="Eleven machines, ninety-eight percent busy, one queue, one brain. The console, the keeper and the planner behind treadcore's generations.">
+<meta property="og:url" content="https://vonglurt.github.io/orrery/">
+<meta property="og:image" content="https://vonglurt.github.io/orrery/docs/site/shots/pipe-board.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="docs/site/assets/site.css">
+<style>
+/* Orrery's own few lines over treadcore.org's stylesheet: the numbers table and the readme list. */
+.facts{width:100%;border-collapse:collapse;font:500 .92rem/1.4 var(--mono)}
+.facts th,.facts td{padding:.55rem .8rem;text-align:left;border-bottom:1px solid rgba(255,255,255,.08)}
+.facts th{font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.72rem}
+.facts td.n{text-align:right;white-space:nowrap}
+.tiles .screen{height:11rem}
+.readmes code{font-size:.8em}
+</style>
+<script src="docs/site/assets/site.js" defer></script>
+<script src="docs/site/assets/field.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the page</a>
+<canvas class="field" aria-hidden="true"></canvas><div class="veil" aria-hidden="true"></div>
+
+<nav class="nav" aria-label="Site"><div class="wrap"><div class="bar metal">
+<a class="brand etched" href="index.html"><svg viewBox="0 0 13 13" aria-hidden="true"><rect x="5" y="5" width="3" height="3" fill="#ffbf4d"/><rect x="1" y="6" width="2" height="1" fill="#111"/><rect x="10" y="6" width="2" height="1" fill="#111"/><rect x="6" y="1" width="1" height="2" fill="#111"/><rect x="6" y="10" width="1" height="2" fill="#111"/><rect x="2" y="2" width="2" height="2" fill="#73c7ff"/><rect x="9" y="9" width="2" height="2" fill="#bfa070"/><rect x="10" y="2" width="1" height="1" fill="#805e40"/></svg>ORRERY</a>
+<ul>
+<li><a class="btn lit" href="docs/reports.html">Lab reports</a></li>
+<li class="wide"><a class="btn" href="#tour">The console</a></li>
+<li class="wide"><a class="btn" href="docs/index.html">The design set</a></li>
+<li class="wide"><a class="btn" href="#source">READMEs</a></li>
+<li class="wide"><a class="btn" href="https://treadcore.org/">treadcore.org</a></li>
+<li class="wide"><a class="btn" href="https://github.com/vonglurt/orrery">GitHub</a></li>
+</ul>
+</div></div></nav>
+
+<header class="hero"><div class="wrap">
+<div class="plate metal screws"><span class="foot"></span>
+<p class="eyebrow label etched">Eleven machines &middot; one queue &middot; one brain</p>
+<h1 class="etched">Orrery</h1>
+<p class="lcd screen scan phos">The fleet that trains <a href="https://treadcore.org/">treadcore</a>'s bots, and the console that runs it. <b>A planner guesses a number, the machines read it, and what holds goes into the game.</b></p>
+<div class="cta">
+<a class="btn lit" href="docs/reports.html">Lab reports</a>
+<a class="btn" href="#tour">The console</a>
+<a class="btn" href="https://github.com/vonglurt/orrery">Source</a>
+</div>
+<p class="meta etched">MIT &middot; Rust, no crates &middot; a brushed-metal console on macOS &middot; Linux and Copal nodes &middot; CUDA islands</p>
+</div>
+<figure class="monitor metal" style="margin-top:2.2rem;margin-left:auto;margin-right:auto;max-width:60rem">
+<div class="screen"><img src="docs/site/shots/pipe-board.png" width="1400" height="860" alt="Orrery's Pipeline Board at 10:05 on 5 November: the line from the next trial to the game's brain as a Gantt chart with its machines and expected times, and below it the tasks as a kanban of waiting, running and done"><span class="sheen"></span></div>
+</figure>
+<div class="wire screen scan" aria-label="Lines from the fleet's event log, 5 November"><div class="run phos">
+<span>05:46 the keeper restarted on new code: 11 jobs handed over, none run again</span><span class="amber">07:54 r0186: grove/w10040 promoted onto the line, 167 tests, every family, the gauntlet</span><span>08:27 run r0188 finished: bio, 400 seeds</span><span class="red">08:27 grove/w10689 refused by the trade rule: it gives up fights</span><span>10:00 r0187 handed back to the planner, step 16 of 30</span><span class="sky">10:05 busy, last 6 h: CPUs 95 to 98%, GPUs 100%</span><span>the GPU islands keep six segments ahead, on purpose</span>
+</div></div>
+</div></header>
+
+<main id="main">
+<section class="sec" id="tour"><div class="wrap">
+
+<article class="show">
+<div class="text metal reveal">
+<p class="label etched">The line</p>
+<h3 class="etched">From a guess <span class="dim">to a commit.</span></h3>
+<ul class="beats">
+<li class="screen"><b>A first read</b> plays a trial against the game's defaults on 55 seeds, and drops the hopeless for the price.</li>
+<li class="screen"><b>Read on, then held out.</b> More seeds until it is decided; then 400 no search has seen, the only fair read of a winner.</li>
+<li class="screen"><b>Families, gauntlet, tests,</b> and onto the line; the line goes to main when it reads past it.</li>
+</ul>
+<p class="deck">Auto mode promotes by itself. A person can hold any dial.</p>
+</div>
+<figure class="shot"><div class="monitor metal"><div class="screen"><img src="docs/site/shots/pipe-flow.png" width="1400" height="860" alt="The Flow page: every stage of the line as a box with what it takes and gives, and one real trial's reads traced through" loading="lazy"><span class="sheen"></span></div></div>
+<figcaption>The Flow: each stage, what it takes and gives, and one trial's numbers as they moved.</figcaption></figure>
+</article>
+
+<article class="show flip">
+<div class="text metal reveal">
+<p class="label etched">The machines</p>
+<h3 class="etched">Eleven lanes, <span class="dim">ninety-eight percent busy.</span></h3>
+<ul class="beats">
+<li class="screen"><b>Eight CPU machines</b> play the census, three thousand jobs a day, the search's first reads and read-ons most of it.</li>
+<li class="screen"><b>Three GPU cards</b> evolve crucible's islands, a population per card, a segment every twelve minutes.</li>
+<li class="screen"><b>The keeper</b> hands each free lane its next job, and keeps its running jobs across its own restart.</li>
+</ul>
+<p class="deck">Left of now is measured; right of now is a forecast, and says so.</p>
+</div>
+<figure class="shot" style="--glow:rgba(115,199,255,.3)"><div class="monitor metal"><div class="screen"><img src="docs/site/shots/pipe-timeline.png" width="1400" height="860" alt="The Timeline: six hours of each machine, measured, then the forecast from medians" loading="lazy"><span class="sheen"></span></div></div>
+<figcaption>Six hours of each machine: the search in blue and green, held-out reads in orange, the GPU rows one unbroken bar.</figcaption></figure>
+</article>
+
+<article class="show">
+<div class="text metal reveal">
+<p class="label etched">The round table</p>
+<h3 class="etched">Who waits on whom. <span class="dim">And who helps.</span></h3>
+<ul class="beats">
+<li class="screen"><b>Red</b> between two machines: work standing while another finishes. Today there is none.</li>
+<li class="screen"><b>Amber</b> to the table: a run handed back to the planner, until its next pass.</li>
+<li class="screen"><b>Green</b> back to the queue: the small returnable reads each machine takes when its own line waits.</li>
+</ul>
+<p class="deck">The machines do not wait. The work does, and the page says where.</p>
+</div>
+<figure class="shot" style="--glow:rgba(255,191,77,.3)"><div class="monitor metal"><div class="screen"><img src="docs/site/shots/pipe-blame.png" width="1400" height="860" alt="The Blame page: eleven machines round a table, the queue in the middle, green arrows of help, an amber hand-back, loops of GPU segments waiting their turn" loading="lazy"><span class="sheen"></span></div></div>
+<figcaption>The Blame page, live: no machine waits on another; r0187 is handed back to the planner.</figcaption></figure>
+</article>
+
+<article class="show flip">
+<div class="text metal reveal">
+<p class="label etched">The brain, read</p>
+<h3 class="etched">What the generations <span class="dim">found.</span></h3>
+<ul class="beats">
+<li class="screen"><b>Terrain:</b> every dataset's surface and its local maxima, the dials the search climbs.</li>
+<li class="screen"><b>Matrices and spectrum</b> of every learned net, generation by generation.</li>
+<li class="screen"><b>Candidates, nets, recordings, films:</b> every result has a page and a source.</li>
+</ul>
+<p class="deck">Hover almost anything: the inspector says what it is and where it came from.</p>
+</div>
+<figure class="shot" style="--glow:rgba(242,51,38,.25)"><div class="monitor metal"><div class="screen"><img src="docs/site/shots/algo-terrain.png" width="1400" height="860" alt="Results, Algorhythm, Terrain: a dataset's surface with its local maxima marked" loading="lazy"><span class="sheen"></span></div></div>
+<figcaption>Results, Algorhythm: the terrain the search climbs, and where its maxima are.</figcaption></figure>
+</article>
+
+</div></section>
+
+<section class="sec" id="screens"><div class="wrap">
+<div class="head metal reveal"><h2 class="etched">Every screen</h2><p>Captured from the running fleet at 10:05 on 5 November by the console's own <code>--frame</code> renderer. Seven chapters, one header: Machines, Projects, Queue, Results, Watch, Fleet, Settings.</p></div>
+<div class="tiles">
+<a class="metal reveal" href="docs/site/shots/pipe-queued.png"><div class="screen"><img src="docs/site/shots/pipe-queued.png" alt="Queued" loading="lazy"></div><div class="cap"><b>Queued</b><span>What runs and waits, each saying why it is there.</span></div></a>
+<a class="metal reveal" href="docs/site/shots/pipe-values.png"><div class="screen"><img src="docs/site/shots/pipe-values.png" alt="Values" loading="lazy"></div><div class="cap"><b>Values</b><span>The numbers that set how hard a generation is.</span></div></a>
+<a class="metal reveal" href="docs/site/shots/queue-fleet.png"><div class="screen"><img src="docs/site/shots/queue-fleet.png" alt="Queue, Fleet" loading="lazy"></div><div class="cap"><b>Fleet</b><span>Each machine and its job, with the buttons.</span></div></a>
+<a class="metal reveal" href="docs/site/shots/machines.png"><div class="screen"><img src="docs/site/shots/machines.png" alt="Machines" loading="lazy"></div><div class="cap"><b>Machines</b><span>Probe, recipes, join: a fresh node from the console.</span></div></a>
+<a class="metal reveal" href="docs/site/shots/projects.png"><div class="screen"><img src="docs/site/shots/projects.png" alt="Projects" loading="lazy"></div><div class="cap"><b>Projects</b><span>treadcore and crucible, and which machine runs which.</span></div></a>
+<a class="metal reveal" href="docs/site/shots/res-candidates.png"><div class="screen"><img src="docs/site/shots/res-candidates.png" alt="Candidates" loading="lazy"></div><div class="cap"><b>Candidates</b><span>Trials past both held-out reads.</span></div></a>
+<a class="metal reveal" href="docs/site/shots/algo-matrices.png"><div class="screen"><img src="docs/site/shots/algo-matrices.png" alt="Matrices" loading="lazy"></div><div class="cap"><b>Matrices</b><span>A champion's layers, a cell a weight.</span></div></a>
+<a class="metal reveal" href="docs/site/shots/set-keeper.png"><div class="screen"><img src="docs/site/shots/set-keeper.png" alt="Settings, Keeper" loading="lazy"></div><div class="cap"><b>Keeper</b><span>Is it running as it should: every check, a line each.</span></div></a>
+<a class="metal reveal" href="docs/site/shots/set-commits.png"><div class="screen"><img src="docs/site/shots/set-commits.png" alt="Settings, Commits" loading="lazy"></div><div class="cap"><b>Commits</b><span>The line the fleet builds, and the defaults each moved.</span></div></a>
+<a class="metal reveal" href="docs/site/shots/orchestrate.png"><div class="screen"><img src="docs/site/shots/orchestrate.png" alt="Fleet commanders" loading="lazy"></div><div class="cap"><b>Commanders</b><span>The fleet as agents, with a chat.</span></div></a>
+<a class="metal reveal" href="docs/site/shots/storage.png"><div class="screen"><img src="docs/site/shots/storage.png" alt="Storage" loading="lazy"></div><div class="cap"><b>Storage</b><span>The disks, the shares, and what lives where.</span></div></a>
+<a class="metal reveal" href="docs/visual-lab-report.html"><div class="screen"><img src="docs/visual/montage-title.png" alt="The montage" loading="lazy"></div><div class="cap"><b>The montage</b><span>The generations as a film, and every other screen.</span></div></a>
+</div>
+</div></section>
+
+<section class="sec" id="numbers"><div class="wrap">
+<div class="head metal reveal"><h2 class="etched">This morning</h2><p>Read from the queue's own records at 10:00 on 5 November; the method is in <a href="docs/duty-cycle-lab-report.html">The Duty Cycle</a>.</p></div>
+<div class="gridwrap screen scan reveal">
+<table class="facts">
+<thead><tr><th>Measure</th><th>Value</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>CPU lanes busy, last 12 h</td><td class="n">97.7%</td><td>eight machines, 96.2 to 98.5% each</td></tr>
+<tr><td>GPU lanes busy, last 12 h</td><td class="n">99.8%</td><td>three cards, crucible's islands</td></tr>
+<tr><td>Jobs a day</td><td class="n">3,955</td><td>1,519 first reads, 1,505 read-ons, 378 GPU segments, 120 held-out reads</td></tr>
+<tr><td>Generations, last 7 days</td><td class="n">27</td><td>a median 2.2 hours apart</td></tr>
+<tr><td>The search's funnel, a day</td><td class="n">1,520 &rarr; 3</td><td>652 read on, 75 held out, 3 generations</td></tr>
+<tr><td>Jobs run again since the handover</td><td class="n">0</td><td>the keeper keeps its jobs across its own restart</td></tr>
+<tr><td>A handoff in a chain</td><td class="n">3.2 min</td><td>the planner's five-minute pass: the next thing to shorten</td></tr>
+</tbody>
+</table>
+</div>
+</div></section>
+
+<section class="sec" id="reports"><div class="wrap">
+<div class="head metal reveal"><h2 class="etched">Lab reports</h2><p>One report a question, IEEE in form, Markdown with the code and a page here. Every one of orrery's and treadcore's is on <a href="docs/reports.html">one page</a>; the game's are also on <a href="https://treadcore.org/reports/">treadcore.org</a>.</p></div>
+<div class="chan">
+<a class="metal reveal" href="docs/duty-cycle-lab-report.html"><p class="label etched">5 November 2026 &middot; the fleet</p><b class="etched">The Duty Cycle</b><span>Ninety-eight percent busy: where the fleet's waiting goes, a round table to see it, four changes with their estimates, and a background job that asks for nothing.</span></a>
+<a class="metal reveal" href="docs/idle-fleet-lab-report.html"><p class="label etched">4 November 2026 &middot; the fleet</p><b class="etched">Fifty-Four Idle Minutes</b><span>The line replayed twice, three guards, and restarting Orrery without losing work: the keeper's handover, idle lanes flagged, the housekeeping in the keeper.</span></a>
+<a class="metal reveal" href="docs/visual-lab-report.html"><p class="label etched">4 November 2026 &middot; the montage</p><b class="etched">Seeing the Brain Grow</b><span>The film of the generations, the champion thinking, a Mind explorer to play in the page, and every screen pictured.</span></a>
+<a class="metal reveal" href="docs/whole-line-lab-report.html"><p class="label etched">1 November 2026 &middot; the line</p><b class="etched">The Whole Line</b><span>Each training method, what each stage takes and gives, what stops a candidate.</span></a>
+<a class="metal reveal" href="docs/fleet-orchestration-lab-report.html"><p class="label etched">30 October 2026 &middot; the fleet</p><b class="etched">Commanding the Fleet</b><span>The fleet as commanders and agents, and the console that orders them.</span></a>
+<a class="metal reveal" href="docs/reports.html"><p class="label etched">Collected</p><b class="etched">Every lab report</b><span>orrery's, treadcore's brain report a section a step, and every check-in, newest first.</span></a>
+</div>
+</div></section>
+
+<section class="sec" id="source"><div class="wrap">
+<div class="head metal reveal"><h2 class="etched">READMEs and source</h2><p>Everything is MIT, with the code. Start with a README.</p></div>
+<div class="chan readmes">
+<a class="metal reveal" href="https://github.com/vonglurt/orrery/blob/main/README.md"><p class="label etched">orrery</p><b class="etched">README</b><span>The console: the wall, the seat, the museum interface, and the verbs that act on a room full of machines.</span><code class="screen phos">github.com/vonglurt/orrery</code></a>
+<a class="metal reveal" href="https://github.com/vonglurt/orrery/blob/main/docs/README.md"><p class="label etched">orrery &middot; docs/</p><b class="etched">The documents' README</b><span>The design set, the guides and the lab reports, and how each is built.</span><code class="screen phos">docs/README.md</code></a>
+<a class="metal reveal" href="docs/index.html"><p class="label etched">orrery &middot; the design set</p><b class="etched">Orrery Documents</b><span>The museum interface, the verbs, the credential rule, the twelve phases and what can go wrong.</span><code class="screen phos">docs/index.html</code></a>
+<a class="metal reveal" href="https://github.com/treadcore/treadcore/blob/main/README.md"><p class="label etched">treadcore</p><b class="etched">The game's README</b><span>The tank game the fleet trains: build it, play it, and where its brain lives.</span><code class="screen phos">github.com/treadcore/treadcore</code></a>
+<a class="metal reveal" href="https://github.com/treadcore/treadcore/blob/main/documentation/LAB-REPORT-BRAIN.md"><p class="label etched">treadcore &middot; the brain</p><b class="etched">LAB-REPORT-BRAIN.md</b><span>A numbered section a step, 148 of them: every rule, dial and test of the bots.</span><code class="screen phos">documentation/LAB-REPORT-BRAIN.md</code></a>
+<a class="metal reveal" href="https://treadcore.org/"><p class="label etched">treadcore.org</p><b class="etched">The game's site</b><span>Download, how to play, the paper, and the lab reports posted there.</span><code class="screen phos">treadcore.org</code></a>
+</div>
+<ul class="links">
+<li><a class="btn lit" href="https://github.com/vonglurt/orrery">orrery on GitHub</a></li>
+<li><a class="btn" href="https://github.com/treadcore/treadcore">treadcore on GitHub</a></li>
+<li><a class="btn" href="https://github.com/vonglurt/orrery/tree/main/tools/plans">The planner</a></li>
+<li><a class="btn" href="https://github.com/vonglurt/orrery/blob/main/tools/fleet-queue.py">The keeper</a></li>
+<li><a class="btn" href="https://github.com/vonglurt/orrery/tree/main/src">The console</a></li>
+<li><a class="btn" href="https://github.com/copallinux/copal">Copal Linux</a></li>
+</ul>
+</div></section>
+</main>
+
+<footer><div class="wrap"><div class="bar metal">
+<ul><li><a href="docs/reports.html">Lab reports</a></li><li><a href="docs/index.html">The design set</a></li><li><a href="https://treadcore.org/">treadcore.org</a></li><li><a href="https://github.com/vonglurt/orrery">GitHub</a></li></ul>
+<p>orrery &mdash; MIT. Copyright &copy; 2026 Paul Richeson. The style is treadcore.org's, with its stylesheet. Every picture on this page is a frame the console drew of the running fleet.</p>
+</div></div></footer>
+</body>
+</html>

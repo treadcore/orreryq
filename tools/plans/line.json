@@ -1006,6 +1006,15 @@
    "helps": "Too easy and the line fills with noise. Too hard and nothing is carried."
   },
   {
+   "key": "Pipeline/Blame",
+   "does": "Every machine at a round table: who it waits on, and the help it takes from the queue while it does.",
+   "ties": "The Timeline's forecast deals each queued job to a machine; what holds the job is its turn there, its build, a job another machine runs, or the planner.",
+   "drawn": "Machines round the edge and the queue in the middle, because a wait is between two parties and a ring puts every pair in reach of an arrow. Red between machines, amber to the planner, a loop for a machine's own queue, green for its help.",
+   "look": "A red arrow is the only real blame: work standing while another machine finishes. Amber that stays is a chain handed back to the planner. A busy share under 90% is time to find.",
+   "sim": "The census and the GPU arena, as the other pages; here only who waits on whom.",
+   "helps": "It shows whether the fleet's waiting is a bottleneck or a buffer, and where the spare time goes: into the small returnable reads of the standing search."
+  },
+  {
    "key": "Results/Candidates",
    "does": "Trials past their held-out read: a list of what may become a generation.",
    "ties": "Between Held-out and Tests.",

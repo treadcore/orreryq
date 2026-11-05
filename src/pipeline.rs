@@ -16,7 +16,7 @@ use crate::nav;
 use crate::ui::{rect, Rect, Ui};
 
 /// The pages of the line, after the Queue's own keys in one column: order, data, time, why, how hard.
-pub const PAGES: [&str; 5] = ["Board", "Flow", "Timeline", "Queued", "Values"];
+pub const PAGES: [&str; 6] = ["Board", "Flow", "Timeline", "Queued", "Values", "Blame"];
 /// The Queue's own pages, first in the same column.
 pub const QUEUE_KEYS: [&str; 2] = ["Fleet", "Runs"];
 
@@ -122,6 +122,62 @@ pub struct Task {
     pub note: String,
 }
 
+/// A machine at the round table (the Blame page): what it runs, how busy it was, and how much of
+/// that went to the small returnable reads it takes from the queue when its own line waits.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Seat {
+    pub host: String,
+    pub gpu: bool,
+    pub state: String,
+    pub job: String,
+    pub stage: String,
+    pub for_min: f64,
+    pub busy: f64,
+    pub help: f64,
+    pub by_stage: Vec<(String, f64)>,
+    pub backup: String,
+}
+
+/// Queued jobs dealt to `from` that wait on `to`: its turn, its build, or a job `to` runs.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Wait {
+    pub from: String,
+    pub to: String,
+    pub kind: String,
+    pub n: i64,
+    pub jobs: Vec<String>,
+}
+
+/// A run handed back to the planner: its last job came back, its next is not asked yet.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Handed {
+    pub run: String,
+    pub kind: String,
+    pub host: String,
+    pub job: String,
+    pub for_min: f64,
+}
+
+/// A chain's measured handoff: minutes for the planner, in the queue, and working, medians of a day.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Handoff {
+    pub chain: String,
+    pub n: f64,
+    pub planner: f64,
+    pub queue: f64,
+    pub work: f64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Blame {
+    pub seats: Vec<Seat>,
+    pub waits: Vec<Wait>,
+    pub planner: Vec<Handed>,
+    pub handoffs: Vec<Handoff>,
+    pub queued: f64,
+    pub plan_s: f64,
+}
+
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Model {
     pub tasks: Vec<Task>,
@@ -143,6 +199,7 @@ pub struct Model {
     pub marks: Vec<Mark>,
     pub queued: Vec<Waiting>,
     pub traces: Vec<Trace>,
+    pub blame: Blame,
 }
 
 fn s(v: &json::Value, k: &str) -> String {
@@ -218,6 +275,22 @@ impl Model {
                     run: es("run"), status: es("status"), why: es("why"),
                 }
             }).collect(),
+            blame: v.get("blame").map(|b| Blame {
+                seats: list(b, "nodes").iter().map(|x| Seat {
+                    host: s(x, "host"), gpu: x.get("gpu").and_then(|g| g.as_bool()).unwrap_or(false), state: s(x, "state"),
+                    job: s(x, "job"), stage: s(x, "stage"), for_min: n(x, "for_min"), busy: n(x, "busy_pct"), help: n(x, "help_pct"),
+                    by_stage: list(x, "by_stage").iter().filter_map(|p| p.as_array()).filter_map(|p| Some((p.first()?.as_str()?.to_string(), p.get(1)?.as_num()?))).collect(),
+                    backup: s(x, "backup"),
+                }).collect(),
+                waits: list(b, "edges").iter().map(|e| Wait { from: s(e, "from"), to: s(e, "to"), kind: s(e, "kind"), n: n(e, "n") as i64, jobs: words(e, "jobs") }).collect(),
+                planner: list(b, "planner").iter().map(|h| Handed { run: s(h, "run"), kind: s(h, "kind"), host: s(h, "host"), job: s(h, "job"), for_min: n(h, "for_min") }).collect(),
+                handoffs: match b.get("handoffs") {
+                    Some(json::Value::Obj(m)) => m.iter().map(|(k, x)| Handoff { chain: k.clone(), n: n(x, "n"), planner: n(x, "planner_min"), queue: n(x, "queue_min"), work: n(x, "work_min") }).collect(),
+                    _ => Vec::new(),
+                },
+                queued: n(b, "queued"),
+                plan_s: n(b, "plan_s"),
+            }).unwrap_or_default(),
         }
     }
 }
@@ -436,6 +509,7 @@ pub fn draw(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
         2 => timeline(ui, at, m),
         3 => queued(ui, at, m, st),
         4 => values(ui, at, m, st),
+        5 => blame(ui, at, m),
         _ => board(ui, at, m),
     }
 }
@@ -763,6 +837,220 @@ fn queued(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
             q.why.clone(),
             if q.high { "High priority: it goes ahead of the search, because it decides.".to_string() } else { "Takes its turn in the queue.".to_string() },
         ]);
+    }
+}
+
+/// A line one pixel wide, Bresenham's: the canvas has rectangles and discs.
+fn seg(ui: &mut Ui, (x0, y0): (i32, i32), (x1, y1): (i32, i32), c: Rgb) {
+    let (dx, dy) = ((x1 - x0).abs(), -(y1 - y0).abs());
+    let (sx, sy) = (if x0 < x1 { 1 } else { -1 }, if y0 < y1 { 1 } else { -1 });
+    let (mut x, mut y, mut err) = (x0, y0, dx + dy);
+    for _ in 0..8192 {
+        ui.c.set(x, y, c);
+        if x == x1 && y == y1 {
+            break;
+        }
+        let e2 = 2 * err;
+        if e2 >= dy {
+            err += dy;
+            x += sx;
+        }
+        if e2 <= dx {
+            err += dx;
+            y += sy;
+        }
+    }
+}
+
+/// A line with a head at its end, two pixels wide so it reads at a glance.
+fn pointer(ui: &mut Ui, a: (i32, i32), b: (i32, i32), c: Rgb) {
+    let (dx, dy) = ((b.0 - a.0) as f64, (b.1 - a.1) as f64);
+    let len = (dx * dx + dy * dy).sqrt().max(1.0);
+    let (ux, uy) = (dx / len, dy / len);
+    // The second pixel across the line: thick enough to see, thin enough to cross others.
+    let (px, py) = (-uy, ux);
+    let off = |p: (i32, i32)| (p.0 + px.round() as i32, p.1 + py.round() as i32);
+    seg(ui, a, b, c);
+    seg(ui, off(a), off(b), c);
+    for side in [0.45_f64, -0.45] {
+        let (cs, sn) = (side.cos(), side.sin());
+        let (hx, hy) = (-(ux * cs - uy * sn), -(ux * sn + uy * cs));
+        for k in 0..3 {
+            let tip = (b.0, b.1 + k - 1);
+            seg(ui, tip, (b.0 + (hx * 10.0) as i32, b.1 + k - 1 + (hy * 10.0) as i32), c);
+        }
+    }
+}
+
+/// Where a line from a box's centre toward `to` leaves the box.
+fn edge_of(r: Rect, to: (i32, i32)) -> (i32, i32) {
+    let (cx, cy) = (r.x + r.w / 2, r.y + r.h / 2);
+    let (dx, dy) = ((to.0 - cx) as f64, (to.1 - cy) as f64);
+    if dx == 0.0 && dy == 0.0 {
+        return (cx, cy);
+    }
+    let t = ((r.w as f64 / 2.0 + 3.0) / dx.abs().max(1e-9)).min((r.h as f64 / 2.0 + 3.0) / dy.abs().max(1e-9));
+    (cx + (dx * t) as i32, cy + (dy * t) as i32)
+}
+
+/// THE ROUND TABLE (Paul, 5 November: "a blame tab, where it shows the name of the computer and
+/// the arrows pointing at each other in a ring round table fashion around the edges, where the
+/// computers point at each other saying who they are waiting on. On their other hand, shows their
+/// backup help, where it can reach out back to the queue to assist in small jobs of improvement,
+/// piecemeal in returnable increments"). The machines sit round the edge; the queue and its planner
+/// are the table. An arrow between two machines is work one of them waits on the other for; a loop
+/// is work waiting its turn on its own machine; amber to the table is a run handed back to the
+/// planner; green to the table is the machine's help, the small reads it takes from the queue.
+/// THE PLANNER DECIDES ALL OF IT: the page draws `blame` from pipeline.json and counts nothing.
+fn blame(ui: &mut Ui, at: Rect, m: &Model) {
+    let t = ui.t;
+    let b = &m.blame;
+    if b.seats.is_empty() {
+        ui.label_in(at.x + 4, at.y + 4, at.w - 8, "The planner has not written the round table yet: it does at each plan, about a minute.", &F8X13, t.dim);
+        return;
+    }
+    // The two lines that answer the question before the picture does.
+    let cpu: Vec<&Seat> = b.seats.iter().filter(|x| !x.gpu).collect();
+    let gpu: Vec<&Seat> = b.seats.iter().filter(|x| x.gpu).collect();
+    let span = |v: &[&Seat]| -> String {
+        if v.is_empty() {
+            return "none".into();
+        }
+        let lo = v.iter().map(|x| x.busy).fold(f64::MAX, f64::min);
+        let hi = v.iter().map(|x| x.busy).fold(f64::MIN, f64::max);
+        format!("{:.0} to {:.0}%", lo, hi)
+    };
+    let across = b.waits.iter().filter(|w| w.from != w.to).map(|w| w.n).sum::<i64>();
+    let said = format!(
+        "Busy, last {:.0} h: CPUs {}, GPUs {}. {}",
+        m.past_h.max(1.0),
+        span(&cpu),
+        span(&gpu),
+        if across == 0 { "No machine waits on another: each wait is its own queue, its build, or the planner.".to_string() } else { format!("{} job(s) wait on another machine.", across) }
+    );
+    ui.label_in(at.x + 4, at.y + 2, at.w - 8, &said, &F8X13, t.ink);
+    let hand: Vec<String> = b.handoffs.iter().map(|h| format!("{} {:.1} planner + {:.1} queue + {:.1} work", if h.chain == "transform" { "transform step" } else { "trial read" }, h.planner, h.queue, h.work)).collect();
+    if !hand.is_empty() {
+        ui.label_in(at.x + 4, at.y + 18, at.w - 8, &format!("Handoffs, minutes, medians of a day: {}.", hand.join("; ")), &F8X13, t.dim);
+    }
+    let legend_h = 34;
+    let room = rect(at.x, at.y + 38, at.w, at.h - 38 - legend_h);
+    let (sw, sh) = (176, 58);
+    let (cx, cy) = (room.x + room.w / 2, room.y + room.h / 2);
+    let (rx, ry) = (((room.w - sw) / 2 - 24).max(40) as f64, ((room.h - sh) / 2 - 18).max(40) as f64);
+    let hub = rect(cx - 150, cy - 46, 300, 92);
+    let n = b.seats.len();
+    let places: Vec<Rect> = (0..n)
+        .map(|i| {
+            let a = -std::f64::consts::FRAC_PI_2 + 2.0 * std::f64::consts::PI * i as f64 / n as f64;
+            let (x, y) = (cx + (rx * a.cos()) as i32, cy + (ry * a.sin()) as i32);
+            rect(x - sw / 2, y - sh / 2, sw, sh)
+        })
+        .collect();
+    let at_host = |h: &str| b.seats.iter().position(|x| x.host == h).map(|i| places[i]);
+    let mid = |r: Rect| (r.x + r.w / 2, r.y + r.h / 2);
+    // Green first, under everything: each machine's hand back to the queue.
+    for (i, x) in b.seats.iter().enumerate() {
+        if x.help <= 0.0 {
+            continue;
+        }
+        let r = places[i];
+        let (a, z) = (edge_of(r, mid(hub)), edge_of(hub, mid(r)));
+        // Beside the line a wait would take, so the two never hide each other.
+        let (dx, dy) = ((z.0 - a.0) as f64, (z.1 - a.1) as f64);
+        let l = (dx * dx + dy * dy).sqrt().max(1.0);
+        let (ox, oy) = ((-dy / l * 7.0) as i32, (dx / l * 7.0) as i32);
+        pointer(ui, (a.0 + ox, a.1 + oy), (z.0 + ox, z.1 + oy), t.up);
+    }
+    // Amber: a run handed back, waiting on the planner's next pass.
+    for h in &b.planner {
+        if let Some(r) = at_host(&h.host) {
+            let (a, z) = (edge_of(r, mid(hub)), edge_of(hub, mid(r)));
+            pointer(ui, a, z, t.warn);
+            let lab = rect((a.0 + z.0) / 2 - 60, (a.1 + z.1) / 2 - 7, 120, 14);
+            ui.c.rect(lab.x, lab.y, lab.w, lab.h, t.base);
+            ui.label_in(lab.x + 2, lab.y, lab.w - 4, &format!("{} {}", h.run, took(h.for_min)), &F8X13, t.warn);
+            ui.tip(lab, || vec![
+                format!("{} ({}) is handed back to the planner", h.run, h.kind),
+                format!("Its last job, {}, came back from {} {} ago; its next is asked at the planner's next pass.", h.job, h.host, took(h.for_min)),
+                "The planner passes each plan_s, or sooner when the queue runs low: this is the handoff the line above measures.".to_string(),
+            ]);
+        }
+    }
+    // Red: work dealt to one machine that waits on a job another runs.
+    for w in b.waits.iter().filter(|w| w.from != w.to) {
+        let (Some(ra), Some(rb)) = (at_host(&w.from), at_host(&w.to)) else { continue };
+        let (a, z) = (edge_of(ra, mid(rb)), edge_of(rb, mid(ra)));
+        pointer(ui, a, z, t.alarm);
+        let lab = rect((a.0 + z.0) / 2 - 16, (a.1 + z.1) / 2 - 7, 32, 14);
+        ui.c.rect(lab.x, lab.y, lab.w, lab.h, t.base);
+        ui.label(lab.x + 4, lab.y, &w.n.to_string(), &F8X13, t.alarm);
+        ui.tip(lab, || vec![
+            format!("{} waits on {}: {} job(s)", w.from, w.to, w.n),
+            format!("Each runs after a job {} has in hand: {}.", w.to, w.jobs.join(", ")),
+        ]);
+    }
+    // The table: the queue and its planner.
+    ui.c.rect(hub.x, hub.y, hub.w, hub.h, t.tile);
+    ui.outline(hub, t.ink);
+    ui.label(hub.x + 10, hub.y + 6, "The queue and its planner", &F8X13, t.ink);
+    ui.label_in(hub.x + 10, hub.y + 24, hub.w - 20, &format!("{:.0} queued; a plan each {}", b.queued, took(b.plan_s / 60.0)), &F8X13, t.dim);
+    let handed = if b.planner.is_empty() { "nothing handed back".to_string() } else { format!("{} handed back: {}", b.planner.len(), b.planner.iter().map(|h| h.run.as_str()).collect::<Vec<_>>().join(", ")) };
+    ui.label_in(hub.x + 10, hub.y + 42, hub.w - 20, &handed, &F8X13, if b.planner.is_empty() { t.dim } else { t.warn });
+    ui.label_in(hub.x + 10, hub.y + 60, hub.w - 20, "green: each machine's help", &F8X13, t.up);
+    ui.tip(hub, || vec![
+        "The table: every queued job and the planner that asks for them".to_string(),
+        "A free machine takes the next job it can run. When its own line has nothing, that is a small returnable read of the standing search: the backup.".to_string(),
+    ]);
+    // The seats.
+    for (i, x) in b.seats.iter().enumerate() {
+        let r = places[i];
+        let busy = matches!(x.state.as_str(), "running" | "delivering" | "fetching" | "sending");
+        ui.c.rect(r.x, r.y, r.w, r.h, t.tile);
+        ui.outline(r, if busy { t.up } else if x.state == "idle" { t.warn } else { t.line });
+        ui.c.rect(r.x + 1, r.y + 1, 5, r.h - 2, if x.stage.is_empty() { t.dim } else { line::colour(&x.stage) });
+        ui.label_in(r.x + 10, r.y + 4, r.w - 14, &x.host, &F8X13, t.ink);
+        let now = if x.job.is_empty() { format!("{} {}", x.state, took(x.for_min)) } else { format!("{} {}", line::short(&x.stage), took(x.for_min)) };
+        ui.label_in(r.x + 10, r.y + 21, r.w - 14, &now, &F8X13, t.dim);
+        ui.label_in(r.x + 10, r.y + 38, r.w - 14, &format!("busy {:.0}%  help {:.0}%", x.busy, x.help), &F8X13, if x.busy >= 90.0 { t.up } else { t.warn });
+        ui.tip(r, || {
+            let mut v = vec![
+                format!("{}: {}{}", x.host, x.state, if x.job.is_empty() { String::new() } else { format!(", {} for {}", x.job, took(x.for_min)) }),
+                format!("Busy {:.1}% of the last {:.0} h; {:.1}% of that the small returnable reads.", x.busy, m.past_h.max(1.0), x.help),
+                format!("Its backup when its own line waits: {}.", x.backup),
+            ];
+            v.extend(x.by_stage.iter().take(6).map(|(k, mins)| format!("  {}: {}", line::short(k), took(*mins))));
+            v
+        });
+        // Its own waits: a loop on the outer side, turn in blue, build in amber.
+        let mine: Vec<&Wait> = b.waits.iter().filter(|w| w.from == x.host && w.to == x.host).collect();
+        let ox = mid(r).0 - cx;
+        for (k, w) in mine.iter().enumerate() {
+            let side = if ox >= 0 { 1 } else { -1 };
+            let (lx, ly) = (if side > 0 { r.right() + 14 } else { r.x - 14 }, r.y + 14 + k as i32 * 24);
+            let c = if w.kind == "build" { t.warn } else { t.ink };
+            ui.c.ring(lx, ly, 10, c);
+            ui.c.ring(lx, ly, 9, c);
+            let s_ = w.n.to_string();
+            ui.label(lx - 3 * s_.len() as i32, ly - 6, &s_, &F8X13, c);
+            ui.tip(rect(lx - 11, ly - 11, 22, 22), || vec![
+                format!("{}: {} job(s) {}", x.host, w.n, if w.kind == "build" { "wait for its build of the newest commit" } else { "wait their turn on it" }),
+                w.jobs.join(", "),
+                if x.gpu { "A GPU island keeps six segments ahead on purpose: the card never waits for the planner.".to_string() } else { "Its own queue: nothing to blame on anyone.".to_string() },
+            ]);
+        }
+    }
+    // The legend, for a first look.
+    let ly = at.bottom() - legend_h + 8;
+    let mut x = at.x + 6;
+    for (c, word) in [
+        (t.up, "help: small reads from the queue"),
+        (t.warn, "handed back to the planner"),
+        (t.alarm, "waits on another machine"),
+        (t.ink, "loop: its own turn (amber: its build)"),
+    ] {
+        ui.c.rect(x, ly + 4, 18, 4, c);
+        x = ui.label(x + 24, ly, word, &F8X13, t.dim) + 22;
     }
 }
 

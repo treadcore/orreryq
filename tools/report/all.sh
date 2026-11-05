@@ -36,5 +36,6 @@ nets|The Nets Explorer|orrery · the brain · every learned net, where it has be
 x8dt3|The X8DT3-LN4F, Warm Again|orrery · the fleet · a Supermicro server's jumpers and BIOS
 storage-options|Storage, Reconsidered|orrery · the fleet · storage options, nothing decided
 idle-fleet|Fifty-Four Idle Minutes|orrery · the fleet · the line replayed twice, and restarting
+duty-cycle|The Duty Cycle|orrery · the fleet · utilization, waiting and the round table
 LIST
 python3 ../tools/report/collect.py

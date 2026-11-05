@@ -898,3 +898,36 @@ time.sleep(0.3)
 assert m.chores(cq, ct) == [], "the sweep, once in six hours"
 _sh.rmtree(cq)
 print("the housekeeping, the keeper's: every check holds")
+
+# THE ROUND TABLE (Paul, 5 November: "a blame tab"). A queued job belongs to the machine the forecast
+# deals it to, and waits on its turn there, its build there, or a job another machine runs; a run
+# whose last job came back and whose next is not asked is handed back to the planner.
+class Table(P):
+    TIMELINE_H = 6
+    def __init__(self):
+        self.q, self.qcfg = tempfile.mkdtemp(), {"hosts": [{"name": "a", "caps": ["cpu"]}, {"name": "b", "caps": ["cpu"]}, {"name": "a-cuda", "caps": ["cuda"]}], "plan_s": 300}
+        self.state = {}
+    def ids(self, *subs):
+        return {"prep-b-c1", "x-1"} if "done" in subs else set()
+    def queue_jobs(self):
+        return [{"id": "x-3", "needs": "host:a-cuda", "after": ["x-2"]}, {"id": "w1", "needs": "cpu", "after_host": "prep-{host}-c2"},
+                {"id": "h1", "needs": "cpu", "after": ["e1"]}, {"id": "w2", "needs": "cpu"}]
+    def runs(self):
+        return [{"id": "r7", "kind": "patch"}, {"id": "r8", "kind": "census"}]
+    def rstate(self, rid):
+        return {"status": "running"}
+
+
+tb = Table()
+live = {"a": {"job": "e1", "state": "running", "since": time.time() - 60}, "b": {"state": "idle"}, "a-cuda": {"job": "x-2", "state": "running"}}
+tl = {"past_h": 6, "busy": {"a": {"first": 300.0, "other": 54.0}, "a-cuda": {"islands": 360.0}}, "dealt": {"x-3": "a-cuda", "w1": "a", "h1": "b", "w2": "b"}}
+recent = [{"id": "r7-k03", "host": "b", "ended": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(time.time() - 120)), "seconds": 90}]
+bl = tb.blame_view(live, tl, recent)
+kinds = {(e["from"], e["to"], e["kind"]): e["jobs"] for e in bl["edges"]}
+assert kinds == {("a-cuda", "a-cuda", "turn"): ["x-3"], ("a", "a", "build"): ["w1"], ("b", "a", "after"): ["h1"], ("b", "b", "turn"): ["w2"]}, kinds
+assert [h["run"] for h in bl["planner"]] == ["r7"] and bl["planner"][0]["host"] == "b", "r7's step came back from b; r8 has nothing back yet"
+seat = {s_["host"]: s_ for s_ in bl["nodes"]}
+assert seat["a"]["busy_pct"] == 98.3 and seat["a"]["help_pct"] == 84.7 and seat["a-cuda"]["gpu"] and seat["a-cuda"]["help_pct"] == 100.0
+assert not seat["b"]["gpu"] and seat["b"]["busy_pct"] == 0.0
+_sh.rmtree(tb.q)
+print("the round table: every check holds")

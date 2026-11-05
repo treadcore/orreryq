@@ -5037,6 +5037,7 @@ class Plan:
         # Each is for reading, and each alone may fail: the board above must still be written.
         for name, part in (("values", self.values_view), ("flow", lambda: self.flow_view(recent)), ("timeline", lambda: self.timeline_view(recent, live)),
                            ("queued", lambda: self.queued_view(live)), ("traces", lambda: self.trace_view(recent)),
+                           ("blame", lambda: self.blame_view(live, doc.get("timeline") or {}, recent)),
                            # The dials a person holds (hold.json): the Values page shows them with a Release.
                            ("held", lambda: load(os.path.join(self.q, "hold.json"), {}) or {})):
             try:
@@ -5090,8 +5091,12 @@ class Plan:
                 now_ = d.get("base", v["default"])
             elif v["key"] == "held_seeds":
                 now_ = (self.cfg.get("weights") or {}).get("held_seeds", v["default"])
-            else:
+            elif v.get("attr"):
                 now_ = getattr(self, v["attr"], v["default"])
+            else:
+                # A value another tool reads (growth.py's size_warn_gb): tuning.json's, or its default.
+                # Read by name, it stopped this page's whole table from 4 November (getattr of None).
+                now_ = self.tuned.get(v["key"], v["default"])
             out.append({"key": v["key"], "value": round(now_, 3), "moved": v["key"] in self.tuned})
         return out
 
@@ -5126,6 +5131,8 @@ class Plan:
         parse = lambda t: time.mktime(time.strptime(t, "%Y-%m-%dT%H:%M:%S"))
         titles = {j.get("id"): j.get("title", "") for j in recent}
         bars, open_ = {}, {}
+        # Busy minutes by stage, each job as measured (the bars below merge what touches).
+        busy = {}
         for l in lines:
             try:
                 e = json.loads(l)
@@ -5140,7 +5147,10 @@ class Plan:
                 t0, host = open_.pop(job)
                 t1 = parse(e["t"])
                 if t1 >= since and host:
-                    bars.setdefault(host, []).append([round((max(t0, since) - now_) / 60, 1), round((t1 - now_) / 60, 1), self.stage_of(job, titles.get(job, "")), 1 if ev == "done" else 0])
+                    k = self.stage_of(job, titles.get(job, ""))
+                    bars.setdefault(host, []).append([round((max(t0, since) - now_) / 60, 1), round((t1 - now_) / 60, 1), k, 1 if ev == "done" else 0])
+                    by = busy.setdefault(host, {})
+                    by[k] = round(by.get(k, 0.0) + (t1 - max(t0, since)) / 60, 1)
         med = {}
         for j in recent:
             med.setdefault(self.stage_of(j.get("id", ""), j.get("title", "")), []).append((j.get("seconds") or 0) / 60.0)
@@ -5156,7 +5166,10 @@ class Plan:
                 bars.setdefault(n, []).append([round(-gone, 1), 0.0, k, 2])
                 future.setdefault(n, []).append([0.0, round(left, 1), k])
                 free[n] = left
+                by = busy.setdefault(n, {})
+                by[k] = round(by.get(k, 0.0) + min(gone, self.TIMELINE_H * 60), 1)
         cpu = [h["name"] for h in self.qcfg.get("hosts", []) if "cpu" in h.get("caps", ["cpu"]) and free.get(h["name"]) is not None]
+        dealt = {}
         for j in self.queue_jobs():
             need = j.get("needs") or "cpu"
             pool = [need[5:]] if need.startswith("host:") else cpu if need == "cpu" else [n for n in hosts if free.get(n) is not None and need in next(h.get("caps", []) for h in self.qcfg["hosts"] if h["name"] == n)]
@@ -5167,6 +5180,7 @@ class Plan:
             k = self.stage_of(j.get("id", ""), j.get("title", ""))
             future.setdefault(n, []).append([round(free[n], 1), round(free[n] + dur(k), 1), k])
             free[n] += dur(k)
+            dealt[j.get("id", "")] = n
         marks = []
         for t, rid, st_ in self.promotions():
             if t >= since:
@@ -5188,7 +5202,121 @@ class Plan:
         lanes = []
         for n in hosts:
             lanes.append({"host": n, "up": free.get(n) is not None, "past": self.merge_bars(bars.get(n, [])), "next": future.get(n, [])[:12]})
-        return {"past_h": self.TIMELINE_H, "lanes": lanes, "marks": marks}
+        return {"past_h": self.TIMELINE_H, "lanes": lanes, "marks": marks, "busy": busy, "dealt": dealt}
+
+    # The backup: the small reads a free lane takes from the queue when its own line has nothing for
+    # it, each returned whole (its seeds pooled with every other read of its question).
+    RETURNABLE = ("first", "read", "proof", "anchor", "transform", "islands")
+
+    def blame_view(self, live, tl, recent):
+        """THE ROUND TABLE (Paul, 5 November: "a blame tab ... the computers point at each other
+        saying who they are waiting on. On their other hand, shows their backup help, where it can
+        reach out back to the queue to assist in small jobs of improvement, piecemeal in returnable
+        increments"). What a queued job waits on, named by what holds it:
+
+          turn     its machine, busy (the GPU islands keep six segments ahead on purpose);
+          build    its machine's build of the newest commit;
+          after    a job another machine runs: the only arrow between two machines;
+          planner  a run whose last job came back and whose next is not asked yet, until the
+                   planner's next pass (each plan_s, or sooner when the queue runs low).
+
+        A queued job belongs to the machine the Timeline's forecast deals it to. Each machine's
+        help is the share of its busy time on the small returnable reads; the handoffs are the
+        measured minutes between one job of a chain coming back and the next one starting."""
+        now_ = time.time()
+        busy, dealt = tl.get("busy", {}), tl.get("dealt", {})
+        win = float(tl.get("past_h", self.TIMELINE_H)) * 60
+        done = self.ids("done")
+        running = {l["job"]: n for n, l in live.items() if l.get("job")}
+        nodes = []
+        for h in self.qcfg.get("hosts", []):
+            n, l = h["name"], live.get(h["name"], {})
+            b = busy.get(n, {})
+            tot = sum(b.values())
+            gpu = "cpu" not in h.get("caps", ["cpu"]) and bool({"gpu", "cuda"} & set(h.get("caps", [])))
+            nodes.append({"host": n, "gpu": gpu, "state": l.get("state") or "unknown", "job": l.get("job") or "",
+                          "stage": self.stage_of(l["job"], l.get("title", "")) if l.get("job") else "",
+                          "for_min": round((now_ - l.get("since", now_)) / 60, 1),
+                          "busy_pct": round(100 * min(tot, win) / win, 1),
+                          "help_pct": round(100 * sum(v for k, v in b.items() if k in self.RETURNABLE) / tot, 1) if tot else 0.0,
+                          "by_stage": [[k, v] for k, v in sorted(b.items(), key=lambda kv: -kv[1])],
+                          "backup": "its own island's next segment: a population lives on its card" if gpu
+                          else "the standing search: a first read, 55 seeds, about 3 minutes, returned whole"})
+        waits = {}
+        for j in self.queue_jobs():
+            jid, a = j.get("id", ""), dealt.get(j.get("id", ""))
+            if not a:
+                continue
+            ah = j["after_host"].format(host=a) if j.get("after_host") else ""
+            pend = [x for x in j.get("after", []) if x not in done]
+            if ah and ah not in done:
+                b, kind = a, "build"
+            elif pend:
+                b, kind = running.get(pend[0]) or dealt.get(pend[0]) or a, "after"
+            else:
+                b, kind = a, "turn"
+            if b == a and kind == "after":
+                kind = "turn"
+            waits.setdefault((a, b, kind), []).append(jid)
+        edges = [{"from": a, "to": b, "kind": k, "n": len(js), "jobs": js[:8]} for (a, b, k), js in sorted(waits.items())]
+        asked = {j.get("id", "") for j in self.queue_jobs()} | set(running)
+        planner = []
+        for r in self.runs():
+            if self.rstate(r["id"]).get("status") != "running" or any(x.startswith(r["id"] + "-") for x in asked):
+                continue
+            mine = [j for j in recent if str(j.get("id", "")).startswith(r["id"] + "-") and j.get("ended")]
+            if not mine:
+                continue
+            last = max(mine, key=lambda j: j["ended"])
+            planner.append({"run": r["id"], "kind": r["kind"], "host": last.get("host", ""), "job": last["id"],
+                            "for_min": round((now_ - time.mktime(time.strptime(last["ended"], "%Y-%m-%dT%H:%M:%S"))) / 60, 1)})
+        return {"nodes": nodes, "edges": edges, "planner": planner, "handoffs": self.handoffs(recent),
+                "queued": len(self.queue_jobs()), "plan_s": self.qcfg.get("plan_s", 300)}
+
+    def handoffs(self, recent):
+        """The minutes a chain waits between its own jobs, over the last day: from one coming back to
+        the next being asked (the planner's pass) and from asked to started (the queue). The transform's
+        steps are one chain; a trial's first read, read-ons and held-out reads are another."""
+        asked, cut = {}, time.time() * 1000 - 5e10
+        for f in glob.glob(os.path.join(self.q, "done", "*.json")):
+            seq, _, rest = os.path.basename(f).partition("-")
+            try:
+                v = int(seq)
+            except ValueError:
+                continue
+            # A high-priority job's name is 10^11 ms earlier, so it sorts first.
+            asked[rest[:-5]] = (v + 10 ** 11 if v < cut else v) / 1000.0
+        parse = lambda t: time.mktime(time.strptime(t, "%Y-%m-%dT%H:%M:%S"))
+        jobs = {}
+        for j in recent:
+            i = str(j.get("id", ""))
+            if j.get("ended") and i in asked:
+                end = parse(j["ended"])
+                jobs[i] = (asked[i], end - float(j.get("seconds") or 0), end, j.get("title", ""))
+        chains = {"transform": {}, "trials": {}}
+        for i, (q, s0, e, title) in jobs.items():
+            m = re.match(r"(r\d+)-k(\d+)$", i)
+            if m:
+                chains["transform"].setdefault(m.group(1), []).append(i)
+            m = re.search(r"of (w\d+)", title) if re.match(r"[eh]\d+$", i) else None
+            if m or re.match(r"w\d+$", i):
+                chains["trials"].setdefault(m.group(1) if m else i, []).append(i)
+        out = {}
+        for name, cs in chains.items():
+            plan_m, queue_m, work_m = [], [], []
+            for ids in cs.values():
+                ids.sort(key=lambda i: jobs[i][1])
+                for a, b in zip(ids, ids[1:]):
+                    # Two asked together (held-out reads in pairs) are not a handoff.
+                    if jobs[b][0] < jobs[a][2]:
+                        continue
+                    plan_m.append((jobs[b][0] - jobs[a][2]) / 60)
+                    queue_m.append(max(0.0, jobs[b][1] - jobs[b][0]) / 60)
+                    work_m.append((jobs[b][2] - jobs[b][1]) / 60)
+            if plan_m:
+                out[name] = {"n": len(plan_m), "planner_min": round(st.median(plan_m), 1), "queue_min": round(st.median(queue_m), 1),
+                             "work_min": round(st.median(work_m), 1)}
+        return out
 
     @staticmethod
     def merge_bars(rows):

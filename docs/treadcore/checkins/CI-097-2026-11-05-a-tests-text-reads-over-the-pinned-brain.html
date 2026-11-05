@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>A Test&#x27;s Text Reads Over the Pinned Brain</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a><a href="#svi">VI</a><a href="#svii">VII</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-097</p>
+    <h1>A Test's Text Reads Over the Pinned Brain: The Night's Best Candidate Held Back by a Parse</h1>
+    <div class="front"><p><strong>Check-in report CI-097.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 5 November 2026, morning. Companion records: <code>LAB-REPORT-BRAIN.md</code> section 148; journal 0124.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-097-2026-11-05-a-tests-text-reads-over-the-pinned-brain.md">documentation/checkins/CI-097-2026-11-05-a-tests-text-reads-over-the-pinned-brain.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Intent</a></li><li><a href="#sii">II. Decision log</a></li><li><a href="#siii">III. Method</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li><li><a href="#svi">VI. What is not built</a></li><li><a href="#svii">VII. Paul's decisions</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>The night's best candidate, grove/w10040, moved <code>ping_style</code> from 0 to 2 and failed one brain test. That test's helper read its weights text over the defaults. LR 147 had pinned the brain the unit tests play, but its lint let a parse over the defaults through. Its stress moved the numbers and never a choice or a switch. A weights text now reads over the pinned brain, the fleet's role tests ask under it, and a scenario's switches read over its own brain. <code>set-defaults.py</code> now writes the tactics' true/false fields and what a switch makes of them. A promotion of any of five weights or switches would have failed on those fields. Stressed over every promotable choice, every switch and every true/false weight, the line failed six tests before. After the change, everything passed except two assertions that the kite and castle switches are on by default. Paul had them dropped.</p></section><section id="si"><h2>I. Intent</h2><p>Paul: "fix the test." The test was <code>commander::tests::with_pings_on_as_built_a_bot_comes_to_any_ping</code>, on which r0185, the promotion of w10040, failed at 05:44 on bosporus.</p></section><section id="sii"><h2>II. Decision log</h2><div class="table"><table><thead><tr><th>Decision</th><th>Cause</th></tr></thead><tbody><tr><td><code>Settings::parse_over(brain, text)</code>, with <code>parse</code> as <code>parse_over</code> the defaults</td><td><code>parse</code> reads as it always did everywhere outside the tests</td></tr><tr><td><code>Settings::pinned_with(text)</code> for a test's text</td><td><code>hears</code> read "caps = baseline, pings" over the defaults, and played warn once the default moved</td></tr><tr><td><code>baseline</code> in a caps line is the brain's own capabilities</td><td><code>Caps::BASELINE</code> is what a promotion of a switch moves</td></tr><tr><td>The fleet's role tests under <code>with_settings(Settings::pinned())</code></td><td><code>role</code> and <code>role_by_rank</code> read <code>fleet::settings()</code>, the defaults when none is set</td></tr><tr><td>A scenario's caps read over the scenario's base</td><td>under <code>with_base</code> a unit test's scenario read <code>baseline</code> as the code's; the families set no base and read as before</td></tr><tr><td><code>set-defaults.py</code> writes true/false fields and switch-made values</td><td><code>default_weights_are_todays_constants</code> failed when <code>kite</code>, <code>shell_boxes</code>, <code>longshot_any</code> or the kite or focus_blend switch moved</td></tr><tr><td>That test stays on the defaults</td><td>it is about the defaults themselves; the writer was wrong, not the test</td></tr><tr><td>The lint forbids <code>Settings::parse(</code> and follows <code>role</code>, <code>role_by_rank</code>, <code>team_role</code>, <code>equip</code></td><td>the two ways the stress found that the lint could see</td></tr><tr><td>The stresses move choices, switches and true/false weights</td><td><code>RANGES</code> holds none of the 15 choices or 18 switches, so LR 147's stress moved none</td></tr><tr><td>The assertions of kite on, castle on and smooth off dropped</td><td>Paul: "drop assertions."; no decree held them, and the fleet tries each the other way</td></tr><tr><td>The round-trip test picks its numbers off the defaults</td><td>its <code>w_smooth</code> 1 would have been the default after a promotion to 1</td></tr><tr><td>A stress at every range's min and max</td><td>the search may carry a number to the end of its range</td></tr><tr><td><code>Commander::pinned_wingman</code>, and the lint forbids <code>Commander::wingman</code></td><td><code>wingman</code> is made by <code>new</code>, on the defaults; at every weight's max a pillbox shot one</td></tr><tr><td>The slider test's step at a default of 0 is 0.1</td><td>a default of 0 has no tenth; the step rule says 0.1</td></tr><tr><td><code>bot_style</code> and <code>patch</code> left out of the choice stress</td><td>the fleet does not promote them: they change the brain's whole form and wait for a person</td></tr></tbody></table></div></section><section id="siii"><h2>III. Method</h2><p>Two states of a worktree of the line the fleet runs, <code>f04f157</code> (main <code>aebeb1d</code> with r0179's <code>bio</code> 0 to 3): as it is, and with the change. Each move is written by that worktree's <code>scripts/set-defaults.py</code> as a promotion writes it, then <code>cargo test -p treadcore-brain --release --lib</code> runs. The moves:</p><ul><li>w10040's <code>ping_style = 2</code>;</li><li>the 13 choices the fleet promotes, each moved one, two, three and four versions on from its default (modulo its count);</li><li>every one of the 18 switches flipped;</li><li><code>kite</code>, <code>shell_boxes</code> and <code>longshot_any</code> set to 0;</li><li>LR 147's moves: its stress and the ten distinct moves of the 13 failed promotions.</li></ul><p>The scripts and files are in the session's scratchpad (<code>lr148/replay.sh</code>, <code>*.weights</code>).</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th>The defaults moved to</th><th>the line, <code>f04f157</code></th><th>the line with the change</th></tr></thead><tbody><tr><td>none</td><td>not run bare (r0185 ran its 166 there)</td><td>167 pass</td></tr><tr><td>w10040: <code>ping_style</code> 0 to 2</td><td><code>with_pings_on_as_built_a_bot_comes_to_any_ping</code> fails</td><td>167 pass</td></tr><tr><td>every promotable choice one version on</td><td>3 fail: <code>at_style_0_with_pings_off_a_bot_answers_no_bot</code>, <code>a_bots_team_takes_its_roles_from_its_settings</code>, <code>three_teams_of_five_and_one_alone</code></td><td>167 pass</td></tr><tr><td>two versions on; three versions on</td><td>2 fail each: the pings test as built, the roles test</td><td>167 pass, both</td></tr><tr><td>four versions on</td><td><code>at_style_0_with_pings_off_a_bot_answers_no_bot</code> fails</td><td>167 pass</td></tr><tr><td>every true/false weight of the tactics flipped</td><td><code>default_weights_are_todays_constants</code> fails</td><td>167 pass</td></tr><tr><td>every switch flipped</td><td>3 fail: <code>at_style_0_with_pings_off_a_bot_answers_no_bot</code>, <code>a_switch_is_set_on_every_commander</code>, <code>default_weights_are_todays_constants</code></td><td><code>default_weights_are_todays_constants</code> failed on its assertion that the kite switch is on; with the assertions dropped, 167 pass</td></tr><tr><td>every switch flipped but <code>kite</code> and <code>castle_cap</code></td><td>not run</td><td>167 pass</td></tr><tr><td><code>w_smooth</code> 1</td><td>not run</td><td>the round-trip test failed; mended, 167 pass</td></tr><tr><td>every searchable weight at its min</td><td>not run</td><td>the slider test failed; mended, 167 pass</td></tr><tr><td>every searchable weight at its max</td><td>not run</td><td><code>a_wingman_takes_the_pillbox_by_its_leader</code> failed; wingmen pinned, 167 pass</td></tr><tr><td>LR 147's stress, and the ten distinct moves of its 13 failures</td><td>not run (LR 147: pass with the pinned brain)</td><td>167 pass, all eleven</td></tr></tbody></table></div><p>The lint, before the tests moved, named the seven helpers and tests of the first way, with <code>hears</code>'s five callers; before the fleet tests moved, it named <code>three_teams_of_five_and_one_alone</code>.</p><p>The families, with the change on main (<code>every_family_holds_its_floor</code>): all nine hold, from a duel in the open at 87.2% ± 1.7% (floor 55%) to a tank under a ready gun at 82.1% ± 1.2% (floor 80%). They set no base, so the scenario reader's change reads their switches as before.</p></section><section id="sv"><h2>V. Discussion</h2><p>The pinned brain held for everything that built a brain by name and let by everything that built one from a text or a thread's setting. A promotion is the only thing that moves the defaults, so every way a test reads them shows only when the fleet moves the right number. The stresses are the check that does not wait for the fleet: they now move every kind of thing a promotion moves. One failure was not a test reading the defaults. It was a writer that did not write what it promised, and its test was right to stop it.</p></section><section id="svi"><h2>VI. What is not built</h2><p>The lint reads a test's body whole. A test that sets <code>with_settings</code> for one call and not another passes it; only the stress finds that.</p></section><section id="svii"><h2>VII. Paul's decisions</h2><p>The kite and castle switches: <code>default_weights_are_todays_constants</code> asserted both on by default, with no decree in <code>RANGES</code> to hold them. Paul: "drop assertions." Both went, and so did the assertion on the same line that the bot does not smooth. The round-trip test that a smooth promoted to 1 would have failed now picks values off the defaults. Every searchable weight at its min and at its max then found the slider test's zero step and five tests' wingmen on the defaults; both are mended.</p><p>Whether to commit and push this. On main it lets w10040 be tried again, since orrery retries a candidate whose tests failed once main moves.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>
