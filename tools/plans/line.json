@@ -980,11 +980,11 @@
   },
   {
    "key": "Pipeline/Timeline",
-   "does": "Every machine: what it did, what it does now, and what it will do next.",
-   "ties": "All stages, by when and by whom.",
-   "drawn": "A row a machine with now as a line: left is measured, right is a forecast from the medians. Colour is the stage.",
-   "look": "Gaps on the left are lost time. Green marks are generations. A lane of one colour shows where the fleet spends itself. Point at a block and its chain lights: every job of the same trial, run or island, framed in amber wherever it ran, an arrow from each to the next, the rest stepped back. A click keeps it lit.",
-   "sim": "Bars are mostly the census. Crucible's arena on the -cuda rows.",
+   "does": "Every machine: what it did, what it does now, and what it will do next, at six zooms from the hour to three months.",
+   "ties": "All stages, by when and by whom; the milestones of the line, the game and the GPU islands as lines through them.",
+   "drawn": "A row a machine with now as a line: left is measured, right is a forecast from the medians. Colour is the stage. The hour and the six hours draw each job; a day and longer draw bins of the event log, each column filled by the share of it each stage took.",
+   "look": "Gaps on the left are lost time. Green marks are generations. A lane of one colour shows where the fleet spends itself. Point at a block and its chain lights: every job of the same trial, run or island, framed in amber wherever it ran, an arrow from each to the next, the rest stepped back. A click keeps it lit. Lines with tags mark a generation, the line on main, a candidate stopped, the game's rules, a GPU milestone and a net shipped into the game; on the GPU rows a box says when the island next hands the game anything.",
+   "sim": "Bars are mostly the census. Crucible's arena on the -cuda rows: a duel of tanks and pillboxes built with sixteen of treadcore's rules, not its economy or its score.",
    "helps": "It shows the shape of the spending, which is the easiest place to find waste."
   },
   {
@@ -1007,10 +1007,10 @@
   },
   {
    "key": "Pipeline/Blame",
-   "does": "Every machine at a round table: who it waits on, and the help it takes from the queue while it does.",
+   "does": "Every machine at a round table: who it waits on, and the help it takes from the queue while it does. Beside it, each machine's own queue, folding by a click.",
    "ties": "The Timeline's forecast deals each queued job to a machine; what holds the job is its turn there, its build, a job another machine runs, or the planner.",
    "drawn": "Machines round the edge and the queue in the middle, because a wait is between two parties and a ring puts every pair in reach of an arrow. Red between machines, amber to the planner, a loop for a machine's own queue, green for its help.",
-   "look": "A red arrow is the only real blame: work standing while another machine finishes. Amber that stays is a chain handed back to the planner. A busy share under 90% is time to find.",
+   "look": "A red arrow is the only real blame: work standing while another machine finishes. Amber that stays is a chain handed back to the planner. A busy share under 90% is time to find. Point at a machine, or at a job in its queue: its jobs are laid out at the table in the order they will run, an arrow from each to the job it waits on, red when that job is another machine's; a click keeps it, and the pane under the queues says what it is.",
    "sim": "The census and the GPU arena, as the other pages; here only who waits on whom.",
    "helps": "It shows whether the fleet's waiting is a bottleneck or a buffer, and where the spare time goes: into the small returnable reads of the standing search."
   },

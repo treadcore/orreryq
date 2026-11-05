@@ -41,6 +41,55 @@ pub struct State {
     pub said: String,
     /// The chain the Timeline follows, kept by a click: a trial, a run, an island.
     pub chain: Option<String>,
+    /// The Timeline's zoom, an index of ZOOMS; none is the six hours.
+    pub zoom: Option<usize>,
+    /// The Blame page's queues folded by a click; the rest stand open.
+    pub blame_shut: Vec<String>,
+    /// The machine, or the machine and job, a click keeps at the table.
+    pub blame_keep: Option<(String, Option<String>)>,
+    pub blame_off: usize,
+}
+
+/// The Timeline's zooms, nearest first. The hour and the six hours draw each job; a day and longer
+/// draw the planner's bins of the event log.
+pub const ZOOMS: [&str; 6] = ["hour", "hours", "day", "days", "weeks", "months"];
+
+/// A zoom of a day or longer: its bins, a lane a machine, each bin its index from the left edge and
+/// its stages' percentages, busiest first.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ZoomLevel {
+    pub name: String,
+    pub bin_min: f64,
+    /// The left edge, minutes from now.
+    pub from_min: f64,
+    /// Where the event log begins, minutes from now: nothing before it is known.
+    pub begins: Option<f64>,
+    pub lanes: Vec<(String, Vec<(usize, Vec<(String, f64)>)>)>,
+    /// (minutes from now, what the axis says there; empty for a tick alone).
+    pub ticks: Vec<(f64, String)>,
+    /// (minutes from now, minutes the wall clock read more before it): each change of summer time.
+    pub shifts: Vec<(f64, f64)>,
+}
+
+impl ZoomLevel {
+    /// The wall clock of `min` minutes from `checked`, as it read then: summer time and all.
+    pub fn stamp(&self, checked: &str, min: f64) -> String {
+        stamp(checked, min + self.shifts.iter().filter(|(at, _)| min < *at).map(|(_, d)| d).sum::<f64>())
+    }
+}
+
+/// A GPU island's way back to the game: the milestone it must pass, how near its exams of the last
+/// six hours came (errors; it needs +2), their median's climb a day, and the hours that climb needs.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct CudaReturn {
+    pub top: String,
+    pub top_made: String,
+    pub segments: f64,
+    pub best: Option<f64>,
+    pub median: Option<f64>,
+    pub per_day: Option<f64>,
+    pub eta_h: Option<f64>,
+    pub seg_min: Option<f64>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -72,6 +121,8 @@ pub struct JobBar {
     pub ok: i64,
     pub id: String,
     pub chain: String,
+    /// The job it follows, where the planner knows it and the times cannot say; empty otherwise.
+    pub after: String,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -79,6 +130,8 @@ pub struct Mark {
     pub at: f64,
     pub kind: String,
     pub text: String,
+    /// The date and clock it happened, as the planner says it.
+    pub when: String,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -184,8 +237,31 @@ pub struct Handoff {
     pub work: f64,
 }
 
+/// A job in a machine's queue on the Blame page: what it is, when the forecast starts it, and the
+/// job it waits on and where that job is.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct QJob {
+    pub id: String,
+    pub title: String,
+    pub stage: String,
+    /// running, or queued.
+    pub state: String,
+    /// turn, build, after, or "no machine"; empty for the running one.
+    pub wait: String,
+    pub on: String,
+    pub on_host: String,
+    /// Minutes from now: when it began (running, negative), or the forecast's start and end.
+    pub start: Option<f64>,
+    pub end: Option<f64>,
+    pub high: bool,
+}
+
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Blame {
+    /// Each machine's queue: what it runs, then what is dealt it, in order.
+    pub queues: Vec<(String, Vec<QJob>)>,
+    /// Queued jobs no machine that is up can take.
+    pub unplaced: Vec<QJob>,
     pub seats: Vec<Seat>,
     pub waits: Vec<Wait>,
     pub planner: Vec<Handed>,
@@ -211,8 +287,12 @@ pub struct Model {
     pub held: Vec<(String, f64)>,
     pub flow: Vec<(String, Flowing)>,
     pub past_h: f64,
+    /// When the planner measured the timeline, the moment its minutes count from; else `checked`.
+    pub timeline_at: String,
     pub lanes: Vec<Lane>,
     pub marks: Vec<Mark>,
+    pub zoom: Vec<ZoomLevel>,
+    pub cuda: Vec<(String, CudaReturn)>,
     pub queued: Vec<Waiting>,
     pub traces: Vec<Trace>,
     pub blame: Blame,
@@ -268,6 +348,7 @@ impl Model {
                 _ => Vec::new(),
             },
             past_h: v.get("timeline").map(|x| n(x, "past_h")).unwrap_or(0.0),
+            timeline_at: v.get("timeline").map(|x| s(x, "at")).filter(|x| !x.is_empty()).unwrap_or_else(|| s(&v, "checked")),
             lanes: v.get("timeline").map(|t| list(t, "lanes").iter().map(|l| Lane {
                 host: s(l, "host"),
                 up: l.get("up").and_then(|b| b.as_bool()).unwrap_or(false),
@@ -280,9 +361,31 @@ impl Model {
                     ok: j.get(3)?.as_num()? as i64,
                     id: j.get(4)?.as_str()?.to_string(),
                     chain: j.get(5)?.as_str()?.to_string(),
+                    after: j.get(6).and_then(|x| x.as_str()).unwrap_or("").to_string(),
                 })).collect(),
             }).collect()).unwrap_or_default(),
-            marks: v.get("timeline").map(|t| list(t, "marks").iter().map(|m| Mark { at: n(m, "at"), kind: s(m, "kind"), text: s(m, "text") }).collect()).unwrap_or_default(),
+            marks: v.get("timeline").map(|t| list(t, "marks").iter().map(|m| Mark { at: n(m, "at"), kind: s(m, "kind"), text: s(m, "text"), when: s(m, "when") }).collect()).unwrap_or_default(),
+            zoom: v.get("timeline").map(|t| list(t, "zoom").iter().map(|z| ZoomLevel {
+                name: s(z, "name"),
+                bin_min: n(z, "bin_min"),
+                from_min: n(z, "from_min"),
+                begins: z.get("begins_min").and_then(|x| x.as_num()),
+                lanes: list(z, "lanes").iter().map(|l| (s(l, "host"), list(l, "bins").iter().filter_map(|b| b.as_array()).filter_map(|b| {
+                    let i = b.first()?.as_num()? as usize;
+                    Some((i, b[1..].chunks(2).filter_map(|p| Some((p.first()?.as_str()?.to_string(), p.get(1)?.as_num()?))).collect()))
+                }).collect())).collect(),
+                ticks: list(z, "ticks").iter().filter_map(|k| k.as_array()).filter_map(|k| Some((k.first()?.as_num()?, k.get(1)?.as_str()?.to_string()))).collect(),
+                shifts: list(z, "shifts").iter().filter_map(|k| k.as_array()).filter_map(|k| Some((k.first()?.as_num()?, k.get(1)?.as_num()?))).collect(),
+            }).collect()).unwrap_or_default(),
+            cuda: match v.get("timeline").and_then(|t| t.get("cuda")) {
+                Some(json::Value::Obj(c)) => c.iter().map(|(k, x)| (k.clone(), CudaReturn {
+                    top: s(x, "top"), top_made: s(x, "top_made"), segments: n(x, "segments"),
+                    best: x.get("best").and_then(|y| y.as_num()), median: x.get("median").and_then(|y| y.as_num()),
+                    per_day: x.get("per_day").and_then(|y| y.as_num()), eta_h: x.get("eta_h").and_then(|y| y.as_num()),
+                    seg_min: x.get("seg_min").and_then(|y| y.as_num()),
+                })).collect(),
+                _ => Vec::new(),
+            },
             queued: list(&v, "queued").iter().map(|q| Waiting {
                 stage: s(q, "stage"), title: s(q, "title"), state: s(q, "state"), host: s(q, "host"), age: n(q, "age_min"),
                 high: q.get("high").and_then(|b| b.as_bool()).unwrap_or(false), why: s(q, "why"),
@@ -314,8 +417,28 @@ impl Model {
                 },
                 queued: n(b, "queued"),
                 plan_s: n(b, "plan_s"),
+                queues: match b.get("queues") {
+                    Some(json::Value::Obj(q)) => q.iter().map(|(k, x)| (k.clone(), x.as_array().map(|a| a.iter().map(qjob).collect()).unwrap_or_default())).collect(),
+                    _ => Vec::new(),
+                },
+                unplaced: list(b, "unplaced").iter().map(qjob).collect(),
             }).unwrap_or_default(),
         }
+    }
+}
+
+fn qjob(x: &json::Value) -> QJob {
+    QJob {
+        id: s(x, "id"), title: s(x, "title"), stage: s(x, "stage"), state: s(x, "state"), wait: s(x, "wait"), on: s(x, "on"), on_host: s(x, "on_host"),
+        start: x.get("start_min").and_then(|y| y.as_num()), end: x.get("end_min").and_then(|y| y.as_num()),
+        high: x.get("high").and_then(|y| y.as_bool()).unwrap_or(false),
+    }
+}
+
+impl Blame {
+    /// A machine's queue, or none.
+    pub fn queue_of(&self, host: &str) -> &[QJob] {
+        self.queues.iter().find(|(h, _)| h == host).map(|(_, v)| v.as_slice()).unwrap_or(&[])
     }
 }
 
@@ -341,8 +464,10 @@ pub fn took(min: f64) -> String {
         "<1 min".to_string()
     } else if min < 90.0 {
         format!("{:.0} min", min)
-    } else {
+    } else if min < 2880.0 {
         format!("{:.1} h", min / 60.0)
+    } else {
+        format!("{:.1} days", min / 1440.0)
     }
 }
 
@@ -533,7 +658,7 @@ pub fn draw(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
         2 => timeline(ui, at, m, st),
         3 => queued(ui, at, m, st),
         4 => values(ui, at, m, st),
-        5 => blame(ui, at, m),
+        5 => blame(ui, at, m, st),
         _ => board(ui, at, m),
     }
 }
@@ -733,14 +858,37 @@ fn timeline(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
         ui.label_in(at.x + 4, at.y + 4, at.w - 8, "The planner has not written the timeline yet: it does at each plan, about a minute.", &F8X13, t.dim);
         return;
     }
+    // THE ZOOM (Paul, 5 November: "maybe we can zoom timeline in and out. months, weeks, days, day,
+    // hours, hour"). The hour and the six hours draw each job; a day and longer draw the planner's
+    // bins of the event log, a column a bin, filled by the share of it each stage took.
+    let z = st.zoom.unwrap_or(1).min(ZOOMS.len() - 1);
+    for (i, name) in ZOOMS.iter().enumerate() {
+        let r = rect(at.x + 4 + i as i32 * 64, at.y, 60, 20);
+        if i == z {
+            ui.c.rect(r.x + 4, r.bottom(), r.w - 8, 2, t.up);
+        }
+        if ui.button(r, name, i != z) {
+            st.zoom = Some(i);
+        }
+    }
+    let buttons_end = at.x + 4 + ZOOMS.len() as i32 * 64;
+    let level = if z >= 2 { m.zoom.iter().find(|l| l.name == ZOOMS[z]) } else { None };
+    if z >= 2 && level.is_none() {
+        ui.label_in(at.x + 4, at.y + 30, at.w - 8, &format!("The planner has not written the {} yet: it does at its next pass, about a minute.", ZOOMS[z]), &F8X13, t.dim);
+        return;
+    }
     let label_w = 130;
-    let head = 30;
-    let foot = 40;
+    let head = 72;
+    let foot = 52;
     let plot = rect(at.x + label_w, at.y + head, at.w - label_w - 4, at.h - head - foot);
     let n_ = m.lanes.len() as i32;
     let row = (plot.h / n_.max(1)).clamp(10, 46);
     let now_x = plot.x + plot.w * 7 / 10;
-    let past_min = m.past_h.max(1.0) * 60.0;
+    let past_min = match (z, level) {
+        (0, _) => 60.0,
+        (_, Some(l)) => -l.from_min,
+        _ => m.past_h.max(1.0) * 60.0,
+    };
     let ahead_min = m.lanes.iter().flat_map(|l| l.next.iter().map(|b| b.to)).fold(30.0_f64, f64::max).min(240.0);
     let xof = |min: f64| -> i32 {
         if min <= 0.0 {
@@ -750,13 +898,29 @@ fn timeline(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
         }
     };
     let plot_h = row * n_;
-    // The axis: hours back, and minutes on.
-    let mut h = -(m.past_h as i32);
-    while h < 0 {
-        let x = xof(h as f64 * 60.0);
-        ui.c.vline(x, plot.y, plot_h, t.line);
-        ui.label(x + 2, plot.y - 14, &format!("{} h", h), &F8X13, t.dim);
-        h += 1;
+    // The axis: the hour by ten minutes, the six hours by the hour, the longer ones by the
+    // planner's own ticks (midnights, on the local clock).
+    match level {
+        Some(l) => {
+            for (min, say) in &l.ticks {
+                let x = xof(*min);
+                ui.c.vline(x, plot.y, plot_h, t.line);
+                if !say.is_empty() && x + 50 < now_x {
+                    ui.label(x + 2, plot.y - 14, say, &F8X13, t.dim);
+                }
+            }
+        }
+        None => {
+            let every = if z == 0 { 10.0 } else { 60.0 };
+            let mut k = -past_min;
+            while k < -0.5 {
+                let x = xof(k);
+                ui.c.vline(x, plot.y, plot_h, t.line);
+                let say = if z == 0 { format!("{} min", k as i32) } else { format!("{} h", (k / 60.0) as i32) };
+                ui.label(x + 2, plot.y - 14, &say, &F8X13, t.dim);
+                k += every;
+            }
+        }
     }
     let step = [15.0, 30.0, 60.0].into_iter().find(|s| ahead_min / s <= 4.0).unwrap_or(120.0);
     let mut k = step;
@@ -768,22 +932,55 @@ fn timeline(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
         }
         k += step;
     }
-    ui.label(at.x + 4, at.y, "measured, each machine", &F8X13, t.ink);
-    ui.label(now_x + 4, at.y, "forecast from medians", &F8X13, t.ink);
+    ui.label(at.x + 4, plot.y - 14, if level.is_some() { "measured, binned" } else { "measured" }, &F8X13, t.ink);
+    ui.label(now_x + 4, at.y + 3, "forecast from medians", &F8X13, t.ink);
     for (i, l) in m.lanes.iter().enumerate() {
         let y = plot.y + i as i32 * row;
         ui.label_in(at.x + 4, y + (row - 13) / 2, label_w - 8, &l.host, &F8X13, if l.up { t.ink } else { t.alarm });
         ui.c.hline(plot.x, y + row - 1, plot.w, t.line);
-        for b in &l.past {
-            let (a, e) = (xof(b.from), xof(b.to));
-            let r = rect(a, y + 1, (e - a).max(1), row - 3);
-            ui.c.rect(r.x, r.y, r.w, r.h, if b.ok == 0 { t.alarm } else { line::colour(&b.stage) });
-            ui.tip(r, || vec![
-                format!("{}: {}", l.host, line::short(&b.stage)),
-                format!("From {} to {}{}.", signed(b.from), if b.to >= 0.0 { "now".to_string() } else { signed(b.to) }, match b.ok { 0 => ", failed or sent back", 2 => ", still running", _ => "" }),
-                "Touching jobs of one stage are drawn as one bar.".to_string(),
-                "Source: events.jsonl, as measured.".to_string(),
-            ]);
+        if let Some(lv) = level {
+            // Before the event log begins nothing is known, and it says so by a hatch.
+            if let Some(b) = lv.begins.filter(|b| *b > -past_min) {
+                let x1 = xof(b);
+                for yy in (y + 1)..(y + row - 2) {
+                    for xx in plot.x..x1 {
+                        if (xx + yy) % 6 == 0 {
+                            ui.c.set(xx, yy, t.line);
+                        }
+                    }
+                }
+            }
+            let bins = lv.lanes.iter().find(|(h, _)| h == &l.host).map(|(_, b)| b.as_slice()).unwrap_or(&[]);
+            let full = row - 3;
+            for (bi, parts) in bins {
+                let a = lv.from_min + *bi as f64 * lv.bin_min;
+                if a >= 0.0 {
+                    continue;
+                }
+                // The newest bin is still filling: it ends at now, not in the forecast.
+                let (x0, x1) = (xof(a), xof((a + lv.bin_min).min(0.0)));
+                let (w, mut top, mut used) = ((x1 - x0).max(1), y + row - 2, 0);
+                for (stage, pct) in parts {
+                    let h = (((pct / 100.0) * full as f64).round() as i32).min(full - used);
+                    if h > 0 {
+                        ui.c.rect(x0, top - h, w, h, if stage == "failed" { t.alarm } else { line::colour(stage) });
+                        top -= h;
+                        used += h;
+                    }
+                }
+            }
+        } else {
+            for b in l.past.iter().filter(|b| b.to >= -past_min) {
+                let (a, e) = (xof(b.from), xof(b.to));
+                let r = rect(a, y + 1, (e - a).max(1), row - 3);
+                ui.c.rect(r.x, r.y, r.w, r.h, if b.ok == 0 { t.alarm } else { line::colour(&b.stage) });
+                ui.tip(r, || vec![
+                    format!("{}: {}", l.host, line::short(&b.stage)),
+                    format!("From {} to {}{}.", signed(b.from), if b.to >= 0.0 { "now".to_string() } else { signed(b.to) }, match b.ok { 0 => ", failed or sent back", 2 => ", still running", _ => "" }),
+                    "Touching jobs of one stage are drawn as one bar. Point at it to follow its chain.".to_string(),
+                    "Source: events.jsonl, as measured.".to_string(),
+                ]);
+            }
         }
         for b in &l.next {
             // Hollow: it has not happened.
@@ -797,38 +994,202 @@ fn timeline(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
             ]);
         }
     }
+    if let Some(lv) = level {
+        if let Some(b) = lv.begins.filter(|b| *b > -past_min) {
+            let say = format!("before {}: the event log begins there", lv.stamp(&m.timeline_at, b));
+            let w = F8X13.measure(&say) as i32 + 8;
+            if xof(b) - plot.x > w + 8 {
+                let r = rect(plot.x + (xof(b) - plot.x - w) / 2, plot.y + plot_h / 2 - 8, w, 16);
+                ui.c.rect(r.x, r.y, r.w, r.h, t.base);
+                ui.label(r.x + 4, r.y + 1, &say, &F8X13, t.dim);
+            }
+        }
+        bin_tip(ui, m, lv, plot, row, now_x, past_min, &xof);
+    }
     ui.c.vline(now_x, plot.y - 2, plot_h + 4, t.ink);
     ui.c.vline(now_x + 1, plot.y - 2, plot_h + 4, t.ink);
     ui.label(now_x - 12, plot.y + plot_h + 2, "now", &F8X13, t.ink);
-    for mk in &m.marks {
-        let x = xof(mk.at);
-        let c = match mk.kind.as_str() {
-            "generation" => t.up,
-            "failed" => t.alarm,
-            _ => t.warn,
-        };
-        ui.c.vline(x, plot.y - 2, plot_h + 2, c);
-        ui.c.rect(x - 2, plot.y - 5, 5, 5, c);
-        ui.tip(rect(x - 3, plot.y - 6, 7, plot_h + 6), || vec![
-            match mk.kind.as_str() {
-                "generation" => format!("A generation: {}", mk.text),
-                "failed" => format!("A passed candidate stopped: {}", mk.text),
-                "eases" => "The bars ease here, if nothing passes first".to_string(),
-                _ => "The next read of the line against main".to_string(),
-            },
-            signed(mk.at),
-        ]);
+    milestones(ui, m, plot, plot_h, row, past_min, &xof);
+    cuda_return(ui, m, plot, row, now_x);
+    if level.is_none() {
+        follow_chain(ui, m, st, plot, row, now_x, past_min, (buttons_end + 8, at.y + 3), &xof);
     }
-    follow_chain(ui, m, st, plot, row, now_x, &xof);
-    // The key: every colour named, and what a mark means.
+    // The key: every colour named, and what a line means.
     let mut x = at.x + 4;
-    let y = at.bottom() - foot + 18;
+    let y = at.bottom() - foot + 8;
     for k in ["first", "read", "held", "families", "build", "proof", "transform", "islands", "other"] {
         ui.c.rect(x, y + 2, 10, 10, line::colour(k));
         x = ui.label(x + 13, y, line::short(k), &F8X13, t.dim) + 10;
     }
-    let say = "Red bar: failed or sent back. Hollow: forecast. Green line: a generation. Red line: tests stopped one. Amber: bars ease, or the next proof.";
-    ui.label_in(at.x + 4, y + 14, at.w - 8, say, &F8X13, t.dim);
+    ui.label_in(at.x + 4, y + 14, at.w - 8, "Hollow: forecast. Red: failed or sent back. A day and longer: a column is a bin, filled by the share of it each stage took; the rest is idle.", &F8X13, t.dim);
+    ui.label_in(at.x + 4, y + 28, at.w - 8, "Lines: green a generation, thick green the line on main, red tests stopped one, grey a GPU milestone, white a net into the game, cyan the game's rules.", &F8X13, t.dim);
+}
+
+/// What a bin holds, for the one under the pointer: a day and longer have thousands of them and
+/// one pointer, so only that one is asked.
+fn bin_tip(ui: &mut Ui, m: &Model, lv: &ZoomLevel, plot: Rect, row: i32, now_x: i32, past_min: f64, xof: &dyn Fn(f64) -> i32) {
+    let (px, py) = ui.pointer();
+    if px < plot.x || px >= now_x || py < plot.y || py >= plot.y + row * m.lanes.len() as i32 {
+        return;
+    }
+    let i = ((py - plot.y) / row.max(1)) as usize;
+    let at_min = (px - now_x) as f64 / (now_x - plot.x).max(1) as f64 * past_min;
+    let bi = ((at_min - lv.from_min) / lv.bin_min).floor();
+    let Some(l) = m.lanes.get(i) else { return };
+    if bi < 0.0 {
+        return;
+    }
+    let parts = lv.lanes.iter().find(|(h, _)| h == &l.host).and_then(|(_, b)| b.iter().find(|(k, _)| *k == bi as usize)).map(|(_, p)| p.clone()).unwrap_or_default();
+    let a = lv.from_min + bi * lv.bin_min;
+    let r = rect(xof(a), plot.y + i as i32 * row, (xof(a + lv.bin_min) - xof(a)).max(1), row);
+    let busy: f64 = parts.iter().map(|(_, p)| p).sum();
+    let before = lv.begins.map(|b| a + lv.bin_min <= b).unwrap_or(false);
+    ui.tip(r, || {
+        let mut v = vec![format!("{}, {} to {}", l.host, lv.stamp(&m.timeline_at, a), lv.stamp(&m.timeline_at, (a + lv.bin_min).min(0.0)))];
+        if before {
+            v.push("Before the event log begins: nothing is known of it.".to_string());
+        } else {
+            v.extend(parts.iter().map(|(k, p)| format!("{}: {:.0}%", if k == "failed" { "Failed or sent back" } else { line::short(k) }, p)));
+            v.push(format!("Idle or between jobs: {:.0}%", (100.0 - busy).max(0.0)));
+        }
+        v.push(format!("A column is {} of the machine's time, filled by the share each stage took.", took(lv.bin_min)));
+        v.push("Source: events.jsonl, binned by the planner (plan/timeline-bins.json).".to_string());
+        v
+    });
+}
+
+/// THE MILESTONES (Paul, 5 November: "show separation of major milestones of generation"): a line
+/// through every machine where each happened, its name in a tag above, the most telling first
+/// where tags would collide. The islands' rules run only through the GPU rows: a side channel.
+fn milestones(ui: &mut Ui, m: &Model, plot: Rect, plot_h: i32, row: i32, past_min: f64, xof: &dyn Fn(f64) -> i32) {
+    let t = ui.t;
+    let style = |k: &str| -> (Rgb, usize) {
+        match k {
+            "main" | "game" | "ship" => (match k { "main" => t.up, "game" => 0x30c8e0, _ => t.ink }, 0),
+            "milestone" | "rules" => (line::colour("islands"), 1),
+            "generation" => (t.up, 2),
+            "failed" => (t.alarm, 3),
+            _ => (t.warn, 3),
+        }
+    };
+    let gpu: Vec<usize> = m.lanes.iter().enumerate().filter(|(_, l)| m.cuda.iter().any(|(h, _)| h == &l.host)).map(|(i, _)| i).collect();
+    let shown: Vec<&Mark> = m.marks.iter().filter(|mk| mk.at >= -past_min).collect();
+    for mk in &shown {
+        let x = xof(mk.at);
+        let (c, p) = style(&mk.kind);
+        if mk.kind == "rules" {
+            for &i in &gpu {
+                let y = plot.y + i as i32 * row;
+                for yy in (y..y + row - 1).step_by(4) {
+                    ui.c.rect(x - 1, yy, 3, 2, c);
+                }
+            }
+            continue;
+        }
+        let w = if p == 0 { 2 } else { 1 };
+        ui.c.rect(x - 1, plot.y - 2, w + 2, plot_h + 2, t.base);
+        ui.c.rect(x, plot.y - 2, w, plot_h + 2, c);
+    }
+    let mut order = shown.clone();
+    order.sort_by_key(|mk| style(&mk.kind).1);
+    let mut used: [Vec<(i32, i32)>; 2] = [Vec::new(), Vec::new()];
+    for mk in order {
+        let x = xof(mk.at);
+        let (c, _) = style(&mk.kind);
+        let say = match mk.kind.as_str() {
+            "milestone" => {
+                let p: Vec<&str> = mk.text.split('-').collect();
+                format!("{} {}", p.first().unwrap_or(&""), p.get(1).unwrap_or(&""))
+            }
+            "rules" => "islands' rules".to_string(),
+            "ship" => mk.text.replace("into the game: ", "") + " into the game",
+            "main" => {
+                let ws: Vec<&str> = mk.text.trim_start_matches("main: ").split(", ").collect();
+                if ws.len() > 2 { format!("main: {} +{}", ws[0], ws.len() - 1) } else { mk.text.clone() }
+            }
+            "failed" => format!("{} stopped", mk.text),
+            "eases" => "easier".to_string(),
+            "proof" => "proof".to_string(),
+            _ => mk.text.clone(),
+        };
+        let w = F8X13.measure(&say) as i32 + 6;
+        let x0 = (x - 1).min(plot.right() - w).max(plot.x);
+        let mut tag = None;
+        for (ri, row_used) in used.iter_mut().enumerate() {
+            if row_used.iter().all(|(a, b)| x0 + w + 3 < *a || x0 > *b + 3) {
+                row_used.push((x0, x0 + w));
+                tag = Some(rect(x0, plot.y - 46 + ri as i32 * 16, w, 14));
+                break;
+            }
+        }
+        if let Some(r) = tag {
+            ui.c.vline(x, r.bottom(), plot.y - 2 - r.bottom(), c);
+            ui.c.rect(r.x, r.y, r.w, r.h, c);
+            ui.label(r.x + 3, r.y, &say, &F8X13, t.base);
+        } else {
+            ui.c.rect(x - 1, plot.y - 6, 3, 4, c);
+        }
+        let why = match mk.kind.as_str() {
+            "main" => "The line reached main: every machine builds main, so a read after it reads a newer brain.",
+            "generation" => "A generation on the line: a promotion that passed its tests, families and gauntlet.",
+            "failed" => "A candidate the tests stopped: its promotion failed; it is tried again when main moves.",
+            "milestone" => "A GPU island's milestone: a segment's champion beat the ladder's newest by two errors. The bridge reads each as the Gladiator on a CPU machine.",
+            "ship" => "A net shipped into the game: treadcore's nets/ changed on main.",
+            "game" => "The game's rules or its score moved: a read of the old game is no evidence about the new one, so the fleet reads anew.",
+            "rules" => "The islands' rules: each GPU segment is built with sixteen constants of treadcore's rules.rs at the fleet's commit; a move rebuilds them at their next segment.",
+            "eases" => "The bars ease here, if nothing passes first.",
+            _ => "The next read of the line against main.",
+        };
+        let hit = rect(x - 3, plot.y - 2, 7, plot_h + 2);
+        let lines = || vec![say.clone(), format!("{}{}", if mk.when.is_empty() { String::new() } else { format!("{}, ", mk.when) }, signed(mk.at)), mk.text.clone(), why.to_string()];
+        ui.tip(hit, lines);
+        if let Some(r) = tag {
+            ui.tip(r, || vec![say.clone(), format!("{}{}", if mk.when.is_empty() { String::new() } else { format!("{}, ", mk.when) }, signed(mk.at)), mk.text.clone(), why.to_string()]);
+        }
+    }
+}
+
+/// WHEN THE GPU HANDS ANYTHING ON (Paul, 5 November: "I don't understand when the CUDA will
+/// return"): on each GPU row, over its forecast, what its next milestone must beat and the planner's
+/// guess from the trend of its exams.
+fn cuda_return(ui: &mut Ui, m: &Model, plot: Rect, row: i32, now_x: i32) {
+    let t = ui.t;
+    for (i, l) in m.lanes.iter().enumerate() {
+        let Some((_, c)) = m.cuda.iter().find(|(h, _)| h == &l.host) else { continue };
+        let y = plot.y + i as i32 * row;
+        let two = row >= 34;
+        let r = rect(now_x + 6, y + 3, plot.right() - now_x - 10, if two { 30 } else { (row - 6).max(8) });
+        ui.c.rect(r.x, r.y, r.w, r.h, t.base);
+        ui.outline(r, line::colour("islands"));
+        let top = c.top.split('-').next().unwrap_or("").to_string();
+        let when = match c.eta_h {
+            Some(e) => format!("to the game past {} in ~{}", top, took(e * 60.0)),
+            None => format!("to the game past {}: no date", top),
+        };
+        let near = match (c.best, c.median) {
+            (Some(b), Some(md)) => format!("exams: best {:+.1}, median {:+.1} of +2", b, md),
+            _ => "no exam against it in six hours".to_string(),
+        };
+        ui.label_in(r.x + 4, r.y + 1, r.w - 8, &when, &F8X13, line::colour("islands"));
+        if two {
+            ui.label_in(r.x + 4, r.y + 15, r.w - 8, &near, &F8X13, t.ink);
+        }
+        ui.tip(r, || vec![
+            format!("{}: when it next gives the game anything", l.host),
+            format!("A segment every {}: its champion meets the ladder's newest milestone, {} (made {}).",
+                    c.seg_min.map(took).unwrap_or_else(|| "few minutes".to_string()), c.top, c.top_made.replace('T', " ")),
+            format!("Since it: {:.0} segments here, none past it. Last six hours: best {}, median {} errors; it needs +2.",
+                    c.segments, c.best.map(|b| format!("{:+.1}", b)).unwrap_or("-".into()), c.median.map(|b| format!("{:+.1}", b)).unwrap_or("-".into())),
+            match (c.per_day, c.eta_h) {
+                (Some(d), Some(e)) => format!("The median climbs {:+.1} errors a day: at that pace it crosses +2 in about {}. A guess from a trend.", d, took(e * 60.0)),
+                (Some(d), None) => format!("The median moves {:+.1} errors a day: no date from that.", d),
+                _ => "Too few hours of exams for a trend.".to_string(),
+            },
+            "Then: the bridge reads the milestone as the Gladiator on a CPU machine (2 x 48 seeds) against the shipped one, and ships it into the game if it reads better by two errors.".to_string(),
+            "The rules: each segment is built with sixteen constants of treadcore's rules.rs at the fleet's commit (speed, turn, guns, armour, shells, vision, pillboxes). The economy and the score are not in the islands' world.".to_string(),
+            "The six hollow boxes are a buffer, not a backlog: each island keeps six segments in line, one after another, topped up at every pass.".to_string(),
+        ]);
+    }
 }
 
 /// The clock time of `min` minutes from when the planner wrote the page (`checked`), as HH:MM.
@@ -839,15 +1200,56 @@ fn clock(checked: &str, min: f64) -> String {
     format!("{:02}:{:02}", (t / 60.0) as i32, (t % 60.0) as i32)
 }
 
-/// A chain's links in time order, each with the link it followed: the latest that ended by its
-/// start (several pieces begun together each follow the same read-on). None for the first.
+/// The date and clock of `min` minutes from `checked`, as "Nov 5 12:30": the longer zooms reach
+/// back over midnights and months. Wall-clock arithmetic; ZoomLevel::stamp adds summer time.
+fn stamp(checked: &str, min: f64) -> String {
+    const MONTHS: [&str; 12] = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    let num = |a: usize, b: usize| checked.get(a..b).and_then(|x| x.parse::<i64>().ok());
+    let (Some(y), Some(mo), Some(d), Some(h), Some(mi)) = (num(0, 4), num(5, 7), num(8, 10), num(11, 13), num(14, 16)) else {
+        return clock(checked, min);
+    };
+    let total = days_from_civil(y, mo, d) * 1440 + h * 60 + mi + min.round() as i64;
+    let (_, m2, d2) = civil_from_days(total.div_euclid(1440));
+    let rest = total.rem_euclid(1440);
+    format!("{} {} {:02}:{:02}", MONTHS[(m2 - 1).clamp(0, 11) as usize], d2, rest / 60, rest % 60)
+}
+
+/// Days since 1970-01-01 of a date (Howard Hinnant's algorithm), and back.
+fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
+    let y = if m <= 2 { y - 1 } else { y };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let doy = (153 * ((m + 9) % 12) + 2) / 5 + d - 1;
+    era * 146097 + yoe * 365 + yoe / 4 - yoe / 100 + doy - 719468
+}
+
+fn civil_from_days(z: i64) -> (i64, i64, i64) {
+    let z = z + 719468;
+    let era = z.div_euclid(146097);
+    let doe = z - era * 146097;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    (yoe + era * 400 + if m <= 2 { 1 } else { 0 }, m, d)
+}
+
+/// A chain's links in time order, each with the link it followed: the one the planner names
+/// (`after`, where the titles cannot say: a bridge read after its milestone's segment), or else
+/// the latest that ended by its start (several pieces begun together each follow the same read-on).
+/// None for the first.
 pub fn chain_links<'a>(m: &'a Model, chain: &str) -> Vec<(usize, &'a JobBar, Option<usize>)> {
     let mut links: Vec<(usize, &JobBar)> = m.lanes.iter().enumerate().flat_map(|(i, l)| l.jobs.iter().filter(move |j| j.chain == chain).map(move |j| (i, j))).collect();
     links.sort_by(|a, b| a.1.from.partial_cmp(&b.1.from).unwrap_or(std::cmp::Ordering::Equal));
     (0..links.len())
         .map(|k| {
             let b = links[k].1;
-            let prev = (0..k).filter(|&p| links[p].1.to <= b.from + 0.05).max_by(|&p, &q| links[p].1.to.partial_cmp(&links[q].1.to).unwrap_or(std::cmp::Ordering::Equal));
+            let prev = if b.after.is_empty() {
+                (0..k).filter(|&p| links[p].1.to <= b.from + 0.05).max_by(|&p, &q| links[p].1.to.partial_cmp(&links[q].1.to).unwrap_or(std::cmp::Ordering::Equal))
+            } else {
+                (0..links.len()).find(|&p| p != k && links[p].1.id == b.after)
+            };
             (links[k].0, b, prev)
         })
         .collect()
@@ -857,21 +1259,24 @@ pub fn chain_links<'a>(m: &'a Model, chain: &str) -> Vec<(usize, &'a JobBar, Opt
 /// On highlight of cell, highlight all the chain elements associated"). The job under the pointer
 /// names its chain, a trial, a run or an island; every job of it is framed wherever it ran, and an
 /// arrow goes to each from the link it followed, from that one's end to its own start. A click keeps
-/// the chain while the pointer is elsewhere; a click on it again, or on no job, lets it go.
-fn follow_chain(ui: &mut Ui, m: &Model, st: &mut State, plot: Rect, row: i32, now_x: i32, xof: &dyn Fn(f64) -> i32) {
+/// the chain while the pointer is elsewhere; a click on it again, or on no job, lets it go. Only
+/// what the zoom shows: a link before its left edge is not drawn.
+#[allow(clippy::too_many_arguments)]
+fn follow_chain(ui: &mut Ui, m: &Model, st: &mut State, plot: Rect, row: i32, now_x: i32, past_min: f64, tag_at: (i32, i32), xof: &dyn Fn(f64) -> i32) {
     let t = ui.t;
     let row_of = |i: usize| plot.y + i as i32 * row;
     let job_rect = |i: usize, j: &JobBar| {
         let (a, e) = (xof(j.from), xof(j.to));
         rect(a, row_of(i) + 1, (e - a).max(2), row - 3)
     };
+    let seen = |j: &JobBar| j.to >= -past_min;
     let (px, py) = ui.pointer();
     let measured = rect(plot.x, plot.y, now_x - plot.x + 2, row * m.lanes.len() as i32);
     let mut hovered: Option<(usize, &JobBar)> = None;
     if measured.contains((px, py)) {
         let i = ((py - plot.y) / row.max(1)) as usize;
         if let Some(l) = m.lanes.get(i) {
-            hovered = l.jobs.iter().find(|j| {
+            hovered = l.jobs.iter().filter(|j| seen(j)).find(|j| {
                 let r = job_rect(i, j);
                 px >= r.x - 1 && px <= r.right() + 1
             }).map(|j| (i, j));
@@ -885,10 +1290,10 @@ fn follow_chain(ui: &mut Ui, m: &Model, st: &mut State, plot: Rect, row: i32, no
     }
     let Some(chain) = hovered.map(|(_, j)| j.chain.clone()).or_else(|| st.chain.clone()) else { return };
     let links = chain_links(m, &chain);
-    if links.is_empty() {
+    if !links.iter().any(|(_, j, _)| seen(j)) {
         return;
     }
-    // The rest of the six hours stepped back: every other pixel dark, the chain's own jobs drawn
+    // The rest of the hours stepped back: every other pixel dark, the chain's own jobs drawn
     // again over it in their colours, so the chain is what the eye finds.
     for y in measured.y..measured.bottom() {
         for x in (measured.x + (y & 1))..measured.right() {
@@ -897,7 +1302,7 @@ fn follow_chain(ui: &mut Ui, m: &Model, st: &mut State, plot: Rect, row: i32, no
             }
         }
     }
-    for (i, j, _) in &links {
+    for (i, j, _) in links.iter().filter(|(_, j, _)| seen(j)) {
         let r = job_rect(*i, j);
         ui.c.rect(r.x, r.y, r.w, r.h, if j.ok == 0 { t.alarm } else { line::colour(&j.stage) });
     }
@@ -905,7 +1310,7 @@ fn follow_chain(ui: &mut Ui, m: &Model, st: &mut State, plot: Rect, row: i32, no
     for (i, b, prev) in &links {
         let Some(p) = prev else { continue };
         let (ia, a, _) = links[*p];
-        if ia == *i && b.from - a.to < 0.5 {
+        if !seen(a) || !seen(b) || (ia == *i && b.from - a.to < 0.5) {
             continue; // the next link on the same machine, touching: the frames say it
         }
         let (x0, y0) = (xof(a.to), row_of(ia) + row / 2);
@@ -914,29 +1319,29 @@ fn follow_chain(ui: &mut Ui, m: &Model, st: &mut State, plot: Rect, row: i32, no
         pointer(ui, (x0 - 1, y0 - 1), (x1 - 1, y1 - 1), t.base);
         pointer(ui, (x0, y0), (x1, y1), t.warn);
     }
-    for (i, j, _) in &links {
+    for (i, j, _) in links.iter().filter(|(_, j, _)| seen(j)) {
         let r = job_rect(*i, j);
         ui.outline(rect(r.x - 3, r.y - 3, r.w + 6, r.h + 6), t.base);
         ui.outline2(rect(r.x - 2, r.y - 2, r.w + 4, r.h + 4), t.warn);
     }
     let hosts: std::collections::BTreeSet<&str> = links.iter().map(|(i, _, _)| m.lanes[*i].host.as_str()).collect();
     let kept = st.chain.as_deref() == Some(chain.as_str());
-    let said = format!("following {}: {} job{} on {} machine{} {}", chain, links.len(), if links.len() == 1 { "" } else { "s" },
-                       hosts.len(), if hosts.len() == 1 { "" } else { "s" }, if kept { "(kept: click it again to let go)" } else { "(click to keep)" });
+    let said = format!("following {}: {} job{}, {} machine{} {}", chain, links.len(), if links.len() == 1 { "" } else { "s" },
+                       hosts.len(), if hosts.len() == 1 { "" } else { "s" }, if kept { "(kept)" } else { "(a click keeps it)" });
     let w = F8X13.measure(&said) as i32 + 10;
-    let tag = rect(now_x - 8 - w, plot.y - 30, w, 15);
+    let tag = rect((now_x - 8 - w).max(tag_at.0), tag_at.1 - 2, w, 15);
     ui.c.rect(tag.x, tag.y, tag.w, tag.h, t.warn);
     ui.label(tag.x + 5, tag.y + 1, &said, &F8X13, t.base);
     if let Some((i, j)) = hovered {
         let r = job_rect(i, j);
         let steps: Vec<String> = links.iter().map(|(li, lj, _)| {
-            format!("{} {:<10} {:<14} {:<15} {}{}", clock(&m.checked, lj.from), line::short(&lj.stage), lj.id, m.lanes[*li].host,
+            format!("{} {:<10} {:<14} {:<15} {}{}", clock(&m.timeline_at, lj.from), line::short(&lj.stage), lj.id, m.lanes[*li].host,
                     took(lj.to - lj.from), match lj.ok { 0 => ", failed or sent back", 2 => ", running", _ => "" })
         }).collect();
         ui.tip(r, || {
             let mut v = vec![format!("{}: its {} job{} in the last {:.0} h, in the order they began", chain, steps.len(), if steps.len() == 1 { "" } else { "s" }, m.past_h)];
             v.extend(steps.into_iter().take(24));
-            v.push("An arrow runs from the job a link followed to it. Click to keep the chain lit.".to_string());
+            v.push("An arrow runs from the job a link followed to it. Click to keep the chain lit; zoom to the hour for detail.".to_string());
             v
         });
     }
@@ -1038,7 +1443,7 @@ fn edge_of(r: Rect, to: (i32, i32)) -> (i32, i32) {
 /// is work waiting its turn on its own machine; amber to the table is a run handed back to the
 /// planner; green to the table is the machine's help, the small reads it takes from the queue.
 /// THE PLANNER DECIDES ALL OF IT: the page draws `blame` from pipeline.json and counts nothing.
-fn blame(ui: &mut Ui, at: Rect, m: &Model) {
+fn blame(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
     let t = ui.t;
     let b = &m.blame;
     if b.seats.is_empty() {
@@ -1070,8 +1475,14 @@ fn blame(ui: &mut Ui, at: Rect, m: &Model) {
         ui.label_in(at.x + 4, at.y + 18, at.w - 8, &format!("Handoffs, minutes, medians of a day: {}.", hand.join("; ")), &F8X13, t.dim);
     }
     let legend_h = 34;
-    let room = rect(at.x, at.y + 38, at.w, at.h - 38 - legend_h);
-    let (sw, sh) = (176, 58);
+    let panel_w = 352;
+    let panel = rect(at.right() - panel_w, at.y + 38, panel_w, at.h - 38 - legend_h);
+    let room = rect(at.x, at.y + 38, at.w - panel_w - 8, at.h - 38 - legend_h);
+    // The queues first: what the pointer is on there is what the table shows. Under them, what it
+    // is on, written out.
+    let pane_h = 104;
+    let (mut hover, mut clicked) = queue_accordions(ui, rect(panel.x, panel.y, panel.w, panel.h - pane_h - 6), m, st);
+    let (sw, sh) = (160, 58);
     let (cx, cy) = (room.x + room.w / 2, room.y + room.h / 2);
     let (rx, ry) = (((room.w - sw) / 2 - 24).max(40) as f64, ((room.h - sh) / 2 - 18).max(40) as f64);
     let hub = rect(cx - 150, cy - 46, 300, 92);
@@ -1084,6 +1495,21 @@ fn blame(ui: &mut Ui, at: Rect, m: &Model) {
         })
         .collect();
     let at_host = |h: &str| b.seats.iter().position(|x| x.host == h).map(|i| places[i]);
+    let p = ui.pointer();
+    for (i, r) in places.iter().enumerate() {
+        if hover.is_none() && r.contains(p) {
+            hover = Some((b.seats[i].host.clone(), None));
+        }
+        if ui.button_hit(*r) {
+            clicked = Some((b.seats[i].host.clone(), None));
+        }
+    }
+    if let Some(c) = clicked {
+        st.blame_keep = if st.blame_keep.as_ref() == Some(&c) { None } else { Some(c) };
+    }
+    let focus = hover.or_else(|| st.blame_keep.clone());
+    let kept = focus.is_some() && focus == st.blame_keep;
+    detail_pane(ui, rect(panel.x, panel.bottom() - pane_h, panel.w, pane_h), m, focus.as_ref(), kept);
     let mid = |r: Rect| (r.x + r.w / 2, r.y + r.h / 2);
     // Green first, under everything: each machine's hand back to the queue.
     for (i, x) in b.seats.iter().enumerate() {
@@ -1148,16 +1574,8 @@ fn blame(ui: &mut Ui, at: Rect, m: &Model) {
         ui.label_in(r.x + 10, r.y + 4, r.w - 14, &x.host, &F8X13, t.ink);
         let now = if x.job.is_empty() { format!("{} {}", x.state, took(x.for_min)) } else { format!("{} {}", line::short(&x.stage), took(x.for_min)) };
         ui.label_in(r.x + 10, r.y + 21, r.w - 14, &now, &F8X13, t.dim);
-        ui.label_in(r.x + 10, r.y + 38, r.w - 14, &format!("busy {:.0}%  help {:.0}%", x.busy, x.help), &F8X13, if x.busy >= 90.0 { t.up } else { t.warn });
-        ui.tip(r, || {
-            let mut v = vec![
-                format!("{}: {}{}", x.host, x.state, if x.job.is_empty() { String::new() } else { format!(", {} for {}", x.job, took(x.for_min)) }),
-                format!("Busy {:.1}% of the last {:.0} h; {:.1}% of that the small returnable reads.", x.busy, m.past_h.max(1.0), x.help),
-                format!("Its backup when its own line waits: {}.", x.backup),
-            ];
-            v.extend(x.by_stage.iter().take(6).map(|(k, mins)| format!("  {}: {}", line::short(k), took(*mins))));
-            v
-        });
+        ui.label_in(r.x + 10, r.y + 40, r.w - 14, &format!("busy {:.0}%  help {:.0}%", x.busy, x.help), &F6X10, if x.busy >= 90.0 { t.up } else { t.warn });
+        // Its tip is the pane under the queues: here it would cover the jobs it lays out.
         // Its own waits: a loop on the outer side, turn in blue, build in amber.
         let mine: Vec<&Wait> = b.waits.iter().filter(|w| w.from == x.host && w.to == x.host).collect();
         let ox = mid(r).0 - cx;
@@ -1176,6 +1594,9 @@ fn blame(ui: &mut Ui, at: Rect, m: &Model) {
             ]);
         }
     }
+    if let Some((host, job)) = &focus {
+        job_arrows(ui, m, room, &places, hub, host, job.as_deref());
+    }
     // The legend, for a first look.
     let ly = at.bottom() - legend_h + 8;
     let mut x = at.x + 6;
@@ -1187,6 +1608,325 @@ fn blame(ui: &mut Ui, at: Rect, m: &Model) {
     ] {
         ui.c.rect(x, ly + 4, 18, 4, c);
         x = ui.label(x + 24, ly, word, &F8X13, t.dim) + 22;
+    }
+}
+
+/// EACH MACHINE'S QUEUE, an accordion a machine (Paul, 5 November: "add more accordions to blame
+/// ... a filtered job queue for each machine"): its header says what it runs and how many wait; open,
+/// its jobs in the order they will run, each with what it waits on. A click on a header folds it.
+/// What the pointer is on here is what the table shows: a machine's jobs, or one job's.
+type Focus = (String, Option<String>);
+
+fn queue_accordions(ui: &mut Ui, panel: Rect, m: &Model, st: &mut State) -> (Option<Focus>, Option<Focus>) {
+    enum Row<'a> {
+        Head(&'a Seat, &'a [QJob]),
+        Job(&'a str, &'a QJob),
+        Nothing,
+        Lost,
+    }
+    let t = ui.t;
+    let b = &m.blame;
+    let mut rows = Vec::new();
+    for x in &b.seats {
+        let q = b.queue_of(&x.host);
+        rows.push(Row::Head(x, q));
+        if !st.blame_shut.contains(&x.host) {
+            if q.is_empty() {
+                rows.push(Row::Nothing);
+            }
+            rows.extend(q.iter().map(|j| Row::Job(&x.host, j)));
+        }
+    }
+    if !b.unplaced.is_empty() {
+        rows.push(Row::Lost);
+        rows.extend(b.unplaced.iter().map(|j| Row::Job("", j)));
+    }
+    ui.label(panel.x + 2, panel.y, "Each machine's queue: point at one", &F8X13, t.ink);
+    let area = rect(panel.x, panel.y + 18, panel.w, panel.h - 18);
+    let rh = 18;
+    let mut off = st.blame_off;
+    let (list, first, count) = ui.scroll_list(area, rows.len(), rh, &mut off);
+    st.blame_off = off;
+    let p = ui.pointer();
+    let (mut focus, mut clicked) = (None, None);
+    for (k, row) in rows.iter().enumerate().skip(first).take(count) {
+        let r = rect(list.x, list.y + (k - first) as i32 * rh, list.w, rh - 1);
+        match row {
+            Row::Head(x, q) => {
+                let shut = st.blame_shut.contains(&x.host);
+                ui.c.rect(r.x, r.y, r.w, r.h, t.tile);
+                let busy = matches!(x.state.as_str(), "running" | "delivering" | "fetching" | "sending");
+                ui.c.rect(r.x, r.y, 3, r.h, if busy { t.up } else if x.state == "idle" { t.warn } else { t.line });
+                ui.label(r.x + 7, r.y + 2, &format!("{} {}", if shut { "+" } else { "-" }, x.host), &F8X13, t.ink);
+                let waiting = q.iter().filter(|j| j.state != "running").count();
+                let run = q.iter().find(|j| j.state == "running").map(|j| line::short(&j.stage).to_string()).unwrap_or_else(|| x.state.clone());
+                ui.label_right(r.right() - 6, r.y + 4, &format!("{}, {} waiting", run, waiting), &F6X10, t.dim);
+                if ui.button_hit(r) {
+                    if shut {
+                        st.blame_shut.retain(|h| h != &x.host);
+                    } else {
+                        st.blame_shut.push(x.host.clone());
+                    }
+                }
+                if r.contains(p) {
+                    focus = Some((x.host.clone(), None));
+                }
+            }
+            Row::Job(h, j) => {
+                ui.c.rect(r.x + 12, r.y + 3, 4, r.h - 6, line::colour(&j.stage));
+                ui.label_in(r.x + 20, r.y + 4, 150, &j.id, &F6X10, if j.state == "running" { t.up } else if j.high { t.warn } else { t.ink });
+                ui.label_in(r.x + 172, r.y + 4, r.w - 176, &waits_on(j, h), &F6X10, t.dim);
+                if r.contains(p) && !h.is_empty() {
+                    focus = Some((h.to_string(), Some(j.id.clone())));
+                }
+                if ui.button_hit(r) && !h.is_empty() {
+                    clicked = Some((h.to_string(), Some(j.id.clone())));
+                }
+                if job_is(st.blame_keep.as_ref(), h, &j.id) {
+                    ui.outline(r, t.warn);
+                }
+            }
+            Row::Nothing => {
+                ui.label_in(r.x + 20, r.y + 4, r.w - 24, "nothing running or dealt to it", &F6X10, t.dim);
+            }
+            Row::Lost => {
+                ui.c.rect(r.x, r.y, r.w, r.h, t.tile);
+                ui.label(r.x + 7, r.y + 2, "no machine can take these now", &F8X13, t.alarm);
+            }
+        }
+    }
+    (focus, clicked)
+}
+
+fn job_is(f: Option<&Focus>, host: &str, id: &str) -> bool {
+    f.map(|(h, j)| h == host && j.as_deref() == Some(id)).unwrap_or(false)
+}
+
+/// Words broken into lines of at most `n` characters.
+fn wrap(text: &str, n: usize) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let mut cur = String::new();
+    for w in text.split_whitespace() {
+        if !cur.is_empty() && cur.len() + 1 + w.len() > n {
+            out.push(std::mem::take(&mut cur));
+        }
+        if !cur.is_empty() {
+            cur.push(' ');
+        }
+        cur.push_str(w);
+    }
+    if !cur.is_empty() {
+        out.push(cur);
+    }
+    out
+}
+
+/// What the pointer is on, or what a click keeps, written out under the queues: a tooltip there
+/// would cover the very arrows it explains.
+fn detail_pane(ui: &mut Ui, r: Rect, m: &Model, focus: Option<&Focus>, kept: bool) {
+    let t = ui.t;
+    let b = &m.blame;
+    ui.c.rect(r.x, r.y, r.w, r.h, t.tile);
+    ui.outline(r, if focus.is_some() { t.warn } else { t.line });
+    let lines: Vec<String> = match focus {
+        None => vec!["Point at a machine, at the table or in its queue above: its jobs are drawn at the table in the order they will run, an arrow from each to the job it waits on. Point at a job for its own. A click keeps it.".to_string()],
+        Some((h, Some(id))) => match b.queue_of(h).iter().chain(b.unplaced.iter()).find(|j| &j.id == id) {
+            Some(j) => job_tip(j, h),
+            None => vec![format!("{} is no longer in {}'s queue.", id, h)],
+        },
+        Some((h, None)) => match b.seats.iter().find(|x| &x.host == h) {
+            Some(x) => {
+                let q = b.queue_of(h);
+                let mut v = vec![
+                    format!("{}: {}{}", x.host, x.state, if x.job.is_empty() { String::new() } else { format!(", {} for {}", x.job, took(x.for_min)) }),
+                    format!("Busy {:.1}% of the last {:.0} h, {:.1}% of that the small returnable reads. {} waiting for it.", x.busy, m.past_h.max(1.0), x.help, q.iter().filter(|j| j.state != "running").count()),
+                    format!("Its backup when its own line waits: {}.", x.backup),
+                ];
+                v.push(x.by_stage.iter().take(5).map(|(k, mins)| format!("{} {}", line::short(k), took(*mins))).collect::<Vec<_>>().join(", "));
+                v
+            }
+            None => vec![],
+        },
+    };
+    let n = ((r.w - 12) / 6).max(10) as usize;
+    let mut y = r.y + 4;
+    for l in lines.iter().flat_map(|l| wrap(l, n)) {
+        if y + 10 > r.bottom() - 12 {
+            break;
+        }
+        ui.label(r.x + 6, y, &l, &F6X10, t.ink);
+        y += 11;
+    }
+    let foot = if focus.is_none() { "" } else if kept { "kept: a click on it again lets go" } else { "a click keeps it" };
+    ui.label(r.x + 6, r.bottom() - 12, foot, &F6X10, t.warn);
+}
+
+/// What a job waits on, in a few words: the running one says how long it has run.
+fn waits_on(j: &QJob, host: &str) -> String {
+    let when = match j.start {
+        Some(s) if s > 0.5 => format!(", ~{}", took(s)),
+        _ => String::new(),
+    };
+    match j.wait.as_str() {
+        "" => format!("running, {} in", took(j.start.map(|s| -s).unwrap_or(0.0))),
+        "turn" => format!("in turn{}", when),
+        "build" => format!("its build {}{}", j.on, when),
+        "after" if j.on_host != host => format!("after {} on {}{}", j.on, j.on_host, when),
+        "after" => format!("after {}{}", j.on, when),
+        _ => format!("no machine{}", if j.on.is_empty() { String::new() } else { format!(", after {}", j.on) }),
+    }
+}
+
+fn job_tip(j: &QJob, host: &str) -> Vec<String> {
+    vec![
+        format!("{}: {}", j.id, line::short(&j.stage)),
+        j.title.clone(),
+        match j.wait.as_str() {
+            "" => format!("Running on {} for {}.", host, took(j.start.map(|s| -s).unwrap_or(0.0))),
+            "turn" => format!("Waits its turn on {}: it runs when the job ahead, {}, is done.", host, if j.on.is_empty() { "the running one" } else { &j.on }),
+            "build" => format!("Waits for {}'s build of the newest commit, {}.", host, j.on),
+            "after" => format!("Waits on {}, which {} has: the only wait between two machines.", j.on, if j.on_host.is_empty() { "no machine" } else { &j.on_host }),
+            _ => "No machine that can run it is up, so the forecast deals it to none.".to_string(),
+        },
+        match (j.start, j.end) {
+            (Some(s), Some(e)) if s >= 0.0 => format!("Forecast: starts in {}, ends in {}, at the medians of the last day.", took(s), took(e)),
+            _ => String::new(),
+        },
+        if j.high { "High priority: it goes ahead of the search.".to_string() } else { String::new() },
+    ]
+    .into_iter()
+    .filter(|x| !x.is_empty())
+    .collect()
+}
+
+/// Everything in `area` but `keep` stepped back: every other pixel dark.
+fn step_back(ui: &mut Ui, area: Rect, keep: &[Rect]) {
+    let base = ui.t.base;
+    for y in area.y..area.bottom() {
+        for x in (area.x + (y & 1))..area.right() {
+            if (x & 1) == 0 && !keep.iter().any(|r| r.contains((x, y))) {
+                ui.c.set(x, y, base);
+            }
+        }
+    }
+}
+
+/// JOBS AT THE TABLE (Paul, 5 November: "show the job dependency on hover ... job arrow amongst the
+/// blame circle, with jobs shown"). The machine under the pointer, or in the queue beside, lays its
+/// jobs out between its seat and the table, in the order they will run; each one's wait is an arrow:
+/// grey to the job ahead of it, amber to its build, red to a job another machine has, drawn at that
+/// machine's seat; and red from any job elsewhere that waits on one of these. The rest steps back.
+fn job_arrows(ui: &mut Ui, m: &Model, room: Rect, places: &[Rect], hub: Rect, host: &str, job: Option<&str>) {
+    let t = ui.t;
+    let b = &m.blame;
+    let Some(si) = b.seats.iter().position(|x| x.host == host) else { return };
+    let jobs: Vec<&QJob> = b.queue_of(host).iter().take(14).collect();
+    let seat_at = |h: &str| b.seats.iter().position(|x| x.host == h).map(|i| places[i]);
+    let mid = |r: Rect| (r.x + r.w / 2, r.y + r.h / 2);
+    let mine: Vec<&str> = jobs.iter().map(|j| j.id.as_str()).collect();
+    // The others in it: (machine, its job, whether that job waits on one of these).
+    let mut others: Vec<(String, String, bool, String)> = Vec::new();
+    for j in &jobs {
+        if !j.on.is_empty() && !mine.contains(&j.on.as_str()) && j.on_host != host && seat_at(&j.on_host).is_some() {
+            others.push((j.on_host.clone(), j.on.clone(), false, j.id.clone()));
+        }
+    }
+    for (h, q) in &b.queues {
+        if h != host {
+            for j in q.iter().filter(|j| mine.contains(&j.on.as_str())) {
+                others.push((h.clone(), j.id.clone(), true, j.on.clone()));
+            }
+        }
+    }
+    let mut keep = vec![places[si]];
+    keep.extend(others.iter().filter_map(|(h, ..)| seat_at(h)));
+    step_back(ui, room, &keep);
+    ui.outline2(rect(places[si].x - 3, places[si].y - 3, places[si].w + 6, places[si].h + 6), t.warn);
+    // The stack, between its seat and the table.
+    let (cw, ch, gap) = (184, 15, 4);
+    let ((sx, sy), (hx, hy)) = (mid(places[si]), mid(hub));
+    let n = jobs.len().max(1) as i32;
+    let tot = n * (ch + gap);
+    let x0 = (sx + (hx - sx) * 45 / 100 - cw / 2).clamp(room.x + 30, room.right() - cw - 4);
+    let y0 = (sy + (hy - sy) * 45 / 100 - tot / 2).clamp(room.y + 2, (room.bottom() - tot - 2).max(room.y + 2));
+    let chip = |k: usize| rect(x0, y0 + k as i32 * (ch + gap), cw, ch);
+    let stack = rect(x0 - 4, y0 - 4, cw + 8, tot + 4);
+    ui.c.rect(stack.x, stack.y, stack.w, stack.h, t.base);
+    ui.outline(stack, t.warn);
+    let (a, z) = (edge_of(places[si], mid(stack)), edge_of(stack, mid(places[si])));
+    seg(ui, a, z, t.warn);
+    // Chips of the others, beside their seats, toward the table.
+    let mut count: Vec<(String, i32)> = Vec::new();
+    let mut other_chip = Vec::new();
+    for (h, id, _, _) in &others {
+        let Some(r) = seat_at(h) else { continue };
+        let k = match count.iter_mut().find(|(x, _)| x == h) {
+            Some(c) => {
+                c.1 += 1;
+                c.1
+            }
+            None => {
+                count.push((h.clone(), 0));
+                0
+            }
+        };
+        let (ox, oy) = mid(r);
+        let (px, py) = (ox + (hx - ox) * 30 / 100, oy + (hy - oy) * 30 / 100);
+        let c = rect((px - 70).clamp(room.x, room.right() - 140), py - 8 + k * (ch + gap), 140, ch);
+        other_chip.push((id.clone(), c));
+    }
+    let chip_of = |id: &str| -> Option<Rect> {
+        mine.iter().position(|x| *x == id).map(chip).or_else(|| other_chip.iter().find(|(x, _)| x == id).map(|(_, r)| *r))
+    };
+    let lit = |a: &str, z: &str| job.map(|f| f == a || f == z).unwrap_or(false);
+    // The waits inside the stack: a bracket on its left from a job to the one it waits on.
+    for (k, j) in jobs.iter().enumerate() {
+        let Some(p) = mine.iter().position(|x| *x == j.on) else { continue };
+        let c = if lit(&j.id, &j.on) { t.warn } else if j.wait == "build" { t.warn } else if j.wait == "after" { t.alarm } else { t.dim };
+        let depth = (k as i32 - p as i32).abs().min(5);
+        let x = x0 - 6 - depth * 4;
+        let (ya, yz) = (chip(k).y + ch / 2, chip(p).y + ch / 2);
+        seg(ui, (x0 - 1, ya), (x, ya), c);
+        seg(ui, (x, ya), (x, yz), c);
+        pointer(ui, (x, yz), (x0 - 1, yz), c);
+    }
+    // The waits between machines: from a job to the one it waits on, wherever that is.
+    for (h, id, incoming, theirs) in &others {
+        let _ = h;
+        let (from, to) = if *incoming { (id.as_str(), theirs.as_str()) } else { (theirs.as_str(), id.as_str()) };
+        let (Some(ra), Some(rz)) = (chip_of(from), chip_of(to)) else { continue };
+        let (a, z) = (edge_of(ra, mid(rz)), edge_of(rz, mid(ra)));
+        let c = if lit(from, to) { t.warn } else { t.alarm };
+        pointer(ui, (a.0 + 1, a.1 + 1), (z.0 + 1, z.1 + 1), t.base);
+        pointer(ui, a, z, c);
+    }
+    // The chips, over the lines.
+    let draw_chip = |ui: &mut Ui, r: Rect, j: Option<&QJob>, id: &str, there: &str| {
+        ui.c.rect(r.x, r.y, r.w, r.h, t.tile);
+        ui.c.rect(r.x, r.y, 4, r.h, j.map(|j| line::colour(&j.stage)).unwrap_or(t.dim));
+        let when = match j {
+            Some(j) if j.state == "running" => "now".to_string(),
+            Some(j) => j.start.map(|s| format!("+{}", took(s))).unwrap_or_default(),
+            None => there.to_string(),
+        };
+        ui.label_in(r.x + 7, r.y + 3, r.w - 10, &format!("{} {}", id, when), &F6X10, if j.map(|j| j.state == "running").unwrap_or(false) { t.up } else { t.ink });
+        if job == Some(id) {
+            ui.outline2(rect(r.x - 2, r.y - 2, r.w + 4, r.h + 4), t.warn);
+        }
+    };
+    for (k, j) in jobs.iter().enumerate() {
+        draw_chip(ui, chip(k), Some(j), &j.id, host);
+        ui.tip(chip(k), || job_tip(j, host));
+    }
+    if jobs.is_empty() {
+        ui.label_in(x0 + 6, y0 + 3, cw - 10, "nothing running or dealt to it", &F6X10, t.dim);
+    }
+    for ((h, id, _, _), (_, r)) in others.iter().zip(other_chip.iter()) {
+        let theirs = b.queue_of(h).iter().find(|j| &j.id == id);
+        draw_chip(ui, *r, theirs, id, h);
+        if let Some(j) = theirs {
+            ui.tip(*r, || job_tip(j, h));
+        }
     }
 }
 
@@ -1345,6 +2085,56 @@ mod tests {
         assert_eq!(shape, vec![("w1", None), ("e1", Some("w1")), ("h1-p1", Some("e1")), ("h1-p2", Some("e1"))]);
         assert!(chain_links(&m, "r9").iter().all(|(_, _, p)| p.is_none()));
         assert_eq!((clock(&m.checked, -90.0), clock(&m.checked, 15.0), clock("2026-11-05T00:20:00", -30.0)), ("12:20".to_string(), "14:05".to_string(), "23:50".to_string()));
+    }
+
+    #[test]
+    fn a_zoom_reads_its_bins_and_dates_a_time_by_the_clock_then_on_the_wall() {
+        let doc = r#"{"checked":"2026-11-05T13:00:00","timeline":{"past_h":6,"at":"2026-11-05T13:20:00","lanes":[{"host":"a","up":true}],
+          "zoom":[{"name":"days","bin_min":30,"from_min":-10070,"begins_min":-11796,"lanes":[{"host":"a","bins":[[3,"first",60,"failed",5]]}],
+                   "ticks":[[-6611,"Nov 1"]],"shifts":[[-6498.5,60]]}],
+          "cuda":{"g1":{"top":"M0015-c-g1","best":-1.5,"median":-5.4,"per_day":7.6,"eta_h":23.2,"segments":211,"seg_min":8.6}}}}"#;
+        let m = Model::parse(doc);
+        let z = &m.zoom[0];
+        assert_eq!((z.lanes[0].1[0].0, z.lanes[0].1[0].1.clone()), (3, vec![("first".to_string(), 60.0), ("failed".to_string(), 5.0)]));
+        assert_eq!((z.ticks[0].1.as_str(), z.begins), ("Nov 1", Some(-11796.0)));
+        // Minutes count from when the timeline was measured; before 1 November the clock read summer time.
+        assert_eq!(z.stamp(&m.timeline_at, -11796.0), "Oct 28 09:44");
+        assert_eq!(z.stamp(&m.timeline_at, -60.0), "Nov 5 12:20");
+        assert_eq!((m.cuda[0].0.as_str(), m.cuda[0].1.eta_h, m.cuda[0].1.seg_min), ("g1", Some(23.2), Some(8.6)));
+        assert_eq!(stamp("2024-03-01T00:10:00", -20.0), "Feb 29 23:50");
+        assert_eq!(stamp("2026-01-01T00:00:00", -1.0), "Dec 31 23:59");
+        assert_eq!(ZOOMS.iter().position(|z| *z == "hours"), Some(1), "none chosen is the six hours");
+    }
+
+    #[test]
+    fn a_link_the_planner_names_is_followed_before_the_clock() {
+        let doc = r#"{"timeline":{"past_h":6,"lanes":[
+          {"host":"g","up":true,"jobs":[[-40,-30,"islands",1,"x-g-0007","island g",""],[-30,-20,"islands",1,"x-g-0008","island g",""]]},
+          {"host":"c","up":true,"jobs":[[-15,-5,"other",1,"bridge-001-c","island g","x-g-0007"]]}]}}"#;
+        let m = Model::parse(doc);
+        let l = chain_links(&m, "island g");
+        let by: Vec<(&str, Option<&str>)> = l.iter().map(|(_, j, p)| (j.id.as_str(), p.map(|p| l[p].1.id.as_str()))).collect();
+        // By the clock the read would follow segment 8, the last ended; the planner says 7 made the milestone.
+        assert_eq!(by[2], ("bridge-001-c", Some("x-g-0007")));
+    }
+
+    #[test]
+    fn each_machine_has_its_queue_and_each_job_says_what_it_waits_on() {
+        let doc = r#"{"blame":{"nodes":[{"host":"a"},{"host":"b"}],"queues":{
+          "a":[{"id":"e1","stage":"read","state":"running","wait":"","on":"","on_host":"","start_min":-4,"end_min":null},
+               {"id":"h1","stage":"held","state":"queued","wait":"after","on":"e2","on_host":"b","start_min":3,"end_min":11,"high":true}],
+          "b":[{"id":"e2","stage":"read","state":"running","wait":"","start_min":-1}]},
+          "unplaced":[{"id":"x-c-1","stage":"islands","state":"queued","wait":"no machine"}]}}"#;
+        let m = Model::parse(doc);
+        let q = m.blame.queue_of("a");
+        assert_eq!((q.len(), q[1].on_host.as_str(), q[1].high, q[1].end), (2, "b", true, Some(11.0)));
+        assert!(m.blame.queue_of("nobody").is_empty());
+        assert_eq!(waits_on(&q[0], "a"), "running, 4 min in");
+        assert_eq!(waits_on(&q[1], "a"), "after e2 on b, ~3 min");
+        assert_eq!(waits_on(&m.blame.unplaced[0], ""), "no machine");
+        assert!(job_tip(&q[1], "a").iter().any(|l| l.contains("between two machines")));
+        assert_eq!(wrap("one two three four", 9), vec!["one two", "three", "four"]);
+        assert!(job_is(Some(&("a".to_string(), Some("h1".to_string()))), "a", "h1") && !job_is(None, "a", "h1"));
     }
 
     #[test]

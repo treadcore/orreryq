@@ -843,6 +843,10 @@ fn write_frame(
                     operator: std::env::var("ORRERY_FRAME_OPERATOR").is_ok(),
                     // ORRERY_FRAME_CHAIN=w10839: the Timeline follows that chain, as a click keeps one.
                     chain: std::env::var("ORRERY_FRAME_CHAIN").ok(),
+                    // ORRERY_FRAME_ZOOM=day: the Timeline at that zoom (hour, hours, day, days, weeks, months).
+                    zoom: std::env::var("ORRERY_FRAME_ZOOM").ok().and_then(|z| pipeline::ZOOMS.iter().position(|x| *x == z)),
+                    // ORRERY_FRAME_BLAME=host or host/job: the Blame page keeps that, as a click does.
+                    blame_keep: std::env::var("ORRERY_FRAME_BLAME").ok().map(|v| match v.split_once('/') { Some((h, j)) => (h.to_string(), Some(j.to_string())), None => (v, None) }),
                     ..Default::default()
                 };
                 let keys = pipeline::column_keys(st.page);

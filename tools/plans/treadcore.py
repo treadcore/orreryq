@@ -86,10 +86,12 @@ def load(p, default=None):
         return default
 
 
-def save(p, v):
+def save(p, v, compact=False):
     tmp = p + ".tmp"
     with open(tmp, "w") as f:
-        json.dump(v, f, indent=1)
+        # Compact for what a screen reads each minute and no person does: the Timeline's bins,
+        # indented, are an array a line and more than doubled pipeline.json.
+        json.dump(v, f, separators=(",", ":")) if compact else json.dump(v, f, indent=1)
     os.replace(tmp, p)
 
 
@@ -4842,6 +4844,10 @@ class Plan:
             return ""
         old = self.state.get("crucible_rules") or {}
         moved = ["%s %g -> %g" % (k, old["rules"][k], v) for k, v in sorted(rules.items()) if k in (old.get("rules") or {}) and old["rules"][k] != v]
+        if moved:
+            moves = self.state.setdefault("rules_moves", [])
+            moves.append({"at": time.time(), "text": "the islands' rules at %s: %s" % (self.short(), ", ".join(moved))})
+            del moves[:-50]
         if moved or lost and not old.get("lost"):
             self.flag("crucible", "the world islands now play treadcore's rules at %s: %s%s" % (
                 self.short(), ", ".join(moved) or "nothing moved", "; not in rules.rs, left at crucible's own: %s" % ", ".join(lost) if lost else ""),
@@ -5383,7 +5389,7 @@ class Plan:
                 doc[name] = part()
             except Exception as e:
                 print("pipeline %s: %s" % (name, e), file=sys.stderr)
-        save(os.path.join(self.pd, "pipeline.json"), doc)
+        save(os.path.join(self.pd, "pipeline.json"), doc, compact=True)
 
     @staticmethod
     def stage_of(i, title=""):
@@ -5472,8 +5478,10 @@ class Plan:
         bars, open_ = {}, {}
         # Busy minutes by stage, each job as measured (the bars below merge what touches).
         busy = {}
-        # And each job alone, with the chain it is a link of, for the page to follow one through.
-        each = {}
+        # And each job alone, with the chain it is a link of, for the page to follow one through, and
+        # the job it follows where the titles cannot say (a bridge read after its milestone's segment).
+        each, extra = {}, self.chain_extra()
+        link = lambda job, title: list(extra[job]) if job in extra else [self.chain_of(job, title), ""]
         for l in lines:
             try:
                 e = json.loads(l)
@@ -5491,7 +5499,7 @@ class Plan:
                     k = self.stage_of(job, titles.get(job, ""))
                     bars.setdefault(host, []).append([round((max(t0, since) - now_) / 60, 1), round((t1 - now_) / 60, 1), k, 1 if ev == "done" else 0])
                     each.setdefault(host, []).append([round((max(t0, since) - now_) / 60, 2), round((t1 - now_) / 60, 2), k, 1 if ev == "done" else 0,
-                                                      job, self.chain_of(job, titles.get(job, ""))])
+                                                      job] + link(job, titles.get(job, "")))
                     by = busy.setdefault(host, {})
                     by[k] = round(by.get(k, 0.0) + (t1 - max(t0, since)) / 60, 1)
         med = {}
@@ -5507,13 +5515,13 @@ class Plan:
                 gone = (now_ - l.get("since", now_)) / 60
                 left = max(dur(k) - gone, dur(k) * 0.1)
                 bars.setdefault(n, []).append([round(-gone, 1), 0.0, k, 2])
-                each.setdefault(n, []).append([round(-min(gone, self.TIMELINE_H * 60), 2), 0.0, k, 2, l["job"], self.chain_of(l["job"], l.get("title", ""))])
+                each.setdefault(n, []).append([round(-min(gone, self.TIMELINE_H * 60), 2), 0.0, k, 2, l["job"]] + link(l["job"], l.get("title", "")))
                 future.setdefault(n, []).append([0.0, round(left, 1), k])
                 free[n] = left
                 by = busy.setdefault(n, {})
                 by[k] = round(by.get(k, 0.0) + min(gone, self.TIMELINE_H * 60), 1)
         cpu = [h["name"] for h in self.qcfg.get("hosts", []) if "cpu" in h.get("caps", ["cpu"]) and free.get(h["name"]) is not None]
-        dealt = {}
+        dealt, dealt_at = {}, {}
         for j in self.queue_jobs():
             need = j.get("needs") or "cpu"
             pool = [need[5:]] if need.startswith("host:") else cpu if need == "cpu" else [n for n in hosts if free.get(n) is not None and need in next(h.get("caps", []) for h in self.qcfg["hosts"] if h["name"] == n)]
@@ -5523,20 +5531,11 @@ class Plan:
             n = min(pool, key=lambda x: free[x])
             k = self.stage_of(j.get("id", ""), j.get("title", ""))
             future.setdefault(n, []).append([round(free[n], 1), round(free[n] + dur(k), 1), k])
+            dealt_at[j.get("id", "")] = [round(free[n], 1), round(free[n] + dur(k), 1)]
             free[n] += dur(k)
             dealt[j.get("id", "")] = n
-        marks = []
-        for t, rid, st_ in self.promotions():
-            if t >= since:
-                marks.append({"at": round((t - now_) / 60, 1), "kind": "generation", "text": rid})
-        for r in self.runs():
-            if r["kind"] == "promote" and self.rstate(r["id"]).get("status") == "failed":
-                try:
-                    t = os.path.getmtime(os.path.join(self.q, "logs", r["id"] + "-promote.log"))
-                except OSError:
-                    continue
-                if t >= since:
-                    marks.append({"at": round((t - now_) / 60, 1), "kind": "failed", "text": r["id"]})
+        # Every milestone of three months: the page shows those its zoom reaches.
+        marks = self.timeline_marks(now_)
         d = self.state.get("difficulty", {})
         if d.get("eases_at_min") is not None and d.get("dry_min") is not None:
             marks.append({"at": round(d["eases_at_min"] - d["dry_min"], 1), "kind": "eases", "text": "easier"})
@@ -5547,7 +5546,274 @@ class Plan:
         for n in hosts:
             lanes.append({"host": n, "up": free.get(n) is not None, "past": self.merge_bars(bars.get(n, [])), "next": future.get(n, [])[:12],
                           "jobs": sorted(each.get(n, []))})
-        return {"past_h": self.TIMELINE_H, "lanes": lanes, "marks": marks, "busy": busy, "dealt": dealt}
+        seg_min = {n: round(st.median([j[1] - j[0] for j in each.get(n, []) if j[2] == "islands" and j[3] == 1]), 1)
+                   for n in hosts if any(j[2] == "islands" and j[3] == 1 for j in each.get(n, []))}
+        # Its own clock: every minute on the page is from this moment, not the pass's start.
+        return {"past_h": self.TIMELINE_H, "at": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(now_)), "lanes": lanes, "marks": marks, "busy": busy, "dealt": dealt, "dealt_at": dealt_at,
+                "zoom": self.zoom_view(self.timeline_bins(), hosts, now_), "cuda": self.cuda_return(now_, seg_min)}
+
+    # ---- the Timeline zoomed out (Paul, 5 November: "maybe we can zoom timeline in and out.
+    # months, weeks, days, day, hours, hour"), its milestones, and when the GPU hands anything on --
+    # The hour and the six hours are drawn from each job; a day and more from bins of the event log,
+    # each bin the share of its time a machine spent in each stage.
+    BIN_FINE_S, BIN_COARSE_S, BIN_FINE_DAYS = 300, 3600, 14
+    # (name, hours shown, seconds a bin, which bins it is made of)
+    ZOOMS = (("day", 24, 300, "fine"), ("days", 7 * 24, 1800, "fine"), ("weeks", 28 * 24, 7200, "coarse"), ("months", 91 * 24, 21600, "coarse"))
+
+    def timeline_bins(self):
+        """Busy seconds by machine, stage and bin, read on from where the last pass stopped in the
+        event log (plan/timeline-bins.json): five-minute bins for two weeks, hours for always. Time
+        a job failed, stopped or was sent back is `failed`, whatever its stage, as the hours draw it."""
+        path, keep = os.path.join(self.q, "events.jsonl"), os.path.join(self.pd, "timeline-bins.json")
+        c = load(keep, {}) or {}
+        try:
+            size = os.path.getsize(path)
+        except OSError:
+            return c
+        if c.get("v") != 1 or c.get("offset", 0) > size:
+            c = {"v": 1, "offset": 0, "open": {}, "fine": {}, "coarse": {}, "first": None}
+        with open(path, "rb") as f:
+            f.seek(c["offset"])
+            data = f.read()
+        whole = data.rfind(b"\n") + 1
+        parse = lambda t: time.mktime(time.strptime(t, "%Y-%m-%dT%H:%M:%S"))
+
+        def add(host, k, t0, t1):
+            for name, w in (("fine", self.BIN_FINE_S), ("coarse", self.BIN_COARSE_S)):
+                lane, b = c[name].setdefault(host, {}), int(t0 // w)
+                while b * w < t1:
+                    part = min(t1, (b + 1) * w) - max(t0, b * w)
+                    if part > 0:
+                        cell = lane.setdefault(str(b), {})
+                        cell[k] = round(cell.get(k, 0) + part, 1)
+                    b += 1
+        for l in data[:whole].split(b"\n"):
+            if b'"job"' not in l:
+                continue
+            try:
+                e = json.loads(l)
+                t = parse(e["t"])
+            except (ValueError, KeyError):
+                continue
+            c["first"] = c.get("first") or t
+            ev, job = e.get("event"), e.get("job")
+            if ev == "started" and e.get("host"):
+                c["open"][job] = [t, e["host"]]
+            elif ev in ("done", "failed", "stopped", "requeued") and job in c["open"]:
+                t0, host = c["open"].pop(job)
+                add(host, self.stage_of(job) if ev == "done" else "failed", t0, t)
+        c["offset"] += whole
+        now_ = time.time()
+        old = int((now_ - self.BIN_FINE_DAYS * 86400) // self.BIN_FINE_S)
+        for lane in c["fine"].values():
+            for k in [k for k in lane if int(k) < old]:
+                del lane[k]
+        # A start with no end for two days was lost with its keeper; it is not still running.
+        c["open"] = {j: v for j, v in c["open"].items() if now_ - v[0] < 2 * 86400}
+        save(keep, c, compact=True)
+        return c
+
+    @staticmethod
+    def zoom_ticks(name, lo, hi):
+        """Where the axis is marked, minutes from now, and what it says: a day by its clock, the
+        longer ones by their midnights, labelled as often as they have room."""
+        out, lt = [], time.localtime(lo)
+        day0 = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 0, 0, 0, 0, 0, -1))
+        step = 3 * 3600 if name == "day" else 86400
+        t = day0
+        while t <= hi:
+            if t >= lo:
+                d = time.localtime(t)
+                if name == "day":
+                    say = "%s %d" % (time.strftime("%b", d), d.tm_mday) if d.tm_hour == 0 else time.strftime("%H:%M", d)
+                elif name == "days":
+                    say = "%s %d" % (time.strftime("%b", d), d.tm_mday)
+                elif name == "weeks":
+                    say = "%s %d" % (time.strftime("%b", d), d.tm_mday) if d.tm_wday == 0 else ""
+                else:
+                    say = time.strftime("%b", d) if d.tm_mday == 1 else ""
+                if name != "months" or d.tm_mday == 1 or d.tm_wday == 0:
+                    out.append([round((t - hi) / 60, 1), say])
+            # Midnight to midnight by the calendar: a day of 23 or 25 hours keeps them at midnight.
+            nxt = time.localtime(t + step + 7200)
+            t = time.mktime((nxt.tm_year, nxt.tm_mon, nxt.tm_mday, 0, 0, 0, 0, 0, -1)) if step == 86400 else t + step
+        return out
+
+    def zoom_view(self, bins, hosts, now_):
+        """Each zoom: its bins, a lane a machine, each bin [index, stage, percent, stage, percent ...]
+        busiest first; bins on the local clock, so a day's begin at midnight. What runs now counts
+        to now."""
+        out, off = [], time.localtime(now_).tm_gmtoff
+        for name, span_h, w, src in self.ZOOMS:
+            nb = int(span_h * 3600 // w)
+            lo = ((now_ + off) // w) * w - off - (nb - 1) * w
+            unit = self.BIN_FINE_S if src == "fine" else self.BIN_COARSE_S
+            lanes = []
+            for h in hosts:
+                acc = {}
+                for k, cell in ((bins.get(src) or {}).get(h) or {}).items():
+                    i = int((int(k) * unit - lo) // w)
+                    if 0 <= i < nb:
+                        a = acc.setdefault(i, {})
+                        for stage, sec in cell.items():
+                            a[stage] = a.get(stage, 0) + sec
+                for j, (t0, host) in (bins.get("open") or {}).items():
+                    if host == h:
+                        t = max(t0, lo)
+                        while t < now_:
+                            i = int((t - lo) // w)
+                            e_ = min(now_, lo + (i + 1) * w)
+                            if 0 <= i < nb:
+                                a = acc.setdefault(i, {})
+                                a[self.stage_of(j)] = a.get(self.stage_of(j), 0) + e_ - t
+                            t = e_
+                rows = []
+                for i in sorted(acc):
+                    row = [i]
+                    for stage, sec in sorted(acc[i].items(), key=lambda kv: -kv[1]):
+                        pct = int(round(100.0 * sec / w))
+                        if pct >= 1:
+                            row += [stage, min(pct, 100)]
+                    if len(row) > 1:
+                        rows.append(row)
+                lanes.append({"host": h, "bins": rows})
+            first = bins.get("first")
+            out.append({"name": name, "span_h": span_h, "bin_min": w / 60, "from_min": round((lo - now_) / 60, 1), "lanes": lanes,
+                        "begins_min": round((first - now_) / 60, 1) if first else None, "ticks": self.zoom_ticks(name, lo, now_),
+                        "shifts": self.clock_shifts(lo, now_)})
+        return out
+
+    @staticmethod
+    def clock_shifts(lo, now_):
+        """[minutes from now, minutes the clock read more before it than now]: each change of summer
+        time in the span, so the page's dates of a time before one read the clock that was on the
+        wall then (the event log begins 09:34 on 28 October, summer time, not 08:34)."""
+        out, off_now, t = [], time.localtime(now_).tm_gmtoff, lo
+        prev = time.localtime(lo).tm_gmtoff
+        while t < now_:
+            t2 = min(now_, t + 3600)
+            o = time.localtime(t2).tm_gmtoff
+            if o != prev:
+                a, b = t, t2
+                while b - a > 60:
+                    mid = (a + b) / 2
+                    a, b = (mid, b) if time.localtime(mid).tm_gmtoff == prev else (a, mid)
+                out.append([round((b - now_) / 60, 1), (prev - off_now) // 60])
+                prev = o
+            t = t2
+        return out
+
+    def timeline_marks(self, now_):
+        """The milestones of three months, each where it happened, minutes from now: a generation
+        on the line, the line on main, a candidate the tests stopped, the game's rules moving, a
+        GPU island's milestone, a net shipped into the game, and the islands taking new rules."""
+        lo, marks = now_ - 91 * 86400, []
+        def mark(t, kind, text):
+            if t >= lo:
+                lt = time.localtime(t)
+                marks.append({"at": round((t - now_) / 60, 1), "kind": kind, "text": text,
+                              "when": "%s %d %s" % (time.strftime("%b", lt), lt.tm_mday, time.strftime("%H:%M", lt))})
+        cand = {r["id"]: ((r.get("params") or {}).get("candidate") or "").split("/")[-1] for r in self.runs() if r["kind"] == "promote"}
+        for t, rid, st_ in self.promotions():
+            mark(t, "generation", ("%s %s" % (rid, cand.get(rid, ""))).strip())
+        for r in self.runs():
+            if r["kind"] == "promote" and self.rstate(r["id"]).get("status") == "failed":
+                try:
+                    mark(os.path.getmtime(os.path.join(self.q, "logs", r["id"] + "-promote.log")), "failed", ("%s %s" % (r["id"], cand.get(r["id"], ""))).strip())
+                except OSError:
+                    pass
+        # Main, the game's rules and the nets shipped, from treadcore's main as it went.
+        log = run(["git", "-C", self.tc, "log", "origin/main", "--first-parent", "--since=%d" % int(lo), "--format=%ct %h %s"]).stdout.splitlines()
+        landed = {}
+        for l in log:
+            p = l.split(" ", 2)
+            if len(p) == 3 and p[2].startswith("promote grove/"):
+                landed.setdefault(int(p[0]), []).append(p[2].split()[1].split("/")[-1])
+        for t, ws in landed.items():
+            mark(t, "main", "main: " + ", ".join(sorted(ws)))
+        games = run(["git", "-C", self.tc, "log", "origin/main", "--first-parent", "--since=%d" % int(lo), "--format=%ct %h", "--",
+                     "source/treadcore-sim/GAME_VERSION", "source/treadcore-brain/SCORE_VERSION"]).stdout.split()
+        for t, sha in zip(games[0::2], games[1::2]):
+            mark(int(t), "game", "game " + (self.game_at(sha) or "?"))
+        ships = run(["git", "-C", self.tc, "log", "origin/main", "--since=%d" % int(lo), "--format=@%ct %h", "--name-only", "--",
+                     "nets/gladiator.bin", "nets/scholar.bin"]).stdout
+        for part in ships.split("@")[1:]:
+            w = part.split()
+            if len(w) >= 3:
+                mark(int(w[0]), "ship", "into the game: " + ", ".join({"nets/gladiator.bin": "Gladiator", "nets/scholar.bin": "Scholar"}.get(x, x) for x in w[2:]))
+        home = self.crucible_home()
+        for m in self.ladder_state(home).get("milestones", []) if self.cuda else []:
+            try:
+                mark(time.mktime(time.strptime(m["made"], "%Y-%m-%dT%H:%M:%S")), "milestone", m["id"])
+            except (KeyError, ValueError):
+                pass
+        # The islands read treadcore's rules at each segment (world_flags); the first world segment
+        # is when they began to, and each move since is kept in the state.
+        if self.cuda and "world" in home:
+            try:
+                with open(self.crucible_dir("lineage.tsv", home=home)) as f:
+                    f.readline()
+                    first = f.readline().split("\t")[0]
+                mark(time.mktime(time.strptime(first, "%Y-%m-%dT%H:%M:%S")), "rules", "the islands play treadcore's rules")
+            except (OSError, ValueError):
+                pass
+        for r in self.state.get("rules_moves") or []:
+            mark(r["at"], "rules", r["text"])
+        return sorted(marks, key=lambda m: m["at"])
+
+    def cuda_return(self, now_, seg_min=None):
+        """When a GPU island next gives the game anything. Its segments go to the ladder each ten
+        minutes or so, but the game sees a net only when one beats the newest milestone by two
+        errors (crucible_ladder_home), and then only by the bridge's read on a CPU machine and a
+        ship. So, a GPU lane: the milestone to beat, how near its exams of the last six hours came,
+        the climb of their median over the last day, and the hours until it would cross at that
+        climb. A GUESS FROM A TREND, said as one; none when the median does not climb."""
+        home = self.crucible_home()
+        lad = self.ladder_state(home).get("milestones", [])
+        top = lad[-1] if lad else None
+        rows = []
+        try:
+            import csv
+            with open(self.crucible_dir("lineage.tsv", home=home)) as f:
+                rows = [r for r in csv.DictReader(f, delimiter="\t") if r.get("margin_se") not in (None, "-", "")]
+        except OSError:
+            pass
+        parse = lambda t: time.mktime(time.strptime(t, "%Y-%m-%dT%H:%M:%S"))
+        out = {}
+        for h in self.cuda:
+            mine = [(parse(r["time"]), float(r["margin_se"])) for r in rows if r["island"] == h["name"] and top and r["against"] == top["id"]]
+            last6 = [m for t, m in mine if t >= now_ - 6 * 3600]
+            hours = {}
+            for t, m in mine:
+                if t >= now_ - 24 * 3600:
+                    hours.setdefault(int((t - now_) // 3600), []).append(m)
+            pts = [(k + 0.5, st.median(v)) for k, v in sorted(hours.items())]
+            slope = None
+            if len(pts) >= 6:
+                mx, my = st.mean(p[0] for p in pts), st.mean(p[1] for p in pts)
+                vx = sum((p[0] - mx) ** 2 for p in pts)
+                slope = sum((p[0] - mx) * (p[1] - my) for p in pts) / vx * 24 if vx else None
+            med = st.median(last6) if last6 else None
+            eta = (2.0 - med) / slope * 24 if slope and slope > 0 and med is not None and med < 2 else None
+            out[h["name"]] = {"top": top["id"] if top else "", "top_made": top.get("made", "") if top else "", "segments": len(mine),
+                              "best": round(max(last6), 1) if last6 else None, "median": round(med, 1) if med is not None else None,
+                              "per_day": round(slope, 1) if slope is not None else None, "eta_h": round(eta, 1) if eta is not None else None,
+                              "seg_min": (seg_min or {}).get(h["name"])}
+        return out
+
+    def chain_extra(self):
+        """Links the titles cannot say: a bridge read is the island's, after the segment that made
+        the milestone it reads, so the island's chain runs on to the CPU machine that reads it."""
+        made = {m["id"]: m.get("job") for m in self.ladder_state(self.crucible_home()).get("milestones", [])} if self.cuda else {}
+        br = self.state.get("bridge") or {}
+        out = {}
+        for r in (br.get("reads") or []) + ([br["current"]] if br.get("current") else []):
+            seg = made.get(r.get("label"))
+            m = re.match(r"M\d+-(.+)-g\d+$", r.get("label") or "")
+            if m:
+                for j in r.get("jobs") or []:
+                    out[j] = ("island " + m.group(1), seg or "")
+        return out
 
     # The backup: the small reads a free lane takes from the queue when its own line has nothing for
     # it, each returned whole (its seeds pooled with every other read of its question).
@@ -5587,21 +5853,44 @@ class Plan:
                           "by_stage": [[k, v] for k, v in sorted(b.items(), key=lambda kv: -kv[1])],
                           "backup": "its own island's next segment: a population lives on its card" if gpu
                           else "the standing search: a first read, 55 seeds, about 3 minutes, returned whole"})
+        # EACH MACHINE'S QUEUE (Paul, 5 November: "a filtered job queue for each machine ... show the
+        # job dependency on hover"): what it runs, then what the forecast deals it in turn, each
+        # with the job it waits on and where that job is: its build, a job another machine has, or
+        # simply the one ahead of it on this machine.
+        at_ = tl.get("dealt_at", {})
+        queues = {h["name"]: [] for h in self.qcfg.get("hosts", [])}
+        for n, l in live.items():
+            if l.get("job") and n in queues:
+                queues[n].append({"id": l["job"], "title": l.get("title", ""), "stage": self.stage_of(l["job"], l.get("title", "")), "state": "running",
+                                  "wait": "", "on": "", "on_host": "", "start_min": -round((now_ - l.get("since", now_)) / 60, 1), "end_min": None, "high": False})
+        unplaced = []
         waits = {}
         for j in self.queue_jobs():
             jid, a = j.get("id", ""), dealt.get(j.get("id", ""))
+            row = {"id": jid, "title": j.get("title", ""), "stage": self.stage_of(jid, j.get("title", "")), "state": "queued",
+                   "high": j.get("priority") == "high", "start_min": (at_.get(jid) or [None])[0], "end_min": (at_.get(jid) or [None, None])[1]}
             if not a:
+                pend = [x for x in j.get("after", []) if x not in done]
+                row.update({"wait": "no machine", "on": pend[0] if pend else "", "on_host": running.get(pend[0], "") if pend else "",
+                            "needs": j.get("needs") or "cpu"})
+                unplaced.append(row)
                 continue
             ah = j["after_host"].format(host=a) if j.get("after_host") else ""
             pend = [x for x in j.get("after", []) if x not in done]
             if ah and ah not in done:
-                b, kind = a, "build"
+                b, kind, on = a, "build", ah
             elif pend:
-                b, kind = running.get(pend[0]) or dealt.get(pend[0]) or a, "after"
+                b, kind, on = running.get(pend[0]) or dealt.get(pend[0]) or a, "after", pend[0]
             else:
-                b, kind = a, "turn"
+                b, kind, on = a, "turn", ""
             if b == a and kind == "after":
                 kind = "turn"
+            ahead = queues.get(a) or []
+            if kind == "turn" and not on and ahead:
+                on = ahead[-1]["id"]
+            row.update({"wait": kind, "on": on, "on_host": b})
+            if a in queues and len(queues[a]) < 30:
+                queues[a].append(row)
             waits.setdefault((a, b, kind), []).append(jid)
         edges = [{"from": a, "to": b, "kind": k, "n": len(js), "jobs": js[:8]} for (a, b, k), js in sorted(waits.items())]
         asked = {j.get("id", "") for j in self.queue_jobs()} | set(running)
@@ -5616,7 +5905,7 @@ class Plan:
             planner.append({"run": r["id"], "kind": r["kind"], "host": last.get("host", ""), "job": last["id"],
                             "for_min": round((now_ - time.mktime(time.strptime(last["ended"], "%Y-%m-%dT%H:%M:%S"))) / 60, 1)})
         return {"nodes": nodes, "edges": edges, "planner": planner, "handoffs": self.handoffs(recent),
-                "queued": len(self.queue_jobs()), "plan_s": self.qcfg.get("plan_s", 300)}
+                "queued": len(self.queue_jobs()), "plan_s": self.qcfg.get("plan_s", 300), "queues": queues, "unplaced": unplaced[:30]}
 
     def handoffs(self, recent):
         """The minutes a chain waits between its own jobs, over the last day: from one coming back to

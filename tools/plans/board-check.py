@@ -927,6 +927,11 @@ kinds = {(e["from"], e["to"], e["kind"]): e["jobs"] for e in bl["edges"]}
 assert kinds == {("a-cuda", "a-cuda", "turn"): ["x-3"], ("a", "a", "build"): ["w1"], ("b", "a", "after"): ["h1"], ("b", "b", "turn"): ["w2"]}, kinds
 assert [h["run"] for h in bl["planner"]] == ["r7"] and bl["planner"][0]["host"] == "b", "r7's step came back from b; r8 has nothing back yet"
 seat = {s_["host"]: s_ for s_ in bl["nodes"]}
+# Each machine's queue, filtered: what it runs, then what is dealt it, each with the job it waits on.
+qs = {h: [(r["id"], r["wait"], r["on"], r["on_host"]) for r in rows] for h, rows in bl["queues"].items()}
+assert qs == {"a": [("e1", "", "", ""), ("w1", "build", "prep-a-c2", "a")], "b": [("h1", "after", "e1", "a"), ("w2", "turn", "h1", "b")],
+              "a-cuda": [("x-2", "", "", ""), ("x-3", "turn", "x-2", "a-cuda")]}, qs
+assert bl["queues"]["a"][0]["state"] == "running" and bl["unplaced"] == []
 assert seat["a"]["busy_pct"] == 98.3 and seat["a"]["help_pct"] == 84.7 and seat["a-cuda"]["gpu"] and seat["a-cuda"]["help_pct"] == 100.0
 assert not seat["b"]["gpu"] and seat["b"]["busy_pct"] == 0.0
 _sh.rmtree(tb.q)
@@ -1122,3 +1127,73 @@ links = [("w10839", "trial"), ("e9400", "read on 2 of w10839 (300 seeds more, z 
 got = [P.chain_of(i, t) for i, t in links]
 assert got == ["w10839"] * 6 + ["r0187", "clone-003", "build 2180ded", "island calber-cuda", "line 0724007", "f0251"], got
 print("following a chain: every check holds")
+
+# THE ZOOM (5 November): the event log binned as it grows, read on from where it stopped, the same as
+# read whole; each zoom's bins on the local clock; the clock's summer time said; and the GPU's return.
+class Bins(P):
+    def __init__(self, q):
+        self.q, self.pd, self.state = q, os.path.join(q, "plan"), {}
+        os.makedirs(self.pd)
+
+
+bq = tempfile.mkdtemp()
+bp = Bins(bq)
+base = time.mktime((2026, 11, 5, 10, 0, 0, 0, 0, -1))
+stamp_ = lambda t: time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(t))
+ev = [{"t": stamp_(base), "event": "started", "job": "w1", "host": "a"},
+      {"t": stamp_(base + 450), "event": "done", "job": "w1", "host": "a"},
+      {"t": stamp_(base + 450), "event": "started", "job": "e2", "host": "a"},
+      {"t": stamp_(base + 600), "event": "failed", "job": "e2", "host": "a"}]
+with open(os.path.join(bq, "events.jsonl"), "w") as f:
+    f.write("\n".join(json.dumps(e) for e in ev[:2]) + "\n" + json.dumps(ev[2])[:20])  # a line half written
+one = bp.timeline_bins()
+assert one["offset"] < os.path.getsize(os.path.join(bq, "events.jsonl")), "a half-written line waits for its end"
+with open(os.path.join(bq, "events.jsonl"), "w") as f:
+    f.write("\n".join(json.dumps(e) for e in ev) + "\n")
+two = bp.timeline_bins()
+k0, k1 = str(int(base // 300)), str(int(base // 300) + 1)
+assert two["fine"]["a"][k0] == {"first": 300.0} and two["fine"]["a"][k1] == {"first": 150.0, "failed": 150.0}, two["fine"]["a"]
+assert two["coarse"]["a"][str(int(base // 3600))] == {"first": 450.0, "failed": 150.0} and not two["open"]
+os.remove(os.path.join(bp.pd, "timeline-bins.json"))
+assert bp.timeline_bins()["fine"] == two["fine"], "read on from where it stopped, the same as read whole"
+zv = bp.zoom_view(two, ["a"], base + 3600)
+day = zv[0]
+assert day["name"] == "day" and day["bin_min"] == 5 and len(day["lanes"][0]["bins"]) == 2
+assert day["lanes"][0]["bins"][1] == [day["lanes"][0]["bins"][0][0] + 1, "first", 50, "failed", 50], day["lanes"][0]["bins"]
+assert all((day["from_min"] + 60 * i) % 5 == 0 for i in range(3)), "a day's bins begin on the five minutes"
+assert zv[1]["lanes"][0]["bins"][0][1:] == ["first", 25, "failed", 8], zv[1]["lanes"][0]["bins"]
+nov1 = time.mktime((2026, 11, 2, 12, 0, 0, 0, 0, -1))
+sh = P.clock_shifts(nov1 - 3 * 86400, nov1)
+assert len(sh) == 1 and sh[0][1] == 60 and abs(sh[0][0] - (time.mktime((2026, 11, 1, 1, 0, 0, 0, 0, 0)) - nov1) / 60) < 1.5, sh
+tk = P.zoom_ticks("days", nov1 - 3 * 86400, nov1)
+assert [x[1] for x in tk] == ["Oct 31", "Nov 1", "Nov 2"] and round(tk[2][0] - tk[1][0]) == 25 * 60, tk  # the day of 25 hours
+assert [x[1] for x in P.zoom_ticks("day", nov1 - 7 * 3600, nov1)] == ["06:00", "09:00", "12:00"]
+_sh.rmtree(bq)
+
+
+class Isle(P):
+    def __init__(self, q):
+        self.q, self.pd, self.state, self.cfg = q, os.path.join(q, "plan"), {}, {"crucible": {"world": True}}
+        self.cuda = [{"name": "g1"}]
+        self.home = "fleet/q-grove"
+    def crucible_home(self):
+        return "crucible-world-hybrid"
+
+
+iq = tempfile.mkdtemp()
+ip = Isle(iq)
+os.makedirs(os.path.join(iq, "crucible-world-hybrid"))
+ip.state["crucible_ladder:crucible-world-hybrid"] = {"milestones": [{"id": "M0003-g1-g90", "job": "x-g1-0007", "made": "2026-11-04T05:42:03"}]}
+now0 = time.time()
+with open(os.path.join(iq, "crucible-world-hybrid", "lineage.tsv"), "w") as f:
+    f.write("time\tjob\tisland\tgen\tyard_win\tagainst\twin\tdraw\tloss\tmargin_se\tladder_mean\tresult\n")
+    for h in range(24):  # the median climbs one error an hour, from -22 a day ago to +1 now
+        for d in (-0.5, 0.0, 0.5):
+            f.write("%s\tx\tg1\t1\t-\tM0003-g1-g90\t0\t1\t0\t%.2f\t0.1\tkept\n" % (stamp_(now0 - (23.5 - h) * 3600), h - 22.5 + 0.5 + d))
+cr = ip.cuda_return(now0, {"g1": 9.0})["g1"]
+assert cr["top"] == "M0003-g1-g90" and abs(cr["per_day"] - 24) < 0.5 and cr["seg_min"] == 9.0, cr
+assert cr["median"] == -1.5 and cr["best"] == 1.5 and abs(cr["eta_h"] - 3.5) < 0.2, cr
+ip.state["bridge"] = {"reads": [{"label": "M0003-g1-g90", "jobs": ["bridge-001-c", "bridge-001-s"]}]}
+assert ip.chain_extra() == {"bridge-001-c": ("island g1", "x-g1-0007"), "bridge-001-s": ("island g1", "x-g1-0007")}
+_sh.rmtree(iq)
+print("the zoom, its clock, and when the GPU hands anything on: every check holds")
