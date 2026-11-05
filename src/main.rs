@@ -841,6 +841,8 @@ fn write_frame(
                 let mut st = pipeline::State {
                     page: std::env::var("ORRERY_FRAME_PAGE").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
                     operator: std::env::var("ORRERY_FRAME_OPERATOR").is_ok(),
+                    // ORRERY_FRAME_CHAIN=w10839: the Timeline follows that chain, as a click keeps one.
+                    chain: std::env::var("ORRERY_FRAME_CHAIN").ok(),
                     ..Default::default()
                 };
                 let keys = pipeline::column_keys(st.page);

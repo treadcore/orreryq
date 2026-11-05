@@ -5472,6 +5472,8 @@ class Plan:
         bars, open_ = {}, {}
         # Busy minutes by stage, each job as measured (the bars below merge what touches).
         busy = {}
+        # And each job alone, with the chain it is a link of, for the page to follow one through.
+        each = {}
         for l in lines:
             try:
                 e = json.loads(l)
@@ -5488,6 +5490,8 @@ class Plan:
                 if t1 >= since and host:
                     k = self.stage_of(job, titles.get(job, ""))
                     bars.setdefault(host, []).append([round((max(t0, since) - now_) / 60, 1), round((t1 - now_) / 60, 1), k, 1 if ev == "done" else 0])
+                    each.setdefault(host, []).append([round((max(t0, since) - now_) / 60, 2), round((t1 - now_) / 60, 2), k, 1 if ev == "done" else 0,
+                                                      job, self.chain_of(job, titles.get(job, ""))])
                     by = busy.setdefault(host, {})
                     by[k] = round(by.get(k, 0.0) + (t1 - max(t0, since)) / 60, 1)
         med = {}
@@ -5503,6 +5507,7 @@ class Plan:
                 gone = (now_ - l.get("since", now_)) / 60
                 left = max(dur(k) - gone, dur(k) * 0.1)
                 bars.setdefault(n, []).append([round(-gone, 1), 0.0, k, 2])
+                each.setdefault(n, []).append([round(-min(gone, self.TIMELINE_H * 60), 2), 0.0, k, 2, l["job"], self.chain_of(l["job"], l.get("title", ""))])
                 future.setdefault(n, []).append([0.0, round(left, 1), k])
                 free[n] = left
                 by = busy.setdefault(n, {})
@@ -5540,7 +5545,8 @@ class Plan:
             marks.append({"at": round(max(0.0, (pf["last_at"] + self.PROOF_EVERY_MIN * 60 - now_) / 60), 1), "kind": "proof", "text": "proof"})
         lanes = []
         for n in hosts:
-            lanes.append({"host": n, "up": free.get(n) is not None, "past": self.merge_bars(bars.get(n, [])), "next": future.get(n, [])[:12]})
+            lanes.append({"host": n, "up": free.get(n) is not None, "past": self.merge_bars(bars.get(n, [])), "next": future.get(n, [])[:12],
+                          "jobs": sorted(each.get(n, []))})
         return {"past_h": self.TIMELINE_H, "lanes": lanes, "marks": marks, "busy": busy, "dealt": dealt}
 
     # The backup: the small reads a free lane takes from the queue when its own line has nothing for
@@ -5656,6 +5662,37 @@ class Plan:
                 out[name] = {"n": len(plan_m), "planner_min": round(st.median(plan_m), 1), "queue_min": round(st.median(queue_m), 1),
                              "work_min": round(st.median(work_m), 1)}
         return out
+
+    @staticmethod
+    def chain_of(i, title=""):
+        """What a job is a link of, for the Timeline to follow: a trial's first read, read-ons,
+        held-out reads and their pieces, its gauntlet read and its promotion are the trial's
+        (wNNNN); a run's jobs, a transform's steps among them, are the run's; a GPU island's
+        segments are the island's; a commit's builds are the commit's; a proof is its line's."""
+        m = re.search(r"(?:read on \d+|held-out read \d+|held-out piece(?: ahead of time:)? \d+ of \d+ of read \d+) of (w\d+)", title)
+        if m:
+            return m.group(1)
+        m = re.search(r"grove/(w\d+)", title) if re.match(r"(gx\d+|r\d+-promote|f\d+)$", i) else None
+        if m:
+            return m.group(1)
+        if re.match(r"w\d+$", i):
+            return i
+        m = re.match(r"(r\d+)-", i)
+        if m:
+            return m.group(1)
+        m = re.match(r"(clone-\d+)-", i)
+        if m:
+            return m.group(1)
+        m = re.match(r"prep-.+-([0-9a-f]{7})$", i)
+        if m:
+            return "build " + m.group(1)
+        m = re.match(r"x-(.+)-\d+$", i)
+        if m:
+            return "island " + m.group(1)
+        m = re.search(r"the line ([0-9a-f]{7})", title)
+        if m and i.startswith("pv"):
+            return "line " + m.group(1)
+        return i
 
     @staticmethod
     def merge_bars(rows):

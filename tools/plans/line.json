@@ -983,7 +983,7 @@
    "does": "Every machine: what it did, what it does now, and what it will do next.",
    "ties": "All stages, by when and by whom.",
    "drawn": "A row a machine with now as a line: left is measured, right is a forecast from the medians. Colour is the stage.",
-   "look": "Gaps on the left are lost time. Green marks are generations. A lane of one colour shows where the fleet spends itself.",
+   "look": "Gaps on the left are lost time. Green marks are generations. A lane of one colour shows where the fleet spends itself. Point at a block and its chain lights: every job of the same trial, run or island, framed in amber wherever it ran, an arrow from each to the next, the rest stepped back. A click keeps it lit.",
    "sim": "Bars are mostly the census. Crucible's arena on the -cuda rows.",
    "helps": "It shows the shape of the spending, which is the easiest place to find waste."
   },

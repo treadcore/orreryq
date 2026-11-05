@@ -1110,3 +1110,15 @@ fp.seq = {"w0061": {"status": "read on", "stage": 3, "z": 2.0, "text": "w_f = 6\
 assert [j["needs"] for j in fp.ahead_jobs()] == ["cpu"], "the background job's go anywhere"
 _sh.rmtree(fq_)
 print("the writer's failure tried again, and pieces to the fast machines: every check holds")
+
+# FOLLOW A CHAIN (the Timeline, 5 November): each job names the chain it is a link of, so a block
+# hovered on the page lights every other link wherever it ran.
+links = [("w10839", "trial"), ("e9400", "read on 2 of w10839 (300 seeds more, z +1.10 on 55)"),
+         ("h0812", "held-out read 1 of w10839 (400 seeds)"), ("h0812-p2", "held-out piece 2 of 4 of read 1 of w10839 (100 seeds)"),
+         ("h0813-p1", "held-out piece ahead of time: 1 of 4 of read 1 of w10839 (100 seeds)"),
+         ("r0196-promote", "promote grove/w10839: tests and families on a branch"),
+         ("r0187-k17", "transform r0187: step 17 of 30"), ("clone-003-train", ""), ("prep-boburner-2180ded", ""),
+         ("x-calber-cuda-3110", ""), ("pv0070", "the line 0724007 against main"), ("f0251", "families: kite, castle")]
+got = [P.chain_of(i, t) for i, t in links]
+assert got == ["w10839"] * 6 + ["r0187", "clone-003", "build 2180ded", "island calber-cuda", "line 0724007", "f0251"], got
+print("following a chain: every check holds")

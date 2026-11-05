@@ -39,6 +39,8 @@ pub struct State {
     pub tune: Option<String>,
     /// What it said.
     pub said: String,
+    /// The chain the Timeline follows, kept by a click: a trial, a run, an island.
+    pub chain: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -56,6 +58,20 @@ pub struct Lane {
     pub up: bool,
     pub past: Vec<Bar>,
     pub next: Vec<Bar>,
+    /// Each job alone, with its chain, for following one through the fleet.
+    pub jobs: Vec<JobBar>,
+}
+
+/// One job on the Timeline: when it ran (minutes from now), its stage, how it ended, its id, and
+/// the chain it is a link of (the planner's `chain_of`).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct JobBar {
+    pub from: f64,
+    pub to: f64,
+    pub stage: String,
+    pub ok: i64,
+    pub id: String,
+    pub chain: String,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -257,6 +273,14 @@ impl Model {
                 up: l.get("up").and_then(|b| b.as_bool()).unwrap_or(false),
                 past: bars(l, "past"),
                 next: bars(l, "next"),
+                jobs: list(l, "jobs").iter().filter_map(|j| j.as_array()).filter_map(|j| Some(JobBar {
+                    from: j.first()?.as_num()?,
+                    to: j.get(1)?.as_num()?,
+                    stage: j.get(2)?.as_str()?.to_string(),
+                    ok: j.get(3)?.as_num()? as i64,
+                    id: j.get(4)?.as_str()?.to_string(),
+                    chain: j.get(5)?.as_str()?.to_string(),
+                })).collect(),
             }).collect()).unwrap_or_default(),
             marks: v.get("timeline").map(|t| list(t, "marks").iter().map(|m| Mark { at: n(m, "at"), kind: s(m, "kind"), text: s(m, "text") }).collect()).unwrap_or_default(),
             queued: list(&v, "queued").iter().map(|q| Waiting {
@@ -506,7 +530,7 @@ pub fn draw(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
     ui.c.rect(at.x, at.y, at.w, at.h, t.base);
     match st.page {
         1 => flow(ui, at, m, st),
-        2 => timeline(ui, at, m),
+        2 => timeline(ui, at, m, st),
         3 => queued(ui, at, m, st),
         4 => values(ui, at, m, st),
         5 => blame(ui, at, m),
@@ -703,7 +727,7 @@ fn trace(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
 
 /// The Timeline: measured on the left of now, forecast on the right, each at its own scale,
 /// because six hours past and an hour ahead on one scale leave the forecast too thin to read.
-fn timeline(ui: &mut Ui, at: Rect, m: &Model) {
+fn timeline(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
     let t = ui.t;
     if m.lanes.is_empty() {
         ui.label_in(at.x + 4, at.y + 4, at.w - 8, "The planner has not written the timeline yet: it does at each plan, about a minute.", &F8X13, t.dim);
@@ -795,6 +819,7 @@ fn timeline(ui: &mut Ui, at: Rect, m: &Model) {
             signed(mk.at),
         ]);
     }
+    follow_chain(ui, m, st, plot, row, now_x, &xof);
     // The key: every colour named, and what a mark means.
     let mut x = at.x + 4;
     let y = at.bottom() - foot + 18;
@@ -804,6 +829,117 @@ fn timeline(ui: &mut Ui, at: Rect, m: &Model) {
     }
     let say = "Red bar: failed or sent back. Hollow: forecast. Green line: a generation. Red line: tests stopped one. Amber: bars ease, or the next proof.";
     ui.label_in(at.x + 4, y + 14, at.w - 8, say, &F8X13, t.dim);
+}
+
+/// The clock time of `min` minutes from when the planner wrote the page (`checked`), as HH:MM.
+fn clock(checked: &str, min: f64) -> String {
+    let hm = checked.get(11..16).unwrap_or("00:00");
+    let base = hm[..2].parse::<f64>().unwrap_or(0.0) * 60.0 + hm[3..].parse::<f64>().unwrap_or(0.0);
+    let t = (base + min).rem_euclid(24.0 * 60.0);
+    format!("{:02}:{:02}", (t / 60.0) as i32, (t % 60.0) as i32)
+}
+
+/// A chain's links in time order, each with the link it followed: the latest that ended by its
+/// start (several pieces begun together each follow the same read-on). None for the first.
+pub fn chain_links<'a>(m: &'a Model, chain: &str) -> Vec<(usize, &'a JobBar, Option<usize>)> {
+    let mut links: Vec<(usize, &JobBar)> = m.lanes.iter().enumerate().flat_map(|(i, l)| l.jobs.iter().filter(move |j| j.chain == chain).map(move |j| (i, j))).collect();
+    links.sort_by(|a, b| a.1.from.partial_cmp(&b.1.from).unwrap_or(std::cmp::Ordering::Equal));
+    (0..links.len())
+        .map(|k| {
+            let b = links[k].1;
+            let prev = (0..k).filter(|&p| links[p].1.to <= b.from + 0.05).max_by(|&p, &q| links[p].1.to.partial_cmp(&links[q].1.to).unwrap_or(std::cmp::Ordering::Equal));
+            (links[k].0, b, prev)
+        })
+        .collect()
+}
+
+/// FOLLOW A CHAIN (Paul, 5 November: "can we see arrows how the job moves from one to the other ...
+/// On highlight of cell, highlight all the chain elements associated"). The job under the pointer
+/// names its chain, a trial, a run or an island; every job of it is framed wherever it ran, and an
+/// arrow goes to each from the link it followed, from that one's end to its own start. A click keeps
+/// the chain while the pointer is elsewhere; a click on it again, or on no job, lets it go.
+fn follow_chain(ui: &mut Ui, m: &Model, st: &mut State, plot: Rect, row: i32, now_x: i32, xof: &dyn Fn(f64) -> i32) {
+    let t = ui.t;
+    let row_of = |i: usize| plot.y + i as i32 * row;
+    let job_rect = |i: usize, j: &JobBar| {
+        let (a, e) = (xof(j.from), xof(j.to));
+        rect(a, row_of(i) + 1, (e - a).max(2), row - 3)
+    };
+    let (px, py) = ui.pointer();
+    let measured = rect(plot.x, plot.y, now_x - plot.x + 2, row * m.lanes.len() as i32);
+    let mut hovered: Option<(usize, &JobBar)> = None;
+    if measured.contains((px, py)) {
+        let i = ((py - plot.y) / row.max(1)) as usize;
+        if let Some(l) = m.lanes.get(i) {
+            hovered = l.jobs.iter().find(|j| {
+                let r = job_rect(i, j);
+                px >= r.x - 1 && px <= r.right() + 1
+            }).map(|j| (i, j));
+        }
+    }
+    if ui.button_hit(measured) {
+        st.chain = match hovered {
+            Some((_, j)) if st.chain.as_deref() != Some(j.chain.as_str()) => Some(j.chain.clone()),
+            _ => None,
+        };
+    }
+    let Some(chain) = hovered.map(|(_, j)| j.chain.clone()).or_else(|| st.chain.clone()) else { return };
+    let links = chain_links(m, &chain);
+    if links.is_empty() {
+        return;
+    }
+    // The rest of the six hours stepped back: every other pixel dark, the chain's own jobs drawn
+    // again over it in their colours, so the chain is what the eye finds.
+    for y in measured.y..measured.bottom() {
+        for x in (measured.x + (y & 1))..measured.right() {
+            if (x & 1) == 0 {
+                ui.c.set(x, y, t.base);
+            }
+        }
+    }
+    for (i, j, _) in &links {
+        let r = job_rect(*i, j);
+        ui.c.rect(r.x, r.y, r.w, r.h, if j.ok == 0 { t.alarm } else { line::colour(&j.stage) });
+    }
+    // The arrows, under the frames: dark under amber, so they read over any colour.
+    for (i, b, prev) in &links {
+        let Some(p) = prev else { continue };
+        let (ia, a, _) = links[*p];
+        if ia == *i && b.from - a.to < 0.5 {
+            continue; // the next link on the same machine, touching: the frames say it
+        }
+        let (x0, y0) = (xof(a.to), row_of(ia) + row / 2);
+        let (x1, y1) = (xof(b.from).max(x0 + 3), row_of(*i) + row / 2);
+        pointer(ui, (x0 + 1, y0 + 1), (x1 + 1, y1 + 1), t.base);
+        pointer(ui, (x0 - 1, y0 - 1), (x1 - 1, y1 - 1), t.base);
+        pointer(ui, (x0, y0), (x1, y1), t.warn);
+    }
+    for (i, j, _) in &links {
+        let r = job_rect(*i, j);
+        ui.outline(rect(r.x - 3, r.y - 3, r.w + 6, r.h + 6), t.base);
+        ui.outline2(rect(r.x - 2, r.y - 2, r.w + 4, r.h + 4), t.warn);
+    }
+    let hosts: std::collections::BTreeSet<&str> = links.iter().map(|(i, _, _)| m.lanes[*i].host.as_str()).collect();
+    let kept = st.chain.as_deref() == Some(chain.as_str());
+    let said = format!("following {}: {} job{} on {} machine{} {}", chain, links.len(), if links.len() == 1 { "" } else { "s" },
+                       hosts.len(), if hosts.len() == 1 { "" } else { "s" }, if kept { "(kept: click it again to let go)" } else { "(click to keep)" });
+    let w = F8X13.measure(&said) as i32 + 10;
+    let tag = rect(now_x - 8 - w, plot.y - 30, w, 15);
+    ui.c.rect(tag.x, tag.y, tag.w, tag.h, t.warn);
+    ui.label(tag.x + 5, tag.y + 1, &said, &F8X13, t.base);
+    if let Some((i, j)) = hovered {
+        let r = job_rect(i, j);
+        let steps: Vec<String> = links.iter().map(|(li, lj, _)| {
+            format!("{} {:<10} {:<14} {:<15} {}{}", clock(&m.checked, lj.from), line::short(&lj.stage), lj.id, m.lanes[*li].host,
+                    took(lj.to - lj.from), match lj.ok { 0 => ", failed or sent back", 2 => ", running", _ => "" })
+        }).collect();
+        ui.tip(r, || {
+            let mut v = vec![format!("{}: its {} job{} in the last {:.0} h, in the order they began", chain, steps.len(), if steps.len() == 1 { "" } else { "s" }, m.past_h)];
+            v.extend(steps.into_iter().take(24));
+            v.push("An arrow runs from the job a link followed to it. Click to keep the chain lit.".to_string());
+            v
+        });
+    }
 }
 
 /// The Queued page: what runs and what waits, in order, each with why it is there.
@@ -1194,6 +1330,21 @@ mod tests {
         assert_eq!(took(0.4), "<1 min");
         assert_eq!(took(30.0), "30 min");
         assert_eq!(took(180.0), "3.0 h");
+    }
+
+    #[test]
+    fn a_chain_links_each_job_to_the_one_it_followed_across_machines() {
+        let doc = r#"{"checked":"2026-11-05T13:50:00","timeline":{"past_h":6,"lanes":[
+          {"host":"a","up":true,"jobs":[[-90,-80,"first",1,"w1","w1"],[-60,-50,"held",1,"h1-p1","w1"],[-40,-30,"other",1,"r9-k1","r9"]]},
+          {"host":"b","up":true,"jobs":[[-79.98,-61,"read",1,"e1","w1"],[-60,-52,"held",0,"h1-p2","w1"]]}]}}"#;
+        let m = Model::parse(doc);
+        assert_eq!((m.lanes[1].jobs[0].id.as_str(), m.lanes[1].jobs[1].ok), ("e1", 0));
+        let l = chain_links(&m, "w1");
+        let shape: Vec<(&str, Option<&str>)> = l.iter().map(|(_, j, p)| (j.id.as_str(), p.map(|p| l[p].1.id.as_str()))).collect();
+        // The read-on begins a moment before the first read is logged done; both pieces follow it.
+        assert_eq!(shape, vec![("w1", None), ("e1", Some("w1")), ("h1-p1", Some("e1")), ("h1-p2", Some("e1"))]);
+        assert!(chain_links(&m, "r9").iter().all(|(_, _, p)| p.is_none()));
+        assert_eq!((clock(&m.checked, -90.0), clock(&m.checked, 15.0), clock("2026-11-05T00:20:00", -30.0)), ("12:20".to_string(), "14:05".to_string(), "23:50".to_string()));
     }
 
     #[test]
