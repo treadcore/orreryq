@@ -100,6 +100,7 @@ queue knows nothing about what a job is for. A job:
      "deliver": {"src": "path on the host", "to": "user@store", "dst": "path on the store"},
      "on_done": "a command run here, after, with JOB_ID and RESULT_DIR set",
      "replan": true,                   the planner is asked soon after it comes back
+     "priority": "high" | "low",       ahead of the standing work, or after it (the background job)
      "timeout_s": 7200}
 
 Everything is a file a person can read: queue/, running/HOST/, done/, failed/,
@@ -193,8 +194,9 @@ class Queue:
             return False
         # The file name orders the queue: the planner's order, kept. A job
         # marked "priority": "high" (what a person asked for) goes ahead of
-        # the standing work: its number is set back a few years.
-        seq = int(now() * 1000) - (10 ** 11 if job.get("priority") == "high" else 0)
+        # the standing work: its number is set back a few years. One marked
+        # "low" (the background job's) goes after it: set forward as far.
+        seq = int(now() * 1000) - {"high": 10 ** 11, "low": -10 ** 11}.get(job.get("priority"), 0)
         tmp = self.p("queue", ".%s.tmp" % job["id"])
         with open(tmp, "w") as f:
             json.dump(job, f, indent=1)
@@ -688,7 +690,9 @@ def cpu_queued(cfg, jobs):
     cpu = [working(cfg, h) for h in cfg["hosts"] if "cpu" in h.get("caps", ["cpu"]) and not h.get("paused")]
     if not cpu:
         return None
-    return sum(1 for j in jobs if any(fits(h, j) for h in cpu))
+    # The background job's pieces are not work the planner keeps up: counted, they would stand in
+    # for it, and the lanes would take them while the line's own work waited for a pass.
+    return sum(1 for j in jobs if j.get("priority") != "low" and any(fits(h, j) for h in cpu))
 
 
 def breaker_stop(q):

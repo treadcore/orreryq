@@ -940,3 +940,127 @@ cm = P.chain_marks([{"id": "r0187-k17", "title": "transform r0187: step 17 of 30
 assert [bool(j.get("replan")) for j in cm] == [True, True, False, False, False, False], cm
 assert cm[0]["priority"] == "high" and cm[1]["priority"] == "high" and "priority" not in cm[2]
 print("chains advance when they return: every check holds")
+
+# THE HELD-OUT READ IN PIECES (change C) AND THE BACKGROUND JOB. A read is four jobs of a hundred seeds on
+# any CPU machine, made one census when all are back; a piece that failed is asked again, twice at most;
+# a piece on other defaults than the newest weighs nothing and is asked again. The background job asks
+# pieces of likely trials' first reads ahead of time, last in the queue, within its budget; the read,
+# asked later, takes them as its own. Nothing waits on a background job, and nothing waits in a circle.
+import glob
+import re
+TC_DIR = os.path.expanduser(os.environ.get("TREADCORE", "~/code/treadcore"))
+
+
+class Held(P):
+    LINE = "orrery/accepted"
+    def __init__(self, q):
+        self.q, self.home, self.tc, self.writer = q, "fleet/q-grove", TC_DIR, True
+        self.cfg = {"weights": {"held_seeds": 400, "held_seed0": 60000000, "seeds": 55, "secs": 900, "map": "all"}}
+        self.state = {"held_n": 7, "held_read": []}
+        self.flags, self.done, self.gone, self.seq, self.queued = [], set(), set(), {}, []
+        self.hosts = [{"name": n} for n in ("a", "b", "c")]
+        self.commit_of = {}
+    def ids(self, *subs):
+        return (self.done if "done" in subs else set()) | (self.gone if ("failed" in subs or "stopped" in subs) else set())
+    def flag(self, kind, text, key=None, progress=False):
+        self.flags.append(text)
+    def short(self, sha=None):
+        return "abc1234"
+    def sha(self):
+        return "abc1234abc1234"
+    def census_cmd(self, text, seeds, seed0, out_id):
+        return "census %d from %d as %s" % (seeds, seed0, out_id)
+    def census_commit(self, d):
+        return self.commit_of.get(d.rstrip("/").split(os.sep)[-2], "abc1234")
+    def same_class(self, c1, c2):
+        return c1 == c2
+    def game_at(self, c):
+        return "8+score1"
+    def sequential(self):
+        return self.seq
+    def queue_jobs(self):
+        return self.queued
+
+
+def piece_result(q, pid, seeds):
+    d = os.path.join(q, "results", pid, "fleet/q-grove/out", pid, "20261105-120000")
+    os.makedirs(d)
+    # The census's own lines: each seed's difference, as pool.sh reads them.
+    open(os.path.join(d, "g-%d.log" % seeds[0]), "w").write("brain_census: difference a seat, a seed: %s\n" % " ".join("%.1f" % ((s % 7) - 3) for s in seeds))
+    open(os.path.join(d, "run.env"), "w").write("SEEDS=%d\nSEED0=%d\nCOMMIT=abc1234\nHOST=a\n" % (len(seeds), seeds[0]))
+    open(os.path.join(d, "trial.weights"), "w").write("w_a = 1\n")
+    open(os.path.join(d, "pooled.txt"), "w").write("every map +0.00 +/- 0.10 over %d seeds (a piece)\n" % len(seeds))
+
+
+hq = tempfile.mkdtemp()
+hp = Held(hq)
+js = hp.held_read("w0042", 1, "w_a = 1\n", high=True)
+assert [j["id"] for j in js] == ["h0007-p1", "h0007-p2", "h0007-p3", "h0007-p4"], [j["id"] for j in js]
+assert [j["cmd"] for j in js][2] == "census 100 from 60001400200 as h0007-p3".replace("60001400200", str(60000000 + 200000 * 7 + 200))
+assert all(j["needs"] == "cpu" and j["priority"] == "high" and not re.match(r"held-out read \d of", j["title"]) for j in js), js[0]
+assert hp.state["held_n"] == 8 and hp.state["held_split"]["h0007"]["seed0"] == 61400000
+for i, j in enumerate(js):
+    hp.done.add(j["id"])
+    piece_result(hq, j["id"], list(range(61400000 + 100 * i, 61400000 + 100 * i + 100)))
+# One failed: asked again as r1, and nothing merged yet.
+hp.done.discard("h0007-p3")
+hp.gone.add("h0007-p3")
+again = hp.held_merge()
+assert [j["id"] for j in again] == ["h0007-p3r1"] and "h0007" in hp.state["held_split"], again
+hp.done.add("h0007-p3r1")
+piece_result(hq, "h0007-p3r1", list(range(61400200, 61400300)))
+# One on other defaults than the newest: it weighs nothing, and is asked again.
+hp.commit_of["h0007-p1"] = "0ld0000"
+again = hp.held_merge()
+assert [j["id"] for j in again] == ["h0007-p1r1"], again
+hp.done.add("h0007-p1r1")
+piece_result(hq, "h0007-p1r1", list(range(61400000, 61400100)))
+assert hp.held_merge() == [] and "h0007" not in hp.state["held_split"] and hp.state["held_merged"]["h0007"].startswith("held-out read 1 of w0042")
+merged = glob.glob(os.path.join(hq, "results/h0007/fleet/q-grove/out/h0007/*/"))[0]
+assert len(glob.glob(merged + "g-*.log")) == 4 and "SEEDS=400" in open(merged + "run.env").read() and "SEED0=61400000" in open(merged + "run.env").read()
+if os.path.exists(os.path.join(TC_DIR, "scripts", "pool.sh")):
+    assert open(merged + "pooled.txt").read().startswith("every map") and " over 400 seeds" in open(merged + "pooled.txt").read(), open(merged + "pooled.txt").read()
+assert hp.held_pairs() == {"w0042": [merged]}, hp.held_pairs()
+assert [d.split("/out/")[1].split("/")[0] for d in hp.census_dirs()] == ["h0007"], "the pieces are not reads of their own"
+# Three failures of one piece drop the read, and say so.
+js2 = hp.held_read("w0043", 2, "w_b = 2\n", high=False)
+assert all("priority" not in j for j in js2)
+for t in range(3):
+    hp.gone.add(hp.state["held_split"]["h0008"]["slots"]["2"])
+    hp.held_merge()
+assert "h0008" not in hp.state["held_split"] and any("failed three times" in f for f in hp.flags)
+
+# The background job: the likely trials, strongest first, one piece a free lane, within the day's budget.
+hp.seq = {"w0050": {"status": "read on", "stage": 3, "z": 2.4, "text": "w_c = 3\n"}, "w0051": {"status": "read on", "stage": 1, "z": 2.9, "text": "x"},
+          "w0052": {"status": "read on", "stage": 2, "z": 1.2, "text": "x"}, "w0053": {"status": "reading", "stage": 2, "z": 1.7, "text": "w_d = 4\n"},
+          "w0054": {"status": "dropped", "stage": 4, "z": 3.0, "text": "x"}}
+bg = hp.ahead_jobs()
+assert [(j["id"], j["priority"], j["background"]) for j in bg] == [("h0009-p1", "low", True), ("h0010-p1", "low", True)], bg
+assert all(j["title"].startswith("held-out piece ahead of time:") for j in bg)
+assert hp.state["held_ahead"]["w0050"]["hid"] == "h0009" and hp.state["held_split"]["h0009"]["stamp"]["commit"] == "abc1234abc12"
+hp.queued = [dict(j) for j in bg]
+more = hp.ahead_jobs()
+assert [j["id"] for j in more] == ["h0009-p2"], "one queued a lane at most: three lanes, two queued, the strongest trial's next piece"
+hp.AHEAD_PER_DAY = len(hp.state["ahead_log"])
+hp.queued = []
+assert hp.ahead_jobs() == [], "the day's budget spent"
+# w0050 is asked for its read: it takes the reserved id and seeds, asks only the pieces not read ahead,
+# and its queued piece goes first.
+os.makedirs(os.path.join(hq, "queue"), exist_ok=True)
+qf = os.path.join(hq, "queue", "%d-h0009-p1.json" % (int(time.time() * 1000) + 10 ** 11))
+json.dump(bg[0], open(qf, "w"))
+js3 = hp.held_read("w0050", 1, "w_c = 3\n", high=True)
+assert [j["id"] for j in js3] == ["h0009-p3", "h0009-p4"] and "ahead_only" not in hp.state["held_split"]["h0009"], js3
+raised = glob.glob(os.path.join(hq, "queue", "*-h0009-p1.json"))
+assert len(raised) == 1 and int(os.path.basename(raised[0]).split("-")[0]) < time.time() * 1000, "raised ahead of the standing work"
+rj = json.load(open(raised[0]))
+assert rj["priority"] == "high" and "background" not in rj and rj["title"].startswith("held-out piece 1 of 4")
+# Nothing waits on a background job, nor in a circle.
+hp.queued = [{"id": "bgx", "background": True}, {"id": "c1", "after": ["c2"]}, {"id": "c2", "after": ["c3"]}]
+kept = hp.graph_lint([{"id": "n1", "after": ["bgx"]}, {"id": "c3", "after": ["c1"]}, {"id": "n2", "after": ["c1"]}])
+assert [j["id"] for j in kept] == ["n2"], kept
+assert any("background job or in a circle" in f for f in hp.flags)
+cm = P.chain_marks([{"id": "h0012-p2", "title": "held-out piece 2 of 4 of read 1 of w1"}, {"id": "h0013-p1", "background": True, "title": "x"}])
+assert cm[0].get("replan") and not cm[1].get("replan")
+_sh.rmtree(hq)
+print("the held-out read in pieces, and the background job: every check holds")

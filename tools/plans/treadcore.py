@@ -523,7 +523,10 @@ class Plan:
         change: 27,000 of them were globbed sixteen times a pass, 44 of its 105 seconds, once the
         keeper asked for passes sooner (5 November, the duty-cycle report's B)."""
         if self.__dict__.get("_census_dirs") is None:
-            self._census_dirs = sorted(glob.glob(os.path.join(self.q, "results", "*", self.home, "out", "*", "*", "")))
+            # A held-out read's pieces (hNNNN-pI) are read as the one census they make, never alone:
+            # in the ledger as well they would count each seed twice.
+            self._census_dirs = sorted(d for d in glob.glob(os.path.join(self.q, "results", "*", self.home, "out", "*", "*", ""))
+                                       if not re.search(r"-p\d+(r\d+)?$", d.rstrip("/").split(os.sep)[-2]))
         return list(self._census_dirs)
 
     def done_titles(self):
@@ -782,14 +785,8 @@ class Plan:
             # carry what is not proven). Proof is the line's own read against main
             # (line_proof), where the noise of many generations is read at once.
             for k in range(1):
-                hid = "h%04d" % self.state["held_n"]
-                seed0 = w["held_seed0"] + 200000 * self.state["held_n"]
-                self.state["held_n"] += 1
-                jobs.append({"id": hid, "kind": "weights", "title": "held-out read %d of %s (%d seeds)" % (k + 1, jid, w["held_seeds"]),
-                             "needs": self.long_needs(), "after_host": self.after_host(), "cmd": self.census_cmd(trial, w["held_seeds"], seed0, hid),
-                             "fetch": "%s/out/%s" % (self.home, hid), "timeout_s": 6 * 3600,
-                             # What decides goes first: it got 3% of the lanes behind a queue seven hours long.
-                             "priority": "high"})
+                # What decides goes first: it got 3% of the lanes behind a queue seven hours long.
+                jobs += self.held_read(jid, k + 1, trial, high=True)
             self.state["held_read"].append(jid)
         # A second read asked for before the rule above, for a first at zero or better.
         waiting = self.state.get("held_second", [])
@@ -805,12 +802,7 @@ class Plan:
                 waiting.remove(jid)
                 if not first or first["every"][1] <= 0 or first["every"][0] < 0:
                     continue
-                hid = "h%04d" % self.state["held_n"]
-                seed0 = w["held_seed0"] + 200000 * self.state["held_n"]
-                self.state["held_n"] += 1
-                jobs.append({"id": hid, "kind": "weights", "title": "held-out read 2 of %s (%d seeds)" % (jid, w["held_seeds"]),
-                             "needs": self.long_needs(), "after_host": self.after_host(), "cmd": self.census_cmd(seq[jid]["text"], w["held_seeds"], seed0, hid),
-                             "fetch": "%s/out/%s" % (self.home, hid), "timeout_s": 6 * 3600})
+                jobs += self.held_read(jid, 2, seq[jid]["text"], high=False)
         # Then the reads on, the most promising first: a test begun is
         # finished before most new ones begin (Fishtest's way). A third of
         # the room is kept for new trials, so a backlog of reads on (the
@@ -1807,10 +1799,283 @@ class Plan:
                 out.append("%s=%s" % (k, v.replace(", ", ",")))
         return " ".join(out)
 
+    # THE HELD-OUT READ IN PIECES (the duty-cycle report's change C; Paul, 5 November: "build C"). A
+    # held-out read was one job of 400 seeds, about twelve minutes on one machine, and a passing
+    # trial needs two. It is asked as HELD_PIECES jobs of a quarter of the seeds each, on as many
+    # machines, and made one census when all are back: every piece's per-seed logs in one folder,
+    # pooled by treadcore's pool.sh (written for "a census split over jobs"). A seed plays the map of
+    # its own number (n mod k), so the pieces play the very games the one job played, and the read is
+    # the same to the digit, under the read's own id; everything that reads a held-out read reads it
+    # as before.
+    HELD_PIECES = 4
+
+    def held_read(self, jid, k, text, high=True):
+        """Trial jid's k-th held-out read: its id and seeds, and its pieces as jobs. A piece already
+        asked (ahead of time, by the background job) is not asked again."""
+        w = self.cfg["weights"]
+        pre = self.state.setdefault("held_ahead", {}).pop(jid, None) if k == 1 else None
+        if pre:
+            hid, seed0 = pre["hid"], pre["seed0"]
+        else:
+            hid = "h%04d" % self.state["held_n"]
+            seed0 = w["held_seed0"] + 200000 * self.state["held_n"]
+            self.state["held_n"] += 1
+        title = "held-out read %d of %s (%d seeds)" % (k, jid, w["held_seeds"])
+        n = self.HELD_PIECES if self.HELD_PIECES > 1 and w["held_seeds"] % self.HELD_PIECES == 0 else 1
+        if n == 1:
+            job = {"id": hid, "kind": "weights", "title": title, "needs": self.long_needs(), "after_host": self.after_host(),
+                   "cmd": self.census_cmd(text, w["held_seeds"], seed0, hid), "fetch": "%s/out/%s" % (self.home, hid), "timeout_s": 6 * 3600}
+            if high:
+                job["priority"] = "high"
+            return [job]
+        per = w["held_seeds"] // n
+        rec = self.state.setdefault("held_split", {}).setdefault(hid, {
+            "trial": jid, "k": k, "title": title, "seed0": seed0, "per": per, "n": n, "text": text,
+            "slots": {}, "tries": {}, "asked": time.strftime("%Y-%m-%dT%H:%M:%S")})
+        rec["k"], rec["title"], rec["high"] = k, title, high
+        if rec.pop("ahead_only", None):
+            # Asked for now: the pieces read ahead are its own, and those still queued go first.
+            self.state.get("ahead", {}).pop(jid, None)
+            self.raise_queued(set(rec["slots"].values()), high)
+        jobs = []
+        for i in range(1, n + 1):
+            if str(i) in rec["slots"]:
+                continue
+            jobs.append(self.held_piece(hid, rec, i, high))
+        return jobs
+
+    def held_piece(self, hid, rec, i, high, background=False):
+        """Piece i of a split held-out read: its quarter of the seeds, on any CPU machine."""
+        tries = rec["tries"].get(str(i), 0)
+        pid = "%s-p%d" % (hid, i) + ("" if tries == 0 else "r%d" % tries)
+        rec["slots"][str(i)] = pid
+        job = {"id": pid, "kind": "weights", "needs": "cpu", "after_host": self.after_host(),
+               "title": "held-out piece %d of %d of read %d of %s (%d seeds)" % (i, rec["n"], rec["k"], rec["trial"], rec["per"]),
+               "cmd": self.census_cmd(rec["text"], rec["per"], rec["seed0"] + (i - 1) * rec["per"], pid),
+               "fetch": "%s/out/%s" % (self.home, pid), "timeout_s": 6 * 3600}
+        if background:
+            # The background job's: last in the queue, taken only by a machine with nothing else.
+            job["priority"], job["background"] = "low", True
+            job["title"] = job["title"].replace("held-out piece", "held-out piece ahead of time:", 1)
+        elif high:
+            job["priority"] = "high"
+        return job
+
+    def raise_queued(self, ids, high):
+        """Queued background pieces become the read's own: no longer last, no longer background. The
+        queue's file is renamed, as prepare_jobs sets builds aside; a lane that has just taken one
+        keeps it as it is."""
+        for f in glob.glob(os.path.join(self.q, "queue", "*.json")):
+            seq_, _, rest = os.path.basename(f).partition("-")
+            if rest[:-5] not in ids:
+                continue
+            j = load(f, {}) or {}
+            j.pop("background", None)
+            j["title"] = j.get("title", "").replace("held-out piece ahead of time:", "held-out piece", 1)
+            if high:
+                j["priority"] = "high"
+            else:
+                j.pop("priority", None)
+            j["replan"] = True
+            new = os.path.join(self.q, "queue", "%d-%s" % (int(time.time() * 1000) - (10 ** 11 if high else 0), rest))
+            # Out of the lanes' sight first (they read *.json): a lane that has claimed it keeps it,
+            # and the job is never in the queue twice.
+            hold = f + ".raise"
+            try:
+                os.rename(f, hold)
+            except OSError:
+                continue
+            save(new, j)
+            os.remove(hold)
+
+    def piece_dir(self, pid):
+        ds = sorted(glob.glob(os.path.join(self.q, "results", pid, self.home, "out", pid, "*", "")))
+        ds = [d for d in ds if os.path.exists(os.path.join(d, "pooled.txt"))]
+        return ds[-1] if ds else None
+
+    def same_class(self, c1, c2):
+        """Two censuses' commits play the same defaults and the same game: their reads pool."""
+        if not c1 or not c2 or c1.endswith("+") or c2.endswith("+"):
+            return False
+        if c1 == c2:
+            return True
+        a, b = self.defaults_at(c1), self.defaults_at(c2)
+        common = set(a) & set(b)
+        return bool(common) and all(a[k] == b[k] for k in common) and self.game_at(c1) == self.game_at(c2)
+
+    def held_merge(self):
+        """Each split held-out read whose pieces are all back, made one census (see HELD_PIECES).
+        A piece that failed is asked again, twice at most; a piece read on other defaults than the
+        newest of its read weighs nothing and is asked again (the newest decides, as the line's proof
+        pools only one line against one main). Returns the pieces asked again."""
+        if not self.writer:
+            return []
+        split = self.state.get("held_split", {})
+        done, gone = self.ids("done"), self.ids("failed", "stopped")
+        jobs = []
+        for hid, rec in list(split.items()):
+            if rec.get("ahead_only"):
+                continue  # asked ahead of time, and its trial not (yet) asked for the read
+            slots = {int(i): pid for i, pid in rec["slots"].items()}
+            if len(slots) < rec["n"]:
+                continue
+            again = []
+            for i, pid in sorted(slots.items()):
+                if pid in gone:
+                    again.append(i)
+            dirs = {i: self.piece_dir(pid) for i, pid in slots.items() if pid in done}
+            commits = {i: self.census_commit(d) for i, d in dirs.items() if d}
+            if commits:
+                newest = commits[max(commits, key=lambda i: os.path.getmtime(dirs[i]))]
+                again += [i for i, c in commits.items() if not self.same_class(c, newest)]
+            for i in sorted(set(again)):
+                t = rec["tries"].get(str(i), 0) + 1
+                if t > 2:
+                    self.flag("held", "%s: piece %d of %s's held-out read failed three times; the read is dropped" % (hid, i, rec["trial"]),
+                              key="held-dropped:%s" % hid)
+                    del split[hid]
+                    break
+                rec["tries"][str(i)] = t
+                jobs.append(self.held_piece(hid, rec, i, rec.get("high", True)))
+            else:
+                if again or len(dirs) < rec["n"] or not all(dirs.values()):
+                    continue
+                self.merge_pieces(hid, rec, [dirs[i] for i in sorted(dirs)])
+                self.state.setdefault("held_merged", {})[hid] = rec["title"]
+                del split[hid]
+        return jobs
+
+    def merge_pieces(self, hid, rec, dirs):
+        """The pieces' per-seed logs in one folder under the read's id, run.env saying the whole read,
+        and pool.sh's pooled.txt over all of them."""
+        out = os.path.join(self.q, "results", hid, self.home, "out", hid, time.strftime("%Y%m%d-%H%M%S"))
+        os.makedirs(out, exist_ok=True)
+        for d in dirs:
+            for f in glob.glob(os.path.join(d, "g-*.log")):
+                shutil.copy2(f, out)
+        first = dirs[0]
+        for f in glob.glob(os.path.join(first, "*.weights")) + glob.glob(os.path.join(first, "*.env")):
+            shutil.copy2(f, out)
+        env = env_file(os.path.join(first, "run.env"))
+        env.update({"SEEDS": str(rec["per"] * rec["n"]), "SEED0": str(rec["seed0"]), "HOST": "pieces",
+                    "PIECES": ",".join(d.rstrip("/").split(os.sep)[-2] for d in dirs)})
+        with open(os.path.join(out, "run.env"), "w") as f:
+            f.write("".join("%s=%s\n" % (k_, shlex.quote(v)) for k_, v in env.items()))
+        r = run(["bash", os.path.join(self.tc, "scripts", "pool.sh"), out])
+        with open(os.path.join(out, "pooled.txt"), "w") as f:
+            f.write(r.stdout)
+
+    # THE BACKGROUND JOB (the duty-cycle report's section VII; Paul, 5 November: "then the background
+    # job"). Held-out reads asked ahead of time, a piece at a time, at the lowest priority: a trial still
+    # reading on, far enough and strong enough that its held-out read is likely (a trial with three
+    # read-ons reaches one 28% of the time), gets the first pieces of its first held-out read before it
+    # is asked for. If it is, the read is part done; if not, the pieces stay its evidence, kept for the
+    # day it is asked. Each piece is stamped when it is asked (the trial, the commit, the game) and pools
+    # only with its own read's pieces of the same defaults (held_merge), so a piece begun before a
+    # promotion weighs nothing after it. Nothing waits on a background piece (graph_lint), and a
+    # machine takes one only when nothing else is there for it (priority "low"; the keeper's low water
+    # does not count them).
+    AHEAD_Z = 1.5            # the trial's pooled z on its reads so far
+    AHEAD_STAGE = 2          # read-ons it has had
+    AHEAD_PER_DAY = 150      # pieces a day at most, about 5% of the CPU
+    AHEAD_DAYS = 3           # a trial dropped or gone this long: its record goes, its pieces' results stay
+
+    def ahead_jobs(self):
+        if not self.writer or self.HELD_PIECES <= 1:
+            return []
+        w = self.cfg["weights"]
+        now_ = time.time()
+        log = [t for t in self.state.get("ahead_log", []) if t > now_ - 86400]
+        queued = [j for j in self.queue_jobs() if j.get("background")]
+        lanes = [h for h in self.hosts if not h.get("paused")]
+        room = min(len(lanes) - len(queued), self.AHEAD_PER_DAY - len(log))
+        ahead = self.state.setdefault("ahead", {})
+        split = self.state.setdefault("held_split", {})
+        seq = self.sequential()
+        # Records of trials long dropped or gone: forgotten, their results kept.
+        for jid in list(ahead):
+            st_ = seq.get(jid, {}).get("status")
+            if st_ in (None, "dropped") and now_ - ahead[jid]["at"] > self.AHEAD_DAYS * 86400:
+                hid = ahead.pop(jid)["hid"]
+                if split.get(hid, {}).get("ahead_only"):
+                    del split[hid]
+                self.state.get("held_ahead", {}).pop(jid, None)
+        jobs = []
+        if room <= 0:
+            self.state["ahead_log"] = log
+            return jobs
+        asked = set(self.state["held_read"])
+        cands = sorted(((v["z"], jid) for jid, v in seq.items()
+                        if v["status"] in ("reading", "read on") and v["stage"] >= self.AHEAD_STAGE and v["z"] >= self.AHEAD_Z and jid not in asked),
+                       reverse=True)
+        for z, jid in cands:
+            if room <= 0:
+                break
+            if jid not in ahead:
+                hid = "h%04d" % self.state["held_n"]
+                seed0 = w["held_seed0"] + 200000 * self.state["held_n"]
+                self.state["held_n"] += 1
+                n = self.HELD_PIECES if w["held_seeds"] % self.HELD_PIECES == 0 else 1
+                if n == 1:
+                    break
+                ahead[jid] = {"hid": hid, "seed0": seed0, "at": now_}
+                self.state.setdefault("held_ahead", {})[jid] = {"hid": hid, "seed0": seed0}
+                split[hid] = {"trial": jid, "k": 1, "title": "held-out read 1 of %s (%d seeds)" % (jid, w["held_seeds"]), "seed0": seed0,
+                              "per": w["held_seeds"] // n, "n": n, "text": seq[jid]["text"], "slots": {}, "tries": {}, "ahead_only": True,
+                              "asked": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                              # The stamp: what this read is of, and on what, when it was asked.
+                              "stamp": {"trial": self.trial_key(seq[jid]["text"]), "commit": self.sha()[:12], "game": self.game_at(self.sha()), "z": round(z, 2)}}
+            rec = split.get(ahead[jid]["hid"])
+            if not rec or not rec.get("ahead_only"):
+                continue
+            free = [i for i in range(1, rec["n"] + 1) if str(i) not in rec["slots"]]
+            if not free:
+                continue
+            jobs.append(self.held_piece(ahead[jid]["hid"], rec, free[0], high=False, background=True))
+            log.append(now_)
+            room -= 1
+        self.state["ahead_log"] = log
+        return jobs
+
+    def graph_lint(self, jobs):
+        """NO CIRCULAR DEPENDENCIES (Paul, 5 November: "We want to prevent creating circular
+        depdencies"). The queue's `after` edges with the new jobs' sort topologically, and no edge
+        enters a background job: nothing may wait on work that may never be read. A new job that
+        breaks either is not asked, and a flag says which."""
+        known = {j.get("id"): j for j in self.queue_jobs()}
+        for j in jobs:
+            known[j.get("id")] = j
+        background = {i for i, j in known.items() if j.get("background")}
+        bad = set()
+        for j in jobs:
+            if any(a in background for a in j.get("after", [])):
+                bad.add(j["id"])
+        # A cycle: a walk that comes back to a job still on its own path.
+        state = {}
+
+        def walk(i, path):
+            state[i] = 1
+            for a in known.get(i, {}).get("after", []):
+                if a not in known:
+                    continue
+                if state.get(a) == 1:
+                    bad.update(path[path.index(a):] if a in path else [i])
+                elif not state.get(a):
+                    walk(a, path + [a])
+            state[i] = 2
+        for i in list(known):
+            if not state.get(i):
+                walk(i, [i])
+        new = {j["id"] for j in jobs}
+        if bad & new:
+            self.flag("graph", "not asked, for they would wait on a background job or in a circle: %s" % ", ".join(sorted(bad & new)),
+                      key="graph:%s" % ",".join(sorted(bad & new)))
+        return [j for j in jobs if j["id"] not in bad]
+
     def held_pairs(self):
         """Each trial's held-out reads: {trial: [census dir, ...]}, from the jobs' titles."""
         title = {}
-        for i, t in self.done_titles().items():
+        for i, t in list(self.done_titles().items()) + list(self.state.get("held_merged", {}).items()):
             m = re.match(r"held-out read \d of (w\d+)", t)
             if m:
                 title[i] = m.group(1)
@@ -2271,15 +2536,7 @@ class Plan:
             # a run's result was already chosen by a search.
             # A carried pass goes first, and takes the one read a generation takes.
             for k in range(a.get("reads", 2)):
-                hid = "h%04d" % self.state["held_n"]
-                hseed = w["held_seed0"] + 200000 * self.state["held_n"]
-                self.state["held_n"] += 1
-                job = {"id": hid, "kind": "weights", "title": "held-out read %d of %s (%d seeds)" % (k + 1, jid, w["held_seeds"]),
-                       "needs": self.long_needs(), "after_host": self.after_host(), "cmd": self.census_cmd(a["text"], w["held_seeds"], hseed, hid),
-                       "fetch": "%s/out/%s" % (self.home, hid), "timeout_s": 6 * 3600}
-                if a.get("reads"):
-                    job["priority"] = "high"
-                jobs.append(job)
+                jobs += self.held_read(jid, k + 1, a["text"], high=bool(a.get("reads")))
             self.state["held_read"].append(jid)
         self.state["adopt"] = []
         return jobs
@@ -4709,6 +4966,8 @@ class Plan:
             self.keep()
             print(json.dumps(jobs))
             return
+        # The held-out reads whose pieces are all back, made one census each before anything reads them.
+        again = self.held_merge()
         self.raise_found()
         # The local line: to main when auto mode is on and the credentials
         # allow (Paul Accepts); else its flag stays up.
@@ -4732,6 +4991,7 @@ class Plan:
         jobs = self.net_jobs()
         # What a person asked for comes before the standing search.
         jobs += self.run_jobs(n)
+        jobs += again
         jobs = self.prepare_jobs() + jobs
         self.prune_builds()
         try:
@@ -4791,6 +5051,8 @@ class Plan:
             self.ease()
             note["difficulty"] = dict(self.state.get("difficulty", {}), last_promotion=(self.promotions() or [[None, None]])[-1][1])
             save(os.path.join(self.pd, "search.json"), note)
+        jobs += self.ahead_jobs()
+        jobs = self.graph_lint(jobs)
         self.chain_marks(jobs)
         self.model_sends(jobs)
         try:
@@ -4815,7 +5077,8 @@ class Plan:
             if re.match(r"r\d+-k\d+$", i) and j.get("title", "").startswith("transform "):
                 j["replan"] = True
                 j["priority"] = "high"
-            elif re.match(r"h\d+$", i):
+            elif re.match(r"h\d+(-p\d+(r\d+)?)?$", i) and not j.get("background"):
+                # A held-out read, or a piece of one: the last piece back makes the read.
                 j["replan"] = True
         return jobs
 
@@ -5116,7 +5379,7 @@ class Plan:
             return "promote"
         if re.match(r"r\d+-k\d+", i):
             return "transform"
-        if re.match(r"h\d+$", i):
+        if re.match(r"h\d+(-p\d+(r\d+)?)?$", i):
             return "held"
         if re.match(r"e\d+$", i):
             return "read"
@@ -5260,7 +5523,7 @@ class Plan:
 
     # The backup: the small reads a free lane takes from the queue when its own line has nothing for
     # it, each returned whole (its seeds pooled with every other read of its question).
-    RETURNABLE = ("first", "read", "proof", "anchor", "transform", "islands")
+    RETURNABLE = ("first", "read", "held", "proof", "anchor", "transform", "islands")
 
     def blame_view(self, live, tl, recent):
         """THE ROUND TABLE (Paul, 5 November: "a blame tab ... the computers point at each other
@@ -5338,8 +5601,8 @@ class Plan:
                 v = int(seq)
             except ValueError:
                 continue
-            # A high-priority job's name is 10^11 ms earlier, so it sorts first.
-            asked[rest[:-5]] = (v + 10 ** 11 if v < cut else v) / 1000.0
+            # A high-priority job's name is 10^11 ms earlier, so it sorts first; a background one's later.
+            asked[rest[:-5]] = (v + 10 ** 11 if v < cut else v - 10 ** 11 if v > time.time() * 1000 + 5e10 else v) / 1000.0
         parse = lambda t: time.mktime(time.strptime(t, "%Y-%m-%dT%H:%M:%S"))
         jobs = {}
         for j in recent:
@@ -5408,6 +5671,13 @@ class Plan:
         every read with its machine and time, the pooled z after it, and how it ended. This is
         the visualizer's data: one trial's numbers, moving, from question to commit or to nothing."""
         steps = {}
+        # A held-out read made of pieces has no finished job of its own: its merged census stands in.
+        recent = list(recent)
+        for hid, title in self.state.get("held_merged", {}).items():
+            d = self.piece_dir(hid)
+            if d and time.time() - os.path.getmtime(d) < 86400:
+                recent.append({"id": hid, "title": title, "host": "%d machines" % self.HELD_PIECES,
+                               "ended": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(os.path.getmtime(d)))})
         for j in recent:
             title, i = j.get("title", ""), j.get("id", "")
             m = re.match(r"(read on \d+|held-out read \d+) of (w\d+)", title)

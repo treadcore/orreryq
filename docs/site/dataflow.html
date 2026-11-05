@@ -28,8 +28,8 @@
 <text x="72" y="72" class="b">A plan pass</text>
 <text x="44" y="96" class="sm">treadcore.py plan N, a fresh process on the Mac</text>
 <text x="44" y="113" class="sm">reads state.json and every result <tspan class="new">once a pass</tspan></text>
-<text x="44" y="130" class="sm">decides: trials, read-ons, held-out reads, transform</text>
-<text x="44" y="147" class="sm">steps, families, a promotion, the proof, builds, segments</text>
+<text x="44" y="130" class="sm">decides: trials, read-ons, <tspan class="new">held-out reads in 4 pieces</tspan>,</text>
+<text x="44" y="147" class="sm">transform steps, the proof, builds, <tspan class="new">pieces ahead</tspan></text>
 <text x="44" y="163" class="sm new">43 s a pass (was 105); chain steps marked replan</text>
 
 <!-- 2 the queue -->
@@ -40,7 +40,7 @@
 <text x="369" y="113" class="sm">high priority sorts first: held-out reads, and</text>
 <text x="369" y="130" class="sm"><tspan class="new">a transform's step</tspan>; then the search's trials</text>
 <text x="369" y="147" class="sm">GPU islands: six segments ahead a card, a buffer</text>
-<text x="369" y="163" class="sm d">13 to 18 waiting; 3,955 jobs a day</text>
+<text x="369" y="163" class="sm"><tspan class="new">background pieces last</tspan>, one a machine</text>
 
 <!-- 3 a lane -->
 <rect class="box" x="680" y="46" width="290" height="124" rx="5" style="stroke:var(--f-run);stroke-width:2"/>
@@ -57,10 +57,10 @@
 <circle cx="702" cy="248" r="12" fill="var(--f-run)"/><text x="702" y="252" class="num" text-anchor="middle">4</text>
 <text x="722" y="252" class="b">The machine runs it</text>
 <text x="694" y="276" class="sm">8 CPU: the census at the fleet's commit, its build</text>
-<text x="694" y="293" class="sm">first (after_host); 55, 27 to 42 or 400 seeds</text>
+<text x="694" y="293" class="sm">first (after_host); 55, 27 to 42, <tspan class="new">or 100 a piece</tspan></text>
 <text x="694" y="310" class="sm">3 GPU: a crucible segment, 100 generations</text>
 <text x="694" y="327" class="sm d">first read 2.5 min, transform step 0.8 to 1.8,</text>
-<text x="694" y="343" class="sm d">held-out 12, a segment 12; 99.3% busy, 99.8%</text>
+<text x="694" y="343" class="sm d">a held-out piece 2 to 7, a segment 12; 99.3%, 99.8%</text>
 
 <!-- 5 it comes back -->
 <rect class="box" x="355" y="226" width="290" height="124" rx="5" style="stroke:var(--f-back);stroke-width:2"/>
@@ -70,7 +70,7 @@
 <text x="369" y="293" class="sm">the job to done/ or failed/ with host, rc, seconds</text>
 <text x="369" y="310" class="sm">events.jsonl: done, failed or sent back</text>
 <text x="369" y="327" class="sm"><tspan class="new">marked replan: the keeper asks in 15 s</tspan></text>
-<text x="369" y="343" class="sm d">the lane takes its next job at once (step 3)</text>
+<text x="369" y="343" class="sm"><tspan class="new">four pieces back: merged into one read</tspan></text>
 
 <!-- 6 the keeper asks -->
 <rect class="box" x="30" y="226" width="290" height="124" rx="5" style="stroke:var(--f-back);stroke-width:2"/>

@@ -69,4 +69,22 @@ if [ "$K" = "$T/fleet-queue.py" ]; then
 else
     [ "$(asked "$B")" -gt "$before" ] && echo "the keeper given: asked after the step" || echo "the keeper given: not asked within 15 s of the step's return"
 fi
+# C. The background job's pieces (priority "low"): after the standing work in the queue, and not
+# counted by the CPU's low water, so they never stand in for the line's own work.
+if [ "$K" = "$T/fleet-queue.py" ]; then
+python3 - "$K" "$W/c" <<'E' || exit 1
+import importlib.util, json, os, sys
+spec = importlib.util.spec_from_file_location("fq", sys.argv[1]); m = importlib.util.module_from_spec(spec); sys.argv = sys.argv[:1] + sys.argv[2:]; spec.loader.exec_module(m)
+d = sys.argv[1]
+os.makedirs(d)
+q = m.Queue(d)
+for i, pri in (("bg", "low"), ("std", None), ("hi", "high")):
+    q.add(dict({"id": i, "needs": "cpu", "cmd": "true"}, **({"priority": pri} if pri else {})))
+order = [f.split("-", 1)[1][:-5] for f in sorted(os.listdir(os.path.join(d, "queue")))]
+assert order == ["hi", "std", "bg"], order
+cfg = {"hosts": [{"name": "a", "caps": ["cpu"]}]}
+assert m.cpu_queued(cfg, q.jobs_in("queue")) == 2, "the background piece is not counted"
+print("ok  a background piece goes after the standing work, and the low water does not count it")
+E
+fi
 echo "PASS"
