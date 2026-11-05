@@ -430,7 +430,7 @@ class Plan:
                     os.rename(f, os.path.join(self.q, "stopped", os.path.basename(f)))
                 except OSError:
                     pass
-        known = self.ids("queue", "running", "done", "failed", "stopped")
+        known = self.ids("queue", "running", "done", "failed", "stopped") - self.retry_failed_builds()
         for h in self.hosts:
             jid = self.prep_id(h["name"])
             if jid in known:
@@ -466,6 +466,28 @@ class Plan:
             job["fetch"] = "%s/c/%s/defaults.toml" % (self.home, short)
             jobs.append(job)
         return jobs
+
+    def retry_failed_builds(self):
+        """A FAILED BUILD IS TRIED ONCE MORE (4 November). Nothing built a failed build's commit again,
+        so a machine stood idle until main moved: at 20:10 every machine's build of f04f157 failed in a
+        second on a bundle that did not hold it, and nothing asked again. A failed build of the commit
+        the fleet builds goes to failed-retried/ and is asked again, once a machine and commit (a
+        writer's pass only). The builds set aside, by id."""
+        out = set()
+        if not self.writer:
+            return out
+        retried = self.state.setdefault("prep_retried", {})
+        failed = self.ids("failed")
+        for h in self.hosts:
+            jid = self.prep_id(h["name"])
+            if jid in failed and jid not in retried:
+                aside = os.path.join(self.q, "failed-retried")
+                os.makedirs(aside, exist_ok=True)
+                for f in glob.glob(os.path.join(self.q, "failed", "*-%s.json" % jid)):
+                    os.rename(f, os.path.join(aside, os.path.basename(f)))
+                retried[jid] = time.strftime("%Y-%m-%dT%H:%M:%S")
+                out.add(jid)
+        return out
 
     def prepared(self, host):
         return self.prep_id(host) in self.ids("done")
@@ -3228,6 +3250,15 @@ class Plan:
     #                  and auto mode pushed it), the line ends.
     # Nothing waits for a person.
     LINE = "orrery/accepted"
+    # A WRITER MOVES THE LINE; A READER SEES IT AS IT WAS KEPT (4 November). The line's branch and
+    # its bundle are set in the same pass that saves the state naming the line's head. A reader
+    # (analysis.py, the console's reports) used to replay the line too when main had moved, and
+    # saved no state: at 20:09 it moved the branch and the bundle to a replay of its own, d821e7b,
+    # forty seconds after the keeper's pass had kept f04f157, every machine was sent to build
+    # f04f157 with a bundle that did not hold it, and all eight CPU lanes stood idle for an hour.
+    # Only the commands that keep the state are writers (__main__).
+    writer = False
+
     def evidence(self):
         """Every candidate with its weights and evidence: the census, the two
         held-out reads, and its families. {name: {...}}."""
@@ -3649,6 +3680,9 @@ class Plan:
         if not line:
             return None
         head = line.get("commit", "")
+        if not self.writer:
+            # As kept: on main, nothing to build of it; else its head, replayed or not.
+            return None if run(["git", "-C", self.tc, "merge-base", "--is-ancestor", head, main_sha]).returncode == 0 else head
         if run(["git", "-C", self.tc, "merge-base", "--is-ancestor", head, main_sha]).returncode == 0:
             # Resolved: Paul committed the weights (or pushed the line).
             for rid in line["promotions"]:
@@ -3664,6 +3698,7 @@ class Plan:
             self.flag("resolve", "the local line is on main (%s): resolved" % main_sha[:7], key="resolved:%s" % head[:12], progress=True)
             return None
         if run(["git", "-C", self.tc, "merge-base", "--is-ancestor", main_sha, head]).returncode == 0:
+            self.heal_line(head)
             return head
         # main moved on: the line's own commits again, on top of it.
         own = run(["git", "-C", self.tc, "rev-list", "--reverse", "%s..%s" % (main_sha, head)]).stdout.split()
@@ -3677,6 +3712,20 @@ class Plan:
         self.state["local_line"] = line
         self.bundle()
         return new
+
+    def heal_line(self, head):
+        """THE STATE IS THE LINE'S TRUTH, its branch and bundle follow it (4 November). A branch or a
+        bundle that names another commit than the state's head is set back to it, and said."""
+        f = os.path.join(self.pd, "accepted.bundle")
+        branch = run(["git", "-C", self.tc, "rev-parse", "--verify", "-q", self.LINE]).stdout.strip()
+        heads = run(["git", "-C", self.tc, "bundle", "list-heads", f]).stdout.split() if os.path.exists(f) else []
+        if branch == head and head in heads:
+            return
+        run(["git", "-C", self.tc, "branch", "-f", self.LINE, head])
+        self.bundle()
+        self.flag("line", "the line's branch was %s and its bundle held %s, while the line is %s: both set to %s" % (
+            branch[:7] or "none", ", ".join(h[:7] for h in heads if len(h) == 40) or "nothing", head[:7], head[:7]),
+            key="healed:%s:%s" % (head[:12], branch[:12]), progress=True)
 
     def bundle(self):
         """The local line's own commits as a git bundle (plan/accepted.bundle),
@@ -5231,6 +5280,7 @@ if __name__ == "__main__":
         sys.exit(__doc__)
     p = Plan(sys.argv[1])
     cmd = sys.argv[2]
+    p.writer = cmd in ("plan", "now", "approve", "resolve", "why", "tag", "adopt")
     if cmd == "plan":
         p.plan(int(sys.argv[3]) if len(sys.argv) > 3 else 4)
     elif cmd == "collect":

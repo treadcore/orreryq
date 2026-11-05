@@ -161,8 +161,9 @@ def commit(d, path, text, msg):
 
 
 class Git(P):
-    """The line's git, for real; what it reports, kept here."""
+    """The line's git, for real; what it reports, kept here. A writer: it plays the keeper's pass."""
     LINE = "orrery/accepted"
+    writer = True
     def __init__(self, tc, pd):
         self.tc, self.pd, self.cfg, self._sha = tc, pd, {}, None
         self.state = {"commits": {}}
@@ -259,6 +260,49 @@ assert git(tc, "rev-parse", "origin/main") == moved
 new = g.sha()
 assert new != head and git(tc, "rev-parse", new + "~2") == moved
 _sh.rmtree(root)
+
+# A READER REPLAYS NOTHING, AND THE STATE IS THE LINE'S TRUTH (4 November). Main moved: analysis.py's
+# planner sees the line as kept and leaves the branch alone; the keeper's pass replays it; a branch
+# moved behind the state's back is set back on the next pass, and said.
+root, tc, pd, base = fresh()
+g = Git(tc, pd)
+head = line_of(tc, g, base, "r1")
+moved = commit(tc, "source/game", "x", "the game moved")
+git(tc, "push", "-q", "origin", "main")
+rd = Git(tc, pd)
+rd.writer, rd.state = False, json.loads(json.dumps(g.state))
+assert rd.sha() == head and git(tc, "rev-parse", g.LINE) == head, "a reader moves nothing"
+new = g.sha()
+assert new != head and git(tc, "rev-parse", g.LINE) == new, "the writer replays"
+git(tc, "branch", "-f", g.LINE, moved)
+said = len(g.flags)
+g._sha = None
+assert g.sha() == new and git(tc, "rev-parse", g.LINE) == new, "set back to the state's head"
+assert any("set to %s" % new[:7] in f for f in g.flags[said:]), g.flags[said:]
+_sh.rmtree(root)
+
+
+class Builds(P):
+    """A failed build, asked again once."""
+    def __init__(self, q):
+        self.q, self.state, self.hosts = q, {}, [{"name": "a"}, {"name": "b"}]
+    def short(self, sha=None):
+        return "abc1234"
+
+
+bq = tempfile.mkdtemp()
+os.makedirs(os.path.join(bq, "failed"))
+json.dump({"id": "prep-a-abc1234"}, open(os.path.join(bq, "failed", "17-prep-a-abc1234.json"), "w"))
+json.dump({"id": "prep-a-0ld0000"}, open(os.path.join(bq, "failed", "16-prep-a-0ld0000.json"), "w"))
+bw = Builds(bq)
+assert bw.retry_failed_builds() == set(), "a reader asks nothing again"
+bw.writer = True
+assert bw.retry_failed_builds() == {"prep-a-abc1234"} and "prep-a-abc1234" not in bw.ids("failed"), "this commit's failed build, set aside"
+assert "prep-a-0ld0000" in bw.ids("failed"), "an older commit's is left"
+json.dump({"id": "prep-a-abc1234"}, open(os.path.join(bq, "failed", "18-prep-a-abc1234.json"), "w"))
+assert bw.retry_failed_builds() == set() and "prep-a-abc1234" in bw.ids("failed"), "once a machine and commit"
+_sh.rmtree(bq)
+print("the line as kept, set back, and a failed build asked again: every check holds")
 
 # ---- A batch: the strongest, and what moves nothing it moves.
 b = P.__new__(P)
