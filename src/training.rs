@@ -1556,9 +1556,10 @@ fn wrap(text: &str, w: i32) -> Vec<String> {
 /// buttons for what the keeper does not do by itself.
 ///
 /// WHAT IT DOES BY ITSELF IS NOT A BUTTON. It plans for a lane idle with
-/// nothing it can start, and restarts on new code when that throws away
-/// under ten minutes; the buttons are for doing either sooner, and for the
-/// restart that costs a long job, which asks twice and says what it costs.
+/// nothing it can start, and restarts on new code with its running jobs
+/// handed over (4 November; before, a restart ran them again from the
+/// start); the buttons are for doing either sooner. Restart still asks
+/// twice: it is the keeper, and it says how many jobs it carries.
 /// Settings, Long run: what repeats over many generations, what it last found and its options.
 fn draw_long_run(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
     let t = ui.t;
@@ -1822,7 +1823,7 @@ fn draw_keeper_page(ui: &mut Ui, at: Rect, q: &Queue, st: &mut State) {
     by += 32;
     note(ui, &mut by, "Gather every machine's record now (it does by itself each half hour).");
     let (jobs, oldest) = &q.restart;
-    let label = if st.arm_restart { format!("Press again: restart, {} jobs run again", jobs) } else { "Restart the keeper".into() };
+    let label = if st.arm_restart { format!("Press again: restart, {} running jobs carried on", jobs) } else { "Restart the keeper".into() };
     if ui.button(rect(bx, by, bw, 26), &label, true) {
         if st.arm_restart {
             st.ctl = Some("restart".into());
@@ -1833,7 +1834,7 @@ fn draw_keeper_page(ui: &mut Ui, at: Rect, q: &Queue, st: &mut State) {
     }
     by += 32;
     let cost = if oldest.is_empty() { String::new() } else { format!(" The oldest is {}.", oldest) };
-    note(ui, &mut by, &format!("Restart on the code on disk: the jobs running go back on the queue and run again.{} On new code it restarts by itself once nothing running is older than ten minutes.", cost));
+    note(ui, &mut by, &format!("Restart on the code on disk: the jobs running carry on, handed over to the new keeper; a lane still delivering or fetching after 90 seconds is cut off, and its job runs again.{} On new code it restarts by itself once no lane is delivering or fetching.", cost));
 }
 
 /// The Commits page: the line the fleet builds, newest first -- when, which,

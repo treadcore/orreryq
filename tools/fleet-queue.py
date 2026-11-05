@@ -58,7 +58,7 @@ a keeper that keeps it all running, and two ways to stop.
                                              its planning and syncing, the lanes, the jobs waiting
     tools/fleet-queue.py DIR plan-now        the keeper asks the planner for work at its next beat
     tools/fleet-queue.py DIR restart         the keeper restarts on the code on disk; the jobs
-                                             running go back on the queue and run again
+                                             running carry on, handed over to the new keeper
     tools/fleet-queue.py DIR add JOB.json    put a job on the queue by hand
 
 DIR/config.json says who works and who plans:
@@ -125,6 +125,16 @@ class Queue:
             os.makedirs(os.path.join(self.d, sub), exist_ok=True)
         self.lock = threading.Lock()
         self.restarting = False
+        # THE HANDOVER (Paul, 4 November: "build A"). A keeper that restarts itself keeps its jobs:
+        # it re-executes in place, its children (the ssh of each running job) are still its children,
+        # and the new keeper waits on them and finishes each job as any job finishes. From the moment
+        # a handover begins nothing reaps a child (hand_lock), so a job that ends inside it is still
+        # there, with its exit code, for the new keeper to read.
+        self.hand_lock = threading.Lock()
+        self.handing = False
+        self.parked = set()
+        self.started = {}
+        self.adopt = {}
 
     # ---- files ---------------------------------------------------------
     def p(self, *a):
@@ -278,11 +288,51 @@ def remote(target, script, timeout=None, stdin=None, capture=True):
         time.sleep(15)
 
 
-def run_job(q, host, job, log):
+class Child:
+    """A job's process: its Popen, or, adopted across a restart, its pid alone. THE POPEN IS KEPT
+    while the job runs: one let go is reaped by subprocess on its own, and its code is lost."""
+    def __init__(self, p=None, pid=None):
+        self.p, self.pid = p, p.pid if p else pid
+
+    def poll(self):
+        """The exit code; None while it runs; "gone" if it is not this process's child."""
+        if self.p:
+            return self.p.poll()
+        try:
+            done, status = os.waitpid(self.pid, os.WNOHANG)
+        except ChildProcessError:
+            return "gone"
+        return os.waitstatus_to_exitcode(status) if done else None
+
+    def reap(self):
+        if self.p:
+            return self.p.wait()
+        try:
+            return os.waitstatus_to_exitcode(os.waitpid(self.pid, 0)[1])
+        except ChildProcessError:
+            return "gone"
+
+    def terminate(self):
+        try:
+            os.kill(self.pid, signal.SIGTERM)
+        except OSError:
+            pass
+
+    def kill(self):
+        try:
+            os.kill(self.pid, signal.SIGKILL)
+        except OSError:
+            pass
+
+
+def run_job(q, host, job, log, t0=None, adopted=None):
     """The job's command, in its own process group on the host, its pid kept
-    in ~/.fleet-queue/ID.pid so stop-now can stop the whole group."""
+    in ~/.fleet-queue/ID.pid so stop-now can stop the whole group. Its exit code;
+    "gone" when an adopted job turns out not to be this process's child."""
     jid = job["id"]
     body = job["cmd"]
+    t0 = t0 or now()
+    deadline = t0 + job.get("timeout_s", 4 * 3600)
     # A host's "nice" (config.json) lowers the whole job, its children too.
     nice = "renice -n %d -p $$ >/dev/null 2>&1\n" % host["nice"] if host.get("nice") else ""
     wrapper = nice + (
@@ -294,19 +344,40 @@ def run_job(q, host, job, log):
     b = b64encode(wrapper.encode()).decode()
     cmd = ["bash", "-c", wrapper] if host["target"] == "-" else SSH + [host["target"], 'exec bash -c "$(echo %s | base64 -d)"' % b]
     with open(log, "a") as out:
-        out.write("$ %s\n" % job.get("cmd", "")[:2000])
-        out.flush()
-        p = subprocess.Popen(cmd, stdout=out, stderr=subprocess.STDOUT, start_new_session=True)
-        q.procs[jid] = (p, host)
+        if adopted:
+            out.write("-- the keeper restarted at %s; the job ran on (pid %d)\n" % (time.strftime("%H:%M:%S"), adopted))
+            out.flush()
+            child = Child(pid=adopted)
+        else:
+            out.write("$ %s\n" % job.get("cmd", "")[:2000])
+            out.flush()
+            child = Child(p=subprocess.Popen(cmd, stdout=out, stderr=subprocess.STDOUT, start_new_session=True))
+        q.procs[jid] = (child, host)
+        q.started[jid] = (t0, job["_file"], host["name"])
         try:
-            return p.wait(timeout=job.get("timeout_s", 4 * 3600))
-        except subprocess.TimeoutExpired:
-            stop_remote(host, jid)
-            p.kill()
-            out.write("timed out after %s s\n" % job.get("timeout_s"))
-            return 124
+            while True:
+                with q.hand_lock:
+                    if q.handing:
+                        # Handed over: this thread ends with the exec, the job runs on.
+                        q.parked.add(host["name"])
+                        rc = "parked"
+                    else:
+                        rc = child.poll()
+                if rc == "parked":
+                    while True:
+                        time.sleep(60)
+                if rc is not None:
+                    return rc
+                if now() > deadline:
+                    stop_remote(host, jid)
+                    child.kill()
+                    child.reap()
+                    out.write("timed out after %s s\n" % job.get("timeout_s", 4 * 3600))
+                    return 124
+                time.sleep(1)
         finally:
             q.procs.pop(jid, None)
+            q.started.pop(jid, None)
 
 
 def stop_asked(q, jid):
@@ -547,18 +618,31 @@ def lane(q, host, alive):
 
     said = {}
 
-    def say(state, job=None):
+    def say(state, job=None, since=None):
         # "since" is when the lane came to this state: an idle lane says
         # idle every three seconds, and an hour of it must read as an hour.
+        # An adopted job keeps the time it began.
         jid = job and job["id"]
         if said.get("state") != state or said.get("job") != jid:
-            said.update(state=state, job=jid, since=now())
+            said.update(state=state, job=jid, since=since or now())
         tmp = q.p("lanes", ".%s.tmp" % name)
         with open(tmp, "w") as f:
             json.dump({"host": name, "state": state, "job": jid, "kind": job and job.get("kind"),
                        "title": job and job.get("title"), "since": said["since"]}, f)
         os.rename(tmp, q.p("lanes", name + ".json"))
 
+    # A job the keeper before this one handed over: this lane finishes it before it takes another.
+    handed = q.adopt.pop(name, None)
+    if handed:
+        try:
+            j = dict(json.load(open(handed["file"])), _file=handed["file"])
+            work(q, host, j, say, adopted=handed)
+        except Exception as e:  # the job fails; the lane goes on
+            q.event("lane error", host=name, job=handed.get("id"), detail=repr(e)[:300])
+            try:
+                os.rename(handed["file"], q.p("failed", os.path.basename(handed["file"])))
+            except OSError:
+                pass
     say("idle")
     while alive.is_set() and not q.flag("STOP_NOW"):
         if q.flag("SHUTDOWN"):
@@ -681,16 +765,29 @@ def reachable(host):
         return False
 
 
-def work(q, host, j, say):
+def work(q, host, j, say, adopted=None):
     name = host["name"]
     if True:
         log = q.p("logs", j["id"] + ".log")
-        say("running", j)
-        q.event("started", job=j["id"], host=name, kind=j.get("kind"))
-        t0 = now()
-        rc = 1
-        if send(q, host, j, log) and not stop_asked(q, j["id"]) and not sent_back(q, j["id"]):
-            rc = run_job(q, host, j, log)
+        if adopted:
+            # Handed over by the keeper before this one: it ran on through the restart.
+            t0 = adopted["t0"]
+            say("running", j, since=t0)
+            q.event("adopted", job=j["id"], host=name, pid=adopted["pid"])
+            rc = run_job(q, host, j, log, t0, adopted=adopted["pid"])
+            if rc == "gone":
+                with open(log, "a") as out:
+                    out.write("the keeper restarted and the job's process was not its own to wait on: the job goes back on the queue\n")
+                os.rename(j["_file"], q.p("queue", os.path.basename(j["_file"])))
+                q.event("requeued", job=j["id"], host=name, why="the keeper restarted and could not take it up")
+                return
+        else:
+            say("running", j)
+            q.event("started", job=j["id"], host=name, kind=j.get("kind"))
+            t0 = now()
+            rc = 1
+            if send(q, host, j, log) and not stop_asked(q, j["id"]) and not sent_back(q, j["id"]):
+                rc = run_job(q, host, j, log, t0)
         ok = rc == 0
         if ok and j.get("deliver"):
             say("delivering", j)
@@ -762,9 +859,21 @@ def keeper(q):
         f.write(str(os.getpid()))
     q.procs = {}
     q.streak = 0
+    # What the keeper before handed over, if it was this process (exec keeps the pid; a pid
+    # from another process could name some other child): each job stays in running/ for its lane.
+    try:
+        hand = json.load(open(q.p("handover.json")))
+        os.remove(q.p("handover.json"))
+    except (OSError, ValueError):
+        hand = {}
+    if hand.get("keeper") == os.getpid():
+        q.adopt = {e["host"]: e for e in hand.get("jobs", []) if os.path.exists(e["file"])}
+    taken = {e["file"] for e in q.adopt.values()}
     # Jobs a keeper that died left running go back on the queue: their lanes
     # died with it.
     for j in q.jobs_in("running"):
+        if j["_file"] in taken:
+            continue
         os.rename(j["_file"], q.p("queue", os.path.basename(j["_file"])))
         q.event("requeued", job=j["id"], why="the keeper before this one died while it ran")
     # Nothing is running now, so nothing is left to send back.
@@ -858,17 +967,39 @@ def keeper(q):
     def restart(why):
         # THE KEEPER RESTARTS ITSELF ON NEW CODE. A keeper started at 12:28
         # ran 12:28's code until 21:20, and the fix made at 14:29 waited for
-        # "its next start" all evening. The lanes stop, what they cut short
-        # goes back on the queue (work(), q.restarting), and the process
-        # execs itself: the same pid, so keeper.pid and the caffeinate hold.
+        # "its next start" all evening. The process execs itself: the same
+        # pid, so keeper.pid and the caffeinate hold.
+        #
+        # AND IT KEEPS ITS JOBS (4 November). It stopped every running job and
+        # ran it again from the start: 132 jobs and 7.7 machine-hours in the
+        # week to 4 November. Now no lane takes more work, each finishes what is
+        # not its command (a send, a fetch) or parks on its command, and the
+        # running jobs are written down, pid and all (handover.json), for the
+        # new keeper, whose children they still are. A lane still busy after 90
+        # seconds is cut off as before, and its job runs again.
         q.restarting = True
         q.event("keeper restarting", why=why)
         alive.clear()
-        for jid, (p, host) in list(q.procs.items()):
-            stop_remote(host, jid)
-            p.terminate()
-        for t in threads.values():
-            t.join(timeout=90)
+        with q.hand_lock:
+            q.handing = True
+        until = now() + 90
+        while now() < until:
+            with q.hand_lock:
+                parked = set(q.parked)
+            if all(not t.is_alive() or n in parked for n, t in threads.items()):
+                break
+            time.sleep(0.5)
+        with q.hand_lock:
+            jobs = [{"id": jid, "pid": child.pid, "host": name, "file": f, "t0": t0}
+                    for jid, (child, host) in q.procs.items() if jid in q.started
+                    for t0, f, name in [q.started[jid]]]
+        with open(q.p(".handover.json.tmp"), "w") as f:
+            json.dump({"keeper": os.getpid(), "at": time.strftime("%Y-%m-%dT%H:%M:%S"), "jobs": jobs}, f)
+        os.replace(q.p(".handover.json.tmp"), q.p("handover.json"))
+        q.event("handed over", jobs=[j["id"] for j in jobs])
+        # restart-check.sh's knob (config "handover_hold_s", 0): the handover held open, so that
+        # a job can end inside it and be read from its exit by the new keeper.
+        time.sleep(q.config().get("handover_hold_s", 0))
         try:
             os.remove(q.p("RESTART"))
         except OSError:
@@ -974,11 +1105,10 @@ def keeper(q):
                         json.dump({"reset_at": time.time()}, f)
                     q.event("resume adding", why="the breaker reset itself after %d min" % (resume_s // 60))
                     q.notice("breaker", "the queue adds again by itself, %d minutes after the breaker" % (resume_s // 60))
-            # New code on disk: the keeper restarts when that throws away
-            # little (nothing running longer than restart_lose_s, ten
-            # minutes: a census or a segment, run again), or at once when a
-            # person pressed Restart (DIR/RESTART). A six-hour job is not
-            # thrown away for a code change on the keeper's own word.
+            # New code on disk: the keeper restarts at its next beat, its jobs
+            # handed over (restart()), or at once when a person pressed
+            # Restart (DIR/RESTART). Not while a lane delivers or fetches: a
+            # transfer is not a process the new keeper can take up.
             try:
                 mtime = os.stat(__file__).st_mtime
             except OSError:
@@ -990,9 +1120,8 @@ def keeper(q):
             if q.flag("RESTART"):
                 restart("Restart was pressed")
             if stale:
-                ages = [now() - l.get("since", now()) for l in (lane_file(q, h["name"]) for h in q.config()["hosts"])
-                        if l.get("job")]
-                if max(ages, default=0) < life["restart_lose_s"]:
+                moving = [l for l in (lane_file(q, h["name"]) for h in q.config()["hosts"]) if l.get("state") in ("delivering", "fetching")]
+                if not moving:
                     restart("new code on disk (%s, was %s)" % (code_seen[0], life["code"]))
             queued = len(q.jobs_in("queue"))
             running = len(q.jobs_in("running"))
@@ -1136,8 +1265,8 @@ def health(q):
         if info["code"] == disk:
             check("ok", "code", "it runs the code on disk (%s)" % disk)
         else:
-            check("warn", "code", "it runs older code (%s, the file is %s): it restarts itself once nothing running "
-                  "is older than %s%s, or press Restart the keeper" % (info["code"], disk, took(lose), held))
+            check("warn", "code", "it runs older code (%s, the file is %s): it restarts itself, its running jobs carried "
+                  "on, once no lane is delivering or fetching, or press Restart the keeper" % (info["code"], disk))
     else:
         changed = os.stat(__file__).st_mtime
         started = stamp_age(info.get("started"))
@@ -1273,7 +1402,8 @@ def health(q):
 
 
 def restart_cost(q):
-    """What Restart the keeper throws away: the jobs running, run again."""
+    """What Restart the keeper carries across: the jobs running, handed over to the new keeper (a lane
+    still delivering or fetching after 90 seconds is cut off, and its job runs again)."""
     rows = []
     for h in q.config()["hosts"]:
         l = lane_file(q, h["name"])
@@ -1412,7 +1542,7 @@ def restart_keeper(q):
     if info.get("code"):
         open(q.p("RESTART"), "w").close()
         q.event("restart asked")
-        print("the keeper restarts at its next beat; %d running jobs run again" % cost["jobs"])
+        print("the keeper restarts at its next beat; %d running jobs carried on" % cost["jobs"])
         return
     q.event("restart asked", how="stopped from outside: a keeper from before restarts")
     os.kill(pid, signal.SIGTERM)

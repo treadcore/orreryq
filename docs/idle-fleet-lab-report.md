@@ -116,7 +116,7 @@ Tonight's 19:42 restart, for the console's verbs moving out of the keeper's file
 
 ## VII. Restarting without losing work: four changes, not built
 
-**A. The keeper keeps its jobs across its own restart.** A process that re-executes itself keeps its children: the ssh processes running the jobs live on, still the keeper's, still writing their logs. Today the keeper stops them before it restarts. Instead it would write each running job's ssh pid into the job's record, re-execute, and the new keeper would *adopt* them: wait on each pid (`os.waitpid`, which works on a child it did not start in this image), then finish it as any job finishes (deliver, fetch, done or failed). The lane of a machine with an adopted job takes nothing new until it ends. New code would then take effect at once, with no wait for a quiet moment. **This is the 132 jobs and 7.7 machine-hours of Table III.** About a hundred lines in `fleet-queue.py`, and a check in `fleet-queue-check.sh` that restarts a keeper under running jobs and sees each finish once.
+**A. The keeper keeps its jobs across its own restart (built the same night: section X).** A process that re-executes itself keeps its children: the ssh processes running the jobs live on, still the keeper's, still writing their logs. Today the keeper stops them before it restarts. Instead it would write each running job's ssh pid into the job's record, re-execute, and the new keeper would *adopt* them: wait on each pid (`os.waitpid`, which works on a child it did not start in this image), then finish it as any job finishes (deliver, fetch, done or failed). The lane of a machine with an adopted job takes nothing new until it ends. New code would then take effect at once, with no wait for a quiet moment. **This is the 132 jobs and 7.7 machine-hours of Table III.** About a hundred lines in `fleet-queue.py`, and a check in `fleet-queue-check.sh` that restarts a keeper under running jobs and sees each finish once.
 
 **B. The machine keeps the job's end.** A keeper that *dies* (a crash, the Mac restarting under a running fleet) cannot wait on ssh processes it did not start; the next keeper runs every such job again, and does not stop the old one, which may still be running. The job's wrapper on each machine already writes the job's pid to `~/.fleet-queue/ID.pid`; it would also write the exit code to `~/.fleet-queue/ID.rc` and the output to a log beside it. A new keeper would ask each machine about the jobs it inherited: still running (watch it), ended (read its code and log, fetch, finish), or gone (run it again). **No keeper died this week, so B saves nothing measured;** it is insurance against the day one does. It is larger than A, since a job's output today returns through its ssh.
 
@@ -128,7 +128,7 @@ Tonight's 19:42 restart, for the console's verbs moving out of the keeper's file
 
 | Change | Saves | Size | Risk |
 |---|---|---|---|
-| A, adopt across a restart | 7.7 h a week; new code at once | about 100 lines | a job finished twice if the adoption is wrong; the check guards it |
+| A, adopt across a restart (built) | 7.7 h a week; new code at once | about 100 lines | a job finished twice if the adoption is wrong; the check guards it |
 | B, the end kept on the machine | nothing measured: insurance against a keeper that dies | larger | touches every job's wrapper |
 | C, housekeeping in the keeper | stale pages, a late sweep, a burst on opening | small | none to the fleet |
 | D, idle lanes flagged | the next 54 minutes like tonight's | small | none |
@@ -145,7 +145,28 @@ The keeper's restarts are the other half of Paul's question. The fleet has learn
 
 ## IX. What Paul decides
 
-Which of A to D to build, and in what order. Nothing is built yet beyond the three guards of section V.
+Which of A to D to build, and in what order. Paul chose A the same night (section X); B, C and D wait.
+
+## X. Addendum, the same night: A built
+
+Paul: "build A. commit. push report."
+
+**What was built.** The handover of section VII.A, in `tools/fleet-queue.py`. On a restart no lane takes more work; each lane finishes what is not its command (a send, a fetch) or parks on its command, and from that moment nothing reaps a child, so a job that ends inside the handover keeps its exit code for the new keeper. The running jobs are written to `handover.json` with their pids, and the process re-executes. The new keeper takes up a job only if the handover was written by the same process (a pid from another process could name some other child); it waits on the pid, keeps the job's first clock for its timeout and its start time for its lane, and finishes it as any job finishes. A job whose process turns out not to be its own goes back on the queue, said. On new code the keeper now restarts at its next beat, unless a lane is delivering or fetching; the ten-minute wait is gone. The Settings page's Restart says how many running jobs it carries on, no longer how many run again.
+
+**How it was checked.** A new check, `tools/restart-check.sh`, runs a real keeper with five lanes on this Mac and five jobs that each count their own runs. It presses Restart under all five, and again under the longest:
+
+- the same process re-executes, and all five jobs are taken up;
+- a job that ends inside the handover (held open three seconds by the check's own setting, `handover_hold_s`), before the new keeper begins, is read from its exit and is done;
+- a job that exits 3 is failed with code 3;
+- a job with a 15-second limit times out at 15 seconds on its first clock;
+- a job stopped by hand after the handover stops;
+- the second restart hands the longest job over again, and its one log runs from before both restarts to after;
+- a handover written by another process is not taken up, and the job it names runs from the queue;
+- every job started once and ran once, and nothing but that one went back on the queue.
+
+It passed three runs in a row; `fleet-queue-check.sh` and `breaker-check.sh` pass, and orrery's 397 tests.
+
+**One more restart costs what they all did.** The keeper running when this lands is the old code, and its restart into the new is the old kind: what runs then goes back on the queue, for the last time. A pressed Restart can still cut off a lane that is delivering or fetching for more than 90 seconds; B, C and D are not built.
 
 ## References
 
@@ -160,3 +181,5 @@ Which of A to D to build, and in what order. Nothing is built yet beyond the thr
 [5] The keeper's events (`QUEUE/events.jsonl`), log (`keeper.log`) and the build logs `logs/prep-*-f04f157.log`, 29 October to 4 November 2026.
 
 [6] git reflog of `orrery/accepted` in the Mac's treadcore checkout, 4 November 2026.
+
+[7] `tools/restart-check.sh`, the handover against a real keeper, 4 November 2026.
