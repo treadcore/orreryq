@@ -7,6 +7,7 @@
     python3 -I tools/plans/treadcore.py QDIR judged ID  (on_done of a judge job)
     python3 -I tools/plans/treadcore.py QDIR families   the families' verdicts so far
     python3 -I tools/plans/treadcore.py QDIR sync       every machine's ledger, one table
+    python3 -I tools/plans/treadcore.py QDIR chores     the housekeeping: what is stale, begun (the keeper, each minute)
     python3 -I tools/plans/treadcore.py QDIR now        do it now: sync, then promote or re-read
 
 tools/fleet-queue.py is the engine (jobs, lanes, the keeper, stops); this
@@ -3363,12 +3364,12 @@ class Plan:
             # still is something stranded ... create an acknowledge which passes it on to the queue").
             host = p.get("host")
             # It is tested on what the fleet runs: the local line, if there is one.
-            base = self.LINE if self.state.get("local_line") else "origin/main"
+            fetch_line, base, send = self.promote_base(rid)
             out = "~/%s/out/%s" % (self.home, jid)
             cmd = (
                 "set -e -o pipefail; [ -f ~/.cargo/env ] && . ~/.cargo/env; export PATH=$HOME/.cargo/bin:/opt/homebrew/bin:$PATH\n"
                 "T=~/code/treadcore; W=~/%s/promote/%s; B=%s; O=%s; mkdir -p $O\n"
-                "cd $T && git fetch -q origin\n"
+                "cd $T && git fetch -q origin\n%s"
                 "git worktree remove --force $W 2>/dev/null || true; git worktree prune; git branch -D $B 2>/dev/null || true\n"
                 "git worktree add -q -b $B $W %s\n"
                 "cd $W && echo %s | base64 -d > $O/promote.weights && python3 -I scripts/set-defaults.py $O/promote.weights | tee $O/changed.txt\n"
@@ -3391,7 +3392,7 @@ class Plan:
                 "git add source/treadcore-brain/src/weights.rs source/treadcore-brain/src/tactics.rs && echo %s | base64 -d > $O/msg.txt && git commit -q -F $O/msg.txt\n"
                 "git bundle create -q $O/promote.bundle %s..$B && echo 'the commit travels back as promote.bundle'\n"
                 "git rev-parse HEAD > $O/commit.txt; echo \"prepared $(cat $O/commit.txt) on $B\"\n"
-            ) % (self.home, rid, branch, out, base, b1, b2, base)
+            ) % (self.home, rid, branch, out, fetch_line, base, b1, b2, base)
             st = {"status": "running", "job": jid, "candidate": name, "branch": branch, "changed": changed, "can_push": can_push,
                   "evidence": {k: ev.get(k) for k in ("census", "held", "families")}}
             self.rsave(rid, st)
@@ -3399,6 +3400,8 @@ class Plan:
                    "needs": "host:" + host if host else "cpu", "cmd": cmd, "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 4 * 3600}
             if host:
                 job["or"] = "cpu"
+            if send:
+                job["send"] = send
             return [job]
         # Running: the branch is prepared when the job is done, and its commit is fetched from the
         # bundle into this checkout, where approve pushes it from.
@@ -3463,6 +3466,22 @@ class Plan:
         self.rsave(rid, st)
         return []
 
+    def promote_base(self, rid):
+        """What a promotion job builds on, on whichever machine takes it: (the shell line that brings
+        the local line there, the commit to branch from, the files sent with the job).
+
+        THE LINE IS A BRANCH ONLY HERE. Every build fetches the line's commits from its bundle, but
+        under no name, so on any other machine `orrery/accepted` names nothing: on 5 November, 00:15,
+        the night's one promotion (r0182, grove/w10040, held out +0.69) went to macmini and died in a
+        second on `fatal: invalid reference: orrery/accepted`. The job now takes the bundle with it
+        and names the line by its commit, which is the same on every machine."""
+        line = self.state.get("local_line")
+        if not line:
+            return "", "origin/main", []
+        dst = "~/%s/promote/%s.bundle" % (self.home, rid)
+        return ("git fetch -q %s %s\n" % (dst, self.LINE), line["commit"],
+                [{"src": os.path.join(self.pd, "accepted.bundle"), "dst": dst}])
+
     def retry_after_main(self, autos, tried):
         """A candidate whose auto promotion failed at the brain's tests is
         tried once more when main has moved since: the test may have been
@@ -3478,9 +3497,25 @@ class Plan:
         except ValueError:
             return
         done = self.state.setdefault("retried", {})
+        faults = self.state.setdefault("job_faults", {})
         for a in autos:
             st_ = self.rstate(a["id"])
             name = st_.get("candidate")
+            # NOT THE CANDIDATE'S FAULT: its promotion died before its numbers were judged (r0182, a git
+            # error on macmini, 5 November). It is tried again at once, once: a fault that repeats is
+            # the machine's or the line's, and two in a row pause auto promotion as any two failures do.
+            if (st_.get("status") == "failed" and name in tried and st_.get("job") in self.ids("failed")
+                    and not any(self.rstate(b["id"]).get("candidate") == name for b in autos[autos.index(a) + 1:])):
+                why = self.promote_failure(st_["job"])
+                if why.startswith(self.JOB_FAULT) and name not in faults:
+                    if why != st_.get("why"):
+                        st_["why"] = why
+                        self.rsave(a["id"], st_)
+                    tried.remove(name)
+                    faults[name] = a["id"]
+                    self.flag("auto", "%s is tried again: its promotion %s failed before it was judged (%s)" % (name, a["id"], why),
+                              key="fault-retry:%s:%s" % (name, a["id"]), progress=True)
+                    continue
             if st_.get("status") != "failed" or name not in tried or done.get(name) == sha or "tests failed" not in st_.get("why", ""):
                 continue
             # Only its newest try counts.
@@ -3550,6 +3585,9 @@ class Plan:
         """The tests cargo names under its last "failures:", a set."""
         return {n.strip() for b in re.findall(r"^failures:\n((?:    \S+\n)+)", log, re.M) for n in b.splitlines()}
 
+    # A promotion that failed before its candidate was judged: the machine, git, a send.
+    JOB_FAULT = "the promotion job failed"
+
     def promote_failure(self, jid):
         """Which step of a promotion failed, read from its log: the brain's
         tests (and the first that failed), a family under its floor, or the
@@ -3558,13 +3596,19 @@ class Plan:
             log = open(os.path.join(self.q, "logs", jid + ".log")).read()
         except OSError:
             log = ""
-        if "the tests failed" in log:
+        # THE VERDICT IS A LINE OF ITS OWN. The log begins with the job's command, which holds every
+        # verdict's words: r0182 died on a git error and was read as "the brain's tests failed".
+        if re.search(r"^the tests failed: not committed$", log, re.M):
             names = sorted(self.failed_tests(log))
             return "the brain's tests failed%s: see logs/%s.log" % (" (%s)" % ", ".join(names) if names else "", jid)
-        if "a family" in log and "under" in log:
+        if re.search(r"^a family fell under its floor: not committed$", log, re.M):
             m = re.search(r"^family (\S+).*under", log, re.M)
             return "a family fell under its floor%s: see logs/%s.log" % (" (%s)" % m.group(1) if m else "", jid)
-        return "the promotion job failed: see logs/%s.log" % jid
+        if re.search(r"^a gauntlet under its floor: not committed$", log, re.M):
+            m = re.search(r"^gauntlet under its floor: (.*)$", log, re.M)
+            return "a gauntlet fell under its floor%s: see logs/%s.log" % (" (%s)" % m.group(1) if m else "", jid)
+        m = re.search(r"^((?:fatal|error)(?:\[\w+\])?: .*)$", log, re.M)
+        return "%s%s: see logs/%s.log" % (self.JOB_FAULT, " (%s)" % m.group(1)[:160] if m else "", jid)
 
     def approve(self, rid):
         """Paul's word, by hand: a prepared or self-modified promotion is
@@ -5275,9 +5319,62 @@ class Plan:
         print("collected: %d weight censuses (%d past two errors); %d net rounds judged" % (len(rows), len(passed), len(rounds)))
 
 
+def chores(qdir, tools=None):
+    """THE HOUSEKEEPING IS THE KEEPER'S (the lab report of 4 November, "Fifty-Four Idle Minutes",
+    change C). The Results and Analysis pages' documents and the recordings' sweep were begun by
+    the window (treadcore-view.py, every few seconds while it is open): with it closed the pages went
+    stale and the sweep that keeps the disks from filling waited, and opening it began everything
+    stale in the same few seconds. The keeper asks this each minute (`PLANNER chores`), window or
+    none; what is stale is begun in the background, each behind its own lock, and nothing here waits
+    for it. The same clocks as the window kept: analysis each 10 minutes, nets and growth each 5,
+    the recordings' list each half hour and their sweep each 6 hours. Prints what it began."""
+    tools = tools or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    pd = os.path.join(qdir, "plan")
+    began = []
+
+    def age(f):
+        return time.time() - os.path.getmtime(f) if os.path.exists(f) else 1e9
+
+    def begin(name, argv, then_rm=None):
+        if then_rm:
+            argv = ["sh", "-c", '"$@"; rm -f "$RM"', "sh"] + argv
+        subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
+                         env=dict(os.environ, RM=then_rm) if then_rm else None)
+        began.append(name)
+
+    # (the document, how old it may be, its lock, how long a lock holds, the tool and its verb)
+    for doc, every, hold, tool, verb in (("analysis.json", 600, 300, "analysis.py", []),
+                                         ("nets.json", 300, 120, "nets.py", ["refresh"]),
+                                         ("growth.json", 300, 600, "growth.py", ["refresh"])):
+        f = os.path.join(pd, doc)
+        lock = f + ".lock"
+        if age(f) > every and age(lock) > hold:
+            open(lock, "w").close()
+            begin(tool[:-3], [sys.executable, "-I", os.path.join(tools, tool), qdir] + verb)
+    # The recordings: the list each half hour (an ssh to every machine), the SWEEP each six hours (a
+    # run's shards go once nothing reads them and their recipe is proved: Paul's default, 4 November).
+    # One at a time: both ssh to every machine.
+    f = os.path.join(pd, "recordings.json")
+    turns = ((["list"], 1800, f, f + ".lock.run"), (["sweep", "--do"], 6 * 3600, f + ".sweep", f + ".sweep.run"))
+    busy = any(age(run_) < 3600 for _, _, _, run_ in turns)
+    for verb, every, stamp, run_ in turns:
+        if age(stamp) > every and not busy:
+            open(run_, "w").close()
+            if verb[0] == "sweep":
+                open(stamp, "w").close()
+            begin("recordings " + verb[0], [sys.executable, "-I", os.path.join(tools, "recordings.py"), qdir] + verb, then_rm=run_)
+            break
+    return began
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         sys.exit(__doc__)
+    if sys.argv[2] == "chores":
+        # Before the plan is read: a minute's clock wants nothing of it.
+        began = chores(sys.argv[1])
+        print("began " + ", ".join(began) if began else "nothing stale")
+        sys.exit(0)
     p = Plan(sys.argv[1])
     cmd = sys.argv[2]
     p.writer = cmd in ("plan", "now", "approve", "resolve", "why", "tag", "adopt")

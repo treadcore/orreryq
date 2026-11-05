@@ -165,7 +165,7 @@ pub fn draw(ui: &mut Ui, at: Rect, doc: Option<&Value>, bridge: Option<&Value>, 
         None => at,
     };
     let Some(doc) = doc.filter(|d| d.get("homes").is_some() || d.get("sizes").is_some()) else {
-        ui.label_in(at.x, at.y, at.w, "No record yet: tools/growth.py QUEUE refresh writes plan/growth.json (treadcore-view.py starts it when the file is old, or run it by hand).", &F8X13, t.dim);
+        ui.label_in(at.x, at.y, at.w, "No record yet: tools/growth.py QUEUE refresh writes plan/growth.json (the keeper starts it each five minutes, or run it by hand).", &F8X13, t.dim);
         return;
     };
     if ui.f.pressed(Sym::Escape) {

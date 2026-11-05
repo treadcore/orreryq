@@ -71,7 +71,13 @@ DIR/config.json says who works and who plans:
 A host may also say how it powers off for shutdown-now ("poweroff": "doas -n
 /sbin/poweroff"); one that does not is left running and the report says so.
 The keeper runs `PLANNER sync` every sync_s seconds (and at the end), so
-every machine's record is gathered without anyone asking.
+every machine's record is gathered without anyone asking, and `PLANNER
+chores` every chores_s (60): the project's housekeeping, what is stale begun
+in the background, whether or not a window is open.
+
+CPU lanes idle idle_flag_s (900) with nothing they can start raise a flag
+saying why, as far as the keeper can see: a build failed (its first error
+line), builds or jobs not done, or nothing queued that fits.
 
 The planner is the project's: `PLANNER plan N` prints a JSON list of up to N
 new jobs, and `PLANNER collect` gathers what the finished jobs found. The
@@ -585,6 +591,84 @@ def starved(q, cfg, idle_s=None):
     return out
 
 
+def first_error(q, jid):
+    """The first line of a job's last run that says what went wrong: a `fatal:` or `error:` line
+    (git, cargo), else the last line it wrote. A log keeps every run of its job, each begun with the
+    job's command, which is skipped."""
+    try:
+        log = open(q.p("logs", jid + ".log"), errors="replace").read()
+    except OSError:
+        return "no log"
+    for j in q.jobs_in("failed"):
+        if j["id"] == jid and j.get("cmd"):
+            head = "$ %s\n" % j["cmd"][:2000]
+            at = log.rfind(head)
+            if at >= 0:
+                log = log[at + len(head):]
+            break
+    m = re.search(r"^((?:fatal|error)(?:\[\w+\])?: .*)$", log, re.M)
+    if m:
+        return m.group(1)[:200]
+    said = [l for l in log.splitlines() if l.strip() and not l.startswith("[") and not l.startswith("$ ")]
+    return said[-1][:200] if said else "nothing said"
+
+
+def idle_reason(q, cfg, names, info=None):
+    """WHY THESE LANES HAVE NOTHING THEY CAN START, as far as the keeper can see (the lab report of
+    4 November, "Fifty-Four Idle Minutes", change D). That night five CPU lanes stood idle 54 minutes
+    under a full queue, every job behind a build that had failed with `fatal: invalid reference`,
+    and nothing said so until a person looked. In order: a build that failed (with its first error
+    line), a build not done, a job waited on not done, nothing queued that fits."""
+    jobs = q.jobs_in("queue")
+    done, failed = q.ids_in("done"), q.ids_in("failed")
+    by = {h["name"]: working(cfg, h) for h in cfg["hosts"]}
+    broken, building, waiting, empty = {}, {}, {}, []
+    for n in names:
+        mine = [j for j in jobs if n in by and fits(by[n], j)]
+        if not mine:
+            empty.append(n)
+            continue
+        for j in mine:
+            b = j.get("after_host", "").format(host=n) if j.get("after_host") else None
+            if b and b in failed:
+                broken[n] = b
+                break
+            if b and b not in done:
+                building[n] = b
+                break
+            pend = [a for a in j.get("after", []) if a not in done]
+            if pend:
+                waiting[n] = pend[0]
+                break
+    parts = []
+    if broken:
+        first = sorted(broken.values())[0]
+        parts.append("the build failed on %d machine%s (%s): %s (logs/%s.log)" % (
+            len(broken), "" if len(broken) == 1 else "s", ", ".join(sorted(broken)), first_error(q, first), first))
+    if building:
+        parts.append("waiting on builds not done: %s" % ", ".join("%s (%s)" % (b, n) for n, b in sorted(building.items())))
+    if waiting:
+        parts.append("waiting on jobs not done: %s" % ", ".join("%s (%s)" % (b, n) for n, b in sorted(waiting.items())))
+    if empty:
+        info = info or {}
+        asked = (info.get("last_plan") or "")[11:16]
+        parts.append("nothing queued fits %s (%d queued); the planner was last asked at %s and added %s" % (
+            ", ".join(empty), len(jobs), asked or "?", info.get("last_plan_added", "?")))
+    return "; ".join(parts)
+
+
+def idle_lanes(q, cfg, idle_s=None):
+    """CPU lanes idle idle_s (idle_flag_s, 900) with nothing they can start, and since when the first
+    of them: the CPU lanes are where the planner keeps work, so one idle a quarter hour is a fault."""
+    idle_s = cfg.get("idle_flag_s", 900) if idle_s is None else idle_s
+    if not idle_s:
+        return [], None
+    caps = {h["name"]: h.get("caps", ["cpu"]) for h in cfg["hosts"]}
+    names = [n for n in starved(q, cfg, idle_s=idle_s) if "cpu" in caps.get(n, [])]
+    since = min((lane_file(q, n).get("since", now()) for n in names), default=None)
+    return names, since
+
+
 def breaker_stop(q):
     """STOP_ADDING is up, and the breaker put it there (it writes "breaker" in it; a person's press leaves
     it empty)."""
@@ -899,10 +983,16 @@ def keeper(q):
         except OSError:
             awake = None
     life = {"pid": os.getpid(), "started": time.strftime("%Y-%m-%dT%H:%M:%S"), "awake": awake,
-            "last_plan": None, "last_sync": None, "sync_s": cfg.get("sync_s", 1800),
+            "last_plan": None, "last_plan_added": None, "last_sync": None, "sync_s": cfg.get("sync_s", 1800),
+            "last_chores": None, "chores_said": None, "idle": None,
             # The code it runs: health() sets it against the file on disk.
             "code": code_id(), "file": os.path.abspath(__file__),
             "restart_lose_s": cfg.get("restart_lose_s", 600)}
+
+    # A spell of idle lanes goes on across the keeper's own restart (the same pid): one flag, not two.
+    prev = load_json(q.p("keeper.json")) or {}
+    if prev.get("pid") == os.getpid() and prev.get("idle"):
+        life["idle"] = prev["idle"]
 
     def tell():
         with open(q.p(".keeper.json.tmp"), "w") as f:
@@ -926,6 +1016,7 @@ def keeper(q):
         for job in json.loads(r.stdout or "[]"):
             if q.add(job):
                 added += 1
+        life["last_plan_added"] = added
         if added:
             q.event("planned", added=added)
 
@@ -952,6 +1043,30 @@ def keeper(q):
         finally:
             syncing.release()
 
+    chore_lock = threading.Lock()
+
+    def chores():
+        # THE HOUSEKEEPING IS THE KEEPER'S (the lab report of 4 November, change C). The Results and
+        # Analysis pages' documents and the recordings' sweep were begun by the window, so a closed
+        # window let the disks fill and opening one began everything at once. The planner's `chores`
+        # says what is stale and begins it in the background; this only asks, on its own thread.
+        if not planner or not chore_lock.acquire(blocking=False):
+            return
+        try:
+            r = subprocess.run(["bash", "-c", "%s chores" % planner], capture_output=True, text=True, timeout=300)
+            life["last_chores"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+            life["chores_said"] = (r.stdout or "").strip()[-300:] or None
+            if r.returncode != 0:
+                said = (r.stderr or r.stdout).strip()
+                q.event("chores failed", detail=said[-400:])
+                q.notice("chores", "the housekeeping failed: " + (said.splitlines() or ["?"])[-1][-200:])
+        except subprocess.TimeoutExpired:
+            q.event("chores failed", detail="timed out")
+        finally:
+            chore_lock.release()
+
+    chores_s = cfg.get("chores_s", 60)
+    last_chores = 0.0
     sync_s = cfg.get("sync_s", 1800)
     last_sync = 0.0
     # A run asked for (DIR/runs/) is planned at once, not at the low-water mark.
@@ -1030,6 +1145,9 @@ def keeper(q):
             if planner and sync_s and now() - last_sync > sync_s:
                 last_sync = now()
                 threading.Thread(target=sync, daemon=True).start()
+            if planner and chores_s and now() - last_chores > chores_s:
+                last_chores = now()
+                threading.Thread(target=chores, daemon=True).start()
             # A job pinned to a machine that left or paused moves where it may, or is flagged.
             rehome(q, q.config())
             # Keep a lane alive for every host; one that died is started again.
@@ -1127,6 +1245,28 @@ def keeper(q):
             running = len(q.jobs_in("running"))
             hungry = starved(q, q.config()) if planner and not q.flag("STOP_ADDING") else []
             life["starved"] = hungry
+            # A FLEET WITH NOTHING TO DO SAYS SO (change D): once a spell, with the reason it can see.
+            idle, since = idle_lanes(q, q.config()) if hungry else ([], None)
+            spell = life.get("idle")
+            if idle:
+                # One flag a spell, keyed by the moment it was seen (two spells may share a lane's
+                # since); its reason read again each minute (it reads every finished job), and at once
+                # when the lanes change.
+                spell = spell or {"key": "idle:%d" % now(), "since": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(since)),
+                                  "lanes": [], "at": 0}
+                spell["quiet"] = None
+                if now() - spell["at"] > 60 or spell["lanes"] != idle:
+                    spell.update(lanes=idle, why=idle_reason(q, q.config(), idle, life), at=now())
+                    q.notice("idle", "%d CPU lane%s idle since %s with nothing they can start (%s): %s" % (
+                        len(idle), "" if len(idle) == 1 else "s", spell["since"][11:16], ", ".join(idle), spell["why"]), key=spell["key"])
+                life["idle"] = spell
+            elif spell:
+                # It ends when no CPU lane has been idle with nothing for idle_end_s (60): a job
+                # queued and taken in the same second is not the end of it.
+                spell["quiet"] = spell.get("quiet") or now()
+                if now() - spell["quiet"] >= q.config().get("idle_end_s", 60):
+                    q.event("idle lanes at work again", lanes=spell["lanes"], since=spell["since"])
+                    life["idle"] = None
             if q.flag("STOP_ADDING"):
                 # The breaker's stop waits to reset itself: the keeper stays up. A person's stop drains and ends.
                 if queued == 0 and running == 0 and not breaker_stop(q):
@@ -1299,6 +1439,14 @@ def health(q):
         check("warn", "sync", "last gathered the machines' records %s ago" % (took(synced) if synced is not None else "never"))
     else:
         check("ok", "sync", "last gathered %s ago" % took(synced or 0))
+    chores_s = cfg.get("chores_s", 60)
+    chored = stamp_age(info.get("last_chores"))
+    if cfg.get("planner") and chores_s:
+        if chored is None or chored > chores_s + 600:
+            check("warn", "chores", "the housekeeping (the pages' documents, the recordings' sweep) last asked %s" % (
+                "%s ago" % took(chored) if chored is not None else "never: a keeper older than the chores"))
+        else:
+            check("ok", "chores", "the housekeeping asked %s ago%s" % (took(chored), ": " + info["chores_said"] if info.get("chores_said") else ""))
     if info.get("awake") is not None or sys.platform == "darwin":
         try:
             os.kill(int(info.get("awake")), 0)
@@ -1316,7 +1464,11 @@ def health(q):
     if cfg.get("paused_projects"):
         check("ok", "paused", "projects paused on every machine: %s" % ", ".join(cfg["paused_projects"]))
     hungry = starved(q, cfg)
-    if hungry:
+    idle, since = idle_lanes(q, cfg) if hungry else ([], None)
+    if idle:
+        check("bad", "lanes", "idle %s with nothing they can start: %s; %s" % (
+            took(now() - since), ", ".join(idle), (info.get("idle") or {}).get("why") or idle_reason(q, cfg, idle, info)))
+    elif hungry:
         check("warn", "lanes", "idle with nothing they can start: %s (the keeper asks the planner for them each %s)"
               % (", ".join(hungry), took(cfg.get("starve_s", 60))))
     else:

@@ -65,7 +65,7 @@ fn gb(b: f64) -> String {
 pub fn draw(ui: &mut Ui, at: Rect, doc: Option<&Value>, st: &mut State, operator: bool, ctl: &mut Option<String>) {
     let t = ui.t;
     let Some(doc) = doc.filter(|d| !matches!(d, Value::Null)) else {
-        ui.label_in(at.x, at.y, at.w, "No list yet: tools/recordings.py QUEUE list writes plan/recordings.json (treadcore-view.py starts it each half hour, or run it by hand).", &F8X13, t.dim);
+        ui.label_in(at.x, at.y, at.w, "No list yet: tools/recordings.py QUEUE list writes plan/recordings.json (the keeper starts it each half hour, or run it by hand).", &F8X13, t.dim);
         return;
     };
     let runs = arr(doc, "runs");

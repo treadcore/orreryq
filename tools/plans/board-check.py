@@ -769,3 +769,132 @@ pv.line_proof()
 assert pv.state["proof"]["pooled"]["jobs"] == ["pv0005", "pv0006"], "no main known, no pool"
 _sh.rmtree(pr_root)
 print("the line's proof, pooled: every check holds")
+
+# A PROMOTION ON THE LINE, ON A MACHINE THAT HAS NO LINE (5 November, r0182: macmini, `fatal: invalid
+# reference: orrery/accepted`). The Mac holds the line as a branch; the machine has main and nothing
+# else. The job takes the bundle, names the line by its commit, and its commit comes home.
+pb_root = tempfile.mkdtemp()
+pb_remote, pb_tc, pb_mc, pb_pd = (os.path.join(pb_root, n) for n in ("r.git", "tc", "mc", "plan"))
+os.makedirs(pb_pd)
+subprocess.run(["git", "init", "-q", "--bare", "-b", "main", pb_remote], check=True)
+subprocess.run(["git", "clone", "-q", pb_remote, pb_tc], capture_output=True, check=True)
+git(pb_tc, "checkout", "-q", "-b", "main")
+commit(pb_tc, "source/treadcore-brain/src/weights.rs", "a\n", "code")
+git(pb_tc, "push", "-q", "origin", "main")
+subprocess.run(["git", "clone", "-q", pb_remote, pb_mc], capture_output=True, check=True)
+
+
+class Promo(P):
+    LINE = "orrery/accepted"
+    def __init__(self, line):
+        self.q, self.tc, self.pd, self.home = pb_root, pb_tc, pb_pd, "fleet/q-grove"
+        self.state = {"local_line": {"commit": line, "promotions": ["r1"]}} if line else {}
+
+
+assert Promo(None).promote_base("r9") == ("", "origin/main", []), "no line: main, as everywhere"
+pb_head = line_of(pb_tc, Promo(None), git(pb_tc, "rev-parse", "main"), "r1")
+git(pb_tc, "bundle", "create", "-q", os.path.join(pb_pd, "accepted.bundle"), "orrery/accepted", "^origin/main")
+fetch_line, pb_base, pb_send = Promo(pb_head).promote_base("r9")
+assert pb_base == pb_head and pb_send[0]["src"] == os.path.join(pb_pd, "accepted.bundle") and pb_send[0]["dst"].startswith("~/")
+home = os.path.join(pb_root, "home")
+os.makedirs(home)
+sh = lambda c: subprocess.run(["bash", "-c", c], cwd=pb_mc, capture_output=True, text=True, env=dict(os.environ, HOME=home))
+r = sh("git worktree add -q -b promote/old ../old orrery/accepted")
+assert r.returncode != 0 and "invalid reference: orrery/accepted" in r.stderr, "the machine has no line by name: the night's fault"
+dst = pb_send[0]["dst"]
+r = sh("mkdir -p $(dirname %s) && cat %s > %s" % (dst, pb_send[0]["src"], dst))
+assert r.returncode == 0, r.stderr
+r = sh("set -e; git fetch -q origin\n%sgit worktree add -q -b promote/x ../wt %s\ncd ../wt && echo b > source/treadcore-brain/src/weights.rs\n"
+       "git -c user.name=t -c user.email=t@t commit -q -am promoted\ngit bundle create -q %s/promote.bundle %s..promote/x"
+       % (fetch_line, pb_base, pb_root, pb_base))
+assert r.returncode == 0, r.stderr
+git(pb_tc, "fetch", "-q", os.path.join(pb_root, "promote.bundle"), "promote/x:refs/heads/promote/x")
+assert git(pb_tc, "rev-parse", "promote/x^") == pb_head, "built on the line, and home again"
+_sh.rmtree(pb_root)
+
+# THE VERDICT IS A LINE OF ITS OWN: the command at the log's head holds every verdict's words.
+fq = tempfile.mkdtemp()
+os.makedirs(os.path.join(fq, "logs"))
+CMD = ("$ set -e -o pipefail\ngit worktree add -q -b $B $W orrery/accepted\ncargo test || { echo 'the tests failed: not committed'; exit 1; }\n"
+       "cargo test families || { echo 'a family fell under its floor: not committed'; exit 1; }\n")
+open(os.path.join(fq, "logs", "r1-promote.log"), "w").write(CMD + "fatal: invalid reference: orrery/accepted\n[1]+  Exit 128  ( set -e; echo 'the tests failed: not committed' )\n")
+open(os.path.join(fq, "logs", "r2-promote.log"), "w").write(CMD + "test weights::x ... FAILED\nthe tests failed: not committed\n")
+open(os.path.join(fq, "logs", "r3-promote.log"), "w").write(CMD + "family raid 0.41 under 0.50\na family fell under its floor: not committed\n")
+fp = P.__new__(P)
+fp.q = fq
+assert fp.promote_failure("r1-promote") == "the promotion job failed (fatal: invalid reference: orrery/accepted): see logs/r1-promote.log"
+assert fp.promote_failure("r2-promote").startswith("the brain's tests failed")
+assert fp.promote_failure("r3-promote").startswith("a family fell under its floor (raid)")
+_sh.rmtree(fq)
+
+
+# Not the candidate's fault: tried again at once, once.
+class Fault(Window):
+    def __init__(self, why):
+        super().__init__([])
+        self.state["auto_tried"] = ["grove/w1"]
+        self.why, self.saved, self.flags, self.q = why, {}, [], "/nonexistent"
+    def runs(self):
+        return [{"id": "r1", "kind": "promote", "by": "auto"}]
+    def rstate(self, rid):
+        return self.saved.get(rid) or {"status": "failed", "candidate": "grove/w1", "job": "r1-promote", "why": "the brain's tests failed: see logs"}
+    def rsave(self, rid, st):
+        self.saved[rid] = st
+    def ids(self, *subs):
+        return {"r1-promote"} if "failed" in subs else set()
+    def promote_failure(self, jid):
+        return self.why
+    def flag(self, kind, text, key=None, progress=False):
+        self.flags.append(text)
+    def noise(self, k, v):
+        return ""
+    def trades_away(self, k, v):
+        return False
+    def guard_holds(self, k):
+        return True
+    retry_after_main = P.retry_after_main
+    def build_tip(self, sha):
+        return sha
+
+
+f_ = Fault("the promotion job failed (fatal: invalid reference: orrery/accepted): see logs/r1-promote.log")
+f_.tc = os.path.dirname(os.path.abspath(__file__))
+f_.auto_promote()
+assert f_.asked == [{"candidate": "grove/w1"}] and "before it was judged" in f_.flags[0], (f_.asked, f_.flags)
+assert f_.saved["r1"]["why"].startswith("the promotion job failed"), "the record says what happened"
+f_.asked = []
+f_.state["auto_tried"].append("grove/w1")
+f_.auto_promote()
+assert not f_.asked, "once: a fault that repeats is the machine's"
+f_ = Fault("the brain's tests failed: see logs/r1-promote.log")
+f_.tc = os.path.dirname(os.path.abspath(__file__))
+f_.auto_promote()
+assert not f_.asked, "its own tests: it waits for main to move, as before"
+print("a promotion on the line from any machine, its verdict read, a fault tried again once: every check holds")
+
+# THE HOUSEKEEPING IS THE KEEPER'S (change C): what is stale is begun, each behind its lock, and a
+# minute later nothing is begun twice; the recordings' list and sweep one at a time, the sweep each
+# six hours. The tools here are stand-ins that write what they were asked.
+cq = tempfile.mkdtemp()
+ct = os.path.join(cq, "tools")
+os.makedirs(os.path.join(cq, "plan"))
+os.makedirs(ct)
+for t in ("analysis.py", "nets.py", "growth.py", "recordings.py"):
+    open(os.path.join(ct, t), "w").write("import sys, time\ntime.sleep(0.5)\nopen(sys.argv[1] + '/asked', 'a').write(' '.join(['%s'] + sys.argv[2:]) + '\\n')\n" % t[:-3])
+asked = lambda: sorted(open(os.path.join(cq, "asked")).read().splitlines()) if os.path.exists(os.path.join(cq, "asked")) else []
+wait = lambda n: [time.sleep(0.05) for _ in range(100) if len(asked()) < n]
+assert m.chores(cq, ct) == ["analysis", "nets", "growth", "recordings list"]
+assert m.chores(cq, ct) == [], "behind their locks: nothing begun twice, the list's while it runs"
+wait(4)
+assert asked() == ["analysis", "growth refresh", "nets refresh", "recordings list"], asked()
+for doc in ("analysis.json", "nets.json", "growth.json", "recordings.json"):
+    open(os.path.join(cq, "plan", doc), "w").write("{}")
+time.sleep(0.3)
+assert not os.path.exists(os.path.join(cq, "plan", "recordings.json.lock.run")), "the list's mark goes when it ends"
+assert m.chores(cq, ct) == ["recordings sweep"], "fresh documents; the sweep's turn"
+wait(5)
+assert "recordings sweep --do" in asked() and os.path.exists(os.path.join(cq, "plan", "recordings.json.sweep"))
+time.sleep(0.3)
+assert m.chores(cq, ct) == [], "the sweep, once in six hours"
+_sh.rmtree(cq)
+print("the housekeeping, the keeper's: every check holds")

@@ -8,7 +8,7 @@ Companions: `tools/plans/treadcore.py` (the planner: `Plan.writer`, `heal_line`,
 
 ## Abstract
 
-From 20:10 to 21:04 on 4 November all eight of the fleet's CPU machines stood idle while the queue held work. A commit to treadcore's main at 20:04 meant the fleet's *line*, the promotions it carries on top of main, had to be rebuilt on the new main. The keeper's planner rebuilt it and saved the result as commit `f04f157`. Forty seconds later a report that only reads, `analysis.py`, which the console starts every ten minutes, rebuilt it again as `d821e7b`, moved the line's branch and its bundle to its own copy, and saved nothing. Every machine was then told to build `f04f157` from a bundle that did not hold it; all eight builds failed within a second, nothing ever asked for them again, and with no machine built the planner had no CPU work to give. Three faults lined up: a reader with a writer's side effect, two records of one fact that could disagree, and a failure that was never retried. A fourth let it last: the console said "LOOK" and nobody was told. Three guards now stand in the way (`b19b5c2`): only a planner that saves its state may move the line; on every pass the saved state sets the branch and bundle back if they disagree; and a failed build is asked again once. They went live at 21:00; the builds passed by 21:03 and every lane ran by 21:04. The report then answers Paul's second question, whether Orrery can be restarted without trouble. **The application can: it starts nothing the fleet depends on, and today's two launches cost nothing.** What it does carry is housekeeping that runs only while its window is open. The keeper, which most of the name "Orrery" stands for in practice, is another matter: since 29 October its restarts have sent 132 running jobs back to start again, 7.7 machine-hours of work thrown away. Four changes, not built, would let both restart without losing work.
+From 20:10 to 21:04 on 4 November all eight of the fleet's CPU machines stood idle while the queue held work. A commit to treadcore's main at 20:04 meant the fleet's *line*, the promotions it carries on top of main, had to be rebuilt on the new main. The keeper's planner rebuilt it and saved the result as commit `f04f157`. Forty seconds later a report that only reads, `analysis.py`, which the console starts every ten minutes, rebuilt it again as `d821e7b`, moved the line's branch and its bundle to its own copy, and saved nothing. Every machine was then told to build `f04f157` from a bundle that did not hold it; all eight builds failed within a second, nothing ever asked for them again, and with no machine built the planner had no CPU work to give. Three faults lined up: a reader with a writer's side effect, two records of one fact that could disagree, and a failure that was never retried. A fourth let it last: the console said "LOOK" and nobody was told. Three guards now stand in the way (`b19b5c2`): only a planner that saves its state may move the line; on every pass the saved state sets the branch and bundle back if they disagree; and a failed build is asked again once. They went live at 21:00; the builds passed by 21:03 and every lane ran by 21:04. The report then answers Paul's second question, whether Orrery can be restarted without trouble. **The application can: it starts nothing the fleet depends on, and today's two launches cost nothing.** What it does carry is housekeeping that runs only while its window is open. The keeper, which most of the name "Orrery" stands for in practice, is another matter: since 29 October its restarts have sent 132 running jobs back to start again, 7.7 machine-hours of work thrown away. Four changes, not built when it was written, would let both restart without losing work; three were built by the next morning (sections X and XI).
 
 ## I. The question
 
@@ -114,15 +114,15 @@ The keeper's events call the second and third rows "the keeper before this one d
 
 Tonight's 19:42 restart, for the console's verbs moving out of the keeper's file, sent back eleven jobs, the line's proof among them. That change (`f51fb2f`) means editing those verbs no longer restarts the keeper; any other edit to `fleet-queue.py` still does.
 
-## VII. Restarting without losing work: four changes, not built
+## VII. Restarting without losing work: four changes
 
 **A. The keeper keeps its jobs across its own restart (built the same night: section X).** A process that re-executes itself keeps its children: the ssh processes running the jobs live on, still the keeper's, still writing their logs. Today the keeper stops them before it restarts. Instead it would write each running job's ssh pid into the job's record, re-execute, and the new keeper would *adopt* them: wait on each pid (`os.waitpid`, which works on a child it did not start in this image), then finish it as any job finishes (deliver, fetch, done or failed). The lane of a machine with an adopted job takes nothing new until it ends. New code would then take effect at once, with no wait for a quiet moment. **This is the 132 jobs and 7.7 machine-hours of Table III.** About a hundred lines in `fleet-queue.py`, and a check in `fleet-queue-check.sh` that restarts a keeper under running jobs and sees each finish once.
 
 **B. The machine keeps the job's end.** A keeper that *dies* (a crash, the Mac restarting under a running fleet) cannot wait on ssh processes it did not start; the next keeper runs every such job again, and does not stop the old one, which may still be running. The job's wrapper on each machine already writes the job's pid to `~/.fleet-queue/ID.pid`; it would also write the exit code to `~/.fleet-queue/ID.rc` and the output to a log beside it. A new keeper would ask each machine about the jobs it inherited: still running (watch it), ended (read its code and log, fetch, finish), or gone (run it again). **No keeper died this week, so B saves nothing measured;** it is insurance against the day one does. It is larger than A, since a job's output today returns through its ssh.
 
-**C. The housekeeping moves from the window to the keeper.** The keeper already runs the planner on a clock; it would start Table II's work on the same schedule, and the console would only read the files. Closing the window would then stop nothing, and opening it would start nothing: an Orrery that can come and go as it likes. A few dozen lines, most of them moved.
+**C. The housekeeping moves from the window to the keeper (built the next morning: section XI).** The keeper already runs the planner on a clock; it would start Table II's work on the same schedule, and the console would only read the files. Closing the window would then stop nothing, and opening it would start nothing: an Orrery that can come and go as it likes. A few dozen lines, most of them moved.
 
-**D. A fleet with nothing to do says so.** When CPU lanes stand idle with nothing they can start for fifteen minutes, the keeper raises a flag with the reason it can see: the current commit's builds failed on N machines, with the first error line; or the planner asked for nothing, and why. Tonight that flag would have named `fatal: invalid reference` at 20:25, half an hour before anyone saw the lanes. A few lines in the keeper's health and flags.
+**D. A fleet with nothing to do says so (built the next morning: section XI).** When CPU lanes stand idle with nothing they can start for fifteen minutes, the keeper raises a flag with the reason it can see: the current commit's builds failed on N machines, with the first error line; or the planner asked for nothing, and why. Tonight that flag would have named `fatal: invalid reference` at 20:25, half an hour before anyone saw the lanes. A few lines in the keeper's health and flags.
 
 *Table IV. The four, by what they save.*
 
@@ -130,8 +130,8 @@ Tonight's 19:42 restart, for the console's verbs moving out of the keeper's file
 |---|---|---|---|
 | A, adopt across a restart (built) | 7.7 h a week; new code at once | about 100 lines | a job finished twice if the adoption is wrong; the check guards it |
 | B, the end kept on the machine | nothing measured: insurance against a keeper that dies | larger | touches every job's wrapper |
-| C, housekeeping in the keeper | stale pages, a late sweep, a burst on opening | small | none to the fleet |
-| D, idle lanes flagged | the next 54 minutes like tonight's | small | none |
+| C, housekeeping in the keeper (built) | stale pages, a late sweep, a burst on opening | small | none to the fleet |
+| D, idle lanes flagged (built) | the next 54 minutes like tonight's | small | none |
 
 The order I would take: D (the cheapest, and the one that would have named tonight's fault first), C, A, and B only if a keeper ever dies.
 
@@ -145,7 +145,7 @@ The keeper's restarts are the other half of Paul's question. The fleet has learn
 
 ## IX. What Paul decides
 
-Which of A to D to build, and in what order. Paul chose A the same night (section X); B, C and D wait.
+Which of A to D to build, and in what order. Paul chose A the same night (section X), and D and C the next morning (section XI); B waits. Section XI leaves Paul one more: a treadcore test that reads the code's defaults, and holds back the night's best candidate.
 
 ## X. Addendum, the same night: A built
 
@@ -168,6 +168,51 @@ It passed three runs in a row; `fleet-queue-check.sh` and `breaker-check.sh` pas
 
 **One more restart costs what they all did.** The keeper running when this lands is the old code, and its restart into the new is the old kind: what runs then goes back on the queue, for the last time. A pressed Restart can still cut off a lane that is delivering or fetching for more than 90 seconds; B, C and D are not built.
 
+## XI. Addendum, the next morning: D and C built, and a fault the night found
+
+Paul: "build D and C. commit push."
+
+**The night.** Under the handover's keeper the fleet ran 1,328 jobs from 21:52 to 05:29, with no restart and nothing sent back. It found one fault, of the same family as section III's. At 00:15 the night's one promotion (r0182: grove/w10040, `ping_style` 0 to 2, census +2.05 ± 1.31, held out +0.69 ± 0.44) went to macmini and died in one second on `fatal: invalid reference: orrery/accepted`. **The line is a branch only on the Mac.** Every build fetches the line's commits from its bundle, but under no name. A promotion runs on any CPU lane since 3 November, and r0182 was the first promotion built on a line to leave the Mac. The planner then misread the failure as "the brain's tests failed", because the log begins with the job's command, and the command holds every verdict's words. A candidate whose tests failed waits for main to move; main did not move, the other two candidates were judged noise, and **no generation landed all night.**
+
+**The promotion, fixed.** The job takes the line's bundle with it and names the line by its commit, which is the same on every machine (`promote_base`). A verdict is read only from a line of its own; any other failure is "the promotion job failed", followed by the first `fatal:` or `error:` line. A candidate whose promotion failed that way is tried again at once, once. Live, at 05:37, the planner tried grove/w10040 again as r0185. bosporus fetched the line, built on it and ran the tests, which this time judged the candidate on its own numbers. One test fails: `commander::tests::with_pings_on_as_built_a_bot_comes_to_any_ping`. **It builds its settings with `Settings::parse`, which starts from the code's defaults, not the pinned brain:** a gap in LR 147's lint, which forbids `Settings::default()` but not a parse on top of it. The test is treadcore's and waits for Paul.
+
+**D, built: a fleet with nothing to do says so.** When CPU lanes have been idle for `idle_flag_s` (900 s) with nothing they can start, the keeper raises one flag per spell, saying what it can see, in this order:
+
+- a build that failed: on how many machines and which, with the first error line of its last run (the command at the head of the log is skipped);
+- builds not done;
+- jobs waited on, not done;
+- nothing queued that fits, with when the planner was last asked and what it added.
+
+While the spell lasts, health shows the same reason as BAD. A spell ends after a minute with no such lane ("idle lanes at work again"), and it carries across the keeper's own restart, so one spell raises one flag. Since 31 October there were two such spells: saskatchewan for 29 minutes on 3 November, and section III's 54 minutes. **For the second, the flag would have read, at 20:25: the build failed on 8 machines: `fatal: invalid reference: f04f1579f4a8…`.** That is the line this code reads from those logs today.
+
+**C, built: the housekeeping is the keeper's.** The planner's new `chores` command begins whatever is stale, in the background, on the window's old clocks and behind its old locks:
+
+- `analysis.py` every 10 minutes;
+- `nets.py` and `growth.py` refreshes every 5;
+- the `recordings.py` list every half hour, and its sweep every 6 hours.
+
+The keeper asks for the chores every `chores_s` (60 s) on a thread of its own. The list and the sweep now run strictly one at a time; the window could start a sweep while a list was still running. The window starts nothing: its four functions only read. Health gains a `chores` line. The schedule lives in the planner, which is read from disk each time, so changing it restarts nothing.
+
+**How it was checked.** A new check, `tools/idle-check.sh`, runs a real keeper with two lanes on this Mac and a stub planner that plans nothing and counts its chores:
+
+- each machine's build fails on git, with an error-like line planted in its command: one flag, naming 2 machines and the error the job wrote, not the one in its command;
+- health says the same;
+- the flag is raised once however long the spell lasts, and once across the keeper's restart;
+- work arrives, and the spell ends and says so;
+- with nothing queued at all, a new spell names the planner's last ask and what it added;
+- the keeper asked for its chores every two seconds, with no window, and health says when and what was begun.
+
+`board-check.py` gains checks for:
+
+- the chores' clocks and locks, with stand-in tools;
+- a promotion from a clone without the line's branch: the old command fails with the night's error, and the new one builds on the line and its commit comes home;
+- verdicts read from lines of their own;
+- a fault retried once, and a real test failure left to wait for main.
+
+`fleet-queue-check.sh`, `breaker-check.sh`, `restart-check.sh` and `idle-check.sh` pass, as do orrery's 397 tests.
+
+**Live.** Landing the keeper restarted it for new code at 05:46:43, nine seconds after the file changed. 11 running jobs were handed over and adopted at 05:46:44, and none went back on the queue. Its chores then began each document as it came due: nets.py at 05:48:30, growth.py at 05:49:36, analysis.py at 05:51:48, each written within a minute. A last refinement, reading a log's last run rather than its first, restarted it again at 05:51:59: 11 more were handed over, three of them for the second time. **Restarting the keeper is now something nobody needs to time.** B, the end kept on the machine for a keeper that *dies*, is not built.
+
 ## References
 
 [1] orrery commit `b19b5c2`, "A reader replays nothing, the state is the line's truth, and a failed build is asked again once", 4 November 2026.
@@ -183,3 +228,7 @@ It passed three runs in a row; `fleet-queue-check.sh` and `breaker-check.sh` pas
 [6] git reflog of `orrery/accepted` in the Mac's treadcore checkout, 4 November 2026.
 
 [7] `tools/restart-check.sh`, the handover against a real keeper, 4 November 2026.
+
+[8] `tools/idle-check.sh`, idle lanes and the housekeeping against a real keeper, 5 November 2026.
+
+[9] The keeper's events and `logs/r0182-promote.log`, `logs/r0185-promote.log`, 5 November 2026.

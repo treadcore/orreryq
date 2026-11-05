@@ -320,18 +320,16 @@ def algorhythm():
     return {"switches": switches, "dials": dials, "caps": [{"name": n, "on": o == "true"} for n, o in caps], "patches": patches}
 
 
+# THE WINDOW READS AND BEGINS NOTHING (4 November, the lab report's change C). The documents below
+# were begun here when old, so the pages and the recordings' sweep lived only while a window was
+# open; the keeper begins them now, each minute, window or none (treadcore.py's chores()).
+
+
 def nets():
-    """nets.py's register of the learned nets, and a fresh one begun in the background when it is
-    older than five minutes: a refresh is a few seconds, and the Nets page redraws from the file."""
+    """nets.py's register of the learned nets (the keeper refreshes it each five minutes)."""
     if not QDIR:
         return None
     f = os.path.join(QDIR, "plan", "nets.json")
-    age = time.time() - os.path.getmtime(f) if os.path.exists(f) else 1e9
-    lock = f + ".lock"
-    if age > 300 and not (os.path.exists(lock) and time.time() - os.path.getmtime(lock) < 120):
-        open(lock, "w").close()
-        tool = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "nets.py")
-        subprocess.Popen([sys.executable, "-I", tool, QDIR, "refresh"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     try:
         return json.loads(read(f))
     except ValueError:
@@ -339,18 +337,11 @@ def nets():
 
 
 def growth():
-    """growth.py's document: crucible's samples, the sizes and the purge's list. A fresh one begun
-    in the background when it is older than five minutes (the sizes inside it re-measure only each
-    half hour: that is a minute of ssh to every machine)."""
+    """growth.py's document: crucible's samples, the sizes and the purge's list (the keeper
+    refreshes it each five minutes; the sizes inside it re-measure only each half hour)."""
     if not QDIR:
         return None
     f = os.path.join(QDIR, "plan", "growth.json")
-    age = time.time() - os.path.getmtime(f) if os.path.exists(f) else 1e9
-    lock = f + ".lock"
-    if age > 300 and not (os.path.exists(lock) and time.time() - os.path.getmtime(lock) < 600):
-        open(lock, "w").close()
-        tool = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "growth.py")
-        subprocess.Popen([sys.executable, "-I", tool, QDIR, "refresh"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     try:
         return json.loads(read(f))
     except ValueError:
@@ -366,24 +357,12 @@ def load_json(p):
 
 
 def recordings():
-    """recordings.py's list (each half hour: an ssh to every machine) and its SWEEP (each six hours):
-    a run's shards go once nothing reads them and their recipe is proved -- the default Paul chose on 4
-    November -- unless kept for analysis or tuning.json keep_recordings is on."""
+    """recordings.py's list (the keeper's, each half hour: an ssh to every machine; its SWEEP each six
+    hours: a run's shards go once nothing reads them and their recipe is proved -- the default Paul
+    chose on 4 November -- unless kept for analysis or tuning.json keep_recordings is on)."""
     if not QDIR:
         return None
     f = os.path.join(QDIR, "plan", "recordings.json")
-    tool = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "recordings.py")
-    for verb, every, lock in ((["list"], 1800, f + ".lock"), (["sweep", "--do"], 6 * 3600, f + ".sweep")):
-        stamp = lock if verb[0] == "sweep" else f
-        age = time.time() - os.path.getmtime(stamp) if os.path.exists(stamp) else 1e9
-        busy = os.path.exists(lock + ".run") and time.time() - os.path.getmtime(lock + ".run") < 3600
-        if age > every and not busy:
-            open(lock + ".run", "w").close()
-            if verb[0] == "sweep":
-                open(lock, "w").close()
-            subprocess.Popen(["sh", "-c", '"$0" -I "$1" "$2" "$3" "$4"; rm -f "$5"', sys.executable, tool, QDIR] + (verb + [""])[:2] + [lock + ".run"],
-                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-            break
     try:
         doc = json.loads(read(f))
     except ValueError:
@@ -490,17 +469,10 @@ def montage():
 
 
 def analysis():
-    """analysis.py's document, and a fresh one begun in the background when it is old: it
-    takes a minute, and this runs every few seconds."""
+    """analysis.py's document (the keeper refreshes it each ten minutes: it takes a minute)."""
     if not QDIR:
         return None
     f = os.path.join(QDIR, "plan", "analysis.json")
-    age = time.time() - os.path.getmtime(f) if os.path.exists(f) else 1e9
-    lock = f + ".lock"
-    if age > 600 and not (os.path.exists(lock) and time.time() - os.path.getmtime(lock) < 300):
-        open(lock, "w").close()
-        tool = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "analysis.py")
-        subprocess.Popen([sys.executable, "-I", tool, QDIR], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     try:
         return json.loads(read(f))
     except ValueError:

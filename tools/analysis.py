@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """analysis.py QUEUE -- what the Algorhythm page's analysis tabs draw, into
 QUEUE/plan/analysis.json. Slow by the standard of a poll (a minute of plain Python), so
-treadcore-view.py starts it in the background when the file is old and never waits for it.
+the keeper starts it in the background each ten minutes (treadcore.py's chores) and never waits for it.
 
     terrains   each dataset's surface and local maxima, and what works on them: tools/terrain.py
     spectrum   each champion's singular values over its generations: a net's spectrogram
