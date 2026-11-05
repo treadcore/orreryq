@@ -877,11 +877,17 @@ mod tests {
     use super::*;
 
     /// A server on pipes, and a directory to be destructive in.
+    /// A folder of its own for each test. The tests run on threads of one process, and a Mac's clock
+    /// moves a microsecond at a time, so two tests could be handed the same folder by the time alone and
+    /// list each other's files (a_directory_lists_... failed so, about one run in five). A counter in
+    /// the name makes each one its own.
     fn server() -> Option<(Sftp<Pipe>, std::path::PathBuf)> {
+        static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let bin = Sftp::server_binary()?;
         let dir = std::env::temp_dir().join(format!(
-            "orrery-sftp-{}-{}",
+            "orrery-sftp-{}-{}-{}",
             std::process::id(),
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
