@@ -1077,8 +1077,11 @@ class Writer(Fault):
         self.q = wq
     def rdir(self, rid):
         return os.path.join(wq, "runs", rid)
+    def runs(self):
+        return [{"id": "r1", "kind": "promote", "by": "auto", "params": {"candidate": "grove/w1"}}]
     def rstate(self, rid):
-        return {"status": "failed", "candidate": "grove/w1", "why": "no such weight in weights.rs: wing_leash (nothing written)"}
+        # As r0193 saved it: no candidate, the writer's words.
+        return {"status": "failed", "why": "no such weight in weights.rs: wing_leash (nothing written)"}
 
 
 os.makedirs(os.path.join(wq, "runs", "r1"))

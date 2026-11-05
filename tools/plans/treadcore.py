@@ -3636,7 +3636,7 @@ class Plan:
             open(tmp, "w").write(ev["weights"])
             r = run([sys.executable, "-I", os.path.join(self.tc, "scripts", "set-defaults.py"), tmp, "--check"], cwd=self.tc)
             if r.returncode != 0:
-                self.rsave(rid, {"status": "failed", "why": r.stderr.strip()[-200:]})
+                self.rsave(rid, {"status": "failed", "candidate": name, "why": r.stderr.strip()[-200:]})
                 return []
             # Against the line, not the coordinator's checkout of main: that said "no change" for a switch
             # flipped back, and "base_r 16 -> 8" for a step from 32.
@@ -3661,6 +3661,7 @@ class Plan:
             host = p.get("host")
             # It is tested on what the fleet runs: the local line, if there is one.
             fetch_line, base, send = self.promote_base(rid)
+            who = self.author()
             out = "~/%s/out/%s" % (self.home, jid)
             cmd = (
                 "set -e -o pipefail; [ -f ~/.cargo/env ] && . ~/.cargo/env; export PATH=$HOME/.cargo/bin:/opt/homebrew/bin:$PATH\n"
@@ -3685,10 +3686,12 @@ class Plan:
                 # Both files set-defaults.py writes: weights.rs alone left
                 # Tactics::default() behind, and main failed its tests from
                 # dc3df01 until d7e8c09 (29 October).
-                "git add source/treadcore-brain/src/weights.rs source/treadcore-brain/src/tactics.rs && echo %s | base64 -d > $O/msg.txt && git commit -q -F $O/msg.txt\n"
+                # The author is the coordinator's, given: a machine whose git knows no one (calber, 5
+                # November: "Author identity unknown") would refuse the commit after every test passed.
+                "git add source/treadcore-brain/src/weights.rs source/treadcore-brain/src/tactics.rs && echo %s | base64 -d > $O/msg.txt && git -c user.name=%s -c user.email=%s commit -q -F $O/msg.txt\n"
                 "git bundle create -q $O/promote.bundle %s..$B && echo 'the commit travels back as promote.bundle'\n"
                 "git rev-parse HEAD > $O/commit.txt; echo \"prepared $(cat $O/commit.txt) on $B\"\n"
-            ) % (self.home, rid, branch, out, fetch_line, base, b1, b2, base)
+            ) % (self.home, rid, branch, out, fetch_line, base, b1, b2, shlex.quote(who[0]), shlex.quote(who[1]), base)
             st = {"status": "running", "job": jid, "candidate": name, "branch": branch, "changed": changed, "can_push": can_push,
                   "evidence": {k: ev.get(k) for k in ("census", "held", "families")}}
             self.rsave(rid, st)
@@ -3762,6 +3765,13 @@ class Plan:
         self.rsave(rid, st)
         return []
 
+    def author(self):
+        """The name and address the coordinator's treadcore checkout commits as: a promotion is
+        committed in the same name on whichever machine runs it."""
+        name = run(["git", "-C", self.tc, "config", "user.name"]).stdout.strip() or "orrery"
+        mail = run(["git", "-C", self.tc, "config", "user.email"]).stdout.strip() or "orrery@localhost"
+        return name, mail
+
     def promote_base(self, rid):
         """What a promotion job builds on, on whichever machine takes it: (the shell line that brings
         the local line there, the commit to branch from, the files sent with the job).
@@ -3796,7 +3806,8 @@ class Plan:
         faults = self.state.setdefault("job_faults", {})
         for a in autos:
             st_ = self.rstate(a["id"])
-            name = st_.get("candidate")
+            # A promotion that failed at its first step (the writer) saved no candidate: its request says.
+            name = st_.get("candidate") or (a.get("params") or {}).get("candidate")
             # NOT THE CANDIDATE'S FAULT: its promotion died before its numbers were judged (r0182, a git
             # error on macmini, 5 November). It is tried again at once, once: a fault that repeats is
             # the machine's or the line's, and two in a row pause auto promotion as any two failures do.
