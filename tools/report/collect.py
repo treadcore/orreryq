@@ -50,6 +50,10 @@ CARDS = {
                         "Ceph for the recordings and builds at three copies on NVMe, rsync, sftp and the other ways to move files, the Mac "
                         "and Ceph, and copies by how replaceable the data is. Nothing decided: the space problem is already answered, 33.7 GB "
                         "in all, and no NVMe in the fleet is free."),
+    "idle-fleet": ("Fleet · an hour idle",
+                   "Eight CPU machines idle for 54 minutes: the line replayed twice, by the keeper and by a report that only reads, "
+                   "two records of one commit that disagreed, and a failed build never asked again. Three guards now; and what "
+                   "restarting Orrery costs, the app (nothing) and the keeper (7.7 machine-hours a week), with four changes to stop it."),
     "x8dt3": ("Fleet · a server",
               "An old dual-Xeon Supermicro computes again: one jumper moved (the SAS controller off), every BIOS setting from "
               "photographs of Setup, and Copal booting from a USB stick on a board with no UEFI, from the stick make sd-pc writes."),
