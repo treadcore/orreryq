@@ -53,7 +53,10 @@ class Doc:
 
     def image(self, alt, path):
         data = base64.b64encode(open(os.path.join(self.base, path), "rb").read()).decode()
-        return '<img alt="%s" src="data:image/png;base64,%s">' % (html.escape(alt), data)
+        # The type by the file's extension: a photograph is a JPEG, and a browser told "png" for one must guess.
+        ext = os.path.splitext(path)[1].lower()
+        mime = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".svg": "image/svg+xml", ".webp": "image/webp"}.get(ext, "image/png")
+        return '<img alt="%s" src="data:%s;base64,%s">' % (html.escape(alt), mime, data)
 
     def blocks(self, ls):
         out = []

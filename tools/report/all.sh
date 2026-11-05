@@ -33,5 +33,6 @@ waves|Waves, Width and Waiting|orrery · the brain and the fleet · temperament,
 economy|The Zero-Sum Economy|treadcore · the game and the brain · ore, oil, workers, supply, trade
 diff|The Day's Difference|orrery · treadcore · 2 November in exact code, flow and UML
 nets|The Nets Explorer|orrery · the brain · every learned net, where it has been, kept by request
+x8dt3|The X8DT3-LN4F, Warm Again|orrery · the fleet · a Supermicro server's jumpers and BIOS
 LIST
 python3 ../tools/report/collect.py

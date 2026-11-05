@@ -1,0 +1,44 @@
+<figure class="drawing"><svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="JPS1 pin positions: enabled on pins 1-2, disabled on pins 2-3, as set">
+<style>
+ .x1-pin{fill:var(--tile);stroke:var(--ink);stroke-width:2}
+ .x1-sq{fill:var(--tile);stroke:var(--ink);stroke-width:2}
+ .x1-cap{fill:var(--accent);stroke:var(--accent);stroke-width:1;opacity:.85}
+ .x1-lbl{font:600 14px "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;fill:var(--ink)}
+ .x1-mono{font:600 12px "IBM Plex Mono", ui-monospace, Menlo, monospace;fill:var(--ink)}
+ .x1-g{font:12px "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;fill:var(--dim)}
+ .x1-ok{font:600 13px "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;fill:var(--up)}
+ .x1-set{font:600 13px "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;fill:var(--accent)}
+ .x1-arrow{stroke:var(--dim);stroke-width:1.5;fill:none;marker-end:url(#x1-ah)}
+</style>
+<defs><marker id="x1-ah" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--dim)"/></marker></defs>
+<text x="20" y="22" class="x1-lbl">JPS1, onboard SAS enable. Three pins in a row along the front edge, beside JWD and Fan4.</text>
+<line x1="60" y1="150" x2="700" y2="150" class="x1-arrow"/>
+<text x="60" y="142" class="x1-g">toward back-panel I/O shield</text>
+<text x="560" y="142" class="x1-g">toward Fan4 and the board corner</text>
+<!-- ENABLED -->
+<text x="120" y="60" class="x1-ok">ENABLED (factory): pins 1-2</text>
+<rect x="120" y="80" width="24" height="24" class="x1-sq"/>
+<circle cx="176" cy="92" r="12" class="x1-pin"/>
+<circle cx="220" cy="92" r="12" class="x1-pin"/>
+<rect x="114" y="74" width="76" height="36" rx="4" class="x1-cap"/>
+<text x="128" y="98" class="x1-mono" style="fill:var(--base)">1   2</text>
+<text x="215" y="97" class="x1-mono">3</text>
+<text x="120" y="128" class="x1-g">jumper covers the square pin; pin 3 bare</text>
+<!-- DISABLED -->
+<text x="420" y="60" class="x1-set">DISABLED, as set 3 Nov 2026: pins 2-3</text>
+<rect x="420" y="80" width="24" height="24" class="x1-sq"/>
+<circle cx="476" cy="92" r="12" class="x1-pin"/>
+<circle cx="520" cy="92" r="12" class="x1-pin"/>
+<rect x="458" y="74" width="76" height="36" rx="4" class="x1-cap"/>
+<text x="427" y="97" class="x1-mono">1</text>
+<text x="472" y="98" class="x1-mono" style="fill:var(--base)">2   3</text>
+<text x="420" y="128" class="x1-g">square pin 1 bare; jumper on the two pins away from the shield</text>
+<!-- context row -->
+<text x="20" y="200" class="x1-g">Seen from above, front edge of the board at the bottom, the row reads left to right:</text>
+<rect x="40" y="220" width="60" height="26" rx="3" class="x1-pin"/><text x="52" y="238" class="x1-mono">JL1</text>
+<rect x="120" y="220" width="70" height="26" rx="3" class="x1-pin"/><text x="134" y="238" class="x1-mono">JWD</text>
+<rect x="210" y="220" width="80" height="26" rx="3" class="x1-cap"/><text x="222" y="238" class="x1-mono" style="fill:var(--base)">JPS1 2-3</text>
+<rect x="310" y="220" width="70" height="26" rx="3" class="x1-pin"/><text x="322" y="238" class="x1-mono">JPS2</text>
+<rect x="400" y="220" width="70" height="26" rx="3" class="x1-pin"/><text x="412" y="238" class="x1-mono">Fan4</text>
+<text x="40" y="272" class="x1-g">In the photo (Fig. 6) this row is at the top right, a quarter turn round: shield side down, Fan4 up.</text>
+</svg><figcaption><b>Fig. 2.</b> JPS1, as set: the jumper cap on pins 2 and 3, the two pins away from the back-panel shield, and the square pin 1 bare. The onboard LSI SAS controller is off. Drawn from the manual's page 2-32; the square pad on the silkscreen is pin 1.</figcaption></figure>

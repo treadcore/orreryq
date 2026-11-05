@@ -46,6 +46,9 @@ CARDS = {
                "The film shows the champion thinking: a crowd of its other duels, its 55 inputs, two layers lit by their strongest "
                "currents, eight seconds of its decisions, the generation. Every screen of orrery and of the game, pictured; a Mind "
                "explorer to play in the page; the films listed on Results, Videos."),
+    "x8dt3": ("Fleet · a server",
+              "An old dual-Xeon Supermicro computes again: one jumper moved (the SAS controller off), every BIOS setting from "
+              "photographs of Setup, and Copal booting from a USB stick on a board with no UEFI, from the stick make sd-pc writes."),
 }
 
 
@@ -243,8 +246,10 @@ def write_cards(orrery, tc_reports, checkins, posts):
     s = open(p).read()
     begin, end = "    <!-- collect.py: begin -->\n", "    <!-- collect.py: end -->\n"
     cards = ""
-    newest = orrery[0] if orrery else None
-    if newest and "%s-lab-report.html" % newest["key"] not in re.sub(r"<!-- collect\.py: begin -->.*?<!-- collect\.py: end -->", "", s, flags=re.S):
+    # Every orrery report of the newest day that the hand-made cards do not already hold, newest first.
+    hand = re.sub(r"<!-- collect\.py: begin -->.*?<!-- collect\.py: end -->", "", s, flags=re.S)
+    day0 = orrery[0]["date"] if orrery else None
+    for newest in [r for r in orrery if r["date"] == day0 and "%s-lab-report.html" % r["key"] not in hand]:
         lead = re.search(r'<section id="abstract">.*?<p>(.*?)</p>', open(os.path.join(DOCS, newest["href"])).read(), re.S)
         text = re.sub(r"<[^>]+>", "", lead.group(1)) if lead else ""
         text = (text[:330].rsplit(" ", 1)[0] + "...") if len(text) > 330 else text

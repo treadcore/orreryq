@@ -1,0 +1,68 @@
+<figure class="drawing"><svg viewBox="0 0 760 700" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Schematic of the X8DT3-LN4F board, rear I/O on the left, with jumper positions">
+<style>
+ .x2-b{fill:none;stroke:var(--ink);stroke-width:2}
+ .x2-s{fill:var(--tile);stroke:var(--line);stroke-width:1}
+ .x2-j{fill:var(--panel);stroke:var(--accent);stroke-width:1.5}
+ .x2-t{font:12px "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;fill:var(--ink)}
+ .x2-m{font:600 11px "IBM Plex Mono", ui-monospace, Menlo, monospace;fill:var(--accent)}
+ .x2-g{font:11px "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;fill:var(--dim)}
+</style>
+<text x="20" y="14" class="x2-g">Same orientation as the manual drawing: rear I/O shield on the LEFT, front edge at the BOTTOM. Not to scale.</text>
+<rect x="20" y="22" width="720" height="650" rx="6" class="x2-b"/>
+<!-- rear I/O, left edge -->
+<rect x="24" y="30" width="26" height="40" class="x2-s"/><text x="54" y="45" class="x2-g">KB/Mouse</text>
+<rect x="24" y="80" width="26" height="50" class="x2-s"/><text x="54" y="100" class="x2-g">USB 0/1, IPMI LAN</text>
+<rect x="24" y="140" width="26" height="40" class="x2-s"/><text x="54" y="160" class="x2-g">COM1</text>
+<rect x="24" y="190" width="26" height="50" class="x2-s"/><text x="54" y="215" class="x2-g">VGA</text>
+<rect x="24" y="250" width="26" height="40" class="x2-s"/><text x="54" y="265" class="x2-g">LAN1 / LAN3</text>
+<rect x="24" y="296" width="26" height="40" class="x2-s"/><text x="54" y="311" class="x2-g">LAN2 / LAN4</text>
+<!-- DIMMs and CPUs -->
+<g class="x2-s"><rect x="190" y="40" width="210" height="9"/><rect x="190" y="55" width="210" height="9"/><rect x="190" y="70" width="210" height="9"/><rect x="190" y="85" width="210" height="9"/><rect x="190" y="100" width="210" height="9"/><rect x="190" y="115" width="210" height="9"/></g>
+<text x="195" y="138" class="x2-g">P1 DIMMs</text>
+<rect x="190" y="190" width="150" height="150" rx="4" class="x2-s"/><text x="240" y="270" class="x2-t">CPU1</text>
+<rect x="470" y="60" width="150" height="150" rx="4" class="x2-s"/><text x="520" y="140" class="x2-t">CPU2</text>
+<g class="x2-s"><rect x="400" y="250" width="300" height="9"/><rect x="400" y="265" width="300" height="9"/><rect x="400" y="280" width="300" height="9"/><rect x="400" y="295" width="300" height="9"/><rect x="400" y="310" width="300" height="9"/><rect x="400" y="325" width="300" height="9"/></g>
+<text x="405" y="348" class="x2-g">P2 DIMMs</text>
+<rect x="700" y="280" width="30" height="80" class="x2-s"/><text x="702" y="375" class="x2-g">JF1</text>
+<!-- LAN controllers -->
+<rect x="40" y="390" width="60" height="50" class="x2-s"/><text x="44" y="412" class="x2-g">LAN</text><text x="44" y="426" class="x2-g">CTRL</text>
+<rect x="40" y="480" width="60" height="60" class="x2-s"/><text x="44" y="502" class="x2-g">LAN</text><text x="44" y="516" class="x2-g">CTRL</text><text x="44" y="530" class="x2-g">(LN4)</text>
+<!-- slots -->
+<rect x="120" y="392" width="130" height="12" class="x2-s"/><text x="124" y="388" class="x2-g">Slot6 PCI-E x8</text>
+<rect x="120" y="432" width="130" height="12" class="x2-s"/><text x="124" y="428" class="x2-g">Slot5 PCI-E x8</text>
+<rect x="120" y="472" width="200" height="12" class="x2-s"/><text x="124" y="468" class="x2-g">Slot4 PCI-E x16</text>
+<rect x="120" y="512" width="180" height="12" class="x2-s"/><text x="124" y="508" class="x2-g">Slot3 PCI</text>
+<rect x="120" y="552" width="130" height="12" class="x2-s"/><text x="124" y="548" class="x2-g">Slot2 PCI-E x4</text>
+<rect x="120" y="592" width="180" height="12" class="x2-s"/><text x="124" y="588" class="x2-g">Slot1 PCI</text>
+<rect x="320" y="500" width="22" height="22" class="x2-s"/><text x="320" y="496" class="x2-g">BIOS</text>
+<rect x="326" y="530" width="18" height="10" class="x2-j"/><text x="348" y="539" class="x2-m">JBT1</text>
+<rect x="270" y="540" width="50" height="50" class="x2-s"/><text x="273" y="560" class="x2-g">BMC/</text><text x="273" y="574" class="x2-g">VGA</text>
+<circle cx="70" cy="585" r="22" class="x2-s"/><text x="56" y="589" class="x2-g">Battery</text>
+<rect x="104" y="574" width="16" height="8" class="x2-j"/><text x="104" y="571" class="x2-m">JI2C1</text>
+<rect x="104" y="590" width="16" height="8" class="x2-j"/><text x="122" y="598" class="x2-m">JI2C2</text>
+<!-- south bridge, LSI -->
+<rect x="380" y="520" width="70" height="70" rx="3" class="x2-s"/><text x="386" y="550" class="x2-g">ICH10R</text><text x="386" y="564" class="x2-g">south bridge</text>
+<rect x="460" y="440" width="80" height="80" rx="3" class="x2-s"/><text x="466" y="470" class="x2-g">Intel 5520</text><text x="466" y="484" class="x2-g">north bridge</text>
+<rect x="560" y="530" width="70" height="70" rx="3" class="x2-s"/><text x="566" y="560" class="x2-g">LSI 1068E</text><text x="566" y="574" class="x2-g">(X8DT3 only)</text>
+<rect x="640" y="520" width="40" height="36" class="x2-s"/><text x="682" y="540" class="x2-g">JSM2 SAS4-7</text>
+<rect x="640" y="566" width="40" height="36" class="x2-s"/><text x="682" y="586" class="x2-g">JSM1 SAS0-3</text>
+<rect x="650" y="450" width="40" height="40" class="x2-s"/><text x="652" y="446" class="x2-g">SI/O</text>
+<rect x="705" y="400" width="26" height="130" class="x2-s"/><text x="708" y="545" class="x2-g">Floppy</text>
+<!-- SATA -->
+<g class="x2-s"><rect x="440" y="612" width="34" height="12"/><rect x="480" y="612" width="34" height="12"/><rect x="530" y="612" width="34" height="12"/><rect x="440" y="634" width="34" height="12"/><rect x="480" y="634" width="34" height="12"/><rect x="530" y="634" width="34" height="12"/></g>
+<text x="440" y="608" class="x2-g">I-SATA 5 3 1 (top), 4 2 0 (bottom)</text>
+<!-- bottom-edge jumpers -->
+<rect x="34" y="645" width="20" height="8" class="x2-j"/><text x="56" y="652" class="x2-m">JPL1</text>
+<rect x="34" y="657" width="20" height="8" class="x2-j"/><text x="56" y="664" class="x2-m">JPL2</text>
+<text x="34" y="641" class="x2-g">COM2</text>
+<rect x="290" y="650" width="16" height="8" class="x2-j"/><text x="290" y="647" class="x2-m">JPB</text>
+<rect x="312" y="650" width="16" height="8" class="x2-j"/><text x="312" y="667" class="x2-m">JPG1</text>
+<rect x="340" y="648" width="40" height="14" class="x2-s"/><text x="342" y="645" class="x2-g">USB 6/7, 4/5</text>
+<rect x="400" y="648" width="24" height="14" class="x2-s"/><text x="398" y="645" class="x2-g">USB3</text>
+<rect x="590" y="652" width="12" height="8" class="x2-j"/><text x="584" y="649" class="x2-m">JL1</text>
+<rect x="608" y="652" width="18" height="8" class="x2-j"/><text x="606" y="667" class="x2-m">JWD</text>
+<rect x="632" y="652" width="18" height="8" class="x2-j"/><text x="600" y="637" class="x2-m">JPS1 = 2-3 DISABLED</text>
+<rect x="656" y="652" width="18" height="8" class="x2-j"/><text x="654" y="667" class="x2-m">JPS2</text>
+<circle cx="700" cy="640" r="10" class="x2-s"/><text x="690" y="625" class="x2-g">Fan4</text>
+<text x="20" y="690" class="x2-g">Amber = jumpers. Pins 1-2 = enabled on every two-position jumper; pin 1 is the square pad. JPS1/JPS2 are the pair circled A and B in the manual zoom below.</text>
+</svg><figcaption><b>Fig. 3.</b> The board as the manual draws it, rear I/O on the left and the front edge at the bottom, every jumper in amber. JPS1 is the one moved; the rest are at their factory positions. Traced from the manual's layout; not to scale.</figcaption></figure>
