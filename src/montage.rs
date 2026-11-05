@@ -12,6 +12,14 @@
 //!
 //! A CHAPTER IS ITS WINS, LOSSES AND DRAWS FROM ONE START, against the same opponents in every
 //! chapter: the bar is the comparison the film makes, so it is drawn beside each chapter's name.
+//!
+//! THE MIND PLAYS HERE TOO (Paul, 4 November: "This should really be animated within orrery or
+//! treadcore"). A film made since version 2 of crucible's trace has a mind.json beside it: every step
+//! of every clip, the champion's 55 inputs, its two layers of 48, its four outputs, what its tank did,
+//! the shot it fired, and the strongest currents between the layers. The page draws the film's corners
+//! from it, natively and at the console's own six frames a second, paced by the wall clock (a step is
+//! 0.1 s), so the net can be watched thinking without the film. Paused, it rests on the first step whose
+//! shell hit.
 use crate::draw::Rgb;
 use crate::font::{F6X10, F8X13};
 use crate::json::Value;
@@ -24,6 +32,220 @@ pub struct State {
     /// The film selected, by its number (0: the newest).
     pub sel: i64,
     pub off: usize,
+    /// The mind playing, since when, and where it was left (a step of the film's mind).
+    pub mind_play: bool,
+    pub mind_t0: Option<std::time::Instant>,
+    pub mind_at: Option<usize>,
+}
+
+// ---- the mind: mind.json, drawn as the film's corners ----
+
+/// The screens' colours, treadcore.org's (site.css): black glass, phosphor, amber, a dim rim.
+const SCR: Rgb = 0x070807;
+const PHOS: Rgb = 0x33f24d;
+const PHOS_DIM: Rgb = 0x1d8a2c;
+const AMBER: Rgb = 0xffbf4d;
+const RED: Rgb = 0xf23326;
+const SKY: Rgb = 0x73c7ff;
+
+/// One step of one clip.
+struct Step {
+    ch: usize,
+    clip: String,
+    x: Vec<f32>,
+    h1: Vec<f32>,
+    h2: Vec<f32>,
+    y: Vec<f32>,
+    a: Vec<f32>,
+    shot: String,
+    cur: Vec<(u8, usize, usize, f32)>,
+}
+
+/// A film's mind, read once a change of its file.
+struct Mind {
+    path: String,
+    stamp: std::time::SystemTime,
+    chapters: Vec<(String, i64, String)>,
+    steps: Vec<Step>,
+}
+
+static MIND: Mutex<Option<Mind>> = Mutex::new(None);
+
+fn floats(v: Option<&Value>) -> Vec<f32> {
+    v.and_then(|x| x.as_array()).map(|a| a.iter().map(|n| n.as_num().unwrap_or(0.0) as f32).collect()).unwrap_or_default()
+}
+
+fn read_mind(path: &str) -> Option<Mind> {
+    let stamp = std::fs::metadata(path).and_then(|m| m.modified()).ok()?;
+    let doc = crate::json::parse(&std::fs::read_to_string(path).ok()?).ok()?;
+    let mut chapters = Vec::new();
+    let mut steps = Vec::new();
+    for (ci, ch) in arr(&doc, "chapters").iter().enumerate() {
+        chapters.push((s(ch, "label"), n(ch, "gen") as i64, s(ch, "island")));
+        for clip in arr(ch, "clips") {
+            for st in arr(clip, "steps") {
+                let cur = arr(st, "c")
+                    .iter()
+                    .filter_map(|e| e.as_array())
+                    .filter(|e| e.len() == 4)
+                    .map(|e| (e[0].as_num().unwrap_or(0.0) as u8, e[1].as_num().unwrap_or(0.0) as usize, e[2].as_num().unwrap_or(0.0) as usize, e[3].as_num().unwrap_or(0.0) as f32))
+                    .collect();
+                steps.push(Step { ch: ci, clip: s(clip, "what"), x: floats(st.get("x")), h1: floats(st.get("h1")), h2: floats(st.get("h2")), y: floats(st.get("y")), a: floats(st.get("a")), shot: s(st, "s"), cur });
+            }
+        }
+    }
+    Some(Mind { path: path.to_string(), stamp, chapters, steps })
+}
+
+/// A number as the screens show one: phosphor for +, amber for -, black at 0, the brightness its size.
+fn shade(v: f32, signed: bool) -> Rgb {
+    let a = if signed { v.clamp(-1.0, 1.0) } else { v.clamp(0.0, 1.0) };
+    let k = (a.abs().powf(0.6) * 255.0) as u8;
+    crate::draw::mix(SCR, if a >= 0.0 { PHOS } else { AMBER }, k)
+}
+
+fn seg(ui: &mut Ui, (x0, y0): (i32, i32), (x1, y1): (i32, i32), c: Rgb) {
+    let (dx, dy) = ((x1 - x0).abs(), -(y1 - y0).abs());
+    let (sx, sy) = (if x0 < x1 { 1 } else { -1 }, if y0 < y1 { 1 } else { -1 });
+    let (mut x, mut y, mut err) = (x0, y0, dx + dy);
+    for _ in 0..4096 {
+        ui.c.set(x, y, c);
+        if x == x1 && y == y1 {
+            break;
+        }
+        let e2 = 2 * err;
+        if e2 >= dy {
+            err += dy;
+            x += sx;
+        }
+        if e2 <= dx {
+            err += dx;
+            y += sy;
+        }
+    }
+}
+
+/// The mind player: the film's corners on one screen, its buttons under it. Returns the height used.
+fn draw_mind(ui: &mut Ui, at: Rect, path: &str, film_n: i64, st: &mut State, now: Option<std::time::Instant>) -> i32 {
+    let mut guard = MIND.lock().unwrap_or_else(|e| e.into_inner());
+    let fresh = std::fs::metadata(path).and_then(|m| m.modified()).ok();
+    if guard.as_ref().map(|m| m.path != path || Some(m.stamp) != fresh).unwrap_or(true) {
+        *guard = read_mind(path);
+        st.mind_at = None;
+    }
+    let Some(m) = guard.as_ref().filter(|m| !m.steps.is_empty()) else {
+        return 0;
+    };
+    let t = ui.t;
+    let total = m.steps.len();
+    let rest = st.mind_at.unwrap_or_else(|| m.steps.iter().position(|x| x.shot == "hit").unwrap_or(0));
+    let i = match (st.mind_play, st.mind_t0, now) {
+        (true, Some(t0), Some(now)) => (rest + (now.duration_since(t0).as_secs_f64() * 10.0) as usize) % total,
+        _ => rest.min(total - 1),
+    };
+    let step = &m.steps[i];
+    let h = 300;
+    let screen = rect(at.x, at.y, at.w, h - 30);
+    ui.c.rect(screen.x - 1, screen.y - 1, screen.w + 2, screen.h + 2, PHOS_DIM);
+    ui.c.rect(screen.x, screen.y, screen.w, screen.h, SCR);
+    for yy in (screen.y + 1..screen.bottom()).step_by(3) {
+        ui.c.rect(screen.x, yy, screen.w, 1, 0x0b0e0b);
+    }
+    let (label, gen, island) = m.chapters.get(step.ch).cloned().unwrap_or_default();
+    ui.label_in(screen.x + 10, screen.y + 6, screen.w - 20, &format!("MIND  montage {}  chapter {} of {}  {}  {}", film_n, step.ch + 1, m.chapters.len(), island.trim_end_matches("-cuda"), step.clip), &F6X10, PHOS);
+    // The generation, the fourth corner.
+    ui.label(screen.right() - 170, screen.y + 22, "GENERATION", &F6X10, PHOS_DIM);
+    ui.label(screen.right() - 170, screen.y + 36, &format!("{}", gen), &F8X13, PHOS);
+    ui.label_in(screen.right() - 170, screen.y + 54, 160, &label, &F6X10, AMBER);
+    // The inputs, 11 a row.
+    let (ix, iy) = (screen.x + 10, screen.y + 24);
+    ui.label(ix, iy, "inputs", &F6X10, PHOS_DIM);
+    for (k, v) in step.x.iter().enumerate() {
+        ui.c.rect(ix + (k % 11) as i32 * 13, iy + 14 + (k / 11) as i32 * 13, 11, 11, shade(*v, true));
+    }
+    // The transform: h1, h2 and the outputs, the strongest currents between them.
+    let (tx, ty) = (screen.x + 10, screen.y + 112);
+    ui.label(tx, ty, "transform  55 > 48 > 48 > 4", &F6X10, PHOS_DIM);
+    let g1 = |k: usize| (tx + (k % 8) as i32 * 12 + 5, ty + 16 + (k / 8) as i32 * 12 + 5);
+    let g2 = |k: usize| (tx + 150 + (k % 8) as i32 * 12 + 5, ty + 16 + (k / 8) as i32 * 12 + 5);
+    let go = |k: usize| (tx + 290 + 8, ty + 16 + k as i32 * 20 + 8);
+    let top = step.cur.iter().fold(1e-6f32, |a, e| a.max(e.3.abs()));
+    for &(layer, a, b, v) in step.cur.iter().rev() {
+        let (p, q) = if layer == 0 { (g1(a), g2(b)) } else { (g2(a), go(b)) };
+        let k = ((v.abs() / top).powf(0.8) * 200.0) as u8 + 40;
+        seg(ui, p, q, crate::draw::mix(SCR, if v >= 0.0 { PHOS } else { AMBER }, k));
+    }
+    for (k, v) in step.h1.iter().enumerate() {
+        let (cx, cy) = g1(k);
+        ui.c.rect(cx - 5, cy - 5, 10, 10, shade(*v, true));
+    }
+    for (k, v) in step.h2.iter().enumerate() {
+        let (cx, cy) = g2(k);
+        ui.c.rect(cx - 5, cy - 5, 10, 10, shade(*v, true));
+    }
+    for (k, v) in step.y.iter().enumerate() {
+        let (cx, cy) = go(k);
+        ui.c.rect(cx - 8, cy - 8, 16, 16, shade(*v, true));
+        ui.label(cx + 12, cy - 5, ["turn", "speed", "fire", "gate"].get(k).copied().unwrap_or(""), &F6X10, PHOS_DIM);
+    }
+    // The decisions: the clip's last eight seconds, newest at the right.
+    let (dx, dy) = (screen.x + 360, screen.y + 112);
+    ui.label(dx, dy, "decisions, the last 8 s", &F6X10, PHOS_DIM);
+    let rows = ["turn", "speed", "fire", "net's say", "shots"];
+    for (r, word) in rows.iter().enumerate() {
+        ui.label(dx, dy + 16 + r as i32 * 14, word, &F6X10, PHOS_DIM);
+    }
+    let cx0 = dx + 64;
+    let cols = ((screen.right() - 10 - cx0) / 3).min(80) as usize;
+    for k in 0..cols {
+        let back = cols - 1 - k;
+        if back > i {
+            continue;
+        }
+        let u = &m.steps[i - back];
+        if u.ch != step.ch || u.clip != step.clip {
+            continue;
+        }
+        let col = cx0 + k as i32 * 3;
+        let vals = [shade(*u.a.first().unwrap_or(&0.0), true), shade(*u.a.get(1).unwrap_or(&0.0), false), shade(*u.a.get(2).unwrap_or(&0.0), true), shade(*u.y.last().unwrap_or(&0.0), true)];
+        for (r, c) in vals.iter().enumerate() {
+            ui.c.rect(col, dy + 16 + r as i32 * 14, 3, 12, *c);
+        }
+        let sc = match u.shot.as_str() {
+            "hit" => Some(RED),
+            "pillbox" => Some(AMBER),
+            "shot" => Some(0xf0f8f0),
+            "pillbox fired" => Some(SKY),
+            _ => None,
+        };
+        if let Some(c) = sc {
+            ui.c.rect(col, dy + 16 + 4 * 14, 3, 12, c);
+        }
+    }
+    ui.c.rect(cx0 + cols as i32 * 3, dy + 14, 1, 5 * 14, PHOS);
+    // The buttons.
+    let by = screen.bottom() + 6;
+    if ui.button(rect(at.x, by, 90, 22), if st.mind_play { "Pause" } else { "Play mind" }, true) {
+        if st.mind_play {
+            st.mind_at = Some(i);
+            st.mind_play = false;
+        } else {
+            st.mind_at = Some(i);
+            st.mind_t0 = now;
+            st.mind_play = now.is_some();
+        }
+    }
+    let first_of = |c: usize| m.steps.iter().position(|x| x.ch == c).unwrap_or(0);
+    if ui.button(rect(at.x + 98, by, 90, 22), "< chapter", step.ch > 0) {
+        st.mind_at = Some(first_of(step.ch - 1));
+        st.mind_t0 = now;
+    }
+    if ui.button(rect(at.x + 196, by, 90, 22), "chapter >", step.ch + 1 < m.chapters.len()) {
+        st.mind_at = Some(first_of(step.ch + 1));
+        st.mind_t0 = now;
+    }
+    ui.label_in(at.x + 296, by + 5, at.w - 296, &format!("step {} of {}  green +, amber -, black 0; a step is 0.1 s", i + 1, total), &F6X10, t.dim);
+    h
 }
 
 fn s(v: &Value, k: &str) -> String {
@@ -143,12 +365,23 @@ pub fn draw(ui: &mut Ui, at: Rect, doc: Option<&Value>, st: &mut State, operator
         ui.label_in(left.x, y, left.w, "No film yet.", &F8X13, t.dim);
         return;
     }
-    let lh = F8X13.height as i32 + 8;
-    let list = rect(left.x, y, left.w, left.bottom() - y);
-    ui.well(list);
+    // ---- the mind of the film chosen, when it has one and nothing is being made ----
     if st.sel == 0 {
         st.sel = n(&films[0], "n") as i64;
     }
+    if !running {
+        if let Some(f) = films.iter().find(|f| n(f, "n") as i64 == st.sel) {
+            let mind = s(f, "mind");
+            if !mind.is_empty() {
+                // The console's frames for a screenshot (--frame) have no clock: the mind rests.
+                let now = if std::env::var("ORRERY_FRAME_PAGE").is_ok() { None } else { Some(std::time::Instant::now()) };
+                y += draw_mind(ui, rect(left.x, y, left.w, 300), &mind, st.sel, st, now) + 10;
+            }
+        }
+    }
+    let lh = F8X13.height as i32 + 8;
+    let list = rect(left.x, y, left.w, left.bottom() - y);
+    ui.well(list);
     let (area, first, count) = ui.scroll_list(list.inset(2), films.len(), lh, &mut st.off);
     for (i, f) in films.iter().enumerate().skip(first).take(count) {
         let row = rect(area.x, area.y + (i - first) as i32 * lh, area.w, lh);
@@ -186,7 +419,10 @@ pub fn draw(ui: &mut Ui, at: Rect, doc: Option<&Value>, st: &mut State, operator
     }
     ui.label(rx, ry, &format!("Montage {}: {} duels from one start in every chapter", s(f, "n"), s(f, "duels")), &F8X13, t.ink);
     ry += 20;
-    let bar_w = 180;
+    // The bar shrinks to the room there is, and its words move into the tip when there is none (at 1280
+    // pixels wide the column ran past the page's edge).
+    let bar_w = (at.right() - (rx + 310) - 150).clamp(40, 180);
+    let words = rx + 310 + bar_w + 8 + 140 <= at.right();
     for ch in arr(f, "chapters") {
         if ry + 16 > at.bottom() {
             break;
@@ -201,11 +437,14 @@ pub fn draw(ui: &mut Ui, at: Rect, doc: Option<&Value>, st: &mut State, operator
         ui.c.rect(bx, ry + 2, bar_w, 10, t.line);
         ui.c.rect(bx, ry + 2, ww, 10, t.up);
         ui.c.rect(bx + bar_w - lw, ry + 2, lw, 10, t.alarm);
-        ui.label(bx + bar_w + 8, ry, &format!("{} won  {} lost  {} drawn", w, l, d), &F6X10, t.dim);
+        if words {
+            ui.label(bx + bar_w + 8, ry, &format!("{} won  {} lost  {} drawn", w, l, d), &F6X10, t.dim);
+        }
         let clips: Vec<String> = arr(ch, "clips").iter().map(|c| s(c, "what")).collect();
         let (name, gen) = (s(ch, "label"), s(ch, "gen"));
+        let score = format!("{} won, {} lost, {} drawn", w, l, d);
         ui.tip(rect(rx, ry, bx + bar_w - rx, 14), move || {
-            let mut v = vec![format!("{} at generation {}", name, gen), "Its clips:".to_string()];
+            let mut v = vec![format!("{} at generation {}: {}", name, gen, score), "Its clips:".to_string()];
             v.extend(clips);
             v
         });

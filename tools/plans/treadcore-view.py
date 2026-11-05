@@ -423,7 +423,9 @@ def montage():
         chs = [{k: c.get(k) for k in ("name", "label", "island", "gen", "won", "lost", "drawn")} | {"clips": [{"what": k.get("what")} for k in c.get("clips", [])]}
                for c in summ.get("chapters", [])]
         poster = os.path.join(md, "poster.ppm")
-        films.append(dict(m, chapters=chs, duels=summ.get("duels"), poster=poster if os.path.exists(poster) else "", path=os.path.join(QDIR, m.get("mp4", ""))))
+        mind = os.path.join(md, "mind.json")
+        films.append(dict(m, chapters=chs, duels=summ.get("duels"), poster=poster if os.path.exists(poster) else "", path=os.path.join(QDIR, m.get("mp4", "")),
+                          mind=mind if os.path.exists(mind) else "", output=summ.get("output") or "", marks=summ.get("marks") or []))
     pv = os.path.join(QDIR, "plan", "montage-preview.ppm")
     lock = os.path.join(QDIR, "plan", "montage.lock")
     return {"state": st, "films": films, "preview": pv if os.path.exists(pv) else "",

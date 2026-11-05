@@ -9,3 +9,6 @@ target/
 # Python bytecode from tools/
 __pycache__/
 *.pyc
+
+# Finished films for a person to take (tools/montage.py, ORRERY_OUTPUT)
+output/

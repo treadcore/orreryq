@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""montage.py QUEUE make [--chapters N] [--duels N] [--host NAME] [--seed S] | status -- the generations
+"""montage.py QUEUE make [--chapters N] [--duels N] [--host NAME] [--seed S] [--since start|LABEL] | status -- the generations
 since the last montage, as a film: crucible's world duels, the camera on the best winning tank, every other
 duel a ghost.
 
@@ -72,6 +72,12 @@ TITLE_S = 0.25
 TREC = 22
 FONT = "Helvetica"
 FONT_B = "Helvetica-Bold"
+# treadcore.org's screens are monospace (site.css --mono: ui-monospace, Menlo); Courier where there is none.
+MONO = "/System/Library/Fonts/Menlo.ttc" if os.path.exists("/System/Library/Fonts/Menlo.ttc") else "Courier"
+MONO_B = ".SF-NS-Mono-Bold" if os.path.exists("/System/Library/Fonts/SFNSMono.ttf") else "Courier-Bold"
+# Where a finished film is put for a person to take (Paul, 4 November: "Make sure the video creation is
+# scripted such that its auto placed in the output folder"): orrery's output/, or ORRERY_OUTPUT.
+OUTPUT = os.environ.get("ORRERY_OUTPUT") or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "output")
 X264 = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-r", str(FPS)]
 
 # The look is treadcore's clip renderer's (site.css, night): dark grass, the learner in sky blue with its
@@ -80,6 +86,9 @@ GRASS, GRID, OUT = (27, 41, 30), (34, 52, 37), (12, 18, 14)
 WALL, ROCK, ROCK_E = (90, 107, 92), (104, 94, 79), (70, 63, 54)
 PB, PB_DEAD, PB_BAR = (216, 194, 122), (60, 58, 51), (120, 200, 110)
 ME, FOE, ME_G, FOE_G = (108, 196, 255), (232, 88, 79), (44, 84, 108), (88, 46, 44)
+# The corners are treadcore.org's screens (site.css): black glass, phosphor green, amber, a dim green rim.
+SCR, SCR_RIM, PHOS, PHOS_DIM, AMBER, SKY, RED_HUD = (7, 8, 7), (29, 138, 44), (51, 242, 77), (29, 138, 44), (255, 191, 77), (115, 199, 255), (242, 51, 38)
+HISTORY = 80               # steps of decisions in the spectrogram: 8 s
 SHELL, RING, ZAP = (255, 160, 64), (255, 255, 255), (255, 224, 138)
 
 
@@ -236,12 +245,17 @@ class Trace:
         hdr = struct.unpack_from("<9i", b, 0)
         if hdr[0] != 0x63747231:
             raise RuntimeError("not a crucible trace")
-        _, _, self.nc, self.nd, self.steps, trec, self.npl, self.npb, _ = hdr
+        _, self.version, self.nc, self.nd, self.steps, trec, self.npl, self.npb, _ = hdr
         if trec != TREC:
             raise RuntimeError("a trace of %d floats a step, not %d" % (trec, TREC))
         off = 36
         self.dt, self.arena, self.hp, self.pb_hp, self.gun, self.pb_range = struct.unpack_from("<6f", b, off)
         off += 24
+        # Version 2 (crucible, 4 November): the net's shape, and after each champion's steps its mind.
+        self.nin = self.nh = self.nout = 0
+        if self.version >= 2:
+            self.nin, self.nh, self.nout = struct.unpack_from("<3i", b, off)
+            off += 12
         na = 3 * self.npl + 2 * self.npb
         ar = struct.unpack_from("<%df" % na, b, off)
         off += 4 * na
@@ -258,7 +272,12 @@ class Trace:
             fit = struct.unpack_from("<%df" % self.nd, b, off); off += 4 * self.nd
             rec = array.array("f")
             rec.frombytes(b[off:off + 4 * n]); off += 4 * n
-            self.champs.append({"outcome": out, "lasted": last, "fit": fit, "rec": rec})
+            mind = None
+            if self.version >= 2:
+                m = self.nd * self.steps * (self.nin + self.nout)
+                mind = array.array("f")
+                mind.frombytes(b[off:off + 4 * m]); off += 4 * m
+            self.champs.append({"outcome": out, "lasted": last, "fit": fit, "rec": rec, "mind": mind})
 
     def at(self, c, d, t):
         """Duel d's step t of champion c, as a tuple of TREC floats; past its end, its last step."""
@@ -266,6 +285,123 @@ class Trace:
         t = max(0, min(t, ch["lasted"][d] - 1))
         i = (d * self.steps + t) * TREC
         return ch["rec"][i:i + TREC]
+
+    def mind(self, c, d, t):
+        """What champion c's net read in duel d at step t, and what its tank did: (inputs, actions); None
+        for a version 1 trace."""
+        ch = self.champs[c]
+        if ch["mind"] is None:
+            return None
+        t = max(0, min(t, ch["lasted"][d] - 1))
+        k = self.nin + self.nout
+        i = (d * self.steps + t) * k
+        v = ch["mind"][i:i + k]
+        return v[:self.nin], v[self.nin:]
+
+
+# ---- the mind: the champion's net, recomputed ------------------------------------------------------
+#
+# Paul, 4 November: "show all the inputs, transform and output as a bunch of 1x1 pixel on three of the
+# corners, with generation counter in the 4th corner. if you can show the activation of the circuits and
+# animate them ... I like to see a history of decisions like a spectrogram of fire, from a bright square
+# display." The trace carries what the net READ and what the tank DID; the two layers between are
+# computed here from the champion's own weights by crucible's forward pass (`think`: NIN -> H -> H -> NOUT,
+# tanh throughout, row-major), which is exact, so the film shows the net as it thought and not a guess.
+
+def nw_of(nin, h, nout):
+    return nin * h + h + h * h + h + h * nout + nout
+
+
+def widen(src, nin, nh, nout, path):
+    """An older champion in this net's shape, as crucible's read_champion widens it (`widen`): its shape
+    found from its size among the four kinds (32 or 52 inputs plain, 35 or 55 hybrid), the first 32
+    inputs in place, a hybrid's three rules at 32 to 34, the world's twenty at 35; every new weight zero,
+    so its answers are what they were; a hybrid's new confidence shut (-0.5). The ladder's first
+    milestones are of the old arena's net."""
+    for (k_in, k_out) in ((32, 3), (35, 4), (52, 3), (55, 4)):
+        for h in range(1, 513):
+            n = nw_of(k_in, h, k_out)
+            if n == len(src):
+                break
+            if n > len(src):
+                h = None
+                break
+        else:
+            h = None
+        if h:
+            break
+    else:
+        raise RuntimeError("%s: %d weights, of no net's shape" % (path, len(src)))
+    if k_in > nin or h > nh or k_out > nout:
+        raise RuntimeError("%s: a %d-%d-%d-%d net does not shrink into %d-%d-%d-%d" % (path, k_in, h, h, k_out, nin, nh, nh, nout))
+    rules = k_in in (35, 55)
+    at = 35 if rules else 32
+
+    def to(i):
+        if i < 32:
+            return i
+        if rules and i < 35:
+            return i
+        return 35 + (i - at)
+    out = [0.0] * nw_of(nin, nh, nout)
+    sW1, sb1 = 0, k_in * h
+    sW2, sb2 = sb1 + h, sb1 + h + h * h
+    sW3, sb3 = sb2 + h, sb2 + h + h * k_out
+    W1, b1 = 0, nin * nh
+    W2, b2 = b1 + nh, b1 + nh + nh * nh
+    W3, b3 = b2 + nh, b2 + nh + nh * nout
+    for j in range(h):
+        for i in range(k_in):
+            out[W1 + j * nin + to(i)] = src[sW1 + j * k_in + i]
+        out[b1 + j] = src[sb1 + j]
+        for i in range(h):
+            out[W2 + j * nh + i] = src[sW2 + j * h + i]
+        out[b2 + j] = src[sb2 + j]
+    for k in range(k_out):
+        for i in range(h):
+            out[W3 + k * nh + i] = src[sW3 + k * h + i]
+        out[b3 + k] = src[sb3 + k]
+    if k_out < nout:
+        out[b3 + nout - 1] = -0.5
+    return out
+
+
+class Net:
+    def __init__(self, path, nin, nh, nout):
+        with open(path, "rb") as f:
+            raw = f.read()
+        nw = nin * nh + nh + nh * nh + nh + nh * nout + nout
+        if len(raw) % 4:
+            raise RuntimeError("%s: %d bytes, not a net" % (path, len(raw)))
+        w = struct.unpack("<%df" % (len(raw) // 4), raw)
+        if len(w) != nw:
+            w = widen(w, nin, nh, nout, path)
+        self.nin, self.nh, self.nout = nin, nh, nout
+        k = 0
+        self.w1 = [w[k + j * nin:k + (j + 1) * nin] for j in range(nh)]; k += nin * nh
+        self.b1 = w[k:k + nh]; k += nh
+        self.w2 = [w[k + j * nh:k + (j + 1) * nh] for j in range(nh)]; k += nh * nh
+        self.b2 = w[k:k + nh]; k += nh
+        self.w3 = [w[k + j * nh:k + (j + 1) * nh] for j in range(nout)]; k += nh * nout
+        self.b3 = w[k:k + nout]
+        self.cache = {}
+
+    def think(self, x, key=None):
+        """(h1, h2, y): the two hidden layers and the net's own outputs, before the hybrid's gate."""
+        if key is not None and key in self.cache:
+            return self.cache[key]
+        h1 = [math.tanh(b + sum(a * v for a, v in zip(row, x))) for row, b in zip(self.w1, self.b1)]
+        h2 = [math.tanh(b + sum(a * v for a, v in zip(row, h1))) for row, b in zip(self.w2, self.b2)]
+        y = [math.tanh(b + sum(a * v for a, v in zip(row, h2))) for row, b in zip(self.w3, self.b3)]
+        if key is not None:
+            self.cache[key] = (h1, h2, y)
+        return h1, h2, y
+
+    def circuits(self, h1, h2, most=28):
+        """The strongest currents this step: weight times the signal it carries, h1 -> h2 and h2 -> out."""
+        a = sorted(((abs(self.w2[j][i] * h1[i]), 0, i, j, self.w2[j][i] * h1[i]) for j in range(self.nh) for i in range(self.nh)), reverse=True)[:most]
+        b = sorted(((abs(self.w3[k][i] * h2[i]), 1, i, k, self.w3[k][i] * h2[i]) for k in range(self.nout) for i in range(self.nh)), reverse=True)[:most // 2]
+        return a + b
 
 
 # ---- the clips -------------------------------------------------------------------------------
@@ -418,11 +554,35 @@ def alerp(a, b, f):
     return a + d * f
 
 
-class Film:
-    """The frames of one chapter's clips: the followed duel solid, every other duel a ghost."""
+def mix(a, b, f):
+    return (int(a[0] + (b[0] - a[0]) * f), int(a[1] + (b[1] - a[1]) * f), int(a[2] + (b[2] - a[2]) * f))
 
-    def __init__(self, tr, c, d):
-        self.tr, self.c, self.d = tr, c, d
+
+def shade(v, signed=True):
+    """A number as the screens show one: phosphor green for +, amber for -, black glass at 0, the
+    brightness its size (a power under 1, so a small signal still shows)."""
+    a = max(-1.0, min(1.0, v))
+    if not signed:
+        a = max(0.0, a)
+    return mix(SCR, PHOS if a >= 0 else AMBER, abs(a) ** 0.6)
+
+
+# The corners' places (1280 x 720): inputs top left, the transform bottom left, the decisions bottom right,
+# the generation top right with the arena's map under it. Each panel's first 30 pixels hold its label.
+P_IN = (16, 16, 230, 134)
+P_TX = (16, H - 16 - 154, 476, 154)
+P_DE = (W - 16 - 436, H - 16 - 122, 436, 122)
+P_GEN = (W - 16 - 300, 16, 300, 96)
+MAP = (W - 16 - 150, 124, 150)
+DE_ROWS = ("turn", "speed", "fire", "net's say", "shots")
+
+
+class Film:
+    """The frames of one chapter's clips: the followed duel solid, every other duel a ghost, and in the
+    corners the champion's net thinking."""
+
+    def __init__(self, tr, c, d, net=None):
+        self.tr, self.c, self.d, self.net = tr, c, d, net
         self.scale = W / 30.0          # 30 tiles across: the camera's window
         self.blank = bytes(OUT) * (W * H)
         self.cam = None
@@ -430,11 +590,18 @@ class Film:
     def to_px(self, x, y):
         return int((x - self.cam[0]) * self.scale + W / 2), int((y - self.cam[1]) * self.scale + H / 2)
 
-    def frame(self, t, f, flash):
+    def frame(self, t, f, flash, bare=False):
+        """Step t and the fraction f of the way to the next; `bare`, the field alone (the title's)."""
         tr, c, d = self.tr, self.c, self.d
         s0, s1 = tr.at(c, d, t), tr.at(c, d, t + 1)
         ax, ay = lerp(s0[0], s1[0], f), lerp(s0[1], s1[1], f)
-        want = (min(max(ax, 15.0), tr.arena - 15.0), min(max(ay, 8.4), tr.arena - 8.4))
+        # The camera frames the fight: a third of the way toward a living foe within 16 tiles, and up to six
+        # tiles past the walls, so a tank by a wall is not pushed under the corners (the first film's kill
+        # shots by the north wall stood under the caption, the foe under the generation).
+        bx_, by_ = lerp(s0[7], s1[7], f), lerp(s0[8], s1[8], f)
+        if s0[10] > 0 and math.hypot(bx_ - ax, by_ - ay) < 16.0:
+            ax, ay = ax + (bx_ - ax) / 3.0, ay + (by_ - ay) / 3.0
+        want = (min(max(ax, 9.0), tr.arena - 9.0), min(max(ay, 2.4), tr.arena - 2.4))
         self.cam = want if self.cam is None else (lerp(self.cam[0], want[0], 0.25), lerp(self.cam[1], want[1], 0.25))
         cv = Canvas(self.blank)
         S = self.scale
@@ -466,19 +633,43 @@ class Film:
             cv.rect(sx - half, sy - half, 2 * half, 2 * half, PB if hp > 0 else PB_DEAD)
             if hp > 0:
                 cv.rect(sx - half, sy - half - 10, int(2 * half * hp / tr.pb_hp), 5, PB_BAR)
-        # The ghosts: every other duel at this moment, dim, and touching nothing.
-        gr = max(3, int(0.45 * S))
+        # THE CROWD (Paul, 4 November: "a crowd of tanks on the same map because the pill boxes dont move.
+        # or even enemy ghost tanks ... a faded overlay with same camera movement to make it align"): every
+        # other duel at this same step, the champion and its foe, drawn as tanks faded into the grass. The
+        # fade is pre-blended with the field's colour -- the field is the mask -- which costs nothing a
+        # pixel. The camera is the followed tank's, so the crowd moves with it. A duel already over keeps its
+        # tanks where they ended, fading out over three seconds, so the crowd does not empty as the duels
+        # finish (the first film's kill shots stood alone: by then most of the 64 were done).
+        gr = max(4, int(0.62 * S))
         for e in range(tr.nd):
             if e == d:
                 continue
-            g0 = tr.at(c, e, t)
-            if t >= tr.champs[c]["lasted"][e] + 8:
+            last = tr.champs[c]["lasted"][e]
+            over = t - (last - 1)
+            fade = 1.0 if over <= 0 else max(0.0, 1.0 - over / 30.0)
+            if fade <= 0:
                 continue
-            for (k, col) in ((7, FOE_G), (0, ME_G)):
-                if g0[k + 3] > 0:
-                    sx, sy = self.to_px(g0[k], g0[k + 1])
-                    if -40 < sx < W + 40 and -40 < sy < H + 40:
-                        cv.disc(sx, sy, gr, col)
+            te = min(t, last - 1)
+            g0 = tr.at(c, e, te)
+            g1 = tr.at(c, e, te + 1) if over <= 0 else g0
+            for (k, col) in ((7, FOE), (0, ME)):
+                if g0[k + 3] <= 0:
+                    continue
+                x, y = lerp(g0[k], g1[k], f), lerp(g0[k + 1], g1[k + 1], f)
+                sx, sy = self.to_px(x, y)
+                if not (-60 < sx < W + 60 and -60 < sy < H + 60):
+                    continue
+                a = 0.36 * fade
+                if k == 0 and over <= 0:
+                    for back in (12, 8, 4):
+                        p0 = tr.at(c, e, max(0, te - back))
+                        px_, py_ = self.to_px(p0[0], p0[1])
+                        cv.disc(px_, py_, 2, mix(GRASS, col, a * 0.6))
+                edge = mix(GRASS, (6, 9, 7), a * 1.4)
+                cv.disc(sx, sy, gr + 2, edge)
+                cv.disc(sx, sy, gr, mix(GRASS, col, a))
+                hx, hy = self.to_px(x + math.cos(g0[k + 2]) * 1.25, y + math.sin(g0[k + 2]) * 1.25)
+                cv.line(sx, sy, hx, hy, edge, w=3)
         # The followed duel: both tanks, their shells, the hits.
         tank_r = int(0.8 * S)
         for (k, col) in ((7, FOE), (0, ME)):
@@ -510,9 +701,15 @@ class Film:
                 tx, ty = (float(v) for v in kind[4:].split(","))
                 ex, ey = self.to_px(tx, ty)
                 cv.line(sx, sy, ex, ey, ZAP, w=3)
-        # The arena whole, small, bottom right: every duel's learner a dot, the camera's window a frame.
-        mm, ms = 168, 168 / tr.arena
-        mx, my = W - mm - 18, H - mm - 18
+        if bare:
+            return cv.b
+        if self.net is not None:
+            hud_of(self, cv, t)
+        panel(cv, P_GEN)
+        # The arena whole, small, top right under the generation: every duel's learner a dot, the camera's
+        # window a frame.
+        mm, ms = MAP[2], MAP[2] / tr.arena
+        mx, my = MAP[0], MAP[1]
         cv.rect(mx - 2, my - 2, mm + 4, mm + 4, (8, 10, 9))
         cv.rect(mx, my, mm, mm, (22, 33, 25))
         for (px, py, pr) in tr.pillars:
@@ -525,6 +722,86 @@ class Film:
         for (a, b, w, h) in ((wx, wy, int(30 * ms), 1), (wx, wy + int(16.8 * ms), int(30 * ms), 1), (wx, wy, 1, int(16.8 * ms)), (wx + int(30 * ms), wy, 1, int(16.8 * ms))):
             cv.rect(a, b, w, h, (200, 200, 200))
         return cv.b
+
+
+def panel(cv, box):
+    """A screen of treadcore.org's: black glass in a dim phosphor rim, a scanline every third row."""
+    x, y, w, h = box
+    cv.rect(x - 2, y - 2, w + 4, h + 4, (4, 5, 4))
+    cv.rect(x - 1, y - 1, w + 2, h + 2, SCR_RIM)
+    cv.rect(x, y, w, h, SCR)
+    line = bytes((11, 14, 11))
+    for yy in range(y + 1, y + h, 3):
+        cv.hspan(x, x + w - 1, yy, line)
+
+
+def shot_of(tr, c, d, u):
+    """The shots row's colour at step u: red where its shell hit the foe, amber where it struck a
+    pillbox, white where a shell left the gun, sky where a pillbox fired at it; None for nothing."""
+    s = tr.at(c, d, u)
+    fa = int(s[18])
+    if fa == 1:
+        return RED_HUD
+    if fa in (2, 3):
+        return AMBER
+    if u > 0 and s[6] > tr.at(c, d, u - 1)[6] + 1e-4:
+        return (240, 248, 240)
+    if int(s[20]) > 0:
+        return SKY
+    return None
+
+
+def hud_of(film, cv, t):
+    """The three corners of the mind (the fourth, the generation, is a picture laid over by ffmpeg)."""
+    tr, c, d, net = film.tr, film.c, film.d, film.net
+    mt = tr.mind(c, d, t)
+    if mt is None:
+        return
+    x, act = mt
+    h1, h2, y = net.think(x, (d, t))
+    # ---- top left: the inputs, 11 a row ----
+    panel(cv, P_IN)
+    x0, y0 = P_IN[0] + 12, P_IN[1] + 30
+    for i, v in enumerate(x):
+        cv.rect(x0 + (i % 11) * 19, y0 + (i // 11) * 19, 16, 16, shade(v))
+    # ---- bottom left: the transform, h1 -> h2 -> out, the strongest currents lit ----
+    panel(cv, P_TX)
+    bx, by = P_TX[0] + 12, P_TX[1] + 34
+    g1 = [(bx + (i % 8) * 15 + 6, by + (i // 8) * 15 + 6) for i in range(net.nh)]
+    g2 = [(bx + 187 + (i % 8) * 15 + 6, by + (i // 8) * 15 + 6) for i in range(net.nh)]
+    go = [(bx + 362 + 10, by + k * 28 + 10) for k in range(net.nout)]
+    cur = net.circuits(h1, h2)
+    top = max((e[0] for e in cur), default=1.0) or 1.0
+    for (mag, layer, i, j, v) in reversed(cur):
+        a, b = (g1[i], g2[j]) if layer == 0 else (g2[i], go[j])
+        k = (mag / top) ** 0.8
+        cv.line(a[0], a[1], b[0], b[1], mix(SCR, PHOS if v >= 0 else AMBER, 0.25 + 0.75 * k), w=2 if k > 0.6 else 1)
+    for (cx, cy), v in zip(g1, h1):
+        cv.rect(cx - 6, cy - 6, 12, 12, shade(v))
+    for (cx, cy), v in zip(g2, h2):
+        cv.rect(cx - 6, cy - 6, 12, 12, shade(v))
+    for (cx, cy), v in zip(go, y):
+        cv.rect(cx - 10, cy - 10, 20, 20, shade(v))
+    # ---- bottom right: the decisions, a spectrogram of the last eight seconds ----
+    panel(cv, P_DE)
+    sx0, sy0 = P_DE[0] + 12 + 92, P_DE[1] + 32
+    for k in range(HISTORY):
+        u = t - (HISTORY - 1) + k
+        if u < 0:
+            continue
+        m = tr.mind(c, d, u)
+        if m is None:
+            continue
+        _, _, yu = net.think(m[0], (d, u))
+        au = m[1]
+        col = sx0 + k * 4
+        vals = (shade(au[0]), shade(au[1], False), shade(au[2]), shade(yu[-1]))
+        for r, cl in enumerate(vals):
+            cv.rect(col, sy0 + r * 16, 4, 14, cl)
+        sc = shot_of(tr, c, d, u)
+        if sc:
+            cv.rect(col, sy0 + 4 * 16, 4, 14, sc)
+    cv.rect(sx0 + HISTORY * 4, sy0 - 2, 1, 5 * 16, PHOS)
 
 
 def flashes(tr, c, d, t, f):
@@ -604,8 +881,9 @@ def orrery_frame(work, status, name, view, env, size="1280x720"):
     return png
 
 
-def card(work, name, bg_png, title, sub, facts):
-    """A slide: a picture (orrery's) on the left or behind, a title in 48 point, facts in 32."""
+def card(work, name, bg_png, title, sub, facts, pt=32, step=48):
+    """A slide: a picture (orrery's) on the left or behind, a title in 48 point, facts in 32 (smaller when
+    there are more than fit)."""
     out = os.path.join(work, name + ".png")
     args = ["-size", "%dx%d" % (W, H), "xc:#0b100d"]
     if bg_png:
@@ -616,8 +894,8 @@ def card(work, name, bg_png, title, sub, facts):
     x = 780 if bg_png else 60
     y = 200
     for f in facts:
-        args += ["-font", FONT, "-pointsize", "32", "-fill", "#e8e8e8", "-annotate", "+%d+%d" % (x, y), f]
-        y += 48
+        args += ["-font", MONO if pt < 32 else FONT, "-pointsize", str(pt), "-fill", "#e8e8e8", "-annotate", "+%d+%d" % (x, y), f]
+        y += step
     magick(args + [out])
     return out
 
@@ -637,9 +915,147 @@ def num(v, k=2):
     return ("%%.%df" % k) % x
 
 
+# ---- the corners' words, the generation, the title sequence ------------------------------------------
+
+def hud_labels(work):
+    """The corners' labels, once a film: a transparent frame laid over every clip."""
+    out = os.path.join(work, "hud-labels.png")
+    args = ["-size", "%dx%d" % (W, H), "xc:none", "-font", MONO, "-pointsize", "13", "-fill", "#9effa8"]
+    args += ["-annotate", "+%d+%d" % (P_IN[0] + 12, P_IN[1] + 20), "INPUTS  the 55 numbers it senses"]
+    args += ["-annotate", "+%d+%d" % (P_TX[0] + 12, P_TX[1] + 20), "TRANSFORM  55 > 48 > 48 > 4, tanh; brightest currents lit"]
+    args += ["-annotate", "+%d+%d" % (P_DE[0] + 12, P_DE[1] + 20), "DECISIONS  the last 8 s, newest at the right"]
+    bx, by = P_TX[0] + 12, P_TX[1] + 34
+    for k, word in enumerate(("turn", "speed", "fire", "gate")):
+        args += ["-annotate", "+%d+%d" % (bx + 390, by + k * 28 + 15), word]
+    for r, word in enumerate(DE_ROWS):
+        args += ["-annotate", "+%d+%d" % (P_DE[0] + 12, P_DE[1] + 32 + r * 16 + 11), word]
+    magick(args + [out])
+    return out
+
+
+def gen_png(work, ci, ch, of):
+    """The fourth corner: the generation, large, in phosphor."""
+    out = os.path.join(work, "gen-%02d.png" % ci)
+    name = ch["name"] if ch["name"] != "now" else "the newest"
+    magick(["-size", "%dx%d" % (P_GEN[2], P_GEN[3]), "xc:none",
+            "-font", MONO, "-pointsize", "13", "-fill", "#9effa8", "-annotate", "+12+20", "GENERATION",
+            "-font", MONO_B, "-pointsize", "40", "-fill", "#33f24d", "-annotate", "+12+62", format(ch["gen"], ","),
+            "-font", MONO, "-pointsize", "13", "-fill", "#ffbf4d", "-annotate", "+12+86",
+            "%s  chapter %d of %d  %s" % (name, ci + 1, of, ch["island"].replace("-cuda", "")), out])
+    return out
+
+
+def title_sequence(work, n, chapters, tr, home, field, seg_out):
+    """The opening in treadcore.org's look (index.html, site.css): the battlefield behind a veil and its
+    scanlines, a brushed-metal plate with four screws, the name etched, an eyebrow label, a phosphor
+    screen that types what the film holds, and the newswire along the foot. 3.6 s, faded in."""
+    base = os.path.join(work, "t-base.png")
+    px, py, pw, ph = 190, 120, 900, 360
+    first, lastc = chapters[0], chapters[-1]
+    gens = "generations %s to %s" % (format(first["gen"], ","), format(lastc["gen"], ","))
+    magick(["-size", "1x3", "xc:none", "-fill", "#00000030", "-draw", "point 0,0", "-write", "mpr:sl", "+delete",
+            field, "-modulate", "65,85", "-fill", "#020403", "-colorize", "30",
+            "(", "-size", "%dx%d" % (W, H), "radial-gradient:none-#020403c0", ")", "-composite",
+            "(", "-size", "%dx%d" % (W, H), "tile:mpr:sl", ")", "-composite",
+            # the plate: metal.rs's gradient, a brush's streaks, a rounded edge
+            "(", "-size", "%dx%d" % (pw, ph), "gradient:#ececec-#8a8a8a",
+            "(", "-size", "%dx%d" % (pw, ph), "xc:gray50", "-attenuate", "0.5", "+noise", "Uniform", "-motion-blur", "0x60+0", "-colorspace", "gray", ")",
+            "-compose", "blend", "-define", "compose:args=22", "-composite",
+            "(", "-size", "%dx%d" % (pw, ph), "xc:none", "-fill", "white", "-draw", "roundrectangle 0,0 %d,%d 14,14" % (pw - 1, ph - 1), ")",
+            "-compose", "dstin", "-composite", "-compose", "over",
+            "-fill", "none", "-stroke", "#2b2c2e", "-strokewidth", "2", "-draw", "roundrectangle 1,1 %d,%d 14,14" % (pw - 2, ph - 2),
+            "-stroke", "#ffffffd0", "-strokewidth", "1", "-draw", "line 14,3 %d,3" % (pw - 15),
+            ")", "-geometry", "+%d+%d" % (px, py), "-composite",
+            # four screws
+            "-stroke", "#555", "-strokewidth", "1", "-fill", "#b8b8b8",
+            "-draw", "circle %d,%d %d,%d" % (px + 22, py + 22, px + 29, py + 22),
+            "-draw", "circle %d,%d %d,%d" % (px + pw - 22, py + 22, px + pw - 15, py + 22),
+            "-draw", "circle %d,%d %d,%d" % (px + 22, py + ph - 22, px + 29, py + ph - 22),
+            "-draw", "circle %d,%d %d,%d" % (px + pw - 22, py + ph - 22, px + pw - 15, py + ph - 22),
+            "-stroke", "#444", "-strokewidth", "2",
+            "-draw", "line %d,%d %d,%d" % (px + 18, py + 18, px + 26, py + 26),
+            "-draw", "line %d,%d %d,%d" % (px + pw - 26, py + 18, px + pw - 18, py + 26),
+            "-draw", "line %d,%d %d,%d" % (px + 18, py + ph - 26, px + 26, py + ph - 18),
+            "-draw", "line %d,%d %d,%d" % (px + pw - 26, py + ph - 26, px + pw - 18, py + ph - 18),
+            "-stroke", "none",
+            # the eyebrow, the etched name (a highlight a pixel under it), the meta line
+            "-font", MONO_B, "-pointsize", "17", "-kerning", "3", "-fill", "#3c3e40",
+            "-annotate", "+%d+%d" % (px + 60, py + 62), "CRUCIBLE  ·  MONTAGE %d  ·  %s" % (n, home.upper().replace("CRUCIBLE-", "").replace("-", " ")),
+            "-kerning", "0", "-font", FONT_B, "-pointsize", "104",
+            "-fill", "#ffffffd8", "-annotate", "+%d+%d" % (px + 56, py + 166), "Treadcore",
+            "-fill", "#121214", "-annotate", "+%d+%d" % (px + 56, py + 165), "Treadcore",
+            "-font", MONO, "-pointsize", "15", "-fill", "#3c3e40",
+            "-annotate", "+%d+%d" % (px + 60, py + ph - 30), "MIT  ·  treadcore.org  ·  orrery  ·  %s" % time.strftime("%d %B %Y"),
+            # the screen the words type onto
+            "-fill", "#070807", "-stroke", "#2b2c2e", "-strokewidth", "2",
+            "-draw", "roundrectangle %d,%d %d,%d 8,8" % (px + 50, py + 196, px + pw - 50, py + 290), "-stroke", "none",
+            # the newswire
+            "-fill", "#070807", "-draw", "rectangle 0,%d %d,%d" % (H - 58, W, H - 22),
+            "-font", MONO, "-pointsize", "16",
+            "-fill", "#33f24d", "-annotate", "+24+%d" % (H - 34), "%d chapters" % len(chapters),
+            "-fill", "#ffbf4d", "-annotate", "+190+%d" % (H - 34), "%d duels from one start each" % tr.nd,
+            "-fill", "#73c7ff", "-annotate", "+520+%d" % (H - 34), "the camera follows the best win",
+            "-fill", "#f23326", "-annotate", "+880+%d" % (H - 34), "every other duel a ghost",
+            base])
+    line1 = "> %s, %s" % (home.replace("crucible-", ""), gens)
+    line2 = "  the net's inputs, layers and decisions in the corners"
+    frames = 36
+    for i in range(frames):
+        k = int((len(line1) + len(line2)) * min(1.0, i / 22.0))
+        a, b = line1[:k], line2[:max(0, k - len(line1))]
+        cur = "_" if (i // 3) % 2 == 0 else " "
+        magick([base, "-font", MONO, "-pointsize", "22", "-fill", "#33f24d",
+                "-annotate", "+%d+%d" % (px + 70, py + 234), a + (cur if k < len(line1) else ""),
+                "-fill", "#1d8a2c", "-annotate", "+%d+%d" % (px + 70, py + 270), b + (cur if k >= len(line1) else ""),
+                os.path.join(work, "t-%02d.png" % i)])
+    r = run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", "10", "-i", os.path.join(work, "t-%02d.png"),
+             "-vf", "fps=%d,fade=in:0:12,format=yuv420p" % FPS] + X264 + [seg_out], 300)
+    if r.returncode != 0:
+        raise RuntimeError("ffmpeg title: %s" % r.stderr.strip()[-300:])
+    return seg_out, frames / 10.0
+
+
+def how_to_read(work, frame_png):
+    """A card that names the four corners on a real frame of the film."""
+    out = os.path.join(work, "how.png")
+    magick(["-size", "%dx%d" % (W, H), "xc:#0b100d", "(", frame_png, "-resize", "760x428", ")", "-geometry", "+30+150", "-composite",
+            "-font", FONT_B, "-pointsize", "44", "-fill", "white", "-annotate", "+40+80", "How to read the film",
+            "-font", FONT, "-pointsize", "26", "-fill", "#9fd4ff", "-annotate", "+40+124", "The champion's net, thinking, in the four corners",
+            "-font", FONT, "-pointsize", "24", "-fill", "#e8e8e8",
+            "-annotate", "+820+190", "Top left: what it senses,",
+            "-annotate", "+820+220", "55 numbers a step.",
+            "-annotate", "+820+275", "Bottom left: the transform,",
+            "-annotate", "+820+305", "two layers of 48, the",
+            "-annotate", "+820+335", "strongest currents lit.",
+            "-annotate", "+820+390", "Bottom right: its decisions,",
+            "-annotate", "+820+420", "8 s of turn, speed, fire.",
+            "-annotate", "+820+475", "Top right: the generation,",
+            "-annotate", "+820+505", "and the arena's map.",
+            "-fill", "#33f24d", "-annotate", "+820+560", "Green +, amber -,",
+            "-annotate", "+820+590", "black zero.",
+            "-fill", "#9fd4ff", "-annotate", "+40+640", "Faded tanks: the other duels at the same moment, the same start.",
+            out])
+    return out
+
+
+def stamp(sec):
+    sec = int(sec)
+    return "%d:%02d" % (sec // 60, sec % 60)
+
+
+def pack_mind(net, tr, c, d, t, h):
+    """One step of the mind for orrery's Montage page: rounded, with its strongest currents."""
+    x, act = tr.mind(c, d, t)
+    h1, h2, y = net.think(x, (d, t))
+    r = lambda v: [round(float(a), 2) for a in v]
+    cur = net.circuits(h1, h2, 16)
+    return {"t": t, "x": r(x), "h1": r(h1), "h2": r(h2), "y": r(y), "a": r(act), "s": h,
+            "c": [[e[1], e[2], e[3], round(e[4], 2)] for e in cur]}
+
+
 # ---- the film --------------------------------------------------------------------------------
 
-def make(q, most=12, duels=64, host=None, seed=7):
+def make(q, most=12, duels=64, host=None, seed=7, since=None):
     lock = os.path.join(q, "plan", "montage.lock")
     if os.path.exists(lock) and time.time() - os.path.getmtime(lock) < 3 * 3600:
         print("a montage is being made (plan/montage.json says where it is)")
@@ -649,7 +1065,7 @@ def make(q, most=12, duels=64, host=None, seed=7):
     shutil.rmtree(work, ignore_errors=True)
     os.makedirs(work)
     try:
-        return _make(q, most, duels, host, seed, work)
+        return _make(q, most, duels, host, seed, work, since)
     except Exception as e:
         state(q, state="failed", said=str(e)[:400])
         print("montage failed: %s" % e)
@@ -662,12 +1078,15 @@ def make(q, most=12, duels=64, host=None, seed=7):
             pass
 
 
-def _make(q, most, duels, host, seed, work):
+def _make(q, most, duels, host, seed, work, since=None):
     t0 = time.time()
     adir = os.path.join(q, "archive", "montages")
     os.makedirs(adir, exist_ok=True)
     idx = load(os.path.join(adir, "index.json"), {"montages": []}) or {"montages": []}
     last = idx["montages"][-1]["last"] if idx["montages"] else None
+    # --since start (or a milestone's label): the whole ladder again, or from there, whatever was filmed.
+    if since:
+        last = None if since == "start" else since
     homename, cfg = home_of(q)
     hd = os.path.join(q, homename)
     state(q, state="choosing", progress=0.0, said="the generations since %s" % (last or "the start"))
@@ -686,21 +1105,40 @@ def _make(q, most, duels, host, seed, work):
         f.write(r.stdout)
     segs = []
     seg_n = [0]
+    clock = [0.0]
+    marks = []
 
     def seg_path():
         seg_n[0] += 1
         return os.path.join(work, "seg-%04d.mp4" % seg_n[0])
 
-    # ---- the opening: a title, then orrery's flowchart, history, terrain, spectrum ----
+    def add(path, seconds, mark=None):
+        if mark:
+            marks.append((clock[0], mark))
+        segs.append(path)
+        clock[0] += seconds
+
+    # ---- the opening: the title sequence, how to read it, then orrery's flowchart, history, terrain, spectrum ----
     state(q, state="rendering", progress=0.1, said="the opening")
-    title = card(work, "title", None, "Crucible, montage %d" % n,
-                 "%s: %s to %s, %d chapters" % (homename, chapters[0]["label"], chapters[-1]["label"], len(chapters)),
-                 ["The world duels: treadcore's rules, four neutral pillboxes.",
-                  "Each chapter: one champion, %d duels from one start." % tr.nd,
-                  "The camera follows the duel it won best;",
-                  "every other duel is a ghost.",
-                  "Clips: 1 s before each shot, 0.5 s after."])
-    segs.append(still(title, 3.5, seg_path()))
+    nets = [Net(c["path"], tr.nin, tr.nh, tr.nout) if tr.version >= 2 else None for c in chapters]
+    d0 = follow(tr, 0)
+    m0 = moments(tr, 0, d0)
+    t_show = m0[0][1].get("at", m0[0][1]["from"]) if m0 else 0
+    f0 = Film(tr, 0, m0[0][0] if m0 else d0, nets[0])
+    field = os.path.join(work, "field.ppm")
+    with open(field, "wb") as f:
+        f.write(b"P6\n%d %d\n255\n" % (W, H) + bytes(Film(tr, 0, d0).frame(0, 0.0, [], bare=True)))
+    tseg, tsec = title_sequence(work, n, chapters, tr, homename, field, seg_path())
+    add(tseg, tsec, "Title")
+    title = os.path.join(work, "t-%02d.png" % 35)
+    labels = hud_labels(work)
+    if nets[0] is not None:
+        shown = os.path.join(work, "shown.ppm")
+        with open(shown, "wb") as f:
+            f.write(b"P6\n%d %d\n255\n" % (W, H) + bytes(f0.frame(t_show, 0.0, flashes(tr, 0, f0.d, t_show, 0.0))))
+        shown_png = os.path.join(work, "shown.png")
+        magick([shown, labels, "-composite", shown_png])
+        add(still(how_to_read(work, shown_png), 6.0, seg_path()), 6.0, "How to read the film")
     story = [("pipeline", "pipeline", {"ORRERY_FRAME_PAGE": "1"}, "The flowchart: where a generation goes"),
              ("growth", "results", {"ORRERY_FRAME_PAGE": "14"}, "The history: every island's generations (Growth)"),
              ("terrain", "results", {"ORRERY_FRAME_PAGE": "8", "ORRERY_FRAME_TAB": "1"}, "The terrain: the census reads as a landscape over two dials"),
@@ -714,9 +1152,10 @@ def _make(q, most, duels, host, seed, work):
         label_png(lab, cap, 32)
         comp = os.path.join(work, name + "-card.png")
         magick([png, lab, "-gravity", "south", "-geometry", "+0+24", "-composite", comp])
-        segs.append(still(comp, 2.5, seg_path()))
+        add(still(comp, 2.5, seg_path()), 2.5, cap.split(":")[0] if name == "pipeline" else None)
     # ---- the chapters ----
     summary = []
+    mind_doc = []
     poster_ppm = None
     preview = os.path.join(q, "plan", "montage-preview.ppm")
     frames_total = 0
@@ -740,24 +1179,33 @@ def _make(q, most, duels, host, seed, work):
         gpng = orrery_frame(work, status, "g%02d" % ci, "results", {"ORRERY_FRAME_PAGE": "14", "ORRERY_FRAME_GEN": str(ch["gen"]), "ORRERY_FRAME_ISLAND": ch["island"]})
         slide = card(work, "chapter-%02d" % ci, gpng, "Generation %s" % format(ch["gen"], ","),
                      "%s · %s" % (ch["name"] if ch["name"] != "now" else "the newest champion", ch["island"].replace("-cuda", "")), facts)
-        segs.append(still(slide, 3.0, seg_path()))
+        add(still(slide, 3.0, seg_path()), 3.0, "Generation %s (%s)" % (format(ch["gen"], ","), ch["name"] if ch["name"] != "now" else "the newest"))
         ttl = os.path.join(work, "ttl-%02d.png" % ci)
         label_png(ttl, "Generation %s · %s" % (format(ch["gen"], ","), ch["name"] if ch["name"] != "now" else "now"), 48)
+        gen = gen_png(work, ci, ch, len(chapters))
+        minds = []
         for k, (cd, clip) in enumerate(clips):
-            film = Film(tr, ci, cd)
+            film = Film(tr, ci, cd, nets[ci])
             clip["duel"] = cd
             cap = os.path.join(work, "cap-%02d-%d.png" % (ci, k))
             o = tr.opp_of[cd]
             vs = ("a " + ("scripted tank", "Raider", "Castle", "Expander", "Timid")[min(4, -1 - o)]) if o < 0 else opps[o]["name"] if o < len(opps) else "a milestone"
-            label_png(cap, "%s  ·  duel %d of %d against %s, %s" % (clip["what"], cd + 1, tr.nd, vs, "won" if c["outcome"][cd] == 1 else "lost" if c["outcome"][cd] == -1 else "drawn"), 28, font=FONT)
+            label_png(cap, "%s  ·  duel %d of %d against %s, %s" % (clip["what"], cd + 1, tr.nd, vs, "won" if c["outcome"][cd] == 1 else "lost" if c["outcome"][cd] == -1 else "drawn"), 22, font=FONT)
             out = seg_path()
-            inputs = ["-i", cap] + (["-i", ttl] if k == 0 else [])
-            filt = "[0][1]overlay=24:H-h-24" + ("[a];[a][2]overlay=W-w-24:24:enable='lt(t,%.2f)'" % TITLE_S if k == 0 else "")
+            # The corners' labels, the generation, the caption at the top's middle; on the chapter's first
+            # clip the generation's 0.25 s title over the upper right.
+            inputs = ["-i", labels, "-i", gen, "-i", cap] + (["-i", ttl] if k == 0 else [])
+            filt = ("[0][1]overlay=0:0[a];[a][2]overlay=%d:%d[b];[b][3]overlay=(W-w)/2:16" % (P_GEN[0], P_GEN[1])
+                    + ("[c];[c][4]overlay=W-w-24:24:enable='lt(t,%.2f)'" % TITLE_S if k == 0 else ""))
             p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", "%dx%d" % (W, H), "-r", str(FPS), "-i", "-"]
                                  + inputs + ["-filter_complex", filt] + X264 + [out], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
             film.cam = None
             nfr = 0
+            steps = []
             for t in range(clip["from"], clip["to"] + 1):
+                if nets[ci] is not None:
+                    sc = shot_of(tr, ci, cd, t)
+                    steps.append(pack_mind(nets[ci], tr, ci, cd, t, {RED_HUD: "hit", AMBER: "pillbox", SKY: "pillbox fired", (240, 248, 240): "shot"}.get(sc, "") if sc else ""))
                 for sub in range(SUB):
                     fr = film.frame(t, sub / SUB, flashes(tr, ci, cd, t, sub / SUB))
                     p.stdin.write(fr)
@@ -772,16 +1220,21 @@ def _make(q, most, duels, host, seed, work):
             err = p.stderr.read().decode(errors="replace")
             if p.wait() != 0:
                 raise RuntimeError("ffmpeg: %s" % err.strip()[-300:])
-            segs.append(out)
+            add(out, nfr / float(FPS))
             frames_total += nfr
             clip["frames"] = nfr
+            minds.append({"what": clip["what"], "duel": cd, "from": clip["from"], "to": clip["to"], "steps": steps})
+        mind_doc.append({"chapter": ci + 1, "name": ch["name"], "label": ch["label"], "gen": ch["gen"], "island": ch["island"], "clips": minds})
         summary.append({"chapter": ci + 1, "name": ch["name"], "label": ch["label"], "island": ch["island"], "gen": ch["gen"],
                         "won": w_, "lost": l_, "drawn": d_, "followed": d, "followed_vs": tr.opp_of[d],
                         "followed_fitness": round(c["fit"][d], 3), "clips": [k for _, k in clips], "facts": fx})
     # ---- the last card: every chapter's wins in a column ----
     rows = ["%-10s gen %9s   %2d won  %2d lost  %2d drawn" % (s["name"] if s["name"] != "now" else "now", format(s["gen"], ","), s["won"], s["lost"], s["drawn"]) for s in summary]
-    end = card(work, "end", None, "%d duels from one start, every chapter" % tr.nd, "the same opponents each time: %s, and sparring partners" % ", ".join(o["name"] for o in opps), rows[:10])
-    segs.append(still(end, 5.0, seg_path()))
+    # Every chapter on the last card: twelve rows fit at 26 point.
+    end = card(work, "end", None, "%d duels from one start, every chapter" % tr.nd,
+               "the same opponents each time: %d milestones, and sparring partners of five styles" % len(opps), rows,
+               *((26, 38) if len(rows) > 10 else (32, 48)))
+    add(still(end, 5.0, seg_path()), 5.0, "Every chapter's duels")
     # ---- one film ----
     state(q, state="encoding", progress=0.93, said="joining %d pieces" % len(segs))
     lst = os.path.join(work, "list.txt")
@@ -806,6 +1259,29 @@ def _make(q, most, duels, host, seed, work):
     # Its last milestone is the next montage's start; a chapter "now" is not a milestone and is filmed again.
     if chapters[-1]["name"] == "now":
         doc["last"] = next((c["label"] for c in reversed(chapters) if c["name"] != "now"), last)
+    # The mind for orrery's Montage page: the steps of every clip, as the corners drew them.
+    if mind_doc:
+        save(os.path.join(md, "mind.json"), {"n": n, "inputs": tr.nin, "hidden": tr.nh, "outputs": tr.nout,
+                                             "rows": list(DE_ROWS), "chapters": mind_doc})
+        doc["mind"] = os.path.relpath(os.path.join(md, "mind.json"), q)
+    doc["marks"] = [[round(a, 2), m] for a, m in marks]
+    # THE OUTPUT FOLDER: the film and a description with its chapter marks, ready to upload.
+    try:
+        os.makedirs(OUTPUT, exist_ok=True)
+        base = os.path.join(OUTPUT, "treadcore-montage-%04d" % n)
+        shutil.copy2(mp4, base + ".mp4")
+        with open(base + ".txt", "w") as f:
+            f.write("Treadcore: crucible montage %d, %s\n\n" % (n, "generations %s to %s" % (format(chapters[0]["gen"], ","), format(chapters[-1]["gen"], ","))))
+            f.write("Champions of crucible's GPU islands, trained by neuroevolution under treadcore's rules, each playing "
+                    "%d duels from one start. The camera follows the duel each won best; the faded tanks are the other duels "
+                    "at the same moment. In the corners, the champion's net thinking: its inputs, its two hidden layers with "
+                    "the strongest currents lit, its decisions over the last eight seconds, and the generation.\n\n" % tr.nd)
+            for a, m in marks:
+                f.write("%s %s\n" % (stamp(a), m))
+            f.write("\nMIT licensed: https://treadcore.org  Made by orrery (tools/montage.py) on %s.\n" % now()[:10])
+        doc["output"] = base + ".mp4"
+    except OSError as e:
+        doc["output_error"] = str(e)
     save(os.path.join(md, "summary.json"), doc)
     idx["montages"].append({k: doc[k] for k in ("n", "at", "home", "since", "last", "seconds", "mp4", "bytes")} | {"chapters": len(summary)})
     save(os.path.join(adir, "index.json"), idx)
@@ -838,7 +1314,7 @@ def main(a):
     def opt(k, d, f=int):
         return f(rest[rest.index(k) + 1]) if k in rest else d
     if cmd == "make":
-        sys.exit(make(q, opt("--chapters", 12), opt("--duels", 64), opt("--host", None, str), opt("--seed", 7)))
+        sys.exit(make(q, opt("--chapters", 12), opt("--duels", 64), opt("--host", None, str), opt("--seed", 7), opt("--since", None, str)))
     elif cmd == "status":
         print(json.dumps(load(os.path.join(q, "plan", "montage.json"), {}), indent=1))
     else:
