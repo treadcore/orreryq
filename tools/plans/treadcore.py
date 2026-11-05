@@ -2242,6 +2242,16 @@ class Plan:
         return None
 
     GENERATION_EVERY_MIN = 30
+    # Minutes a pause of auto promotion lasts before it goes on by itself (or less, if main moves).
+    PAUSE_RESUME_MIN = 60
+
+    def main_now(self):
+        """main's commit as the remote has it, or "" when it cannot be read (no checkout, no config)."""
+        try:
+            remote, branch = self.push_target()
+            return run(["git", "-C", self.tc, "rev-parse", "%s/%s" % (remote, branch)]).stdout.strip()
+        except (AttributeError, OSError, subprocess.SubprocessError):
+            return ""
 
     # LESS NOISE (Paul, 1 November: "can we get a little less noise promotions"). Of the day's thirteen
     # generations, nine were noise by any reading: a switch off at +0.10 and back on at +0.08, base_r 16 to
@@ -2317,6 +2327,26 @@ class Plan:
     GIVE_BUILT = 0.10
     GIVE_ROAD = 0.10
     GIVE_KD = 0.10
+    # THE TRADE RULE (Paul, 4 November: "what holds wait for a person. what step of a human is required.
+    # automate this please"). A trade past its floor waited for a person: 51 candidates in three days, and
+    # a line held half an hour that evening until Paul approved it. Since SCORE_VERSION 1 the score counts
+    # building, so a read that gives up building and still clears the bar has already paid for it. A trade
+    # up to TRADE_TIMES its floor (25% of building or road, 0.25 kills less deaths a seat) lands by itself,
+    # said in a flag; past that it is refused by itself. Nothing waits.
+    TRADE_TIMES = 2.5
+
+    @staticmethod
+    def trade_rule(items, times):
+        """What is given up, judged: items are (words, mean, se, bar) with mean negative where the trial
+        gives up; (words past the floor, the worst ratio of loss to floor, "within" or "past" or None)."""
+        lost, worst = [], 0.0
+        for words, mean, se, bar in items:
+            if bar and mean < -bar and mean < -2 * se:
+                lost.append(words)
+                worst = max(worst, -mean / bar)
+        if not lost:
+            return [], 0.0, None
+        return lost, worst, ("within" if worst <= times else "past")
 
     @staticmethod
     def side_read(d):
@@ -2352,7 +2382,7 @@ class Plan:
                 out[k + "_of"] = sum(lv) / len(lv)
         return out
 
-    def gives_up(self, dirs, sign=1):
+    def gives_up(self, dirs, sign=1, detail=False):
         """What these reads, pooled, give up past noise and past a floor, in words. sign -1: the
         trial is what would be left behind, as in the proof, where main is the trial."""
         cache = self.state.setdefault("side_reads", {})
@@ -2380,17 +2410,24 @@ class Plan:
                 level = [r[k + "_of"] for r in reads if r.get(k + "_of")] if share else []
                 of = sum(level) / len(level) if level else None
                 bar = floor * of if share and of else floor if not share else None
-                if bar is not None and mean < -bar and mean < -2 * se:
-                    out.append("%s %+.2f +/- %.2f%s" % (word, mean, se, " (%.0f%% of the %.1f the others do)" % (-100 * mean / of, of) if share and of else ""))
-        return out
+                out.append(("%s %+.2f +/- %.2f%s" % (word, mean, se, " (%.0f%% of the %.1f the others do)" % (-100 * mean / of, of) if share and of else ""), mean, se, bar))
+        return out if detail else self.trade_rule(out, self.TRADE_TIMES)[0]
+
+    def trade(self, dirs, sign=1):
+        """gives_up, judged by the trade rule: (words, worst ratio to the floor, "within" | "past" | None)."""
+        return self.trade_rule(self.gives_up(dirs, sign, detail=True), self.TRADE_TIMES)
 
     def trades_away(self, name, v):
-        """True for a candidate whose held-out reads give up building or fights: it stays a candidate."""
-        lost = self.gives_up(v.get("held_dirs"))
-        if lost:
-            self.flag("trade", "%s waits for a person: held out %+.2f, and it gives up %s. Promote it by hand, or raise that floor on Values" % (
-                name, v.get("held_mean") or 0.0, ", ".join(lost)), key="trade:%s" % name, progress=True)
-        return bool(lost)
+        """True for a candidate whose held-out reads give up building or fights past the trade rule's
+        limit: it stays a candidate. Within the limit it goes on, and a flag says what it traded."""
+        lost, worst, verdict = self.trade(v.get("held_dirs"))
+        if verdict == "within":
+            self.flag("trade", "%s goes on by the trade rule: held out %+.2f, and it gives up %s, %.1f times its floor (the rule allows %.1f)" % (
+                name, v.get("held_mean") or 0.0, ", ".join(lost), worst, self.TRADE_TIMES), key="trade:%s" % name, progress=True)
+        elif verdict == "past":
+            self.flag("trade", "%s refused by the trade rule: held out %+.2f, but it gives up %s, %.1f times its floor (the rule allows %.1f)" % (
+                name, v.get("held_mean") or 0.0, ", ".join(lost), worst, self.TRADE_TIMES), key="trade:%s" % name, progress=True)
+        return verdict == "past"
 
     def batch(self, ev, name):
         """The strongest candidate's weights and, on top, each other current candidate that moves
@@ -2451,9 +2488,28 @@ class Plan:
             batch = lambda r: {(r.get("params") or {}).get("candidate")} | set((r.get("params") or {}).get("with") or [])
             shared = (batch(autos[-2]) & batch(autos[-1])) - {None}
             if not shared:
-                self.flag("auto", "auto promotion paused: %s and %s failed in a row; see their logs, then ask for a promotion by hand"
-                          % (autos[-2]["id"], autos[-1]["id"]), key="paused:%s" % autos[-1]["id"])
-                return
+                # THE PAUSE LIFTS ITSELF (Paul, 4 November: "automate this please"). It waited for a person
+                # four times. Now it waits PAUSE_RESUME_MIN, or until main moves (a fix may have landed),
+                # then sets the two candidates aside and goes on; their logs say what failed.
+                pz = self.state.setdefault("auto_pause", {})
+                after = autos[-1]["id"]
+                main_now = self.main_now()
+                if pz.get("after") != after:
+                    pz.clear()
+                    pz.update(after=after, at=time.time(), main=main_now)
+                    self.flag("auto", "auto promotion paused: %s and %s failed in a row on different candidates; it goes on by itself in %d minutes, or when main moves, "
+                              "with both set aside (their logs say what failed)" % (autos[-2]["id"], after, self.PAUSE_RESUME_MIN), key="paused:%s" % after, progress=True)
+                    return
+                if pz.get("resumed") != after:
+                    if time.time() - pz.get("at", 0) < self.PAUSE_RESUME_MIN * 60 and main_now == pz.get("main"):
+                        return
+                    tried_ = self.state.setdefault("auto_tried", [])
+                    pair = [x.get("candidate") for x in last if x.get("candidate")]
+                    tried_.extend(c for c in pair if c not in tried_)
+                    pz["resumed"] = after
+                    self.flag("auto", "auto promotion goes on by itself after its pause (%s): %s set aside" % (
+                        "main moved" if main_now != pz.get("main") else "%d minutes" % self.PAUSE_RESUME_MIN, ", ".join(pair) or "the two candidates"),
+                        key="resumed:%s" % after, progress=True)
             tried_ = self.state.setdefault("auto_tried", [])
             aside = sorted(shared - set(tried_))
             if aside:
@@ -4665,11 +4721,17 @@ class Plan:
                 # came after waits for its own proof. Only if it is still on the line: a commit to main
                 # replays the line under new hashes, and then this read is of no commit that remains.
                 on_line = head and run(["git", "-C", self.tc, "merge-base", "--is-ancestor", head, line.get("commit", "")]).returncode == 0
-                lost = self.gives_up(ds, sign=-1) if -d / se >= self.HELD_Z and not p["above"] and on_line else []
-                if lost:
-                    self.flag("trade", "the line %s reads %+.2f past main and gives up %s: it stays on the line for a person. Raise that floor on Values to let it land" % (
-                        head[:7], -d, ", ".join(lost)), key="trade-line:%s" % head[:12])
+                lost, worst, verdict = self.trade(ds, sign=-1) if -d / se >= self.HELD_Z and not p["above"] and on_line else ([], 0.0, None)
+                if verdict == "past":
+                    # Refused by itself: the line stays the fleet's working line, and the next proof reads it
+                    # again with whatever has landed on it since.
+                    self.flag("trade", "the line %s reads %+.2f past main but gives up %s, %.1f times its floor: refused by the trade rule (it allows %.1f); "
+                              "the fleet works on from the line and the next proof reads it again" % (head[:7], -d, ", ".join(lost), worst, self.TRADE_TIMES),
+                              key="trade-line:%s" % head[:12], progress=True)
                 elif -d / se >= self.HELD_Z and not p["above"] and on_line:
+                    if verdict == "within":
+                        self.flag("trade", "the line %s goes to main by the trade rule: %+.2f past main, and it gives up %s, %.1f times its floor (the rule allows %.1f)" % (
+                            head[:7], -d, ", ".join(lost), worst, self.TRADE_TIMES), key="trade-line:%s" % head[:12], progress=True)
                     try:
                         with contextlib.redirect_stdout(sys.stderr):
                             self.resolve(upto=head, carried=carried)

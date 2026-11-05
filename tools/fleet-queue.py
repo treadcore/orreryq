@@ -514,6 +514,24 @@ def starved(q, cfg, idle_s=None):
     return out
 
 
+def breaker_stop(q):
+    """STOP_ADDING is up, and the breaker put it there (it writes "breaker" in it; a person's press leaves
+    it empty)."""
+    try:
+        with open(q.p("STOP_ADDING")) as f:
+            return f.read().startswith("breaker")
+    except OSError:
+        return False
+
+
+def load_json(path):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
 def code_id():
     """This file's identity: what a keeper runs, against what is on disk."""
     try:
@@ -924,10 +942,38 @@ def keeper(q):
             # as the planner fills it; after this many failures in a row the
             # keeper stops adding and says so (converge stops after three).
             limit = cfg.get("max_failures_in_a_row", 5)
+            # THE BREAKER RESETS ITSELF, ONCE (Paul, 4 November: "what step of a human is required.
+            # automate this please"). Its stop is marked as the breaker's, so a person's Stop adding is
+            # never lifted by it. After breaker_resume_min (30) the queue adds again; a breaker that trips
+            # again within two hours of resetting itself stays off, since then the cause is real and a
+            # person reads logs/. A breaker's stop does not end the keeper when the queue drains.
+            breaker_file = q.p("breaker.json")
             if q.streak >= limit and not q.flag("STOP_ADDING"):
-                open(q.p("STOP_ADDING"), "w").close()
-                q.event("stop adding", why="%d jobs failed in a row: read logs/, fix, then resume-adding" % q.streak)
-                q.notice("breaker", "%d jobs failed in a row: the queue stopped adding (read logs/, fix, then Resume adding)" % q.streak)
+                with open(q.p("STOP_ADDING"), "w") as f:
+                    f.write("breaker %d\n" % int(time.time()))
+                q.event("stop adding", why="%d jobs failed in a row: the breaker; it resets itself in %d min unless it tripped within two hours of its last reset"
+                        % (q.streak, cfg.get("breaker_resume_min", 30)))
+                q.notice("breaker", "%d jobs failed in a row: the queue stopped adding; it adds again by itself in %d minutes, unless it trips again soon after (read logs/)"
+                         % (q.streak, cfg.get("breaker_resume_min", 30)))
+            resume_s = 60 * cfg.get("breaker_resume_min", 30)
+            if resume_s > 0 and breaker_stop(q) and time.time() - os.path.getmtime(q.p("STOP_ADDING")) >= resume_s:
+                last_reset = (load_json(breaker_file) or {}).get("reset_at", 0)
+                if time.time() - last_reset < 2 * 3600:
+                    if not life.get("breaker_told"):
+                        q.event("breaker stays off", why="it tripped again within two hours of resetting itself")
+                        q.notice("breaker", "the breaker tripped again within two hours of resetting itself: it stays off until a person resumes adding (read logs/)")
+                        life["breaker_told"] = True
+                else:
+                    try:
+                        os.remove(q.p("STOP_ADDING"))
+                    except OSError:
+                        pass
+                    q.streak = 0
+                    life["breaker_told"] = False
+                    with open(breaker_file, "w") as f:
+                        json.dump({"reset_at": time.time()}, f)
+                    q.event("resume adding", why="the breaker reset itself after %d min" % (resume_s // 60))
+                    q.notice("breaker", "the queue adds again by itself, %d minutes after the breaker" % (resume_s // 60))
             # New code on disk: the keeper restarts when that throws away
             # little (nothing running longer than restart_lose_s, ten
             # minutes: a census or a segment, run again), or at once when a
@@ -953,7 +999,8 @@ def keeper(q):
             hungry = starved(q, q.config()) if planner and not q.flag("STOP_ADDING") else []
             life["starved"] = hungry
             if q.flag("STOP_ADDING"):
-                if queued == 0 and running == 0:
+                # The breaker's stop waits to reset itself: the keeper stays up. A person's stop drains and ends.
+                if queued == 0 and running == 0 and not breaker_stop(q):
                     collect()
                     q.event("drained")
                     alive.clear()

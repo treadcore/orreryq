@@ -558,7 +558,13 @@ w.auto_promote()
 assert w.asked == [{"candidate": "grove/w1"}], "one candidate failing twice stops no other"
 w = Paused(["grove/w8", "grove/w9"])
 w.auto_promote()
-assert not w.asked, "two candidates failing alike: something all trip on, and it waits for a person"
+assert not w.asked, "two candidates failing alike: something all trip on, and auto promotion pauses"
+w.auto_promote()
+assert not w.asked, "the pause holds until its time is up"
+w.state["auto_pause"]["at"] -= w.PAUSE_RESUME_MIN * 60 + 1
+w.auto_promote()
+assert w.asked == [{"candidate": "grove/w1"}] and {"grove/w8", "grove/w9"} <= set(w.state["auto_tried"]), \
+    "after PAUSE_RESUME_MIN it goes on by itself, the two that failed set aside (Paul, 4 November: automate this)"
 
 print("less noise: every check holds")
 
@@ -602,7 +608,11 @@ assert sd.gives_up([census(LOSES)], sign=-1) == [], "the line that builds more g
 sd.GIVE_BUILT = 99.0
 assert sd.gives_up([census(LOSES)]) == [], "a floor raised on Values lets it through"
 sd = Sides()
-assert sd.trades_away("grove/w1", {"held_dirs": [census(LOSES)], "held_mean": 1.0}) and sd.flags[0][0] == "trade"
+# LOSES gives up 3.75 of the others' 20, 1.9 times the 10% floor: within the trade rule (2.5), it goes on,
+# and a flag says what it traded. HALVES gives up half, 5 times: refused by itself. Neither waits.
+assert not sd.trades_away("grove/w1", {"held_dirs": [census(LOSES)], "held_mean": 1.0}) and sd.flags[0][0] == "trade" and "goes on by the trade rule" in sd.flags[0][1]
+HALVES = {s_: ((10 + s_ * 0.1, 6, 17, 18), (20, 6, 17, 18)) for s_ in range(6)}
+assert sd.trades_away("grove/w3", {"held_dirs": [census(HALVES)], "held_mean": 1.0}) and "refused by the trade rule" in sd.flags[-1][1]
 assert not sd.trades_away("grove/w2", {"held_dirs": [census(FLAT)], "held_mean": 1.0})
 assert not sd.trades_away("gen3/x", {"held_mean": 1.0}), "a converge run's candidate has no logs here"
 
@@ -621,3 +631,18 @@ w.auto_promote()
 assert not w.asked, "a candidate that trades away waits, and asks no promotion"
 
 print("what the score does not weigh: every check holds")
+
+# THE TRADE RULE (Paul, 4 November: "automate this please"). Under its floor nothing is traded; past the
+# floor but inside two errors it is noise; past the floor and within TRADE_TIMES of it the trade goes on;
+# past that it is refused. 1 refuses every trade past its floor.
+tr = P.trade_rule
+assert tr([("built a team -2.51", -2.51, 0.23, 1.87)], 2.5)[2] == "within", "r0178's: 13% of 18.7 against a 10% floor, 1.3 times"
+assert abs(tr([("built a team -2.51", -2.51, 0.23, 1.87)], 2.5)[1] - 2.51 / 1.87) < 1e-9, "the worst ratio of loss to floor"
+assert tr([("built a team -6.0", -6.0, 0.3, 1.87)], 2.5)[2] == "past", "a third of what the others build: refused"
+assert tr([("built a team -1.0", -1.0, 0.3, 1.87)], 2.5) == ([], 0.0, None), "under the floor: nothing traded"
+assert tr([("built a team -2.5", -2.5, 1.5, 1.87)], 2.5)[2] is None, "past the floor, inside two errors: noise"
+assert tr([("kills less deaths a seat -0.2", -0.2, 0.05, 0.1)], 2.5)[2] == "within" and tr([("kills less deaths a seat -0.3", -0.3, 0.05, 0.1)], 2.5)[2] == "past", "fights, a count a seat"
+assert tr([("built a team -2.51", -2.51, 0.23, 1.87)], 1.0)[2] == "past", "TRADE_TIMES 1 refuses every trade past its floor"
+assert tr([("built", -2.0, 0.2, 1.87), ("road", -3.0, 0.2, 0.8)], 2.5)[2] == "past", "the worst of them decides"
+assert tr([("built", -2.0, 0.2, None)], 2.5)[2] is None, "no floor known: nothing judged"
+print("the trade rule: ok")

@@ -205,7 +205,7 @@
    "max": 1.0,
    "step": 0.01,
    "unit": "share",
-   "what": "A candidate or a proof that builds less than the other teams by more than this share of what they build, and by two errors, waits for a person, whatever its score (Paul, 4 November: \"ajust your floors, keep what we got, maybe normalize some\"): a share, so a floor means the same on a map of small bases as of large. The score weighs building at half a kill since LR 139; the guard holds what the score still trades.",
+   "what": "A candidate or a proof that builds less than the other teams by more than this share of what they build, and by two errors, is weighed by the trade rule: within Trade allowed times this floor it goes on, past it it is refused (Paul, 4 November: \"ajust your floors, keep what we got, maybe normalize some\"): a share, so a floor means the same on a map of small bases as of large. The score weighs building at half a kill since LR 139; the guard holds what the score still trades.",
    "up": "more goes through that builds less",
    "down": "more waits for a person"
   },
@@ -234,6 +234,28 @@
    "what": "The same floor, for kills less deaths a seat.",
    "up": "more goes through that fights worse",
    "down": "more waits for a person"
+  },
+  {
+   "key": "trade_times",
+   "attr": "TRADE_TIMES",
+   "label": "Trade allowed, times its floor",
+   "default": 2.5,
+   "min": 1.0,
+   "max": 10.0,
+   "step": 0.5,
+   "unit": "times",
+   "what": "A candidate or the line that gives up building, road or fights past its floor goes on by itself while the loss is at most this many times the floor (2.5: a quarter of what the other teams build or lay, or 0.25 kills less deaths a seat), and is refused by itself past it. The score counts building since SCORE_VERSION 1, so a read that clears the bar has paid for what it gave up. Nothing waits for a person (Paul, 4 November: \"automate this please\"). 1 refuses every trade past its floor."
+  },
+  {
+   "key": "pause_resume_min",
+   "attr": "PAUSE_RESUME_MIN",
+   "label": "A pause of auto promotion lasts",
+   "default": 60,
+   "min": 5,
+   "max": 1440,
+   "step": 5,
+   "unit": "min",
+   "what": "When two promotions of different candidates fail in a row, auto promotion pauses this long, or until main moves, then sets both candidates aside and goes on by itself; their logs say what failed (Paul, 4 November: \"automate this please\")."
   },
   {
    "key": "long_on_fast",
