@@ -1669,90 +1669,6 @@ def main(argv):
             json.dump({"kind": argv[2], "params": params, "asked": time.strftime("%Y-%m-%dT%H:%M:%S")}, f, indent=1)
         q.event("run asked", run=rid, kind=argv[2], params=params)
         print("%s: %s asked; the planner turns it into jobs at its next top-up" % (rid, argv[2]))
-    elif cmd == "nets":
-        # The register of the learned nets and its vault (tools/nets.py): refresh, capture, promote,
-        # demote, expire, note, forget. Delegated whole, so the Nets page's buttons are one verb each.
-        tool = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nets.py")
-        r = subprocess.run([sys.executable, "-I", tool, q.d] + argv[2:], capture_output=True, text=True)
-        sys.stdout.write(r.stdout)
-        sys.stderr.write(r.stderr)
-        sys.exit(r.returncode)
-    elif cmd == "growth":
-        # crucible's generations sampled, the sizes the fleet's generations fill, and the purge
-        # (tools/growth.py): refresh, sizes, purge [--do]. Delegated whole, as nets is, so the Growth
-        # page's buttons are one verb each.
-        tool = os.path.join(os.path.dirname(os.path.abspath(__file__)), "growth.py")
-        r = subprocess.run([sys.executable, "-I", tool, q.d] + argv[2:], capture_output=True, text=True)
-        sys.stdout.write(r.stdout)
-        sys.stderr.write(r.stderr)
-        sys.exit(r.returncode)
-    elif cmd == "recordings":
-        # The behaviour-cloning recordings (tools/recordings.py): list, recipe, prove, drop [--do],
-        # sweep [--do], keep, unkeep, rerecord, read. Delegated whole, as growth is; the verbs that
-        # take minutes (a re-recording, a sweep's proofs, a dropped shard read) go to the background,
-        # and the page sees their result when the list is written again.
-        tool = os.path.join(os.path.dirname(os.path.abspath(__file__)), "recordings.py")
-        if argv[2:3] and argv[2] in ("sweep", "rerecord", "prove", "read", "recipe"):
-            subprocess.Popen(["sh", "-c", '"$0" -I "$@"; "$0" -I "$1" "$2" list >/dev/null 2>&1', sys.executable, tool, q.d] + argv[2:],
-                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-            print("recordings %s: begun in the background" % argv[2])
-            sys.exit(0)
-        r = subprocess.run([sys.executable, "-I", tool, q.d] + argv[2:], capture_output=True, text=True)
-        sys.stdout.write(r.stdout)
-        sys.stderr.write(r.stderr)
-        sys.exit(r.returncode)
-    elif cmd == "bridge":
-        # A world milestone shipped as the game's Gladiator (tools/bridge.py): status, ship LABEL. Ship
-        # tests and commits on a worktree of origin/main and pushes, minutes: in the background, and a
-        # line in events.jsonl says how it went.
-        tool = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bridge.py")
-        if argv[2:3] in (["ship"], ["ship-clone"]) and argv[3:4]:
-            log = os.path.join(q.d, "plan", "bridge-ship.log" if argv[2] == "ship" else "clone-ship.log")
-            subprocess.Popen(["sh", "-c", '"$0" -I "$@" > "$LOG" 2>&1', sys.executable, tool, q.d] + argv[2:4],
-                             env=dict(os.environ, LOG=log), stdin=subprocess.DEVNULL, start_new_session=True)
-            print("bridge ship %s: begun; plan/bridge-ship.log says how it went" % argv[3])
-            sys.exit(0)
-        r = subprocess.run([sys.executable, "-I", tool, q.d] + argv[2:], capture_output=True, text=True)
-        sys.stdout.write(r.stdout)
-        sys.stderr.write(r.stderr)
-        sys.exit(r.returncode)
-    elif cmd == "montage":
-        # The generations since the last film, as a film (tools/montage.py). make goes to the
-        # background (minutes: a trace on a GPU island, then the frames), and the Montage page follows
-        # plan/montage.json; open N plays film N in this machine's own player.
-        tool = os.path.join(os.path.dirname(os.path.abspath(__file__)), "montage.py")
-        if argv[2:3] == ["make"]:
-            subprocess.Popen([sys.executable, "-I", tool, q.d] + argv[2:], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                             stderr=subprocess.DEVNULL, start_new_session=True)
-            print("montage: begun; the Montage page follows it")
-            sys.exit(0)
-        if argv[2:3] == ["open"] and argv[3:4] and argv[3].isdigit():
-            mp4 = os.path.join(q.d, "archive", "montages", "%04d" % int(argv[3]), "montage.mp4")
-            if not os.path.exists(mp4):
-                print("no film %s" % argv[3])
-                sys.exit(1)
-            subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", mp4], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                             stderr=subprocess.DEVNULL, start_new_session=True)
-            print("playing %s" % mp4)
-            sys.exit(0)
-        r = subprocess.run([sys.executable, "-I", tool, q.d] + argv[2:], capture_output=True, text=True)
-        sys.stdout.write(r.stdout)
-        sys.stderr.write(r.stderr)
-        sys.exit(r.returncode)
-    elif cmd == "videos":
-        # Results, Videos: a film in orrery's output folder opened in this machine's own player, or shown in
-        # its file browser. NAME is a file's name in that folder and nothing else: no path reaches here.
-        out = os.environ.get("ORRERY_OUTPUT") or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "output")
-        verb, name = (argv[2:3] or [""])[0], (argv[3:4] or [""])[0]
-        path = os.path.join(out, name)
-        if verb not in ("open", "show") or not re.match(r"^[\w.-]+\.mp4$", name) or not os.path.isfile(path):
-            print("videos open|show NAME: NAME an .mp4 in %s" % out)
-            sys.exit(2)
-        mac = sys.platform == "darwin"
-        cmdv = (["open", path] if verb == "open" else ["open", "-R", path]) if mac else ["xdg-open", path if verb == "open" else out]
-        subprocess.Popen(cmdv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-        print("%s %s" % ("playing" if verb == "open" else "showing", path))
-        sys.exit(0)
     elif cmd == "runs":
         r = subprocess.run(["bash", "-c", "%s runs" % q.config()["planner"]], text=True)
         sys.exit(r.returncode)
@@ -1829,7 +1745,26 @@ def main(argv):
             for j in (jobs if isinstance(jobs, list) else [jobs]):
                 print(("added " if q.add(j) else "already known ") + j["id"])
     else:
+        # THE CONSOLE'S VERBS THAT RUN A TOOL (nets, growth, recordings, bridge, montage, videos, and every
+        # verb added after) live in fleet-verbs.py, read fresh each time: a new button changes that file,
+        # not this one, so the keeper does not restart for it (Paul, 4 November: "making blockages
+        # minimized"; seven restarts had thrown away 71 jobs in two days, most for a new verb).
+        verbs = fleet_verbs()
+        if verbs and cmd in verbs.VERBS:
+            verbs.VERBS[cmd](q, argv)
+            return
         sys.exit(__doc__)
+
+
+def fleet_verbs():
+    import importlib.util
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fleet-verbs.py")
+    if not os.path.exists(path):
+        return None
+    spec = importlib.util.spec_from_file_location("fleet_verbs", path)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
 
 
 if __name__ == "__main__":
