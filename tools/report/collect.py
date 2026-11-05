@@ -253,6 +253,10 @@ def write_cards(orrery, tc_reports, checkins, posts):
         links = [(newest["href"], "the full report"), (newest["md"], "the Markdown")]
         if os.path.exists(os.path.join(DOCS, "visual", "montage.mp4")) and newest["key"] == "visual":
             links.append(("visual/montage.mp4", "the film"))
+        # Posted on treadcore.org: the posting whose title opens the report's.
+        posted = next((p for p in posts if newest["title"].startswith(p["title"]) or p["title"].startswith(newest["title"].split(":")[0])), None)
+        if posted:
+            links.append((posted["href"], "on treadcore.org"))
         cards += card(day(newest["date"]), topic, inline(newest["title"]), newest["href"], html.escape(text), links, new=True)
     cards += card(day(max([r["date"] for r in orrery] + [c["date"] for c in checkins])), "Collected", "Every Lab Report, orrery's and treadcore's", "reports.html",
                   "%d of orrery's, %d of treadcore's, %d check-in reports and %d posted on treadcore.org, as pages here, newest first. Rebuilt with orrery's own each time <code>tools/report/all.sh</code> runs." % (len(orrery), len(tc_reports), len(checkins), len(posts)),
