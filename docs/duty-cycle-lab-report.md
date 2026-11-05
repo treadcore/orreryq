@@ -250,3 +250,5 @@ Each step, with where it lives and what it takes:
 [6] orrery commit `228c30c`, "The line's proofs pooled", 4 November 2026.
 
 [7] The queue's `events.jsonl`, `done/` and `plan/pipeline.json`, 29 October to 5 November 2026.
+
+!html(site/seal.html)
