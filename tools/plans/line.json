@@ -453,6 +453,20 @@
    "down": "more freed, less raw evidence at hand"
   },
   {
+   "key": "power_usd_kwh",
+   "attr": null,
+   "label": "Electricity, a kWh",
+   "default": 0.17,
+   "min": 0.05,
+   "max": 0.6,
+   "step": 0.01,
+   "unit": "$",
+   "long": true,
+   "what": "What a kilowatt-hour costs here, for the Timeline's fleet watts and each job's energy (tools/power.py). 0.17 is the US average residential price of 2025, a guess until it is set.",
+   "up": "every watt costs more on the page",
+   "down": "every watt costs less on the page"
+  },
+  {
    "key": "keep_recordings",
    "attr": null,
    "label": "Keep every recording",
@@ -983,7 +997,7 @@
    "does": "Every machine: what it did, what it does now, and what it will do next, at six zooms from the hour to three months.",
    "ties": "All stages, by when and by whom; the milestones of the line, the game and the GPU islands as lines through them.",
    "drawn": "A row a machine with now as a line: left is measured, right is a forecast from the medians. Colour is the stage. The hour and the six hours draw each job; a day and longer draw bins of the event log, each column filled by the share of it each stage took.",
-   "look": "Gaps on the left are lost time. Green marks are generations. A lane of one colour shows where the fleet spends itself. Point at a block and its chain lights: every job of the same trial, run or island, framed in amber wherever it ran, an arrow from each to the next, the rest stepped back. A click keeps it lit. Lines with tags mark a generation, the line on main, a candidate stopped, the game's rules, a GPU milestone and a net shipped into the game; on the GPU rows a box says when the island next hands the game anything.",
+   "look": "Gaps on the left are lost time. Green marks are generations. A lane of one colour shows where the fleet spends itself. Point at a block and its chain lights: every job of the same trial, run or island, framed in amber wherever it ran, an arrow from each to the next, the rest stepped back. A click keeps it lit. Lines with tags mark a generation, the line on main, a candidate stopped, the game's rules, a GPU milestone and a net shipped into the game; on the GPU rows a box says when the island next hands the game anything. Under the rows, the fleet's watts at the wall, blue to white to purple to yellow to red as it nears full tilt, with what they cost; each row's foot is its own watts.",
    "sim": "Bars are mostly the census. Crucible's arena on the -cuda rows: a duel of tanks and pillboxes built with sixteen of treadcore's rules, not its economy or its score.",
    "helps": "It shows the shape of the spending, which is the easiest place to find waste."
   },
@@ -1004,6 +1018,24 @@
    "look": "A value away from its default, and whether the generation gap on the Board answers.",
    "sim": "Nothing itself. tools/plans/difficulty-sim.py simulates what a value buys.",
    "helps": "Too easy and the line fills with noise. Too hard and nothing is carried."
+  },
+  {
+   "key": "Pipeline/Lineup",
+   "does": "Every chain in its own rows, a Gantt chart each: a trial, a run, a build, an island, the line's proof. Named for The Lineup (1954): each one stands in its own row.",
+   "ties": "The Timeline's jobs, regrouped by the chain each is a link of; the planner says how each chain ended.",
+   "drawn": "A head row a chain with how it ended or where it stands; under it its jobs where they ran, each block its machine and its job; a fork (jobs of it that ran at once, a held-out read's pieces) on sub-rows of its own, open as an accordion; an arrow from each job to the next. The hour and the six hours share the Timeline's clock; each its own stretches every chain across the width.",
+   "look": "A red wall is a dead end: a trial dropped after its reads, a held-out read that did not pass, a promotion that failed. Green is won: promoted, built, shipped. Amber is still going, with hollow blocks for what the forecast deals it next.",
+   "sim": "The census's reads, the held-out reads in their pieces, the tests, the builds and the GPU segments, as the Timeline has them.",
+   "helps": "It untangles the Timeline's arrows: each chain's road from its first read to its end, every dead end and every success in one place."
+  },
+  {
+   "key": "Pipeline/Hit Parade",
+   "does": "The tally of every job handed off: each machine a row, each kind of job a column, counted. Named for Your Hit Parade, the countdown of the 1950s. Approved by Von Glurt.",
+   "ties": "Each job as the keeper hands it off, counted by the planner a day at a time and kept.",
+   "drawn": "A wall of counters, because the question is how much and how well, machine by kind: each the jobs done, the share that came back done, the rate an hour and the energy a job. Beside it each machine's rate by kind as one bar; under it a bar a day.",
+   "look": "A share under 99% in amber or red, a machine whose rate falls behind its kind's, and the energy a job of the slow servers against the fast machines'.",
+   "sim": "Nothing itself: it counts what the other pages show.",
+   "helps": "It shows which machine does which work best, and what each job costs, over today, a week, or everything."
   },
   {
    "key": "Pipeline/Blame",

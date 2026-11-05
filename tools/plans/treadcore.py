@@ -5549,8 +5549,36 @@ class Plan:
         seg_min = {n: round(st.median([j[1] - j[0] for j in each.get(n, []) if j[2] == "islands" and j[3] == 1]), 1)
                    for n in hosts if any(j[2] == "islands" and j[3] == 1 for j in each.get(n, []))}
         # Its own clock: every minute on the page is from this moment, not the pass's start.
-        return {"past_h": self.TIMELINE_H, "at": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(now_)), "lanes": lanes, "marks": marks, "busy": busy, "dealt": dealt, "dealt_at": dealt_at,
-                "zoom": self.zoom_view(self.timeline_bins(), hosts, now_), "cuda": self.cuda_return(now_, seg_min)}
+        bins = self.timeline_bins()
+        try:
+            P = power_mod()
+            pm = P.model()
+            power = (P, pm, P.calib(pm, P.samples(self.q, now_ - 3 * 86400)))
+        except Exception as e:
+            print("power: %s" % e, file=sys.stderr)
+            power = None
+        zoom = self.zoom_view(bins, hosts, now_, power)
+        out = {"past_h": self.TIMELINE_H, "at": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(now_)), "lanes": lanes, "marks": marks, "busy": busy, "dealt": dealt, "dealt_at": dealt_at,
+               "zoom": zoom, "cuda": self.cuda_return(now_, seg_min)}
+        try:
+            out["chains"] = self.chain_meta(lanes, dealt, dealt_at, now_)
+        except Exception as e:
+            print("chains: %s" % e, file=sys.stderr)
+        try:
+            out["parade"] = self.parade_view(bins, now_)
+        except Exception as e:
+            print("parade: %s" % e, file=sys.stderr)
+        if power:
+            try:
+                out["power"] = self.power_view(now_, zoom, bins, live, hosts)
+                # Each job's watt-hours, its lane's watts busy for the minutes it ran.
+                for l in lanes:
+                    bw = out["power"]["lane_busy_w"].get(l["host"]) or 0
+                    for j in l["jobs"]:
+                        j.append(round(bw * (j[1] - j[0]) / 60, 1))
+            except Exception as e:
+                print("power: %s" % e, file=sys.stderr)
+        return out
 
     # ---- the Timeline zoomed out (Paul, 5 November: "maybe we can zoom timeline in and out.
     # months, weeks, days, day, hours, hour"), its milestones, and when the GPU hands anything on --
@@ -5570,8 +5598,19 @@ class Plan:
             size = os.path.getsize(path)
         except OSError:
             return c
-        if c.get("v") != 1 or c.get("offset", 0) > size:
-            c = {"v": 1, "offset": 0, "open": {}, "fine": {}, "coarse": {}, "first": None}
+        if c.get("v") != 4 or c.get("offset", 0) > size:
+            c = {"v": 4, "offset": 0, "open": {}, "fine": {}, "coarse": {}, "first": None, "energy": {}, "down": {}, "tally": {}}
+        # EACH JOB'S ENERGY AS IT IS HANDED OFF (Paul, 5 November: "have each computer report its power
+        # estimate participation ... as it hands it off"): its lane's watts while busy (power.py: a CPU
+        # lane its box's rest and CPU at the use measured, a GPU lane its card as measured) for the
+        # time it ran, added to its day and lane: [jobs, watt-hours].
+        try:
+            P = power_mod()
+            pm = P.model()
+            cal = P.calib(pm, P.samples(self.q, time.time() - 3 * 86400))
+            busy_w = lambda lane: P.lane_watts(pm, cal, lane, 1.0)
+        except Exception:  # the bins are for drawing; watts are an extra
+            busy_w = lambda lane: None
         with open(path, "rb") as f:
             f.seek(c["offset"])
             data = f.read()
@@ -5588,7 +5627,7 @@ class Plan:
                         cell[k] = round(cell.get(k, 0) + part, 1)
                     b += 1
         for l in data[:whole].split(b"\n"):
-            if b'"job"' not in l:
+            if b'"job"' not in l and b'"host"' not in l:
                 continue
             try:
                 e = json.loads(l)
@@ -5597,17 +5636,38 @@ class Plan:
                 continue
             c["first"] = c.get("first") or t
             ev, job = e.get("event"), e.get("job")
-            if ev == "started" and e.get("host"):
+            # A MACHINE OFF DRAWS NOTHING: from the keeper finding it unreachable or powering it off,
+            # until it is back or starts a job, its time is `~off` (not a stage; the watts leave it out).
+            if ev in ("host unreachable", "powered off") and e.get("host"):
+                c["down"].setdefault(e["host"], t)
+            elif ev in ("host back", "started") and e.get("host") in c["down"]:
+                add(e["host"], "~off", c["down"].pop(e["host"]), t)
+            if ev == "started" and e.get("host") and job:
                 c["open"][job] = [t, e["host"]]
             elif ev in ("done", "failed", "stopped", "requeued") and job in c["open"]:
                 t0, host = c["open"].pop(job)
                 add(host, self.stage_of(job) if ev == "done" else "failed", t0, t)
+                w = busy_w(host)
+                d_ = time.strftime("%Y-%m-%d", time.localtime(t))
+                if w:
+                    day = c["energy"].setdefault(d_, {}).setdefault(host, [0, 0.0])
+                    day[0] += 1
+                    day[1] = round(day[1] + w * (t - t0) / 3600, 1)
+                # THE HIT PARADE'S TALLY (Paul, 5 November: "keep the statistic in a chart ... a success
+                # counter matrix wall"): a day, a machine, a kind of job: [done, not done (failed, stopped
+                # or sent back), seconds, watt-hours], kept as long as the bins' hours.
+                tl_ = c["tally"].setdefault(d_, {}).setdefault(host, {}).setdefault(self.stage_of(job), [0, 0, 0.0, 0.0])
+                tl_[0 if ev == "done" else 1] += 1
+                tl_[2] = round(tl_[2] + t - t0, 1)
+                tl_[3] = round(tl_[3] + (w or 0) * (t - t0) / 3600, 1)
         c["offset"] += whole
         now_ = time.time()
         old = int((now_ - self.BIN_FINE_DAYS * 86400) // self.BIN_FINE_S)
         for lane in c["fine"].values():
             for k in [k for k in lane if int(k) < old]:
                 del lane[k]
+        for d in sorted(c["energy"])[:-120]:
+            del c["energy"][d]
         # A start with no end for two days was lost with its keeper; it is not still running.
         c["open"] = {j: v for j, v in c["open"].items() if now_ - v[0] < 2 * 86400}
         save(keep, c, compact=True)
@@ -5639,17 +5699,20 @@ class Plan:
             t = time.mktime((nxt.tm_year, nxt.tm_mon, nxt.tm_mday, 0, 0, 0, 0, 0, -1)) if step == 86400 else t + step
         return out
 
-    def zoom_view(self, bins, hosts, now_):
+    def zoom_view(self, bins, hosts, now_, power=None):
         """Each zoom: its bins, a lane a machine, each bin [index, stage, percent, stage, percent ...]
         busiest first; bins on the local clock, so a day's begin at midnight. What runs now counts
-        to now."""
+        to now. With `power` (power.py, its model and calibration), each lane's watts at the wall in
+        each bin as well: its watts busy for the share of the bin it was busy, idle for the rest;
+        none before the event log begins, where nothing is known."""
         out, off = [], time.localtime(now_).tm_gmtoff
         for name, span_h, w, src in self.ZOOMS:
             nb = int(span_h * 3600 // w)
             lo = ((now_ + off) // w) * w - off - (nb - 1) * w
             unit = self.BIN_FINE_S if src == "fine" else self.BIN_COARSE_S
-            lanes = []
-            for h in hosts:
+            lanes, watts, off_of = [], {}, {}
+            # Boxes before their GPU lanes, so a GPU lane knows when its box was off.
+            for h in sorted(hosts, key=lambda x: bool(power) and power[0].box_of(power[1], x) != x):
                 acc = {}
                 for k, cell in ((bins.get(src) or {}).get(h) or {}).items():
                     i = int((int(k) * unit - lo) // w)
@@ -5657,6 +5720,16 @@ class Plan:
                         a = acc.setdefault(i, {})
                         for stage, sec in cell.items():
                             a[stage] = a.get(stage, 0) + sec
+                for host_, t0 in (bins.get("down") or {}).items():
+                    if host_ == h:
+                        t = max(t0, lo)
+                        while t < now_:
+                            i = int((t - lo) // w)
+                            e_ = min(now_, lo + (i + 1) * w)
+                            if 0 <= i < nb:
+                                a = acc.setdefault(i, {})
+                                a["~off"] = a.get("~off", 0) + e_ - t
+                            t = e_
                 for j, (t0, host) in (bins.get("open") or {}).items():
                     if host == h:
                         t = max(t0, lo)
@@ -5671,17 +5744,195 @@ class Plan:
                 for i in sorted(acc):
                     row = [i]
                     for stage, sec in sorted(acc[i].items(), key=lambda kv: -kv[1]):
+                        if stage.startswith("~"):
+                            continue
                         pct = int(round(100.0 * sec / w))
                         if pct >= 1:
                             row += [stage, min(pct, 100)]
                     if len(row) > 1:
                         rows.append(row)
                 lanes.append({"host": h, "bins": rows})
+                if power:
+                    P, pm, cal = power
+                    first_t = bins.get("first") or lo
+                    row_w = []
+                    for i in range(nb):
+                        t0 = lo + i * w
+                        if t0 + w <= first_t:
+                            row_w.append(None)
+                            continue
+                        span = max(1.0, min(w, now_ - t0))
+                        cell = acc.get(i) or {}
+                        off = cell.get("~off", 0) / span
+                        if h != P.box_of(pm, h):  # a GPU lane is off when its box is
+                            off = max(off, off_of.get((P.box_of(pm, h), i), 0.0))
+                        else:
+                            off_of[(h, i)] = off
+                        busy = sum(v for k, v in cell.items() if not k.startswith("~")) / span
+                        lw = P.lane_watts(pm, cal, h, busy)
+                        row_w.append(None if lw is None else int(round(lw * max(0.0, 1.0 - min(1.0, off)))))
+                    if any(x is not None for x in row_w):
+                        watts[h] = row_w
             first = bins.get("first")
             out.append({"name": name, "span_h": span_h, "bin_min": w / 60, "from_min": round((lo - now_) / 60, 1), "lanes": lanes,
                         "begins_min": round((first - now_) / 60, 1) if first else None, "ticks": self.zoom_ticks(name, lo, now_),
-                        "shifts": self.clock_shifts(lo, now_)})
+                        "shifts": self.clock_shifts(lo, now_), "watts": watts})
         return out
+
+    def parade_view(self, bins, now_):
+        """THE HIT PARADE: the tally of every job handed off, a machine by a kind, over today, the last
+        seven days and everything the event log holds; each window with the hours it covers, so a
+        count is also a rate; and a row a day for the history."""
+        tally, first = bins.get("tally") or {}, bins.get("first") or now_
+        lt = time.localtime(now_)
+        midnight = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 0, 0, 0, 0, 0, -1))
+        week0 = time.mktime(time.localtime(midnight - 6 * 86400)[:3] + (0, 0, 0, 0, 0, -1))
+
+        def window(keys, since):
+            out = {}
+            for d in keys:
+                for h, kinds in tally[d].items():
+                    for k, v in kinds.items():
+                        a = out.setdefault(h, {}).setdefault(k, [0, 0, 0.0, 0.0])
+                        for i in range(4):
+                            a[i] += v[i]
+            return {"hours": round((now_ - max(since, first)) / 3600, 2),
+                    "cells": {h: {k: [v[0], v[1], round(v[2] / 60, 1), round(v[3], 1)] for k, v in ks.items()} for h, ks in out.items()}}
+        days = sorted(tally)
+        today = time.strftime("%Y-%m-%d", lt)
+        return {"today": window([d for d in days if d == today], midnight),
+                "week": window([d for d in days if d >= time.strftime("%Y-%m-%d", time.localtime(week0))], week0),
+                "all": window(days, first),
+                "since": time.strftime("%Y-%m-%d %H:%M", time.localtime(first)),
+                "days": [[d, sum(v[0] for ks in tally[d].values() for v in ks.values()), sum(v[1] for ks in tally[d].values() for v in ks.values()),
+                          round(sum(v[3] for ks in tally[d].values() for v in ks.values()), 1)] for d in days]}
+
+    def chain_meta(self, lanes, dealt, dealt_at, now_):
+        """THE CHAINS PAGE (Paul, 5 November: "rearranges each chain into its own gantt chart ... this
+        would unscramble the net trace of arrows to have each dead end and each success clearly
+        shown"). For every chain with a job in the six hours or in the queue: its kind; how it ended
+        or where it stands, `good` True a success, False a dead end, None still going; that in words;
+        and its queued jobs as the forecast deals them, [start, end, stage, id, machine]."""
+        jobs = {}
+        for l in lanes:
+            for j in l["jobs"]:
+                jobs.setdefault(j[5], []).append((j, l["host"]))
+        nxt, extra = {}, self.chain_extra()
+        for j in self.queue_jobs():
+            jid = j.get("id", "")
+            ch = extra[jid][0] if jid in extra else self.chain_of(jid, j.get("title", ""))
+            at = dealt_at.get(jid) or [None, None]
+            nxt.setdefault(ch, []).append([at[0], at[1], self.stage_of(jid, j.get("title", "")), jid, dealt.get(jid, "")])
+        cand, kinds = {}, {}
+        for r in self.runs():
+            kinds[r["id"]] = r["kind"]
+            if r["kind"] == "promote":
+                c = ((r.get("params") or {}).get("candidate") or "").split("/")[-1]
+                if c:
+                    cand.setdefault(c, []).append(r["id"])
+        on_main = set(re.findall(r"promote grove/(w\d+)", run(["git", "-C", self.tc, "log", "origin/main", "--first-parent",
+                                                                 "--since=%d" % int(now_ - 14 * 86400), "--format=%s"]).stdout))
+        current = {k for k, v in (load(os.path.join(self.pd, "candidates.json"), {}) or {}).items() if (v or {}).get("current")}
+        rounds = {("clone-%03d" % r.get("n", 0)): r for r in ((self.state.get("clone") or {}).get("rounds") or [])}
+        out = {}
+        for ch in set(jobs) | set(nxt):
+            js = jobs.get(ch, [])
+            going_now = any(j[3] == 2 for j, _ in js) or ch in nxt
+            last = max(js, key=lambda x: x[0][1])[0] if js else None
+            fail = sorted({h for j, h in js if j[3] == 0})
+            kind, good, say = "other", None, ""
+            if re.match(r"w\d+$", ch):
+                kind = "trial"
+                states = [(rid, self.rstate(rid)) for rid in cand.get(ch, [])]
+                won = [rid for rid, s_ in states if s_.get("status") in ("approved", "self-modified")]
+                lost = [(rid, s_) for rid, s_ in states if s_.get("status") == "failed"]
+                asked = [rid for rid, s_ in states if s_.get("status") in ("new", "running", "prepared")]
+                if ch in on_main:
+                    good, say = True, "promoted%s, and on main" % (" as " + won[-1] if won else "")
+                elif won:
+                    good, say = True, "promoted as %s: on the line" % won[-1]
+                elif asked:
+                    say = "its promotion, %s, is asked" % asked[-1]
+                elif going_now:
+                    held = any(x[2] == "held" for x in nxt.get(ch, [])) or any(j[2] == "held" and j[3] == 2 for j, _ in js)
+                    say = "reading: its held-out read" if held else "reading on"
+                elif lost:
+                    good, say = False, "dead end: its promotion %s failed%s" % (lost[-1][0], (": " + lost[-1][1]["why"][:90]) if lost[-1][1].get("why") else "")
+                elif ch in current:
+                    say = "a candidate: its held-out reads passed, and it waits its promotion"
+                elif last and last[2] == "held":
+                    good, say = False, "dead end: its held-out read did not pass"
+                else:
+                    good, say = False, "dead end: dropped after %d read%s" % (len(js), "" if len(js) == 1 else "s")
+            elif re.match(r"r\d+$", ch):
+                kind = kinds.get(ch, "run")
+                st_ = self.rstate(ch).get("status", "")
+                good = True if st_ in ("done", "approved", "self-modified") else False if st_ == "failed" else None
+                say = "%s, %s" % (kind, st_ or "running")
+            elif ch.startswith("build "):
+                kind = "build"
+                good = None if going_now else (False if fail else True)
+                say = ("failed on " + ", ".join(fail)) if fail else "built on %d machine%s" % (len({h for _, h in js}), "" if len({h for _, h in js}) == 1 else "s")
+            elif ch.startswith("island "):
+                kind, say = "island", "segments, each after the one before"
+            elif ch.startswith("line "):
+                kind, say = "proof", "the line read against main"
+            elif ch.startswith("clone-"):
+                kind = "clone"
+                r = rounds.get(ch) or {}
+                good = None if r.get("holds") is None else bool(r["holds"])
+                say = "shipped as the Scholar" if good else ("not shipped: %+.2f against the shipped one" % r["diff"] if r.get("diff") is not None else "a clone round")
+            else:
+                say = self.stage_of(ch)
+            if good is None and not going_now and kind not in ("island",) and not say:
+                say = "done"
+            out[ch] = {"kind": kind, "good": good, "say": say, "next": nxt.get(ch, [])[:8]}
+        return out
+
+    def power_view(self, now_, zoom, bins, live, hosts):
+        """THE FLEET'S WATTS AND THEIR COST (Paul, 5 November). Each lane's watts at the wall now (the
+        last sample's CPU use and GPU draw, if under a quarter hour old; its model busy or idle as it
+        is, if not), the fleet's now and at full tilt, the last day's kilowatt-hours from the day's
+        bins, the jobs' own energy as each was handed off (today, by lane), and the price at
+        power_usd_kwh. Each box's model, measured or assumed, for the page to say."""
+        P = power_mod()
+        pm = P.model()
+        smp = P.samples(self.q, now_ - 3 * 86400)
+        cal = P.calib(pm, smp)
+        rate = P.rate(self.q, pm)
+        last = {}
+        for x in smp:
+            last[x["box"]] = x
+        lanes_now = {}
+        for h in hosts:
+            box = P.box_of(pm, h)
+            b = (pm.get("boxes") or {}).get(box)
+            if not b:
+                continue
+            x = last.get(box) if last.get(box) and now_ - last[box]["t"] < 900 and last[box].get("ok") else None
+            busy = (live.get(h) or {}).get("state") in P.BUSY or bool((live.get(h) or {}).get("job"))
+            if x and h == box and x.get("cpu") is not None:
+                lanes_now[h] = round(P.watts(pm, box, x["cpu"], 0.0)["wall"])
+            elif x and h != box and x.get("gpu_w"):
+                lanes_now[h] = round(sum(x["gpu_w"]) / P.eff(pm, box))
+            else:
+                lanes_now[h] = round(P.lane_watts(pm, cal, h, 1.0 if busy else 0.0))
+        day = next((z for z in zoom if z["name"] == "day"), None)
+        kwh = sum(v for row in ((day or {}).get("watts") or {}).values() for v in row if v) * (day["bin_min"] / 60) / 1000 if day else 0.0
+        today = (bins.get("energy") or {}).get(time.strftime("%Y-%m-%d", time.localtime(now_)), {})
+        full = {box: round(P.full_tilt(pm, cal, box)) for box in (pm.get("boxes") or {})}
+        boxes = []
+        for box, b in (pm.get("boxes") or {}).items():
+            c = cal.get(box) or {}
+            boxes.append({"box": box, "cpu": b.get("cpu", ""), "gpu": b.get("gpu", ""), "full_w": full[box],
+                          "now_w": sum(v for h, v in lanes_now.items() if P.box_of(pm, h) == box),
+                          "busy_util": c.get("busy_util"), "gpu_busy_w": c.get("gpu_busy_w") if b.get("gpu") else None,
+                          "samples": c.get("measured", {}), "why": b.get("why", "")})
+        return {"rate": rate, "lanes_now": lanes_now, "fleet_now_w": sum(lanes_now.values()), "fleet_full_w": sum(full.values()),
+                "kwh_24h": round(kwh, 2), "usd_24h": round(kwh * rate, 2), "usd_30d": round(kwh * rate * 30, 2),
+                "jobs_today": {h: [n, round(wh, 1)] for h, (n, wh) in today.items()}, "boxes": boxes,
+                "sampled": time.strftime("%H:%M", time.localtime(max((x["t"] for x in smp), default=0))) if smp else "",
+                "lane_busy_w": {h: round(P.lane_watts(pm, cal, h, 1.0) or 0, 1) for h in hosts}}
 
     @staticmethod
     def clock_shifts(lo, now_):
@@ -6119,6 +6370,20 @@ class Plan:
         print("collected: %d weight censuses (%d past two errors); %d net rounds judged" % (len(rows), len(passed), len(rounds)))
 
 
+_POWER = None
+
+
+def power_mod():
+    """tools/power.py, the fleet's watts: its model and its samples (loaded once a process)."""
+    global _POWER
+    if _POWER is None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("orrery_power", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "power.py"))
+        _POWER = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_POWER)
+    return _POWER
+
+
 def chores(qdir, tools=None):
     """THE HOUSEKEEPING IS THE KEEPER'S (the lab report of 4 November, "Fifty-Four Idle Minutes",
     change C). The Results and Analysis pages' documents and the recordings' sweep were begun by
@@ -6145,7 +6410,9 @@ def chores(qdir, tools=None):
     # (the document, how old it may be, its lock, how long a lock holds, the tool and its verb)
     for doc, every, hold, tool, verb in (("analysis.json", 600, 300, "analysis.py", []),
                                          ("nets.json", 300, 120, "nets.py", ["refresh"]),
-                                         ("growth.json", 300, 600, "growth.py", ["refresh"])):
+                                         ("growth.json", 300, 600, "growth.py", ["refresh"]),
+                                         # The fleet's watts (Paul, 5 November): each box's CPU use and GPU draw.
+                                         ("power-samples.jsonl", 300, 120, "power.py", ["sample"])):
         f = os.path.join(pd, doc)
         lock = f + ".lock"
         if age(f) > every and age(lock) > hold:

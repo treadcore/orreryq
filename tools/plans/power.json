@@ -1,0 +1,31 @@
+{
+ "about": "What each box of the fleet draws at the wall: the model tools/power.py and the planner read. Watts at the wall = (rest + CPU idle + CPU use x (CPU full - CPU idle) + GPU) / supply efficiency. The CPU's use and the GPU's draw are measured each five minutes; everything else here is an estimate from the parts' published power and is said to be one. Edit a box's numbers here when a meter says otherwise.",
+ "rate_usd_kwh": 0.17,
+ "rate_about": "The US average residential price of 2025, about 17 cents a kWh: a guess until Paul sets his own (Settings, Long run, power_usd_kwh).",
+ "gold": {"about": "80 PLUS Gold at 115 V: at least 87% efficient at 20% of its rating, 90% at 50%, 87% at 100%. A fleet box runs between, so 0.88.", "eff": 0.88},
+ "boxes": {
+  "saskatchewan": {"cpu": "Intel Core i7-13700F, 16 cores (8P + 8E), 24 threads", "cpu_idle_w": 8, "cpu_full_w": 150, "rest_w": 45, "eff": 0.88,
+                   "why": "Intel rates it 65 W base and 219 W turbo; a board that lifts the limits runs all cores near 150-200 W, one that keeps them runs 65 W. 150 W until its counter is read. The rest: board, 64 GB, NVMe, fans, and an NVIDIA card with no driver loaded."},
+  "boburner":     {"cpu": "AMD Ryzen 7 3700X, 8 cores, 16 threads", "cpu_idle_w": 20, "cpu_full_w": 88, "rest_w": 35, "eff": 0.88,
+                   "gpu": "GeForce GTX 1070 Ti", "gpu_idle_w": 10, "gpu_limit_w": 180,
+                   "why": "AMD rates it 65 W, and its package limit (PPT) is 88 W, which all cores reach under load; its I/O die idles near 20 W. The GPU is measured."},
+  "columbia":     {"cpu": "Intel Core i3-N300, 8 cores", "cpu_idle_w": 2, "cpu_full_w": 12, "rest_w": 6, "eff": 0.87,
+                   "why": "Intel rates it 7 W; it bursts higher. A mini PC: the rest is a few watts, and its supply an external brick."},
+  "calber":       {"cpu": "Intel Core i7-9700F, 8 cores", "cpu_idle_w": 6, "cpu_full_w": 95, "rest_w": 40, "eff": 0.88,
+                   "gpu": "GeForce GTX 1080 Ti", "gpu_idle_w": 10, "gpu_limit_w": 250,
+                   "why": "Intel rates it 65 W; boards let all eight cores run past it, about 95 W. The GPU is measured."},
+  "whitewolf":    {"cpu": "Intel Core i7-6700K, 4 cores, 8 threads", "cpu_idle_w": 6, "cpu_full_w": 90, "rest_w": 35, "eff": 0.88,
+                   "gpu": "GeForce GTX 1080", "gpu_idle_w": 8, "gpu_limit_w": 215,
+                   "why": "Intel rates it 91 W and it draws about that with all cores busy. The GPU is measured."},
+  "jaguaribe":    {"cpu": "2 x Intel Xeon X5670, 12 cores, 24 threads", "cpu_idle_w": 60, "cpu_full_w": 190, "rest_w": 75, "eff": 0.88,
+                   "why": "Intel rates each 95 W, so 190 W for two at full tilt; a 2010 server's CPUs idle near 30 W each. The rest: a Supermicro X8DTL's 5500 chipset (27 W alone), 48 GB of DDR3 ECC, disks and server fans. No sensor: Westmere has no energy counter."},
+  "bosporus":     {"cpu": "2 x Intel Xeon E5645, 12 cores, 24 threads", "cpu_idle_w": 50, "cpu_full_w": 160, "rest_w": 75, "eff": 0.88,
+                   "why": "Intel rates each 80 W, so 160 W for two; the rest as jaguaribe's, a dual-socket server of the same age with six DIMMs. No sensor."},
+  "macmini":      {"cpu": "Apple M4, 10 cores", "cpu_idle_w": 1, "cpu_full_w": 35, "rest_w": 3, "eff": 1.0,
+                   "why": "Apple publishes the Mac mini M4 at the wall: about 4 W idle, 65 W at its most with CPU and GPU both loaded; the CPU alone near 38 W. Its figures include its own supply, so no efficiency is applied."}
+ },
+ "lanes": {"boburner-cuda": "boburner", "calber-cuda": "calber", "whitewolf-cuda": "whitewolf"},
+ "busy_util": 0.9,
+ "idle_util": 0.03,
+ "gpu_busy_share": 0.6
+}

@@ -879,20 +879,20 @@ cq = tempfile.mkdtemp()
 ct = os.path.join(cq, "tools")
 os.makedirs(os.path.join(cq, "plan"))
 os.makedirs(ct)
-for t in ("analysis.py", "nets.py", "growth.py", "recordings.py"):
+for t in ("analysis.py", "nets.py", "growth.py", "recordings.py", "power.py"):
     open(os.path.join(ct, t), "w").write("import sys, time\ntime.sleep(0.5)\nopen(sys.argv[1] + '/asked', 'a').write(' '.join(['%s'] + sys.argv[2:]) + '\\n')\n" % t[:-3])
 asked = lambda: sorted(open(os.path.join(cq, "asked")).read().splitlines()) if os.path.exists(os.path.join(cq, "asked")) else []
 wait = lambda n: [time.sleep(0.05) for _ in range(100) if len(asked()) < n]
-assert m.chores(cq, ct) == ["analysis", "nets", "growth", "recordings list"]
+assert m.chores(cq, ct) == ["analysis", "nets", "growth", "power", "recordings list"]
 assert m.chores(cq, ct) == [], "behind their locks: nothing begun twice, the list's while it runs"
-wait(4)
-assert asked() == ["analysis", "growth refresh", "nets refresh", "recordings list"], asked()
-for doc in ("analysis.json", "nets.json", "growth.json", "recordings.json"):
+wait(5)
+assert asked() == ["analysis", "growth refresh", "nets refresh", "power sample", "recordings list"], asked()
+for doc in ("analysis.json", "nets.json", "growth.json", "recordings.json", "power-samples.jsonl"):
     open(os.path.join(cq, "plan", doc), "w").write("{}")
 time.sleep(0.3)
 assert not os.path.exists(os.path.join(cq, "plan", "recordings.json.lock.run")), "the list's mark goes when it ends"
 assert m.chores(cq, ct) == ["recordings sweep"], "fresh documents; the sweep's turn"
-wait(5)
+wait(6)
 assert "recordings sweep --do" in asked() and os.path.exists(os.path.join(cq, "plan", "recordings.json.sweep"))
 time.sleep(0.3)
 assert m.chores(cq, ct) == [], "the sweep, once in six hours"
@@ -1197,3 +1197,76 @@ ip.state["bridge"] = {"reads": [{"label": "M0003-g1-g90", "jobs": ["bridge-001-c
 assert ip.chain_extra() == {"bridge-001-c": ("island g1", "x-g1-0007"), "bridge-001-s": ("island g1", "x-g1-0007")}
 _sh.rmtree(iq)
 print("the zoom, its clock, and when the GPU hands anything on: every check holds")
+
+# THE FLEET'S WATTS (5 November): the model's arithmetic, the probe read, the model's guess until six
+# samples say otherwise, a machine off drawing nothing (its GPU lane with it), and each job's energy
+# counted as it is handed off.
+PW = m.power_mod()
+pm = PW.model()
+assert round(PW.watts(pm, "saskatchewan", 1.0)["wall"], 1) == round((45 + 150) / 0.88, 1)
+assert PW.watts(pm, "macmini", 0.0)["wall"] == 4.0, "Apple's own figure at the wall: idle 4 W, no supply applied"
+assert PW.parse("cpu  100 0 50 800 50 0 0 0 0 0\ncpu  160 0 70 860 60 0 0 0 0 0\n71.5, 100\n") == (0.533, [71.5], [100.0])
+assert PW.parse("CPU usage: 70.10% user, 7.90% sys, 22.0% idle") == (0.78, [], [])
+few = [{"box": "boburner", "cpu": 0.09, "gpu_w": [70.0], "busy": {"boburner": True, "boburner-cuda": True}}] * 5
+assert PW.calib(pm, few)["boburner"]["busy_util"] == 0.9, "five samples: the model's guess stands"
+six = few + [{"box": "boburner", "cpu": 0.69, "gpu_w": [72.0], "busy": {"boburner": True, "boburner-cuda": True}}]
+cb = PW.calib(pm, six)["boburner"]
+assert cb["busy_util"] == 0.19 and cb["gpu_busy_w"] == 70.0, cb
+assert round(PW.lane_watts(pm, cb and {"boburner": cb}, "boburner-cuda", 1.0), 1) == round(70.0 / 0.88, 1), "a GPU lane is its card"
+pq = tempfile.mkdtemp()
+pp = Bins(pq)
+b0 = time.mktime((2026, 11, 5, 10, 0, 0, 0, 0, -1))
+ev = [{"t": stamp_(b0), "event": "started", "job": "w1", "host": "macmini"},
+      {"t": stamp_(b0 + 600), "event": "done", "job": "w1", "host": "macmini"},
+      {"t": stamp_(b0 + 600), "event": "powered off", "host": "boburner"},
+      {"t": stamp_(b0 + 1800), "event": "host back", "host": "boburner"}]
+with open(os.path.join(pq, "events.jsonl"), "w") as f:
+    f.write("\n".join(json.dumps(e) for e in ev) + "\n")
+bb = pp.timeline_bins()
+day = bb["energy"]["2026-11-05"]["macmini"]
+assert day[0] == 1 and abs(day[1] - (3 + 1 + 0.9 * 34) / 1.0 / 6) < 0.05, day  # ten minutes of macmini busy
+assert sum(v.get("~off", 0) for v in bb["fine"]["boburner"].values()) == 1200, bb["fine"]["boburner"]
+zp = pp.zoom_view(bb, ["boburner", "boburner-cuda", "macmini"], b0 + 3600, (PW, pm, PW.calib(pm, [])))[0]
+wb, wg = zp["watts"]["boburner"], zp["watts"]["boburner-cuda"]
+i_off = next(i for i in range(len(wb)) if zp["from_min"] + 5 * i == -45)  # 10:15, inside the twenty minutes off
+assert wb[i_off] == 0 and wg[i_off] == 0, (wb[i_off], wg[i_off])
+assert wb[-1] == round(PW.lane_watts(pm, PW.calib(pm, []), "boburner", 0.0)), "idle once back"
+assert all(r[1:] and not str(r[1]).startswith("~") for l in zp["lanes"] for r in l["bins"]), "off is not a stage"
+_sh.rmtree(pq)
+print("the fleet's watts, off machines and each job's energy: every check holds")
+
+# THE LINEUP AND THE HIT PARADE (5 November): each chain's end, said; and the tally by machine and kind,
+# over today, a week and everything, each window with its hours.
+class Ends(P):
+    def __init__(self, q):
+        self.q, self.pd, self.state, self.tc = q, os.path.join(q, "plan"), {"clone": {"rounds": []}}, os.path.dirname(os.path.abspath(__file__))
+        os.makedirs(self.pd)
+        self.rs = {"r1": {"status": "approved"}, "r2": {"status": "failed", "why": "the brain's tests failed"}}
+    def queue_jobs(self):
+        return [{"id": "e9", "title": "read on 2 of w5 (55 seeds more)"}]
+    def runs(self):
+        return [{"id": "r1", "kind": "promote", "params": {"candidate": "grove/w1"}}, {"id": "r2", "kind": "promote", "params": {"candidate": "grove/w2"}}]
+    def rstate(self, rid):
+        return self.rs.get(rid, {})
+    def chain_extra(self):
+        return {}
+
+
+eq_ = tempfile.mkdtemp()
+en = Ends(eq_)
+json.dump({"w4": {"current": True}}, open(os.path.join(en.pd, "candidates.json"), "w"))
+lanes_ = [{"host": "a", "jobs": [[-50, -40, "first", 1, "w1", "w1", ""], [-40, -30, "first", 1, "w2", "w2", ""], [-30, -20, "first", 1, "w3", "w3", ""],
+                                 [-20, -10, "held", 1, "h1", "w6", ""], [-20, -15, "first", 1, "w4", "w4", ""], [-9, 0, "first", 2, "w5", "w5", ""]]}]
+cm_ = en.chain_meta(lanes_, {"e9": "a"}, {"e9": [1.0, 4.0]}, time.time())
+ends = {k: (v["good"], v["say"].split(":")[0]) for k, v in cm_.items()}
+assert ends["w1"] == (True, "promoted as r1") and ends["w2"] == (False, "dead end")
+assert ends["w3"] == (False, "dead end") and "dropped after 1 read" in cm_["w3"]["say"]
+assert cm_["w6"]["say"] == "dead end: its held-out read did not pass" and ends["w4"] == (None, "a candidate")
+assert cm_["w5"]["good"] is None and cm_["w5"]["next"] == [[1.0, 4.0, "read", "e9", "a"]], cm_["w5"]
+noon = time.mktime((2026, 11, 5, 12, 0, 0, 0, 0, -1))
+pv = en.parade_view({"first": noon - 3 * 86400, "tally": {"2026-11-02": {"a": {"first": [10, 1, 600.0, 50.0]}}, "2026-11-05": {"a": {"first": [4, 0, 240.0, 20.0]}}}}, noon)
+assert pv["today"]["cells"] == {"a": {"first": [4, 0, 4.0, 20.0]}} and pv["today"]["hours"] == 12.0
+assert pv["week"]["cells"]["a"]["first"][:2] == [14, 1] and pv["all"]["hours"] == 72.0
+assert pv["days"] == [["2026-11-02", 10, 1, 50.0], ["2026-11-05", 4, 0, 20.0]]
+_sh.rmtree(eq_)
+print("the Lineup's ends and the Hit Parade's tally: every check holds")

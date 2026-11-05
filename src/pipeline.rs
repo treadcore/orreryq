@@ -16,7 +16,7 @@ use crate::nav;
 use crate::ui::{rect, Rect, Ui};
 
 /// The pages of the line, after the Queue's own keys in one column: order, data, time, why, how hard.
-pub const PAGES: [&str; 6] = ["Board", "Flow", "Timeline", "Queued", "Values", "Blame"];
+pub const PAGES: [&str; 8] = ["Board", "Flow", "Timeline", "Queued", "Values", "Blame", "Lineup", "Hit Parade"];
 /// The Queue's own pages, first in the same column.
 pub const QUEUE_KEYS: [&str; 2] = ["Fleet", "Runs"];
 
@@ -47,6 +47,16 @@ pub struct State {
     pub blame_shut: Vec<String>,
     /// The machine, or the machine and job, a click keeps at the table.
     pub blame_keep: Option<(String, Option<String>)>,
+    /// The Lineup: its zoom (0 the hour, 1 the six hours; none the six), the kind of chain, its
+    /// scroll and the chains folded by a click.
+    pub lineup_zoom: Option<usize>,
+    pub lineup_kind: usize,
+    pub lineup_off: usize,
+    pub lineup_shut: Vec<String>,
+    /// The Lineup's ending shown: 0 every one, 1 going, 2 won, 3 dead ends.
+    pub lineup_end: usize,
+    /// The Hit Parade's window: 0 today, 1 the last seven days, 2 since the log began.
+    pub parade_win: usize,
     pub blame_off: usize,
 }
 
@@ -69,6 +79,99 @@ pub struct ZoomLevel {
     pub ticks: Vec<(f64, String)>,
     /// (minutes from now, minutes the wall clock read more before it): each change of summer time.
     pub shifts: Vec<(f64, f64)>,
+    /// Each lane's watts at the wall in each bin; none before the event log begins.
+    pub watts: Vec<(String, Vec<Option<f64>>)>,
+}
+
+/// A chain as the planner's chain_meta says it: its kind, how it ended (good: a success; not: a dead
+/// end; none: still going), that in words, and its queued jobs as the forecast deals them.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ChainMeta {
+    pub id: String,
+    pub kind: String,
+    pub good: Option<bool>,
+    pub say: String,
+    pub next: Vec<NextJob>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct NextJob {
+    pub from: Option<f64>,
+    pub to: Option<f64>,
+    pub stage: String,
+    pub id: String,
+    pub host: String,
+}
+
+/// A counter of the Hit Parade: jobs done, not done, their minutes and their watt-hours.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Tally {
+    pub done: f64,
+    pub failed: f64,
+    pub minutes: f64,
+    pub wh: f64,
+}
+
+/// A window of the Hit Parade: the hours it covers, and each machine's tally by kind of job.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ParadeWindow {
+    pub name: String,
+    pub hours: f64,
+    pub cells: Vec<(String, Vec<(String, Tally)>)>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Parade {
+    pub windows: Vec<ParadeWindow>,
+    pub since: String,
+    /// (day, done, not done, watt-hours).
+    pub days: Vec<(String, f64, f64, f64)>,
+}
+
+/// THE FLEET'S WATTS AND WHAT THEY COST (Paul, 5 November), as the planner's power_view says from
+/// tools/power.py's model and its samples: each lane's watts now, the fleet's now and at full tilt,
+/// the last day's kilowatt-hours and their price, and each box's model and how much of it is measured.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Power {
+    pub rate: f64,
+    pub lanes_now: Vec<(String, f64)>,
+    pub fleet_now: f64,
+    pub fleet_full: f64,
+    pub kwh_24h: f64,
+    pub usd_24h: f64,
+    pub usd_30d: f64,
+    /// (lane, jobs handed off today, their watt-hours).
+    pub jobs_today: Vec<(String, f64, f64)>,
+    pub boxes: Vec<BoxPower>,
+    pub sampled: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct BoxPower {
+    pub name: String,
+    pub cpu: String,
+    pub gpu: String,
+    pub full: f64,
+    pub now: f64,
+    pub busy_util: Option<f64>,
+    pub gpu_busy: Option<f64>,
+    pub cpu_samples: f64,
+    pub gpu_samples: f64,
+    pub why: String,
+}
+
+impl Power {
+    pub fn lane_now(&self, lane: &str) -> Option<f64> {
+        self.lanes_now.iter().find(|(h, _)| h == lane).map(|(_, w)| *w)
+    }
+    pub fn today(&self, lane: &str) -> Option<(f64, f64)> {
+        self.jobs_today.iter().find(|(h, _, _)| h == lane).map(|(_, n, wh)| (*n, *wh))
+    }
+    /// The box a lane is part of: a GPU lane's is its name less "-cuda".
+    pub fn box_of(&self, lane: &str) -> Option<&BoxPower> {
+        let b = lane.strip_suffix("-cuda").unwrap_or(lane);
+        self.boxes.iter().find(|x| x.name == b)
+    }
 }
 
 impl ZoomLevel {
@@ -123,6 +226,8 @@ pub struct JobBar {
     pub chain: String,
     /// The job it follows, where the planner knows it and the times cannot say; empty otherwise.
     pub after: String,
+    /// Its energy, watt-hours at the wall: its lane's watts busy for the minutes it ran.
+    pub wh: Option<f64>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -293,6 +398,9 @@ pub struct Model {
     pub marks: Vec<Mark>,
     pub zoom: Vec<ZoomLevel>,
     pub cuda: Vec<(String, CudaReturn)>,
+    pub power: Power,
+    pub chains: Vec<ChainMeta>,
+    pub parade: Parade,
     pub queued: Vec<Waiting>,
     pub traces: Vec<Trace>,
     pub blame: Blame,
@@ -362,6 +470,7 @@ impl Model {
                     id: j.get(4)?.as_str()?.to_string(),
                     chain: j.get(5)?.as_str()?.to_string(),
                     after: j.get(6).and_then(|x| x.as_str()).unwrap_or("").to_string(),
+                    wh: j.get(7).and_then(|x| x.as_num()),
                 })).collect(),
             }).collect()).unwrap_or_default(),
             marks: v.get("timeline").map(|t| list(t, "marks").iter().map(|m| Mark { at: n(m, "at"), kind: s(m, "kind"), text: s(m, "text"), when: s(m, "when") }).collect()).unwrap_or_default(),
@@ -376,7 +485,65 @@ impl Model {
                 }).collect())).collect(),
                 ticks: list(z, "ticks").iter().filter_map(|k| k.as_array()).filter_map(|k| Some((k.first()?.as_num()?, k.get(1)?.as_str()?.to_string()))).collect(),
                 shifts: list(z, "shifts").iter().filter_map(|k| k.as_array()).filter_map(|k| Some((k.first()?.as_num()?, k.get(1)?.as_num()?))).collect(),
+                watts: match z.get("watts") {
+                    Some(json::Value::Obj(w)) => w.iter().map(|(k, x)| (k.clone(), x.as_array().map(|a| a.iter().map(|y| y.as_num()).collect()).unwrap_or_default())).collect(),
+                    _ => Vec::new(),
+                },
             }).collect()).unwrap_or_default(),
+            power: v.get("timeline").and_then(|t| t.get("power")).map(|p| Power {
+                rate: n(p, "rate"),
+                lanes_now: match p.get("lanes_now") {
+                    Some(json::Value::Obj(w)) => w.iter().filter_map(|(k, x)| Some((k.clone(), x.as_num()?))).collect(),
+                    _ => Vec::new(),
+                },
+                fleet_now: n(p, "fleet_now_w"),
+                fleet_full: n(p, "fleet_full_w"),
+                kwh_24h: n(p, "kwh_24h"),
+                usd_24h: n(p, "usd_24h"),
+                usd_30d: n(p, "usd_30d"),
+                jobs_today: match p.get("jobs_today") {
+                    Some(json::Value::Obj(w)) => w.iter().filter_map(|(k, x)| {
+                        let a = x.as_array()?;
+                        Some((k.clone(), a.first()?.as_num()?, a.get(1)?.as_num()?))
+                    }).collect(),
+                    _ => Vec::new(),
+                },
+                boxes: list(p, "boxes").iter().map(|b| BoxPower {
+                    name: s(b, "box"), cpu: s(b, "cpu"), gpu: s(b, "gpu"), full: n(b, "full_w"), now: n(b, "now_w"),
+                    busy_util: b.get("busy_util").and_then(|x| x.as_num()), gpu_busy: b.get("gpu_busy_w").and_then(|x| x.as_num()),
+                    cpu_samples: b.get("samples").map(|x| n(x, "cpu")).unwrap_or(0.0), gpu_samples: b.get("samples").map(|x| n(x, "gpu")).unwrap_or(0.0),
+                    why: s(b, "why"),
+                }).collect(),
+                sampled: s(p, "sampled"),
+            }).unwrap_or_default(),
+            chains: match v.get("timeline").and_then(|t| t.get("chains")) {
+                Some(json::Value::Obj(c)) => c.iter().map(|(k, x)| ChainMeta {
+                    id: k.clone(), kind: s(x, "kind"), good: x.get("good").and_then(|b| b.as_bool()), say: s(x, "say"),
+                    next: list(x, "next").iter().filter_map(|a| a.as_array()).filter_map(|a| Some(NextJob {
+                        from: a.first()?.as_num(), to: a.get(1)?.as_num(), stage: a.get(2)?.as_str()?.to_string(),
+                        id: a.get(3)?.as_str()?.to_string(), host: a.get(4)?.as_str().unwrap_or("").to_string(),
+                    })).collect(),
+                }).collect(),
+                _ => Vec::new(),
+            },
+            parade: v.get("timeline").and_then(|t| t.get("parade")).map(|p| Parade {
+                windows: PARADE_WINDOWS.iter().filter_map(|w| p.get(w).map(|x| ParadeWindow {
+                    name: w.to_string(),
+                    hours: n(x, "hours"),
+                    cells: match x.get("cells") {
+                        Some(json::Value::Obj(c)) => c.iter().map(|(h, ks)| (h.clone(), match ks {
+                            json::Value::Obj(k) => k.iter().filter_map(|(s_, a)| {
+                                let a = a.as_array()?;
+                                Some((s_.clone(), Tally { done: a.first()?.as_num()?, failed: a.get(1)?.as_num()?, minutes: a.get(2)?.as_num()?, wh: a.get(3)?.as_num()? }))
+                            }).collect(),
+                            _ => Vec::new(),
+                        })).collect(),
+                        _ => Vec::new(),
+                    },
+                })).collect(),
+                since: s(p, "since"),
+                days: list(p, "days").iter().filter_map(|d| d.as_array()).filter_map(|d| Some((d.first()?.as_str()?.to_string(), d.get(1)?.as_num()?, d.get(2)?.as_num()?, d.get(3)?.as_num()?))).collect(),
+            }).unwrap_or_default(),
             cuda: match v.get("timeline").and_then(|t| t.get("cuda")) {
                 Some(json::Value::Obj(c)) => c.iter().map(|(k, x)| (k.clone(), CudaReturn {
                     top: s(x, "top"), top_made: s(x, "top_made"), segments: n(x, "segments"),
@@ -659,6 +826,8 @@ pub fn draw(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
         3 => queued(ui, at, m, st),
         4 => values(ui, at, m, st),
         5 => blame(ui, at, m, st),
+        6 => lineup(ui, at, m, st),
+        7 => parade(ui, at, m, st),
         _ => board(ui, at, m),
     }
 }
@@ -882,7 +1051,9 @@ fn timeline(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
     let foot = 52;
     let plot = rect(at.x + label_w, at.y + head, at.w - label_w - 4, at.h - head - foot);
     let n_ = m.lanes.len() as i32;
-    let row = (plot.h / n_.max(1)).clamp(10, 46);
+    // Under the rows, the fleet's watts: room kept for it first.
+    let graph_h = if m.power.fleet_full > 0.0 { 96 } else { 0 };
+    let row = ((plot.h - if graph_h > 0 { graph_h + 22 } else { 0 }) / n_.max(1)).clamp(10, 46);
     let now_x = plot.x + plot.w * 7 / 10;
     let past_min = match (z, level) {
         (0, _) => 60.0,
@@ -936,7 +1107,13 @@ fn timeline(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
     ui.label(now_x + 4, at.y + 3, "forecast from medians", &F8X13, t.ink);
     for (i, l) in m.lanes.iter().enumerate() {
         let y = plot.y + i as i32 * row;
-        ui.label_in(at.x + 4, y + (row - 13) / 2, label_w - 8, &l.host, &F8X13, if l.up { t.ink } else { t.alarm });
+        let lw = m.power.lane_now(&l.host);
+        let two = lw.is_some() && row >= 28;
+        ui.label_in(at.x + 4, y + (row - 13) / 2 - if two { 6 } else { 0 }, label_w - 8, &l.host, &F8X13, if l.up { t.ink } else { t.alarm });
+        if let (true, Some(w)) = (two, lw) {
+            ui.c.rect(at.x + 4, y + row / 2 + 6, 8, 8, heat(w / lane_top(m)));
+            ui.label(at.x + 16, y + row / 2 + 5, &format!("{:.0} W now", w), &F6X10, t.dim);
+        }
         ui.c.hline(plot.x, y + row - 1, plot.w, t.line);
         if let Some(lv) = level {
             // Before the event log begins nothing is known, and it says so by a hatch.
@@ -994,6 +1171,27 @@ fn timeline(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
             ]);
         }
     }
+    // Each lane's watts along its foot, and the fleet's under the rows: a day's five-minute bins for
+    // the hour and the six hours, the zoom's own bins for the rest.
+    if let Some(src) = level.or_else(|| m.zoom.iter().find(|l| l.name == "day")).filter(|l| !l.watts.is_empty()) {
+        for (i, l) in m.lanes.iter().enumerate() {
+            let Some((_, ws)) = src.watts.iter().find(|(h, _)| h == &l.host) else { continue };
+            let y = plot.y + i as i32 * row + row - 4;
+            for (k, w) in ws.iter().enumerate() {
+                let a = src.from_min + k as f64 * src.bin_min;
+                let Some(w) = w else { continue };
+                if a >= 0.0 || a + src.bin_min < -past_min {
+                    continue;
+                }
+                let (x0, x1) = (xof(a.max(-past_min)), xof((a + src.bin_min).min(0.0)));
+                ui.c.rect(x0, y, (x1 - x0).max(1), 3, heat(w / lane_top(m)));
+            }
+        }
+        if graph_h > 0 {
+            let g = rect(plot.x, plot.y + plot_h + 18, plot.w, graph_h);
+            power_graph(ui, m, src, g, rect(at.x + 4, g.y, label_w - 8, g.h), now_x, past_min, &xof);
+        }
+    }
     if let Some(lv) = level {
         if let Some(b) = lv.begins.filter(|b| *b > -past_min) {
             let say = format!("before {}: the event log begins there", lv.stamp(&m.timeline_at, b));
@@ -1009,7 +1207,7 @@ fn timeline(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
     ui.c.vline(now_x, plot.y - 2, plot_h + 4, t.ink);
     ui.c.vline(now_x + 1, plot.y - 2, plot_h + 4, t.ink);
     ui.label(now_x - 12, plot.y + plot_h + 2, "now", &F8X13, t.ink);
-    milestones(ui, m, plot, plot_h, row, past_min, &xof);
+    milestones(ui, m, plot, plot_h, row, past_min, &xof, true);
     cuda_return(ui, m, plot, row, now_x);
     if level.is_none() {
         follow_chain(ui, m, st, plot, row, now_x, past_min, (buttons_end + 8, at.y + 3), &xof);
@@ -1023,6 +1221,125 @@ fn timeline(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
     }
     ui.label_in(at.x + 4, y + 14, at.w - 8, "Hollow: forecast. Red: failed or sent back. A day and longer: a column is a bin, filled by the share of it each stage took; the rest is idle.", &F8X13, t.dim);
     ui.label_in(at.x + 4, y + 28, at.w - 8, "Lines: green a generation, thick green the line on main, red tests stopped one, grey a GPU milestone, white a net into the game, cyan the game's rules.", &F8X13, t.dim);
+}
+
+/// Paul's scale for watts (5 November: "showing graph color from blue to white to purple to yellow to
+/// red"), 0 to 1 of the most there can be.
+pub fn heat(f: f64) -> Rgb {
+    const STOPS: [Rgb; 5] = [0x2a5bd7, 0xf0f0f0, 0x9b4fd0, 0xf2c200, 0xe8332a];
+    let f = if f.is_finite() { f.clamp(0.0, 1.0) * 4.0 } else { 0.0 };
+    let i = (f.floor() as usize).min(3);
+    mix(STOPS[i], STOPS[i + 1], f - i as f64)
+}
+
+fn mix(a: Rgb, b: Rgb, t: f64) -> Rgb {
+    let ch = |s: u32| -> u32 {
+        let (x, y) = (((a >> s) & 0xff) as f64, ((b >> s) & 0xff) as f64);
+        ((x + (y - x) * t.clamp(0.0, 1.0)).round() as u32) << s
+    };
+    ch(16) | ch(8) | ch(0)
+}
+
+/// A lane's watts are coloured against the hungriest box's full tilt, so a red row is red anywhere.
+fn lane_top(m: &Model) -> f64 {
+    m.power.boxes.iter().map(|b| b.full).fold(100.0, f64::max)
+}
+
+/// THE FLEET'S WATTS UNDER THE TIMELINE (Paul, 5 November: "an underlay graph underneath timeline").
+/// A column a bin, as high as the fleet's watts at the wall then and coloured by them, blue at none,
+/// red at full tilt; beside it what they cost. Estimated, and said so: the CPUs' use and the GPUs'
+/// draw measured, the CPUs' watts the model's (tools/plans/power.json).
+#[allow(clippy::too_many_arguments)]
+fn power_graph(ui: &mut Ui, m: &Model, lv: &ZoomLevel, g: Rect, label: Rect, now_x: i32, past_min: f64, xof: &dyn Fn(f64) -> i32) {
+    let t = ui.t;
+    let p = &m.power;
+    let top = p.fleet_full.max(1.0);
+    let n = lv.watts.iter().map(|(_, v)| v.len()).max().unwrap_or(0);
+    let total = |k: usize| -> Option<f64> {
+        let v: Vec<f64> = lv.watts.iter().filter_map(|(_, w)| w.get(k).copied().flatten()).collect();
+        if v.is_empty() { None } else { Some(v.iter().sum()) }
+    };
+    let mut wv = 500.0;
+    while wv < top {
+        let y = g.bottom() - (wv / top * g.h as f64) as i32;
+        for x in (g.x..now_x).step_by(4) {
+            ui.c.set(x, y, t.line);
+        }
+        wv += 500.0;
+    }
+    ui.c.hline(g.x, g.bottom(), now_x - g.x, t.line);
+    for k in 0..n {
+        let a = lv.from_min + k as f64 * lv.bin_min;
+        if a >= 0.0 || a + lv.bin_min < -past_min {
+            continue;
+        }
+        let Some(tot) = total(k) else { continue };
+        let (x0, x1) = (xof(a.max(-past_min)), xof((a + lv.bin_min).min(0.0)));
+        let h = ((tot / top) * g.h as f64).round() as i32;
+        ui.c.rect(x0, g.bottom() - h, (x1 - x0).max(1), h, heat(tot / top));
+    }
+    // The scale's lines named over the columns, on a dark ground so they read over any colour.
+    let mut wv = 500.0;
+    while wv < top {
+        let y = g.bottom() - (wv / top * g.h as f64) as i32;
+        let say = format!("{:.0} W", wv);
+        ui.c.rect(g.x + 1, y - 11, F6X10.measure(&say) as i32 + 4, 10, t.base);
+        ui.label(g.x + 3, y - 11, &say, &F6X10, t.dim);
+        wv += 500.0;
+    }
+    ui.label_in(label.x, label.y, label.w, "fleet watts", &F8X13, t.ink);
+    ui.label_in(label.x, label.y + 15, label.w, "at the wall,", &F6X10, t.dim);
+    ui.label_in(label.x, label.y + 26, label.w, "estimated", &F6X10, t.dim);
+    // The scale, blue to red.
+    for i in 0..(label.w - 30) {
+        ui.c.rect(label.x + i, label.y + 42, 1, 8, heat(i as f64 / (label.w - 31) as f64));
+    }
+    ui.label(label.x, label.y + 52, "0", &F6X10, t.dim);
+    ui.label_right(label.x + label.w - 30, label.y + 52, &format!("{:.0} W", top), &F6X10, t.dim);
+    // What it costs, over the forecast's side.
+    let r = rect(now_x + 6, g.y, g.right() - now_x - 10, g.h);
+    let lines = [
+        (format!("now {:.0} W of {:.0} W at full tilt", p.fleet_now, p.fleet_full), heat(p.fleet_now / top)),
+        (format!("last 24 h: {:.1} kWh, ${:.2}", p.kwh_24h, p.usd_24h), t.ink),
+        (format!("a month like it: ~${:.0} at ${:.2}/kWh", p.usd_30d, p.rate), t.ink),
+        (format!("sampled {}: CPU use and GPU watts measured,", p.sampled), t.dim),
+        ("the CPUs' watts estimated from their parts".to_string(), t.dim),
+    ];
+    for (i, (l, c)) in lines.iter().enumerate() {
+        ui.label_in(r.x, r.y + 2 + i as i32 * 14, r.w, l, if i == 0 { &F8X13 } else { &F6X10 }, *c);
+    }
+    ui.tip(r, || {
+        let mut v = vec!["The fleet's watts at the wall, and what they cost".to_string(),
+            "Each box: (the rest of it + its CPU at idle + the CPU's use x its full tilt less idle + its GPU) / its supply's efficiency (80 Plus Gold, 0.88).".to_string(),
+            "Measured each five minutes: each CPU's use (/proc/stat; top on the Mac) and each GPU's draw (nvidia-smi). Estimated: the CPUs' watts, from their makers' figures (tools/plans/power.json). No box lets a user read its CPU's energy counter, and none has a meter at the wall.".to_string()];
+        v.extend(p.boxes.iter().map(|b| format!("{}: {:.0} W now, {:.0} W at full tilt; {}{}", b.name, b.now, b.full,
+            b.busy_util.map(|u| format!("busy at {:.0}% of its cores", u * 100.0)).unwrap_or_default(),
+            b.gpu_busy.map(|g| format!(", its card {:.0} W in a segment", g)).unwrap_or_default())));
+        v.push(format!("The price, ${:.2} a kWh, is Settings, Long run, power_usd_kwh.", p.rate));
+        v
+    });
+    // The bin under the pointer.
+    let (px, py) = ui.pointer();
+    if px >= g.x && px < now_x && py >= g.y && py <= g.bottom() {
+        let at_min = (px - now_x) as f64 / (now_x - g.x).max(1) as f64 * past_min;
+        let k = ((at_min - lv.from_min) / lv.bin_min).floor();
+        if k >= 0.0 {
+            let k = k as usize;
+            if let Some(tot) = total(k) {
+                let a = lv.from_min + k as f64 * lv.bin_min;
+                let mut by: Vec<(&str, f64)> = lv.watts.iter().filter_map(|(h, w)| Some((h.as_str(), w.get(k).copied().flatten()?))).collect();
+                by.sort_by(|x, y| y.1.partial_cmp(&x.1).unwrap_or(std::cmp::Ordering::Equal));
+                let hit = rect(xof(a.max(-past_min)), g.y, (xof((a + lv.bin_min).min(0.0)) - xof(a.max(-past_min))).max(2), g.h);
+                ui.tip(hit, || {
+                    let mut v = vec![format!("{} to {}: {:.0} W at the wall", lv.stamp(&m.timeline_at, a), lv.stamp(&m.timeline_at, (a + lv.bin_min).min(0.0)), tot),
+                        format!("{:.2} kWh in it, ${:.3}; at this, ${:.2} a day", tot * lv.bin_min / 60.0 / 1000.0, tot * lv.bin_min / 60.0 / 1000.0 * p.rate, tot * 24.0 / 1000.0 * p.rate)];
+                    v.extend(by.iter().map(|(h, w)| format!("  {}: {:.0} W", h, w)));
+                    v.push("Each lane its watts busy for the share of the bin it ran a job, idle for the rest; a machine switched off counts as idle.".to_string());
+                    v
+                });
+            }
+        }
+    }
 }
 
 /// What a bin holds, for the one under the pointer: a day and longer have thousands of them and
@@ -1061,7 +1378,8 @@ fn bin_tip(ui: &mut Ui, m: &Model, lv: &ZoomLevel, plot: Rect, row: i32, now_x: 
 /// THE MILESTONES (Paul, 5 November: "show separation of major milestones of generation"): a line
 /// through every machine where each happened, its name in a tag above, the most telling first
 /// where tags would collide. The islands' rules run only through the GPU rows: a side channel.
-fn milestones(ui: &mut Ui, m: &Model, plot: Rect, plot_h: i32, row: i32, past_min: f64, xof: &dyn Fn(f64) -> i32) {
+#[allow(clippy::too_many_arguments)]
+fn milestones(ui: &mut Ui, m: &Model, plot: Rect, plot_h: i32, row: i32, past_min: f64, xof: &dyn Fn(f64) -> i32, side: bool) {
     let t = ui.t;
     let style = |k: &str| -> (Rgb, usize) {
         match k {
@@ -1078,6 +1396,9 @@ fn milestones(ui: &mut Ui, m: &Model, plot: Rect, plot_h: i32, row: i32, past_mi
         let x = xof(mk.at);
         let (c, p) = style(&mk.kind);
         if mk.kind == "rules" {
+            if !side {
+                continue;
+            }
             for &i in &gpu {
                 let y = plot.y + i as i32 * row;
                 for yy in (y..y + row - 1).step_by(4) {
@@ -1335,11 +1656,12 @@ fn follow_chain(ui: &mut Ui, m: &Model, st: &mut State, plot: Rect, row: i32, no
     if let Some((i, j)) = hovered {
         let r = job_rect(i, j);
         let steps: Vec<String> = links.iter().map(|(li, lj, _)| {
-            format!("{} {:<10} {:<14} {:<15} {}{}", clock(&m.timeline_at, lj.from), line::short(&lj.stage), lj.id, m.lanes[*li].host,
-                    took(lj.to - lj.from), match lj.ok { 0 => ", failed or sent back", 2 => ", running", _ => "" })
+            format!("{} {:<10} {:<14} {:<15} {}{}{}", clock(&m.timeline_at, lj.from), line::short(&lj.stage), lj.id, m.lanes[*li].host,
+                    took(lj.to - lj.from), lj.wh.map(|w| format!(", {:.1} Wh", w)).unwrap_or_default(), match lj.ok { 0 => ", failed or sent back", 2 => ", running", _ => "" })
         }).collect();
         ui.tip(r, || {
-            let mut v = vec![format!("{}: its {} job{} in the last {:.0} h, in the order they began", chain, steps.len(), if steps.len() == 1 { "" } else { "s" }, m.past_h)];
+            let wh: f64 = links.iter().filter_map(|(_, j, _)| j.wh).sum();
+            let mut v = vec![format!("{}: its {} job{} in the last {:.0} h, in the order they began; {:.1} Wh, ${:.3}", chain, steps.len(), if steps.len() == 1 { "" } else { "s" }, m.past_h, wh, wh / 1000.0 * m.power.rate)];
             v.extend(steps.into_iter().take(24));
             v.push("An arrow runs from the job a link followed to it. Click to keep the chain lit; zoom to the hour for detail.".to_string());
             v
@@ -1480,7 +1802,7 @@ fn blame(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
     let room = rect(at.x, at.y + 38, at.w - panel_w - 8, at.h - 38 - legend_h);
     // The queues first: what the pointer is on there is what the table shows. Under them, what it
     // is on, written out.
-    let pane_h = 104;
+    let pane_h = 128;
     let (mut hover, mut clicked) = queue_accordions(ui, rect(panel.x, panel.y, panel.w, panel.h - pane_h - 6), m, st);
     let (sw, sh) = (160, 58);
     let (cx, cy) = (room.x + room.w / 2, room.y + room.h / 2);
@@ -1660,7 +1982,8 @@ fn queue_accordions(ui: &mut Ui, panel: Rect, m: &Model, st: &mut State) -> (Opt
                 ui.label(r.x + 7, r.y + 2, &format!("{} {}", if shut { "+" } else { "-" }, x.host), &F8X13, t.ink);
                 let waiting = q.iter().filter(|j| j.state != "running").count();
                 let run = q.iter().find(|j| j.state == "running").map(|j| line::short(&j.stage).to_string()).unwrap_or_else(|| x.state.clone());
-                ui.label_right(r.right() - 6, r.y + 4, &format!("{}, {} waiting", run, waiting), &F6X10, t.dim);
+                let w = m.power.lane_now(&x.host).map(|w| format!(", {:.0} W", w)).unwrap_or_default();
+                ui.label_right(r.right() - 6, r.y + 4, &format!("{}, {} waiting{}", run, waiting, w), &F6X10, t.dim);
                 if ui.button_hit(r) {
                     if shut {
                         st.blame_shut.retain(|h| h != &x.host);
@@ -1743,6 +2066,10 @@ fn detail_pane(ui: &mut Ui, r: Rect, m: &Model, focus: Option<&Focus>, kept: boo
                     format!("Its backup when its own line waits: {}.", x.backup),
                 ];
                 v.push(x.by_stage.iter().take(5).map(|(k, mins)| format!("{} {}", line::short(k), took(*mins))).collect::<Vec<_>>().join(", "));
+                if let Some(w) = m.power.lane_now(h) {
+                    let today = m.power.today(h).map(|(n, wh)| format!(" Today {:.0} jobs, {:.2} kWh, ${:.2}.", n, wh / 1000.0, wh / 1000.0 * m.power.rate)).unwrap_or_default();
+                    v.push(format!("Power: {:.0} W at the wall now{}.{}", w, m.power.box_of(h).map(|b| format!(", its box {:.0} W at full tilt", b.full)).unwrap_or_default(), today));
+                }
                 v
             }
             None => vec![],
@@ -1928,6 +2255,605 @@ fn job_arrows(ui: &mut Ui, m: &Model, room: Rect, places: &[Rect], hub: Rect, ho
             ui.tip(*r, || job_tip(j, h));
         }
     }
+}
+
+/// The Lineup's filters: what kind of chain stands in it, and how it ended.
+pub const LINEUP_KINDS: [&str; 5] = ["trials", "runs", "builds", "islands", "all"];
+pub const LINEUP_ENDS: [&str; 4] = ["every end", "going", "won", "dead ends"];
+
+fn kind_group(kind: &str) -> usize {
+    match kind {
+        "trial" => 0,
+        "build" => 2,
+        "island" => 3,
+        "other" => 4,
+        _ => 1,
+    }
+}
+
+struct Item<'a> {
+    from: f64,
+    to: f64,
+    stage: &'a str,
+    id: &'a str,
+    host: &'a str,
+    ok: i64,
+    wh: Option<f64>,
+    hollow: bool,
+    after: &'a str,
+}
+
+struct Group<'a> {
+    id: &'a str,
+    meta: Option<&'a ChainMeta>,
+    items: Vec<Item<'a>>,
+    sub: Vec<usize>,
+    subs: usize,
+    last: f64,
+    going: bool,
+}
+
+impl Group<'_> {
+    /// Each item's link: the job the planner names it after, or the latest that ended by its start.
+    fn prev(&self, k: usize) -> Option<usize> {
+        let b = &self.items[k];
+        if !b.after.is_empty() {
+            return (0..self.items.len()).find(|&p| p != k && self.items[p].id == b.after);
+        }
+        (0..self.items.len())
+            .filter(|&p| p != k && self.items[p].to <= b.from + 0.05 && self.items[p].from < b.from)
+            .max_by(|&p, &q| self.items[p].to.partial_cmp(&self.items[q].to).unwrap_or(std::cmp::Ordering::Equal))
+    }
+}
+
+/// THE LINEUP (Paul, 5 November: "it has all the same elements as the timeline does, but it rearranges
+/// each chain into its own gantt chart, with the blocks of the chain reassembled on each row, with
+/// machines' names in job block ... this would unscramble the net trace of arrows to have each dead
+/// end and each success clearly shown, and forks looking like nested accordions already open, showing
+/// arrows and sub-rows"). Named for The Lineup of 1954: every chain stands in its own row. A chain's
+/// head row says how it ended or where it stands; under it its jobs in time, a fork (a held-out read's
+/// pieces) on sub-rows of its own, an arrow from each job to the next, a red wall where it died, a
+/// green tag where it won, hollow blocks where the forecast deals what it waits for.
+fn lineup(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
+    let t = ui.t;
+    if m.lanes.is_empty() {
+        ui.label_in(at.x + 4, at.y + 4, at.w - 8, "The planner has not written the timeline yet: it does at each plan, about a minute.", &F8X13, t.dim);
+        return;
+    }
+    // The hour, the six hours, or each chain its own Gantt: stretched across the width from its first
+    // job to its last, so every block has room for its machine and its job.
+    let z = st.lineup_zoom.unwrap_or(2).min(2);
+    let fit = z == 2;
+    for (i, name) in ["hour", "hours", "each its own"].iter().enumerate() {
+        let r = rect(at.x + 4 + [0, 64, 128][i], at.y, [60, 60, 112][i], 20);
+        if i == z {
+            ui.c.rect(r.x + 4, r.bottom(), r.w - 8, 2, t.up);
+        }
+        if ui.button(r, name, i != z) {
+            st.lineup_zoom = Some(i);
+        }
+    }
+    let past_min = if z == 0 { 60.0 } else { m.past_h.max(1.0) * 60.0 };
+    // The chains: every job of the hours, by the chain it is a link of, and what the forecast deals each.
+    let mut by: Vec<Group> = Vec::new();
+    let mut at_of: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+    for l in &m.lanes {
+        for j in &l.jobs {
+            let i = match at_of.get(j.chain.as_str()) {
+                Some(&i) => i,
+                None => {
+                    by.push(Group { id: &j.chain, meta: m.chains.iter().find(|c| c.id == j.chain), items: Vec::new(), sub: Vec::new(), subs: 0, last: f64::MIN, going: false });
+                    at_of.insert(&j.chain, by.len() - 1);
+                    by.len() - 1
+                }
+            };
+            by[i].items.push(Item { from: j.from, to: j.to, stage: &j.stage, id: &j.id, host: &l.host, ok: j.ok, wh: j.wh, hollow: false, after: &j.after });
+        }
+    }
+    for c in &m.chains {
+        for n in &c.next {
+            let (Some(a), Some(b)) = (n.from, n.to) else { continue };
+            let i = match at_of.get(c.id.as_str()) {
+                Some(&i) => i,
+                None => {
+                    by.push(Group { id: &c.id, meta: Some(c), items: Vec::new(), sub: Vec::new(), subs: 0, last: f64::MIN, going: false });
+                    at_of.insert(&c.id, by.len() - 1);
+                    by.len() - 1
+                }
+            };
+            by[i].items.push(Item { from: a, to: b, stage: &n.stage, id: &n.id, host: &n.host, ok: 3, wh: None, hollow: true, after: "" });
+        }
+    }
+    fn kind_of<'a>(g: &Group<'a>) -> &'a str {
+        g.meta.map(|c| c.kind.as_str()).unwrap_or("other")
+    }
+    let mut counts = [0usize; 5];
+    for g in by.iter().filter(|g| g.items.iter().any(|i| i.hollow || i.to >= -past_min)) {
+        counts[kind_group(kind_of(g))] += 1;
+        counts[4] += 1;
+    }
+    let kind = st.lineup_kind.min(LINEUP_KINDS.len() - 1);
+    let mut x = at.x + 4 + 128 + 112 + 16;
+    for (i, name) in LINEUP_KINDS.iter().enumerate() {
+        let n = if i == 4 { by.iter().filter(|g| g.items.iter().any(|it| it.hollow || it.to >= -past_min)).count() } else { counts[i] };
+        let say = format!("{} {}", name, n);
+        let w = F8X13.measure(&say) as i32 + 16;
+        let r = rect(x, at.y, w, 20);
+        if i == kind {
+            ui.c.rect(r.x + 4, r.bottom(), r.w - 8, 2, t.up);
+        }
+        if ui.button(r, &say, i != kind) {
+            st.lineup_kind = i;
+            st.lineup_off = 0;
+        }
+        x += w + 4;
+    }
+    let mut groups: Vec<Group> = by
+        .into_iter()
+        .filter(|g| g.items.iter().any(|i| i.hollow || i.to >= -past_min))
+        .filter(|g| kind == 4 || kind_group(kind_of(g)) == kind)
+        .collect();
+    // How it ended: each ending a button with its count, the chosen one the rows shown.
+    let end_of = |g: &Group| -> usize { match g.meta.and_then(|c| c.good) { None => 1, Some(true) => 2, Some(false) => 3 } };
+    let end = st.lineup_end.min(LINEUP_ENDS.len() - 1);
+    let mut ex = at.right() - 4;
+    for (i, name) in LINEUP_ENDS.iter().enumerate().rev() {
+        let n = groups.iter().filter(|g| i == 0 || end_of(g) == i).count();
+        let say = format!("{} {}", name, n);
+        let w = F8X13.measure(&say) as i32 + 16;
+        ex -= w;
+        let r = rect(ex, at.y, w, 20);
+        if i == end {
+            ui.c.rect(r.x + 4, r.bottom(), r.w - 8, 2, [t.ink, t.warn, t.up, t.alarm][i]);
+        }
+        if ui.button(r, &say, i != end) {
+            st.lineup_end = i;
+            st.lineup_off = 0;
+        }
+        ex -= 4;
+    }
+    groups.retain(|g| end == 0 || end_of(g) == end);
+    for g in groups.iter_mut() {
+        g.items.sort_by(|a, b| a.from.partial_cmp(&b.from).unwrap_or(std::cmp::Ordering::Equal));
+        let mut ends: Vec<f64> = Vec::new();
+        for it in &g.items {
+            let r = match ends.iter().position(|e| *e <= it.from + 0.05) {
+                Some(r) => r,
+                None => {
+                    ends.push(f64::MIN);
+                    ends.len() - 1
+                }
+            };
+            ends[r] = it.to;
+            g.sub.push(r);
+        }
+        g.subs = ends.len();
+        g.last = g.items.iter().filter(|i| !i.hollow).map(|i| i.to).fold(f64::MIN, f64::max);
+        g.going = g.meta.map(|c| c.good.is_none()).unwrap_or(true) && g.items.iter().any(|i| i.hollow || i.ok == 2);
+    }
+    // Going first, then the won, then the dead ends; each the newest first.
+    let rank = |g: &Group| match g.meta.and_then(|c| c.good) { None => 0, Some(true) => 1, Some(false) => 2 };
+    groups.sort_by(|a, b| rank(a).cmp(&rank(b)).then(b.going.cmp(&a.going)).then(b.last.partial_cmp(&a.last).unwrap_or(std::cmp::Ordering::Equal)));
+    // The page's frame, as the Timeline's: rows, then the fleet's watts under them.
+    let label_w = 268;
+    let head = 72;
+    let foot = 40;
+    let graph_h = if m.power.fleet_full > 0.0 && z < 2 { 88 } else { 0 };
+    let area = rect(at.x, at.y + head, at.w, at.h - head - foot - if graph_h > 0 { graph_h + 20 } else { 0 });
+    let mut lines: Vec<(usize, Option<usize>)> = Vec::new();
+    for (gi, g) in groups.iter().enumerate() {
+        lines.push((gi, None));
+        if !st.lineup_shut.iter().any(|s| s == g.id) {
+            lines.extend((0..g.subs).map(|r| (gi, Some(r))));
+        }
+    }
+    let rh = 18;
+    let mut off = st.lineup_off;
+    let (list, first, count) = ui.scroll_list(area, lines.len(), rh, &mut off);
+    st.lineup_off = off;
+    let plot = rect(list.x + label_w, list.y, list.w - label_w - 4, list.h);
+    let now_x = plot.x + plot.w * 7 / 10;
+    let ahead_min = groups.iter().flat_map(|g| g.items.iter().filter(|i| i.hollow).map(|i| i.to)).fold(30.0_f64, f64::max).min(240.0);
+    let xof = |min: f64| -> i32 {
+        if min <= 0.0 {
+            now_x + ((min.max(-past_min) / past_min) * (now_x - plot.x) as f64) as i32
+        } else {
+            now_x + ((min.min(ahead_min) / ahead_min) * (plot.right() - now_x) as f64) as i32
+        }
+    };
+    let shown = count.min(lines.len().saturating_sub(first));
+    let list_h = shown as i32 * rh;
+    // Each chain's own span, for "each its own": from its first job to its last, the forecast's with it.
+    let span: Vec<(f64, f64)> = groups.iter().map(|g| {
+        let v: Vec<&Item> = g.items.iter().filter(|i| i.hollow || i.to >= -past_min).collect();
+        let a = v.iter().map(|i| i.from).fold(f64::MAX, f64::min);
+        let b = v.iter().map(|i| i.to).fold(f64::MIN, f64::max);
+        (a, b.max(a + 1.0))
+    }).collect();
+    let gx = |gi: usize, min: f64| -> i32 {
+        if fit {
+            let (a, b) = span[gi];
+            plot.x + 2 + (((min - a) / (b - a)).clamp(0.0, 1.0) * (plot.w - 70) as f64) as i32
+        } else {
+            xof(min)
+        }
+    };
+    if fit {
+        ui.label(list.x + 4, plot.y - 14, "each chain, its jobs from its first to its last, stretched across", &F8X13, t.ink);
+    } else {
+        hour_ticks(ui, plot, list_h.max(rh), past_min, ahead_min, z, &xof);
+        ui.label(list.x + 4, plot.y - 14, "each chain, its jobs in time", &F8X13, t.ink);
+    }
+    // Where each visible line is.
+    let mut y_of: std::collections::HashMap<(usize, Option<usize>), i32> = std::collections::HashMap::new();
+    for (k, line) in lines.iter().enumerate().skip(first).take(shown) {
+        y_of.insert(*line, list.y + (k - first) as i32 * rh);
+    }
+    for (k, (gi, sub)) in lines.iter().enumerate().skip(first).take(shown) {
+        let g = &groups[*gi];
+        let y = list.y + (k - first) as i32 * rh;
+        let good = g.meta.and_then(|c| c.good);
+        let tone = match good { Some(true) => t.up, Some(false) => t.alarm, None => t.warn };
+        match sub {
+            None => {
+                let r = rect(list.x, y, plot.right() - list.x, rh - 1);
+                ui.c.rect(r.x, r.y, r.w, r.h, t.tile);
+                ui.c.rect(r.x, r.y, 3, r.h, tone);
+                let shut = st.lineup_shut.iter().any(|s| s == g.id);
+                let name_end = ui.label(r.x + 7, y + 2, &format!("{} {}", if shut { "+" } else { "-" }, g.id), &F8X13, t.ink);
+                let say = g.meta.map(|c| c.say.as_str()).unwrap_or("");
+                ui.label_in(name_end + 8, y + 4, list.x + label_w - name_end - 12, say, &F6X10, tone);
+                // Its span, and how it ended, on its own head row.
+                let real: Vec<&Item> = g.items.iter().filter(|i| !i.hollow && i.to >= -past_min).collect();
+                if let (Some(a), Some(_)) = (real.first(), real.last()) {
+                    let x0 = gx(*gi, a.from);
+                    let x1 = gx(*gi, g.last);
+                    if fit {
+                        let (s0, s1) = span[*gi];
+                        ui.label(plot.x + 2, y + 4, &format!("{} to {}: {}", clock(&m.timeline_at, s0), if s1 > 0.0 { format!("+{} on", took(s1)) } else { clock(&m.timeline_at, s1) }, took(s1 - s0)), &F6X10, t.dim);
+                    }
+                    ui.c.hline(x0, y + rh / 2, (x1 - x0).max(1), t.line);
+                    let (word, c) = match good {
+                        Some(true) => ("won", t.up),
+                        Some(false) => ("dead end", t.alarm),
+                        None => ("going", t.warn),
+                    };
+                    let w = F6X10.measure(word) as i32 + 6;
+                    let tx = if fit { (x1 + 3).min(plot.right() - w - 2) } else { (x1 + 3).min(now_x - w - 2) };
+                    ui.c.rect(tx, y + 3, w, rh - 7, c);
+                    ui.label(tx + 3, y + 4, word, &F6X10, t.base);
+                }
+                if ui.button_hit(r) {
+                    if shut {
+                        st.lineup_shut.retain(|s| s != g.id);
+                    } else {
+                        st.lineup_shut.push(g.id.to_string());
+                    }
+                }
+                let wh: f64 = g.items.iter().filter_map(|i| i.wh).sum();
+                let hosts: std::collections::BTreeSet<&str> = g.items.iter().filter(|i| !i.hollow).map(|i| i.host).collect();
+                ui.tip(r, || vec![
+                    format!("{}: {}", g.id, say),
+                    format!("{} jobs on {} machines in the last {:.0} h{}; {:.1} Wh, ${:.3}", g.items.iter().filter(|i| !i.hollow).count(), hosts.len(), past_min / 60.0,
+                            if g.items.iter().any(|i| i.hollow) { format!(", {} more dealt", g.items.iter().filter(|i| i.hollow).count()) } else { String::new() }, wh, wh / 1000.0 * m.power.rate),
+                    "A click folds it. Its sub-rows are its forks: jobs of it that ran at once, a held-out read's pieces among them.".to_string(),
+                ]);
+            }
+            Some(r_) => {
+                // The fork's line from the head, as an accordion stands open.
+                let first_item = g.items.iter().zip(&g.sub).find(|(_, s)| *s == r_).map(|(i, _)| i);
+                let n = g.sub.iter().filter(|s| **s == *r_).count();
+                let tx = list.x + 12;
+                ui.c.vline(tx, y - 2, if *r_ + 1 == g.subs { rh / 2 + 2 } else { rh + 1 }, t.line);
+                ui.c.hline(tx, y + rh / 2, 8, t.line);
+                if let Some(fi) = first_item {
+                    ui.label_in(tx + 12, y + 4, label_w - 30, &format!("{}{}", line::short(fi.stage), if n > 1 { format!(" and {} more", n - 1) } else { String::new() }), &F6X10, t.dim);
+                }
+                for (it, _) in g.items.iter().zip(&g.sub).filter(|(_, s)| *s == r_) {
+                    if !it.hollow && it.to < -past_min {
+                        continue;
+                    }
+                    let (a, e) = (gx(*gi, it.from), gx(*gi, it.to));
+                    let b = rect(a, y + 2, (e - a).max(2), rh - 5);
+                    if it.hollow {
+                        ui.outline(b, line::colour(it.stage));
+                    } else {
+                        ui.c.rect(b.x, b.y, b.w, b.h, if it.ok == 0 { t.alarm } else { line::colour(it.stage) });
+                    }
+                    // Its machine first, then its job, as much as there is room for.
+                    let both = format!("{} {}", it.host, it.id);
+                    let say = if F6X10.measure(&both) as i32 + 6 <= b.w { both } else { it.host.to_string() };
+                    if b.w > 14 {
+                        ui.label_in(b.x + 3, b.y + 2, b.w - 5, &say, &F6X10, if it.hollow { line::colour(it.stage) } else { t.base });
+                    }
+                    ui.tip(b, || vec![
+                        format!("{}: {}, on {}", it.id, line::short(it.stage), if it.host.is_empty() { "the next free machine" } else { it.host }),
+                        if it.hollow { format!("Forecast: starts in {}, ends in {}.", took(it.from), took(it.to)) }
+                        else { format!("{} to {}, {}{}", clock(&m.timeline_at, it.from), if it.ok == 2 { "now".to_string() } else { clock(&m.timeline_at, it.to) }, took(it.to - it.from),
+                                       match it.ok { 0 => ", failed or sent back", 2 => ", running", _ => "" }) },
+                        it.wh.map(|w| format!("{:.1} Wh at the wall, ${:.4}", w, w / 1000.0 * m.power.rate)).unwrap_or_default(),
+                        format!("Chain {}.", g.id),
+                    ]);
+                }
+                // A dead end's wall: where its last job stopped.
+                if good == Some(false) {
+                    if let Some((it, _)) = g.items.iter().zip(&g.sub).filter(|(i, s)| *s == r_ && !i.hollow).max_by(|a, b| a.0.to.partial_cmp(&b.0.to).unwrap_or(std::cmp::Ordering::Equal)) {
+                        if (it.to - g.last).abs() < 0.01 {
+                            let x = gx(*gi, it.to) + 2;
+                            ui.c.rect(x, y + 1, 3, rh - 3, t.alarm);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // The arrows, over the blocks: from the job each followed to its own start.
+    for (gi, g) in groups.iter().enumerate() {
+        for k in 0..g.items.len() {
+            let Some(p) = g.prev(k) else { continue };
+            let (a, b) = (&g.items[p], &g.items[k]);
+            if (!a.hollow && a.to < -past_min) || (g.sub[p] == g.sub[k] && b.from - a.to < 0.5) {
+                continue;
+            }
+            let (Some(&ya), Some(&yb)) = (y_of.get(&(gi, Some(g.sub[p]))), y_of.get(&(gi, Some(g.sub[k])))) else { continue };
+            let (x0, y0) = (gx(gi, a.to), ya + rh / 2);
+            let (x1, y1) = (gx(gi, b.from).max(x0 + 3), yb + rh / 2);
+            pointer(ui, (x0 + 1, y0 + 1), (x1 + 1, y1 + 1), t.base);
+            pointer(ui, (x0, y0), (x1, y1), if b.hollow { t.dim } else { t.warn });
+        }
+    }
+    if !fit {
+        milestones(ui, m, plot, list_h.max(rh), rh, past_min, &xof, false);
+        ui.c.vline(now_x, plot.y - 2, list_h + 4, t.ink);
+        ui.c.vline(now_x + 1, plot.y - 2, list_h + 4, t.ink);
+    }
+    if graph_h > 0 {
+        if let Some(src) = m.zoom.iter().find(|l| l.name == "day").filter(|l| !l.watts.is_empty()) {
+            let g = rect(plot.x, area.bottom() + 16, plot.w, graph_h);
+            power_graph(ui, m, src, g, rect(at.x + 4, g.y, 120, g.h), now_x, past_min, &xof);
+        }
+    }
+    let y = at.bottom() - foot + 6;
+    ui.label_in(at.x + 4, y, at.w - 8, "Each chain on its own rows, its jobs where they ran in time, each block its machine and job. A fork stands open under it on sub-rows: jobs of the chain that ran at once.", &F8X13, t.dim);
+    ui.label_in(at.x + 4, y + 15, at.w - 8, "Arrows: the job each followed. Green: won (promoted, built, shipped). Red wall: a dead end. Amber: still going. Hollow: what the forecast deals it next.", &F8X13, t.dim);
+}
+
+/// The Lineup's and the Timeline's clock: the hour by ten minutes or the six hours by the hour, back
+/// from now; the forecast by quarter, half or whole hours on.
+fn hour_ticks(ui: &mut Ui, plot: Rect, h: i32, past_min: f64, ahead_min: f64, z: usize, xof: &dyn Fn(f64) -> i32) {
+    let t = ui.t;
+    let every = if z == 0 { 10.0 } else { 60.0 };
+    let mut k = -past_min;
+    while k < -0.5 {
+        let x = xof(k);
+        ui.c.vline(x, plot.y, h, t.line);
+        let say = if z == 0 { format!("{} min", k as i32) } else { format!("{} h", (k / 60.0) as i32) };
+        ui.label(x + 2, plot.y - 14, &say, &F8X13, t.dim);
+        k += every;
+    }
+    let step = [15.0, 30.0, 60.0].into_iter().find(|s| ahead_min / s <= 4.0).unwrap_or(120.0);
+    let mut k = step;
+    while k <= ahead_min {
+        let x = xof(k);
+        ui.c.vline(x, plot.y, h, t.line);
+        if x + 60 < plot.right() {
+            ui.label(x + 2, plot.y - 14, &format!("+{}", took(k)), &F8X13, t.dim);
+        }
+        k += step;
+    }
+}
+
+/// The Hit Parade's windows.
+pub const PARADE_WINDOWS: [&str; 3] = ["today", "week", "all"];
+/// The kinds of job, the columns of the wall, in the line's order.
+const PARADE_KINDS: [&str; 10] = ["first", "read", "held", "families", "promote", "build", "proof", "transform", "islands", "other"];
+
+/// THE HIT PARADE (Paul, 5 November: "generate a graph, a rate of type per machine, and keep the
+/// statistic in a chart: a new screen, it's like a success counter matrix, a wall of success.
+/// Approved by Von Glurt"). Named for Your Hit Parade, the countdown of the 1950s. Every machine a
+/// row, every kind of job a column: each cell the jobs it did, the share that came back done, its
+/// rate an hour and its energy a job. Beside the wall each machine's rate by kind as one bar; under
+/// it a bar a day since the event log began. The planner keeps the tally by day (plan/timeline-bins.json).
+fn parade(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
+    let t = ui.t;
+    let p = &m.parade;
+    if p.windows.is_empty() {
+        ui.label_in(at.x + 4, at.y + 4, at.w - 8, "The planner has not written the Hit Parade yet: it does at its next pass, about a minute.", &F8X13, t.dim);
+        return;
+    }
+    let wi = st.parade_win.min(PARADE_WINDOWS.len() - 1);
+    let since = format!("since {}", p.since.get(5..10).unwrap_or(&p.since));
+    for (i, name) in ["today", "the last 7 days", since.as_str()].iter().enumerate() {
+        let r = rect(at.x + 4 + i as i32 * 152, at.y, 148, 20);
+        if i == wi {
+            ui.c.rect(r.x + 4, r.bottom(), r.w - 8, 2, t.up);
+        }
+        if ui.button(r, name, i != wi) {
+            st.parade_win = i;
+        }
+    }
+    let Some(w) = p.windows.iter().find(|x| x.name == PARADE_WINDOWS[wi]) else { return };
+    let cell_of = |h: &str, k: &str| -> Option<&Tally> { w.cells.iter().find(|(x, _)| x == h).and_then(|(_, v)| v.iter().find(|(s, _)| s == k)).map(|(_, c)| c) };
+    let all: Vec<&Tally> = w.cells.iter().flat_map(|(_, v)| v.iter().map(|(_, c)| c)).collect();
+    let (done, failed): (f64, f64) = all.iter().fold((0.0, 0.0), |a, c| (a.0 + c.done, a.1 + c.failed));
+    let wh: f64 = all.iter().map(|c| c.wh).sum();
+    // The scoreboard: the counters that answer first.
+    let board = [
+        (format!("{:.0}", done), "jobs done".to_string(), t.up),
+        (format!("{:.0}", failed), "not done".to_string(), if failed > 0.0 { t.alarm } else { t.dim }),
+        (format!("{:.1}%", if done + failed > 0.0 { 100.0 * done / (done + failed) } else { 0.0 }), "came back done".to_string(), t.up),
+        (format!("{:.0}", done / w.hours.max(0.01)), "jobs an hour".to_string(), t.ink),
+        (format!("{:.1}", wh / 1000.0), format!("kWh, ${:.2}", wh / 1000.0 * m.power.rate), heat(0.75)),
+    ];
+    let mut x = at.x + 4;
+    for (big, small, c) in &board {
+        let r = rect(x, at.y + 28, 150, 44);
+        ui.c.rect(r.x, r.y, r.w, r.h, t.tile);
+        ui.outline(r, t.line);
+        ui.label(r.x + 8, r.y + 4, big, &F10X20, *c);
+        ui.label(r.x + 8, r.y + 28, small, &F6X10, t.dim);
+        x += 156;
+    }
+    ui.label(x + 6, at.y + 32, &format!("over {:.0} h", w.hours), &F8X13, t.dim);
+    if wi == 2 {
+        ui.label(x + 6, at.y + 48, &format!("since {}", p.since), &F6X10, t.dim);
+    }
+    // The seal, top right: approved.
+    von_glurt_seal(ui, at.right() - 62, at.y + 54, 50);
+    // The wall.
+    let kinds: Vec<&str> = PARADE_KINDS.iter().copied().filter(|k| all_kind(w, k)).collect();
+    let hosts: Vec<&str> = m.lanes.iter().map(|l| l.host.as_str()).filter(|h| w.cells.iter().any(|(x, _)| x == h)).collect();
+    let hist_h = 96;
+    let top = at.y + 84;
+    let rate_w = 260;
+    let label_w = 120;
+    let wall = rect(at.x + 4, top, at.w - rate_w - 16, at.h - (top - at.y) - hist_h - 22);
+    let cw = ((wall.w - label_w) / (kinds.len() as i32 + 1).max(1)).min(112);
+    let ch = (wall.h / (hosts.len() as i32 + 2).max(1)).clamp(24, 52);
+    for (i, k) in kinds.iter().enumerate() {
+        let r = rect(wall.x + label_w + i as i32 * cw, wall.y, cw - 3, 16);
+        ui.c.rect(r.x, r.y + 12, r.w, 3, line::colour(k));
+        ui.label_in(r.x + 2, r.y, r.w - 4, line::short(k), &F6X10, t.ink);
+    }
+    ui.label_in(wall.x + label_w + kinds.len() as i32 * cw + 2, wall.y, cw - 4, "every kind", &F6X10, t.ink);
+    let col_max: Vec<f64> = kinds.iter().map(|k| hosts.iter().filter_map(|h| cell_of(h, k)).map(|c| c.done).fold(1.0, f64::max)).collect();
+    let row_y = |r: usize| wall.y + 20 + r as i32 * ch;
+    for (r, h) in hosts.iter().enumerate() {
+        let y = row_y(r);
+        ui.label_in(wall.x, y + 4, label_w - 6, h, &F8X13, t.ink);
+        let mut tot = Tally::default();
+        for (i, k) in kinds.iter().enumerate() {
+            let c = cell_of(h, k);
+            let r_ = rect(wall.x + label_w + i as i32 * cw, y, cw - 3, ch - 3);
+            cell(ui, r_, c, col_max[i], w.hours, m.power.rate, k);
+            if let Some(c) = c {
+                tot.done += c.done;
+                tot.failed += c.failed;
+                tot.minutes += c.minutes;
+                tot.wh += c.wh;
+                let say = (h.to_string(), line::short(k));
+                ui.tip(r_, || tally_tip(&say.0, say.1, c, w.hours, m.power.rate));
+            }
+        }
+        let r_ = rect(wall.x + label_w + kinds.len() as i32 * cw, y, cw - 3, ch - 3);
+        cell(ui, r_, Some(&tot), f64::MAX, w.hours, m.power.rate, "other");
+    }
+    // The totals of each kind, the wall's floor.
+    let y = row_y(hosts.len());
+    ui.label_in(wall.x, y + 4, label_w - 6, "every machine", &F8X13, t.ink);
+    for (i, k) in kinds.iter().enumerate() {
+        let mut tot = Tally::default();
+        for h in &hosts {
+            if let Some(c) = cell_of(h, k) {
+                tot.done += c.done;
+                tot.failed += c.failed;
+                tot.minutes += c.minutes;
+                tot.wh += c.wh;
+            }
+        }
+        cell(ui, rect(wall.x + label_w + i as i32 * cw, y, cw - 3, ch - 3), Some(&tot), f64::MAX, w.hours, m.power.rate, k);
+    }
+    // Each machine's rate by kind, one bar: jobs an hour.
+    let rr = rect(at.right() - rate_w - 4, top, rate_w, wall.h);
+    ui.label(rr.x, rr.y, "jobs an hour, by kind", &F8X13, t.ink);
+    let rate_of = |h: &str| -> f64 { kinds.iter().filter_map(|k| cell_of(h, k)).map(|c| c.done).sum::<f64>() / w.hours.max(0.01) };
+    let most = hosts.iter().map(|h| rate_of(h)).fold(1.0, f64::max);
+    for (r, h) in hosts.iter().enumerate() {
+        let y = row_y(r) + ch / 2 - 6;
+        let mut x = rr.x;
+        let full = rr.w - 48;
+        for k in &kinds {
+            if let Some(c) = cell_of(h, k) {
+                let bw = ((c.done / w.hours.max(0.01)) / most * full as f64).round() as i32;
+                if bw > 0 {
+                    ui.c.rect(x, y, bw, 12, line::colour(k));
+                    x += bw;
+                }
+            }
+        }
+        ui.label(x + 4, y, &format!("{:.1}", rate_of(h)), &F6X10, t.ink);
+    }
+    // The history: a bar a day, done in green with what was not done in red on top.
+    let hr = rect(at.x + 4, at.bottom() - hist_h - 4, at.w - 8, hist_h);
+    ui.label(hr.x, hr.y, &format!("a bar a day since {}: jobs done, not done in red (each bar's kWh on the inspector)", p.since.get(..10).unwrap_or(&p.since)), &F8X13, t.ink);
+    let bars = rect(hr.x, hr.y + 18, hr.w - 4, hr.h - 34);
+    let most = p.days.iter().map(|d| d.1 + d.2).fold(1.0, f64::max);
+    let n = p.days.len().max(1) as i32;
+    let bw = (bars.w / n).clamp(6, 60);
+    for (i, (d, ok, bad, whd)) in p.days.iter().enumerate() {
+        let x = bars.x + i as i32 * bw;
+        let h_ok = ((ok / most) * bars.h as f64).round() as i32;
+        let h_bad = ((bad / most) * bars.h as f64).round().max(if *bad > 0.0 { 1.0 } else { 0.0 }) as i32;
+        ui.c.rect(x, bars.bottom() - h_ok, bw - 3, h_ok, t.up);
+        ui.c.rect(x, bars.bottom() - h_ok - h_bad, bw - 3, h_bad, t.alarm);
+        if bw >= 40 {
+            ui.label_in(x, bars.bottom() + 2, bw - 3, d.get(5..).unwrap_or(d), &F6X10, t.dim);
+        }
+        let r = rect(x, bars.y, bw - 3, bars.h);
+        ui.tip(r, || vec![d.clone(), format!("{:.0} jobs done, {:.0} not", ok, bad), format!("{:.1} kWh drawn by them, ${:.2}", whd / 1000.0, whd / 1000.0 * m.power.rate)]);
+    }
+}
+
+fn all_kind(w: &ParadeWindow, k: &str) -> bool {
+    w.cells.iter().any(|(_, v)| v.iter().any(|(s, c)| s == k && c.done + c.failed > 0.0))
+}
+
+/// A counter on the wall: its count large, the share done, the rate an hour and the energy a job;
+/// its lamp, along the top, as bright as its count is against its column's most.
+fn cell(ui: &mut Ui, r: Rect, c: Option<&Tally>, col_max: f64, hours: f64, rate: f64, kind: &str) {
+    let t = ui.t;
+    ui.c.rect(r.x, r.y, r.w, r.h, t.tile);
+    let Some(c) = c.filter(|c| c.done + c.failed > 0.0) else {
+        ui.outline(r, t.line);
+        return;
+    };
+    let lit = if col_max.is_finite() { (c.done / col_max).clamp(0.0, 1.0) } else { 1.0 };
+    ui.c.rect(r.x, r.y, ((r.w as f64) * lit).round().max(2.0) as i32, 3, line::colour(kind));
+    let share = 100.0 * c.done / (c.done + c.failed);
+    ui.label(r.x + 4, r.y + 5, &format!("{:.0}", c.done), if r.h >= 44 { &F10X20 } else { &F8X13 }, t.ink);
+    let tone = if share >= 99.0 { t.up } else if share >= 90.0 { t.warn } else { t.alarm };
+    if r.h >= 44 {
+        ui.label_right(r.right() - 4, r.y + 8, &format!("{:.0}%", share), &F6X10, tone);
+        ui.label_in(r.x + 4, r.y + r.h - 13, r.w - 8, &format!("{:.1}/h {:.1}Wh", c.done / hours.max(0.01), c.wh / (c.done + c.failed)), &F6X10, t.dim);
+    } else {
+        ui.label_right(r.right() - 4, r.y + 6, &format!("{:.0}%", share), &F6X10, tone);
+    }
+    let _ = rate;
+}
+
+fn tally_tip(h: &str, k: &str, c: &Tally, hours: f64, rate: f64) -> Vec<String> {
+    vec![
+        format!("{}: {}", h, k),
+        format!("{:.0} done, {:.0} not (failed, stopped or sent back): {:.1}% came back done", c.done, c.failed, 100.0 * c.done / (c.done + c.failed).max(1.0)),
+        format!("{:.2} an hour over {:.0} h; {} a job on average", c.done / hours.max(0.01), hours, took(c.minutes / (c.done + c.failed).max(1.0))),
+        format!("{:.1} Wh a job at the wall, {:.2} kWh in all, ${:.2}", c.wh / (c.done + c.failed).max(1.0), c.wh / 1000.0, c.wh / 1000.0 * rate),
+    ]
+}
+
+/// THE VON GLURT SEAL OF APPROVAL, as the lab report's, in the console's few strokes: navy cloth, a
+/// gold rim and a satin ring, the house's name and its word.
+pub fn von_glurt_seal(ui: &mut Ui, cx: i32, cy: i32, r: i32) {
+    let gold = 0xd4a640;
+    let deep = 0x8a6418;
+    ui.c.disc(cx, cy, r, deep);
+    ui.c.disc(cx, cy, r - 3, gold);
+    ui.c.disc(cx, cy, r - 6, 0x1c2747);
+    for k in [r - 9, r - 10] {
+        ui.c.ring(cx, cy, k, gold);
+    }
+    // The stitches round the rim.
+    for i in 0..36 {
+        let a = i as f64 * std::f64::consts::PI / 18.0;
+        let (x, y) = (cx + ((r - 1) as f64 * a.cos()) as i32, cy + ((r - 1) as f64 * a.sin()) as i32);
+        ui.c.rect(x, y, 2, 2, 0xf3d27a);
+    }
+    let w1 = F6X10.measure("VON GLURT") as i32;
+    ui.label(cx - w1 / 2, cy - 15, "VON GLURT", &F6X10, gold);
+    let w2 = F8X13.measure("APPROVED") as i32;
+    ui.label(cx - w2 / 2, cy - 4, "APPROVED", &F8X13, 0xf3d27a);
+    ui.c.hline(cx - 22, cy + 11, 44, gold);
+    let w3 = F6X10.measure("MMXXVI XI V") as i32;
+    ui.label(cx - w3 / 2, cy + 14, "MMXXVI XI V", &F6X10, gold);
 }
 
 fn number(v: f64, step: f64) -> String {
@@ -2135,6 +3061,44 @@ mod tests {
         assert!(job_tip(&q[1], "a").iter().any(|l| l.contains("between two machines")));
         assert_eq!(wrap("one two three four", 9), vec!["one two", "three", "four"]);
         assert!(job_is(Some(&("a".to_string(), Some("h1".to_string()))), "a", "h1") && !job_is(None, "a", "h1"));
+    }
+
+    #[test]
+    fn the_fleets_watts_are_read_and_coloured_blue_to_red() {
+        let doc = r#"{"timeline":{"past_h":6,"lanes":[{"host":"boburner","up":true,"jobs":[[-10,-4,"read",1,"e1","w1","",13.2]]}],
+          "zoom":[{"name":"day","bin_min":5,"from_min":-1435,"lanes":[],"watts":{"boburner":[null,120,140]}}],
+          "power":{"rate":0.17,"lanes_now":{"boburner":140,"boburner-cuda":80},"fleet_now_w":220,"fleet_full_w":1724,"kwh_24h":38.6,
+                   "usd_24h":6.56,"usd_30d":196.7,"jobs_today":{"boburner":[316,1869.8]},"sampled":"14:26",
+                   "boxes":[{"box":"boburner","cpu":"AMD Ryzen 7 3700X","gpu":"GeForce GTX 1070 Ti","full_w":220,"now_w":220,"busy_util":0.9,"gpu_busy_w":70.5,"samples":{"cpu":3,"gpu":3}}]}}}"#;
+        let m = Model::parse(doc);
+        assert_eq!(m.lanes[0].jobs[0].wh, Some(13.2));
+        assert_eq!(m.zoom[0].watts[0].1, vec![None, Some(120.0), Some(140.0)], "none before the log begins");
+        assert_eq!((m.power.fleet_full, m.power.lane_now("boburner-cuda"), m.power.today("boburner")), (1724.0, Some(80.0), Some((316.0, 1869.8))));
+        assert_eq!(m.power.box_of("boburner-cuda").map(|b| b.full), Some(220.0), "a GPU lane is part of its box");
+        assert_eq!((heat(0.0), heat(0.25), heat(0.5), heat(0.75), heat(1.0)), (0x2a5bd7, 0xf0f0f0, 0x9b4fd0, 0xf2c200, 0xe8332a));
+        assert_eq!((heat(-1.0), heat(9.0), heat(f64::NAN)), (0x2a5bd7, 0xe8332a, 0x2a5bd7));
+        assert_eq!(mix(0x000000, 0xffffff, 0.5), 0x808080);
+    }
+
+    #[test]
+    fn the_lineup_reads_each_chains_end_and_the_hit_parade_its_tally() {
+        let doc = r#"{"timeline":{"past_h":6,"lanes":[],
+          "chains":{"w1":{"kind":"trial","good":false,"say":"dead end: dropped after 2 reads","next":[]},
+                    "w2":{"kind":"trial","good":null,"say":"reading on","next":[[2.5,9,"read","e5","calber"],[null,null,"held","h1",""]]}},
+          "parade":{"since":"2026-10-28 09:34","days":[["2026-11-05",2679,3,24043.8]],
+                    "today":{"hours":14.8,"cells":{"macmini":{"first":[300,1,410.5,190.2]}}},"week":{"hours":159.8,"cells":{}},"all":{"hours":198.2,"cells":{}}}}}"#;
+        let m = Model::parse(doc);
+        let w1 = m.chains.iter().find(|c| c.id == "w1").unwrap();
+        let w2 = m.chains.iter().find(|c| c.id == "w2").unwrap();
+        assert_eq!((w1.good, w2.good, w2.next.len()), (Some(false), None, 2));
+        assert_eq!((w2.next[0].host.as_str(), w2.next[1].from), ("calber", None), "a job no machine is dealt yet has no time");
+        assert_eq!(m.parade.windows.iter().map(|w| w.name.as_str()).collect::<Vec<_>>(), vec!["today", "week", "all"]);
+        assert_eq!(m.parade.windows[0].cells[0].1[0].1, Tally { done: 300.0, failed: 1.0, minutes: 410.5, wh: 190.2 });
+        assert_eq!(m.parade.days[0].1, 2679.0);
+        assert_eq!((kind_group("trial"), kind_group("patch"), kind_group("island"), kind_group("other")), (0, 1, 3, 4));
+        let it = |id: &'static str, from: f64, to: f64, after: &'static str| Item { from, to, stage: "read", id, host: "a", ok: 1, wh: None, hollow: false, after };
+        let g = Group { id: "w1", meta: None, items: vec![it("w1", -10.0, -8.0, ""), it("e1", -8.0, -5.0, ""), it("h1-p1", -5.0, -2.0, ""), it("h1-p2", -5.0, -3.0, "")], sub: vec![0, 0, 0, 1], subs: 2, last: -2.0, going: false };
+        assert_eq!((g.prev(0), g.prev(1), g.prev(2), g.prev(3)), (None, Some(0), Some(1), Some(1)), "both pieces of the fork follow the read-on");
     }
 
     #[test]

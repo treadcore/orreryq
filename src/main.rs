@@ -847,6 +847,11 @@ fn write_frame(
                     zoom: std::env::var("ORRERY_FRAME_ZOOM").ok().and_then(|z| pipeline::ZOOMS.iter().position(|x| *x == z)),
                     // ORRERY_FRAME_BLAME=host or host/job: the Blame page keeps that, as a click does.
                     blame_keep: std::env::var("ORRERY_FRAME_BLAME").ok().map(|v| match v.split_once('/') { Some((h, j)) => (h.to_string(), Some(j.to_string())), None => (v, None) }),
+                    // ORRERY_FRAME_LINEUP=runs: the Lineup's kind; ORRERY_FRAME_PARADE=week: the Hit Parade's window.
+                    lineup_kind: std::env::var("ORRERY_FRAME_LINEUP").ok().and_then(|z| pipeline::LINEUP_KINDS.iter().position(|x| *x == z)).unwrap_or(0),
+                    lineup_zoom: std::env::var("ORRERY_FRAME_ZOOM").ok().and_then(|z| ["hour", "hours"].iter().position(|x| *x == z)),
+                    lineup_end: std::env::var("ORRERY_FRAME_LINEUP_END").ok().and_then(|z| pipeline::LINEUP_ENDS.iter().position(|x| *x == z)).unwrap_or(0),
+                    parade_win: std::env::var("ORRERY_FRAME_PARADE").ok().and_then(|z| pipeline::PARADE_WINDOWS.iter().position(|x| *x == z)).unwrap_or(0),
                     ..Default::default()
                 };
                 let keys = pipeline::column_keys(st.page);
