@@ -70,6 +70,7 @@ mod analysis;
 mod nets;
 mod growth;
 mod montage;
+mod videos;
 mod recordings;
 mod orchestrate;
 mod pipeline;

@@ -1692,6 +1692,20 @@ def main(argv):
         sys.stdout.write(r.stdout)
         sys.stderr.write(r.stderr)
         sys.exit(r.returncode)
+    elif cmd == "videos":
+        # Results, Videos: a film in orrery's output folder opened in this machine's own player, or shown in
+        # its file browser. NAME is a file's name in that folder and nothing else: no path reaches here.
+        out = os.environ.get("ORRERY_OUTPUT") or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "output")
+        verb, name = (argv[2:3] or [""])[0], (argv[3:4] or [""])[0]
+        path = os.path.join(out, name)
+        if verb not in ("open", "show") or not re.match(r"^[\w.-]+\.mp4$", name) or not os.path.isfile(path):
+            print("videos open|show NAME: NAME an .mp4 in %s" % out)
+            sys.exit(2)
+        mac = sys.platform == "darwin"
+        cmdv = (["open", path] if verb == "open" else ["open", "-R", path]) if mac else ["xdg-open", path if verb == "open" else out]
+        subprocess.Popen(cmdv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        print("%s %s" % ("playing" if verb == "open" else "showing", path))
+        sys.exit(0)
     elif cmd == "runs":
         r = subprocess.run(["bash", "-c", "%s runs" % q.config()["planner"]], text=True)
         sys.exit(r.returncode)

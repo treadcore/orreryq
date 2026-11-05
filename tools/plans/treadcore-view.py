@@ -408,6 +408,63 @@ def bridge():
     return doc
 
 
+def videos():
+    """The films in orrery's output folder (montage.py copies each there with a .txt of its title,
+    description and chapter marks): what Results, Videos lists. A list with data, not a player. A
+    montage's length, chapters and generations come from its summary in the archive; any other .mp4's
+    length from ffprobe, once, kept in plan/videos.json by its size and time."""
+    out = os.environ.get("ORRERY_OUTPUT") or os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "output")
+    if not os.path.isdir(out):
+        return {"dir": out, "videos": []}
+    cache_p = os.path.join(QDIR, "plan", "videos.json") if QDIR else ""
+    cache = (load_json(cache_p) or {}) if cache_p else {}
+    changed = False
+    rows = []
+    for name in sorted(os.listdir(out)):
+        if not name.lower().endswith(".mp4"):
+            continue
+        path = os.path.join(out, name)
+        st = os.stat(path)
+        row = {"name": name, "path": path, "bytes": st.st_size, "at": time.strftime("%Y-%m-%d %H:%M", time.localtime(st.st_mtime)),
+               "mtime": st.st_mtime, "seconds": None, "chapters": None, "gens": "", "title": "", "description": "", "marks": [], "txt": ""}
+        txt = path[:-4] + ".txt"
+        if os.path.exists(txt):
+            row["txt"] = txt
+            parts = [x.strip() for x in read(txt).split("\n\n")]
+            row["title"] = parts[0] if parts else ""
+            row["description"] = parts[1] if len(parts) > 1 else ""
+        m = re.match(r"^treadcore-montage-(\d{4})\.mp4$", name)
+        summ = load_json(os.path.join(QDIR, "archive", "montages", m.group(1), "summary.json")) if (m and QDIR) else None
+        if summ:
+            chs = summ.get("chapters") or []
+            row.update(n=summ.get("n"), seconds=summ.get("seconds"), chapters=len(chs), marks=summ.get("marks") or [],
+                       gens=("%s to %s" % (format(chs[0]["gen"], ","), format(chs[-1]["gen"], ","))) if chs else "")
+        else:
+            key = "%s|%d|%d" % (name, st.st_size, int(st.st_mtime))
+            if key not in cache:
+                r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path], capture_output=True, text=True, timeout=60) if shutil_which("ffprobe") else None
+                try:
+                    cache[key] = float(r.stdout.strip()) if r else None
+                except ValueError:
+                    cache[key] = None
+                changed = True
+            row["seconds"] = cache[key]
+        rows.append(row)
+    if changed and cache_p:
+        try:
+            with open(cache_p + ".part", "w") as f:
+                json.dump(cache, f)
+            os.replace(cache_p + ".part", cache_p)
+        except OSError:
+            pass
+    rows.sort(key=lambda r: -r["mtime"])
+    return {"dir": out, "videos": rows, "bytes": sum(r["bytes"] for r in rows)}
+
+
+def shutil_which(cmd):
+    return any(os.access(os.path.join(d, cmd), os.X_OK) for d in os.environ.get("PATH", "").split(os.pathsep) + ["/opt/homebrew/bin", "/usr/local/bin"])
+
+
 def montage():
     """montage.py's state, and the films in archive/montages, newest first, each with its chapters'
     wins from one start: what the Montage page draws. The newest frame's path while one is made."""
@@ -609,6 +666,6 @@ if __name__ == "__main__":
     qd = queue()
     doc = {"fleet": FLEET, "queue": qd, "project": "treadcore", "at": time.strftime("%H:%M:%S"),
            "machines": machines(run, qd), "run": run, "loop": loop(), "net": net(), "algorhythm": algorhythm(), "analysis": analysis(), "long_run": long_run(), "quality": quality(),
-           "ranges": ranges(), "personas": personas(), "gauntlet": gauntlet(), "nets": nets(), "growth": growth(), "recordings": recordings(), "montage": montage(), "bridge": bridge(),
+           "ranges": ranges(), "personas": personas(), "gauntlet": gauntlet(), "nets": nets(), "growth": growth(), "recordings": recordings(), "montage": montage(), "videos": videos(), "bridge": bridge(),
            "held": (lambda p: (lambda t: json.loads(t) if t.strip() else {})(read(p)))(os.path.join(QDIR, "hold.json")) if QDIR else {}}
     print(json.dumps(doc))

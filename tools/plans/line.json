@@ -1198,6 +1198,15 @@
    "look": "The won share of the bar growing chapter on chapter: the champions grew. A chapter of draws: a champion that waits rather than fights.",
    "sim": "Crucible's world arena under treadcore's rules, four neutral pillboxes, a duel of 1,200 steps of 0.1 s; one start, the dice choosing each duel's opponent.",
    "helps": "Seeing what a generation learned, not only its number: the shot it takes, the pillbox it crosses or takes."
+  },
+  {
+   "key": "Results/Videos",
+   "does": "The films in orrery's output folder, newest first, as a list with their data: when each was made, its length, size, chapters and the generations it covers; the one chosen with its title, description, chapter marks and path. Open plays it in this machine's own player; Show finds it in the file browser.",
+   "ties": "tools/montage.py copies every film it makes into output/ (or ORRERY_OUTPUT) with a .txt of its title, description and chapter marks; a montage's length and chapters come from its summary in the archive (Results, Montage), any other film's from ffprobe, once.",
+   "drawn": "A list and not a player (Paul, 4 November: \"its just a list with data, not a player\"): a person picks the file to upload or show, and the machine's own player plays it.",
+   "look": "The newest film at the top, its length and chapters; the chapter marks under it are the lines to paste into a video site's description.",
+   "sim": "Nothing: these are the montage's finished films, crucible's world duels filmed from one start.",
+   "helps": "The film leaves the fleet: the generations shown to someone who has not seen the console."
   }
  ]
 }
