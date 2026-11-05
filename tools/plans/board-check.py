@@ -931,3 +931,12 @@ assert seat["a"]["busy_pct"] == 98.3 and seat["a"]["help_pct"] == 84.7 and seat[
 assert not seat["b"]["gpu"] and seat["b"]["busy_pct"] == 0.0
 _sh.rmtree(tb.q)
 print("the round table: every check holds")
+
+# CHAINS ADVANCE WHEN THEY RETURN (change B): a transform's step and a held-out read carry `replan`; the
+# step goes ahead of new trials; a first read, a read-on and a GPU segment are left to the pass.
+cm = P.chain_marks([{"id": "r0187-k17", "title": "transform r0187: step 17 of 30"}, {"id": "h0812", "title": "held-out read 1 of w10900 (400 seeds)", "priority": "high"},
+                    {"id": "e9400", "title": "read on 2 of w10901"}, {"id": "w10902", "title": "trial"}, {"id": "x-calber-cuda-3110"},
+                    {"id": "r0183-k02", "title": "spsa r0183: step 2 of 30"}])
+assert [bool(j.get("replan")) for j in cm] == [True, True, False, False, False, False], cm
+assert cm[0]["priority"] == "high" and cm[1]["priority"] == "high" and "priority" not in cm[2]
+print("chains advance when they return: every check holds")

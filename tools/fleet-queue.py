@@ -75,6 +75,12 @@ every machine's record is gathered without anyone asking, and `PLANNER
 chores` every chores_s (60): the project's housekeeping, what is stale begun
 in the background, whether or not a window is open.
 
+The planner is asked when the jobs a CPU lane could take fall under
+low_water (the GPU islands' own queue does not count), each plan_s, for
+a lane idle with nothing it can start, and replan_after_s (15) after a
+job marked "replan" comes back: a chain's step, whose next only the
+planner can ask for.
+
 CPU lanes idle idle_flag_s (900) with nothing they can start raise a flag
 saying why, as far as the keeper can see: a build failed (its first error
 line), builds or jobs not done, or nothing queued that fits.
@@ -93,6 +99,7 @@ queue knows nothing about what a job is for. A job:
      "fetch": "a path under $HOME, copied back into DIR/results/ID/",
      "deliver": {"src": "path on the host", "to": "user@store", "dst": "path on the store"},
      "on_done": "a command run here, after, with JOB_ID and RESULT_DIR set",
+     "replan": true,                   the planner is asked soon after it comes back
      "timeout_s": 7200}
 
 Everything is a file a person can read: queue/, running/HOST/, done/, failed/,
@@ -131,6 +138,9 @@ class Queue:
             os.makedirs(os.path.join(self.d, sub), exist_ok=True)
         self.lock = threading.Lock()
         self.restarting = False
+        # When a chain's step came back (a job with `replan`): the planner is asked then, not at its
+        # next pass. The earliest asked, so a burst of returns is one pass (change B).
+        self.replan_at = None
         # THE HANDOVER (Paul, 4 November: "build A"). A keeper that restarts itself keeps its jobs:
         # it re-executes in place, its children (the ssh of each running job) are still its children,
         # and the new keeper waits on them and finishes each job as any job finishes. From the moment
@@ -669,6 +679,18 @@ def idle_lanes(q, cfg, idle_s=None):
     return names, since
 
 
+def cpu_queued(cfg, jobs):
+    """The queued jobs a CPU machine could take: what the low water counts (the duty-cycle report's
+    change A; Paul, 5 November: "build A"). The GPU islands keep six segments a card queued on purpose;
+    counted with the rest they held the queue over low_water for good, so the planner was asked only
+    each plan_s, and a CPU machine whose queue ran dry stood about a minute until the starved path
+    asked for it: the CPU's last two percent. None when no CPU machine is at work."""
+    cpu = [working(cfg, h) for h in cfg["hosts"] if "cpu" in h.get("caps", ["cpu"]) and not h.get("paused")]
+    if not cpu:
+        return None
+    return sum(1 for j in jobs if any(fits(h, j) for h in cpu))
+
+
 def breaker_stop(q):
     """STOP_ADDING is up, and the breaker put it there (it writes "breaker" in it; a person's press leaves
     it empty)."""
@@ -922,6 +944,11 @@ def work(q, host, j, say, adopted=None):
             json.dump(j2, f, indent=1)
         os.rename(j["_file"], q.p(dest, os.path.basename(j["_file"])))
         q.event(dest, job=j["id"], host=name, kind=j.get("kind"), seconds=j2["seconds"])
+        if j.get("replan"):
+            # A chain's step came back: its next is asked soon, not at the planner's next pass
+            # (change B). A few seconds' grace gathers the returns of a burst into one pass.
+            at = now() + q.config().get("replan_after_s", 15)
+            q.replan_at = at if q.replan_at is None else min(q.replan_at, at)
         try:
             os.remove(q.p("stop-job", j["id"]))
         except OSError:
@@ -1006,7 +1033,9 @@ def keeper(q):
     poll = cfg.get("poll_s", 10)
 
     def plan(n):
+        took_from = now()
         r = subprocess.run(["bash", "-c", "%s plan %d" % (planner, n)], capture_output=True, text=True, timeout=600)
+        life["last_plan_s"] = round(now() - took_from, 1)
         if r.returncode != 0:
             q.event("planner failed", detail=(r.stderr or r.stdout)[-400:])
             q.notice("planner", "the planner failed: " + (r.stderr or r.stdout).strip()[-200:])
@@ -1018,7 +1047,7 @@ def keeper(q):
                 added += 1
         life["last_plan_added"] = added
         if added:
-            q.event("planned", added=added)
+            q.event("planned", added=added, seconds=life["last_plan_s"])
 
     def collect():
         if planner:
@@ -1241,8 +1270,16 @@ def keeper(q):
                 moving = [l for l in (lane_file(q, h["name"]) for h in q.config()["hosts"]) if l.get("state") in ("delivering", "fetching")]
                 if not moving:
                     restart("new code on disk (%s, was %s)" % (code_seen[0], life["code"]))
-            queued = len(q.jobs_in("queue"))
+            waiting_jobs = q.jobs_in("queue")
+            queued = len(waiting_jobs)
             running = len(q.jobs_in("running"))
+            cfg_now = q.config()
+            cpu_q = cpu_queued(cfg_now, waiting_jobs)
+            # The low water is the CPU's (A), with a few seconds between passes so a planner that has
+            # nothing to add is not asked each poll; a chain's step back asks too (B).
+            gap = time.time() - planned_at
+            short = cpu_q is not None and cpu_q < low and gap > cfg_now.get("low_min_s", 20)
+            chain = q.replan_at is not None and now() >= q.replan_at and gap > cfg_now.get("replan_min_s", 5)
             hungry = starved(q, q.config()) if planner and not q.flag("STOP_ADDING") else []
             life["starved"] = hungry
             # A FLEET WITH NOTHING TO DO SAYS SO (change D): once a spell, with the reason it can see.
@@ -1274,19 +1311,23 @@ def keeper(q):
                     q.event("drained")
                     alive.clear()
                     break
-            elif planner and (queued < low or runs_mtime(q) > runs_seen or time.time() - planned_at > plan_s
+            elif planner and (short or chain or runs_mtime(q) > runs_seen or time.time() - planned_at > plan_s
                               or (hungry and time.time() - planned_at > starve_s)):
                 # Also every plan_s (300 s) whatever the queue's length, so
                 # auto mode's promotions and the rotation never wait for it
                 # to drain; and each starve_s while a lane is idle with
                 # nothing it can start (starved()). Plan now touches runs/.
-                if hungry and queued >= low and hungry != told_hungry:
+                if hungry and not short and hungry != told_hungry:
                     q.event("planning for idle lanes", hosts=hungry, queued=queued)
                 told_hungry = hungry
                 runs_seen = runs_mtime(q)
                 planned_at = time.time()
+                if chain:
+                    life["last_replan"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+                # Asked before the pass: a step that comes back during it asks for the next one.
+                q.replan_at = None
                 try:
-                    plan(max(2 * low - queued, low))
+                    plan(max(2 * low - (cpu_q if cpu_q is not None else queued), low))
                 except (subprocess.TimeoutExpired, ValueError) as e:
                     q.event("planner failed", detail=str(e))
             time.sleep(poll)
@@ -1430,7 +1471,13 @@ def health(q):
     elif planned is None or planned > 2 * plan_s + 60:
         check("warn", "planning", "last asked the planner %s ago" % (took(planned) if planned is not None else "never"))
     else:
-        check("ok", "planning", "last asked the planner %s ago" % took(planned))
+        extra = ""
+        if info.get("last_plan_s") is not None:
+            extra += "; a pass takes %s" % took(info["last_plan_s"])
+        back = stamp_age(info.get("last_replan"))
+        if back is not None:
+            extra += "; a chain's step last asked for one %s ago" % took(back)
+        check("ok", "planning", "last asked the planner %s ago%s" % (took(planned), extra))
     sync_s = cfg.get("sync_s", 1800)
     synced = stamp_age(info.get("last_sync"))
     if not sync_s:

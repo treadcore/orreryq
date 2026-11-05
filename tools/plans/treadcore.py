@@ -74,6 +74,8 @@ import sys
 import time
 
 SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10"]
+# A fetched census's commit and its one-map verdict, read once a process (a pass): they do not change.
+_COMMITS, _ONE_MAP = {}, {}
 
 
 def load(p, default=None):
@@ -515,8 +517,26 @@ class Plan:
         ) % (self.home, self.cdir(), b, out_id, out_id, seeds, seed0, w["secs"], w["map"], out_id, out_id, out_id)
 
     def census_dirs(self):
-        """Every fetched census of the queue: results/ID/fleet/q-NAME/out/ID/STAMP."""
-        return sorted(glob.glob(os.path.join(self.q, "results", "*", self.home, "out", "*", "*", "")))
+        """Every fetched census of the queue: results/ID/fleet/q-NAME/out/ID/STAMP.
+
+        READ ONCE A PASS. The planner is a fresh process each pass, and a fetched census does not
+        change: 27,000 of them were globbed sixteen times a pass, 44 of its 105 seconds, once the
+        keeper asked for passes sooner (5 November, the duty-cycle report's B)."""
+        if self.__dict__.get("_census_dirs") is None:
+            self._census_dirs = sorted(glob.glob(os.path.join(self.q, "results", "*", self.home, "out", "*", "*", "")))
+        return list(self._census_dirs)
+
+    def done_titles(self):
+        """{job id: title} of every finished job, read once a pass: sequential() and held_pairs() each
+        loaded all 27,000 of them, five and seven times a pass."""
+        if self.__dict__.get("_done_titles") is None:
+            out = {}
+            for f in glob.glob(os.path.join(self.q, "done", "**", "*.json"), recursive=True):
+                j = load(f, {}) or {}
+                if j.get("id"):
+                    out[j["id"]] = j.get("title", "")
+            self._done_titles = out
+        return self._done_titles
 
     def own_ledger(self):
         root = os.path.join(self.pd, "census")
@@ -638,13 +658,21 @@ class Plan:
         """The game's rules at a commit, source/treadcore-sim/GAME_VERSION, bumped by hand when
         they change: the dials can stand still while the game moves under them (Paul's depots,
         30 October), and a read of the old game is no evidence about the new one."""
+        # A commit named by its hash never changes: 195 of them asked a pass, two git runs each, so
+        # what each said is kept in the state from pass to pass.
+        games = self.state.setdefault("games", {})
+        if commit and re.fullmatch(r"[0-9a-f]{7,40}", commit) and commit in games:
+            return games[commit]
         r = run(["git", "-C", self.tc, "show", "%s:source/treadcore-sim/GAME_VERSION" % commit])
         game = r.stdout.strip() if r.returncode == 0 else ""
         # AND THE SCORE'S (LR 139; Paul, 4 November, of the score counting building and the base:
         # "Start anew"): source/treadcore-brain/SCORE_VERSION, absent before it, so a read of the old
         # score is no evidence about the new one, as a read of the old game is not.
         sv = run(["git", "-C", self.tc, "show", "%s:source/treadcore-brain/SCORE_VERSION" % commit])
-        return game + ("+score%s" % sv.stdout.strip() if sv.returncode == 0 and sv.stdout.strip() else "")
+        out = game + ("+score%s" % sv.stdout.strip() if sv.returncode == 0 and sv.stdout.strip() else "")
+        if commit and re.fullmatch(r"[0-9a-f]{7,40}", commit) and r.returncode == 0:
+            games[commit] = out
+        return out
 
     def same_defaults(self, commit):
         """A row's commit read with today's defaults: every weight both
@@ -1665,11 +1693,14 @@ class Plan:
     def one_map(d):
         """A census that read only the generated map: a Mac's, before census_cmd's paste.
         A map is not the game: such a read decides nothing."""
+        if d in _ONE_MAP:
+            return _ONE_MAP[d]
         try:
             rows = [l.split()[0] for l in open(os.path.join(d, "pooled.txt")) if " +/- " in l and not l.startswith("every map")]
         except OSError:
             return False
-        return rows == ["generated"]
+        _ONE_MAP[d] = rows == ["generated"]
+        return _ONE_MAP[d]
 
     def sequential(self):
         """{trial: {status, d, se, seeds, z, stage, text}} for every trial on
@@ -1677,10 +1708,10 @@ class Plan:
         (its stage says more), passed, or dropped. Its reads are its own
         census and the jobs titled "read on N of TRIAL"."""
         title, inflight = {}, set()
-        for f in glob.glob(os.path.join(self.q, "done", "*.json")):
-            m = re.match(r"read on \d+ of (w\d+)", load(f, {}).get("title", ""))
+        for i, t in self.done_titles().items():
+            m = re.match(r"read on \d+ of (w\d+)", t)
             if m:
-                title[load(f, {})["id"]] = m.group(1)
+                title[i] = m.group(1)
         for f in glob.glob(os.path.join(self.q, "queue", "*.json")) + glob.glob(os.path.join(self.q, "running", "*", "*.json")):
             j = load(f, {})
             m = re.match(r"read on \d+ of (w\d+)", j.get("title", ""))
@@ -1779,11 +1810,10 @@ class Plan:
     def held_pairs(self):
         """Each trial's held-out reads: {trial: [census dir, ...]}, from the jobs' titles."""
         title = {}
-        for f in glob.glob(os.path.join(self.q, "done", "**", "*.json"), recursive=True):
-            j = load(f, {})
-            m = re.match(r"held-out read \d of (w\d+)", j.get("title", ""))
+        for i, t in self.done_titles().items():
+            m = re.match(r"held-out read \d of (w\d+)", t)
             if m:
-                title[j["id"]] = m.group(1)
+                title[i] = m.group(1)
         out = {}
         for d in self.census_dirs():
             hid = d.rstrip("/").split(os.sep)[-2]
@@ -2256,13 +2286,18 @@ class Plan:
 
     @staticmethod
     def census_commit(d):
+        if d in _COMMITS:
+            return _COMMITS[d]
+        c = None
         try:
             for l in open(os.path.join(d, "run.env")):
                 if l.startswith("COMMIT="):
-                    return l.split("=", 1)[1].strip().strip("'")
+                    c = l.split("=", 1)[1].strip().strip("'")
+                    break
         except OSError:
-            pass
-        return None
+            return None
+        _COMMITS[d] = c
+        return c
 
     GENERATION_EVERY_MIN = 30
     # Minutes a pause of auto promotion lasts before it goes on by itself (or less, if main moves).
@@ -4756,6 +4791,7 @@ class Plan:
             self.ease()
             note["difficulty"] = dict(self.state.get("difficulty", {}), last_promotion=(self.promotions() or [[None, None]])[-1][1])
             save(os.path.join(self.pd, "search.json"), note)
+        self.chain_marks(jobs)
         self.model_sends(jobs)
         try:
             self.pipeline_view(jobs)
@@ -4764,6 +4800,24 @@ class Plan:
         self.archive_generations()
         self.keep()
         print(json.dumps(jobs))
+
+    @staticmethod
+    def chain_marks(jobs):
+        """CHAINS ADVANCE WHEN THEY RETURN (the duty-cycle report's change B; Paul, 5 November: "build
+        A, then B"). A transform's step and a held-out read are links of a chain whose next link only
+        the planner asks for, and it passed each five minutes: a transform's step waited 3.2 minutes for
+        the pass and 2.6 in the queue to do 1.8 of work, and thirty of them took 3.8 hours. Such a job
+        carries `replan`, and the keeper asks the planner soon after it returns; a transform's step also
+        goes ahead of the search's new trials (a held-out read already does). The trials' read-ons are
+        left to the pass: a pass each of their 1,500 returns a day would be most of the Mac's core."""
+        for j in jobs:
+            i = j.get("id", "")
+            if re.match(r"r\d+-k\d+$", i) and j.get("title", "").startswith("transform "):
+                j["replan"] = True
+                j["priority"] = "high"
+            elif re.match(r"h\d+$", i):
+                j["replan"] = True
+        return jobs
 
     # ---- one line of generations --------------------------------------------------------
     # Paul, 1 November: "always progress forward and carry the weights, and restart with new
@@ -5507,7 +5561,22 @@ if __name__ == "__main__":
     cmd = sys.argv[2]
     p.writer = cmd in ("plan", "now", "approve", "resolve", "why", "tag", "adopt")
     if cmd == "plan":
-        p.plan(int(sys.argv[3]) if len(sys.argv) > 3 else 4)
+        # A pass measured on request: plan/profile-next there, the next pass runs under cProfile and
+        # writes what it spent its time on to plan/profile.txt (the duty-cycle report's passes took
+        # 80 to 106 seconds once the keeper asked for them sooner).
+        flag = os.path.join(p.pd, "profile-next")
+        if os.path.exists(flag):
+            import cProfile
+            import io
+            import pstats
+            os.remove(flag)
+            prof = cProfile.Profile()
+            prof.runcall(p.plan, int(sys.argv[3]) if len(sys.argv) > 3 else 4)
+            out = io.StringIO()
+            pstats.Stats(prof, stream=out).sort_stats("cumulative").print_stats(45)
+            open(os.path.join(p.pd, "profile.txt"), "w").write(out.getvalue())
+        else:
+            p.plan(int(sys.argv[3]) if len(sys.argv) > 3 else 4)
     elif cmd == "collect":
         p.collect()
     elif cmd == "families":
