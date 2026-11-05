@@ -1,0 +1,143 @@
+<style>
+.flowviz{--f-plan:#2a78d6;--f-queue:#87704f;--f-run:#1baf7a;--f-back:#eb6834;--f-gen:#eda100;--f-main:#6250d6;--f-see:#e87ba4;--f-new:#d23c28;
+ margin:1.4em 0;overflow-x:auto;background:var(--tile);border:1px solid var(--line);border-radius:6px;padding:10px}
+.flowviz svg{display:block;width:100%;min-width:760px;height:auto;font-family:var(--cond)}
+.flowviz text{fill:var(--ink);font-size:12px}.flowviz .d{fill:var(--dim)}.flowviz .sm{font-size:10.5px}.flowviz .b{font-weight:700;font-size:13px}
+.flowviz .box{fill:var(--panel);stroke:var(--line)}.flowviz .ar{fill:none;stroke-width:1.6}
+.flowviz .new{fill:var(--f-new);font-weight:700}
+.flowviz .num{font-weight:700;font-size:12px;fill:var(--tile)}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])) .flowviz{--f-plan:#3987e5;--f-run:#199e70;--f-back:#d95926;--f-gen:#c98500;--f-main:#9085e9;--f-see:#d55181;--f-new:#ff6b55;--f-queue:#fccf8a}}
+:root[data-theme="dark"] .flowviz{--f-plan:#3987e5;--f-run:#199e70;--f-back:#d95926;--f-gen:#c98500;--f-main:#9085e9;--f-see:#d55181;--f-new:#ff6b55;--f-queue:#fccf8a}
+</style>
+<figure><div class="flowviz"><svg viewBox="0 0 1000 600" role="img" aria-label="Fig. 3. The data flow as it runs from 5 November: a cycle of six steps, plan, queue, lane, machine, return and ask again, and from the plan the generation's path to main, the builds, and what a person sees.">
+<defs>
+<marker id="fa1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--f-plan)"/></marker>
+<marker id="fa2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--f-queue)"/></marker>
+<marker id="fa3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--f-run)"/></marker>
+<marker id="fa4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--f-back)"/></marker>
+<marker id="fa5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--f-gen)"/></marker>
+<marker id="fa6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--f-main)"/></marker>
+<marker id="fa7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--f-see)"/></marker>
+</defs>
+<text x="20" y="22" class="b">The cycle: every job, every machine</text>
+
+
+<!-- 1 the plan -->
+<rect class="box" x="30" y="46" width="290" height="124" rx="5" style="stroke:var(--f-plan);stroke-width:2"/>
+<circle cx="52" cy="68" r="12" fill="var(--f-plan)"/><text x="52" y="72" class="num" text-anchor="middle">1</text>
+<text x="72" y="72" class="b">A plan pass</text>
+<text x="44" y="96" class="sm">treadcore.py plan N, a fresh process on the Mac</text>
+<text x="44" y="113" class="sm">reads state.json and every result <tspan class="new">once a pass</tspan></text>
+<text x="44" y="130" class="sm">decides: trials, read-ons, held-out reads, transform</text>
+<text x="44" y="147" class="sm">steps, families, a promotion, the proof, builds, segments</text>
+<text x="44" y="163" class="sm new">43 s a pass (was 105); chain steps marked replan</text>
+
+<!-- 2 the queue -->
+<rect class="box" x="355" y="46" width="290" height="124" rx="5" style="stroke:var(--f-queue);stroke-width:2"/>
+<circle cx="377" cy="68" r="12" fill="var(--f-queue)"/><text x="377" y="72" class="num" text-anchor="middle">2</text>
+<text x="397" y="72" class="b">The queue</text>
+<text x="369" y="96" class="sm">queue/: a JSON file a job, named by when it was asked</text>
+<text x="369" y="113" class="sm">high priority sorts first: held-out reads, and</text>
+<text x="369" y="130" class="sm"><tspan class="new">a transform's step</tspan>; then the search's trials</text>
+<text x="369" y="147" class="sm">GPU islands: six segments ahead a card, a buffer</text>
+<text x="369" y="163" class="sm d">13 to 18 waiting; 3,955 jobs a day</text>
+
+<!-- 3 a lane -->
+<rect class="box" x="680" y="46" width="290" height="124" rx="5" style="stroke:var(--f-run);stroke-width:2"/>
+<circle cx="702" cy="68" r="12" fill="var(--f-run)"/><text x="702" y="72" class="num" text-anchor="middle">3</text>
+<text x="722" y="72" class="b">A lane takes it</text>
+<text x="694" y="96" class="sm">fleet-queue.py: a thread a machine, the keeper</text>
+<text x="694" y="113" class="sm">the first job it can run, claimed by a rename</text>
+<text x="694" y="130" class="sm">into running/HOST; its files sent (the line's bundle)</text>
+<text x="694" y="147" class="sm">ssh, its own process group, pid kept on the host</text>
+<text x="694" y="163" class="sm d">kept across the keeper's restart (the handover)</text>
+
+<!-- 4 the machine -->
+<rect class="box" x="680" y="226" width="290" height="124" rx="5" style="stroke:var(--f-run);stroke-width:2"/>
+<circle cx="702" cy="248" r="12" fill="var(--f-run)"/><text x="702" y="252" class="num" text-anchor="middle">4</text>
+<text x="722" y="252" class="b">The machine runs it</text>
+<text x="694" y="276" class="sm">8 CPU: the census at the fleet's commit, its build</text>
+<text x="694" y="293" class="sm">first (after_host); 55, 27 to 42 or 400 seeds</text>
+<text x="694" y="310" class="sm">3 GPU: a crucible segment, 100 generations</text>
+<text x="694" y="327" class="sm d">first read 2.5 min, transform step 0.8 to 1.8,</text>
+<text x="694" y="343" class="sm d">held-out 12, a segment 12; 99.3% busy, 99.8%</text>
+
+<!-- 5 it comes back -->
+<rect class="box" x="355" y="226" width="290" height="124" rx="5" style="stroke:var(--f-back);stroke-width:2"/>
+<circle cx="377" cy="248" r="12" fill="var(--f-back)"/><text x="377" y="252" class="num" text-anchor="middle">5</text>
+<text x="397" y="252" class="b">It comes back</text>
+<text x="369" y="276" class="sm">its out folder fetched into results/ID</text>
+<text x="369" y="293" class="sm">the job to done/ or failed/ with host, rc, seconds</text>
+<text x="369" y="310" class="sm">events.jsonl: done, failed or sent back</text>
+<text x="369" y="327" class="sm"><tspan class="new">marked replan: the keeper asks in 15 s</tspan></text>
+<text x="369" y="343" class="sm d">the lane takes its next job at once (step 3)</text>
+
+<!-- 6 the keeper asks -->
+<rect class="box" x="30" y="226" width="290" height="124" rx="5" style="stroke:var(--f-back);stroke-width:2"/>
+<circle cx="52" cy="248" r="12" fill="var(--f-back)"/><text x="52" y="252" class="num" text-anchor="middle">6</text>
+<text x="72" y="252" class="b">The keeper asks again</text>
+<text x="44" y="276" class="sm new">a chain's step back, 15 s on (B)</text>
+<text x="44" y="293" class="sm new">CPU work queued under low water, 20 s apart (A)</text>
+<text x="44" y="310" class="sm">each plan_s (5 min); a run asked (runs/)</text>
+<text x="44" y="327" class="sm">a lane idle with nothing it can start</text>
+<text x="44" y="343" class="sm d">a pass about every 1.6 min, one at a time</text>
+
+<!-- the cycle's arrows -->
+<path class="ar" d="M320,108 L353,108" style="stroke:var(--f-plan)" marker-end="url(#fa1)"/>
+<text x="337" y="100" class="sm d" text-anchor="middle">jobs</text>
+<path class="ar" d="M645,108 L678,108" style="stroke:var(--f-queue)" marker-end="url(#fa2)"/>
+<text x="662" y="100" class="sm d" text-anchor="middle">claim</text>
+<path class="ar" d="M825,170 L825,224" style="stroke:var(--f-run)" marker-end="url(#fa3)"/>
+<text x="832" y="201" class="sm d">ssh</text>
+<path class="ar" d="M680,288 L647,288" style="stroke:var(--f-run)" marker-end="url(#fa3)"/>
+<text x="663" y="280" class="sm d" text-anchor="middle">fetch</text>
+<path class="ar" d="M355,288 L322,288" style="stroke:var(--f-back)" marker-end="url(#fa4)"/>
+<text x="338" y="280" class="sm d" text-anchor="middle">event</text>
+<path class="ar" d="M175,226 L175,172" style="stroke:var(--f-back)" marker-end="url(#fa4)"/>
+<text x="182" y="203" class="sm d">a pass</text>
+
+<text x="20" y="392" class="b">From the plan: a generation, main, and what a person sees</text>
+
+<!-- 7 a generation -->
+<rect class="box" x="30" y="410" width="290" height="140" rx="5" style="stroke:var(--f-gen);stroke-width:2"/>
+<circle cx="52" cy="432" r="12" fill="var(--f-gen)"/><text x="52" y="436" class="num" text-anchor="middle">7</text>
+<text x="72" y="436" class="b">A generation</text>
+<text x="44" y="460" class="sm">first read, read on until decided, two held-out</text>
+<text x="44" y="477" class="sm">reads past z 1.55: the families hold, the trade</text>
+<text x="44" y="494" class="sm">and gauntlet guards hold: a promotion job</text>
+<text x="44" y="511" class="sm">tests, families, gauntlet on <tspan class="new">any CPU machine,</tspan></text>
+<text x="44" y="528" class="sm new">the line's bundle sent with it, named by commit</text>
+<text x="44" y="544" class="sm d">its commit comes home as a bundle: the line</text>
+
+<!-- 8 main and the builds -->
+<rect class="box" x="355" y="410" width="290" height="140" rx="5" style="stroke:var(--f-main);stroke-width:2"/>
+<circle cx="377" cy="432" r="12" fill="var(--f-main)"/><text x="377" y="436" class="num" text-anchor="middle">8</text>
+<text x="397" y="436" class="b">Main and the builds</text>
+<text x="369" y="460" class="sm">the line read against main, every read pooled,</text>
+<text x="369" y="477" class="sm">800 seeds an hour: past z 3, auto mode pushes</text>
+<text x="369" y="494" class="sm">main; a reader never moves the line</text>
+<text x="369" y="511" class="sm">main moved: every machine builds the commit,</text>
+<text x="369" y="528" class="sm">the bundle with it; a failed build asked again once</text>
+<text x="369" y="544" class="sm d">the builds are jobs, high priority (step 2)</text>
+
+<!-- 9 what a person sees -->
+<rect class="box" x="680" y="410" width="290" height="140" rx="5" style="stroke:var(--f-see);stroke-width:2"/>
+<circle cx="702" cy="432" r="12" fill="var(--f-see)"/><text x="702" y="436" class="num" text-anchor="middle">9</text>
+<text x="722" y="436" class="b">What a person sees</text>
+<text x="694" y="460" class="sm">pipeline.json each pass: Board, Flow, Timeline,</text>
+<text x="694" y="477" class="sm">Queued, Values, <tspan class="new">Blame (the round table)</tspan></text>
+<text x="694" y="494" class="sm">health, with <tspan class="new">a pass's length and the last replan</tspan></text>
+<text x="694" y="511" class="sm">flags: an idle spell, a refused trade, a run done</text>
+<text x="694" y="528" class="sm">the keeper's chores each minute: analysis, nets,</text>
+<text x="694" y="544" class="sm d">growth, recordings: no window needed</text>
+
+<!-- from the plan down -->
+<path class="ar" d="M30,108 L14,108 L14,480 L28,480" style="stroke:var(--f-gen)" marker-end="url(#fa5)"/>
+<path class="ar" d="M320,480 L353,480" style="stroke:var(--f-gen)" marker-end="url(#fa5)"/>
+<text x="337" y="472" class="sm d" text-anchor="middle">line</text>
+<path class="ar" d="M500,410 L500,372 L986,372 L986,108 L972,108" style="stroke:var(--f-main)" marker-end="url(#fa6)"/>
+<text x="700" y="366" class="sm d">builds go to the queue and the lanes, as every job does</text>
+<path class="ar" d="M175,46 L175,34 L994,34 L994,480 L972,480" style="stroke:var(--f-see)" marker-end="url(#fa7)"/>
+<text x="560" y="30" class="sm d">pipeline.json, written each pass</text>
+<text x="30" y="586" class="d sm">The Mac coordinates (steps 1, 2, 3, 5, 6, 9); the machines compute (step 4); red marks what changed on 5 November.</text>
+</svg></div><figcaption>Fig. 3. The data flow as it runs from 5 November. Steps 1 to 6 are the cycle every job goes round; 7 to 9 leave the plan. Red marks what changed on 5 November: the plan's reads once a pass, a chain's step marked and asking for its next, the CPU's own low water, the promotion carrying the line to any machine, the round table and the pass's length in health.</figcaption></figure>
