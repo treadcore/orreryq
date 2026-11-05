@@ -4696,9 +4696,10 @@ class Plan:
                     pass
 
     def line_proof(self):
-        """Main's values read as a trial against the line, 800 seeds. The line past main by
-        HELD_Z, and no map to main's side by two errors: the line goes to main. A
-        generation's noise is in that read and cannot pass it by luck, one time in 750."""
+        """Main's values read as a trial against the line, 800 seeds a read, every read of one line
+        against one main pooled. The line past main by HELD_Z, and no map to main's side by two
+        errors: the line goes to main. A generation's noise is in that read and cannot pass it by
+        luck, one time in 750."""
         line = self.state.get("local_line")
         w = self.cfg.get("weights")
         if not line or not w or not self.auto() or not self.cpu_ready():
@@ -4708,13 +4709,27 @@ class Plan:
         if pf.get("jobs"):
             if not all(j in known for j in pf["jobs"]):
                 return []
-            ds = [d for j in pf["jobs"] for d in glob.glob(os.path.join(self.q, "results", j, self.home, "out", j, "*", ""))]
-            p = self.pool(ds) if len(ds) == len(pf["jobs"]) else None
-            head, jobs, carried = pf.get("head"), pf["jobs"], pf.get("n")
-            self.state["proof"] = pf = {"last_at": time.time()}
+            head, jobs, carried, main_then = pf.get("head"), pf["jobs"], pf.get("n"), pf.get("main")
+            # POOLED WHILE THE QUESTION STANDS (Paul, 4 November: "yes pool the reads"). A proof inside
+            # the noise was read again an hour later on fresh seeds and judged alone: r0179's line read
+            # -0.23 +/- 0.22 at 19:54, and the next hour would have asked the same question anew, 17
+            # machine-minutes each time, and each time given a line that changes nothing a new one in
+            # 750 to pass by luck. Now the reads of one line against one main are one read: each proof
+            # adds its seeds to those before it, the error narrows as they grow, and a commit on either
+            # side (a generation on the line, a commit to main) starts the pool again, because a commit
+            # can change the game. A proof made before the pool knew its main pools with nothing.
+            before = pf.get("pooled") or {}
+            same = bool(main_then) and before.get("head") == head and before.get("main") == main_then
+            reads = ((before.get("jobs") or []) if same else []) + jobs
+
+            def found(js):
+                return [d for j in js for d in glob.glob(os.path.join(self.q, "results", j, self.home, "out", j, "*", ""))]
+            ds = found(reads)
+            p = self.pool(ds) if len(found(jobs)) == len(jobs) else None
+            self.state["proof"] = pf = {"last_at": time.time(), "pooled": {"head": head, "main": main_then, "jobs": reads}}
             if p and p["every"][1] > 0:
                 d, se, n_ = p["every"]
-                pf["last"] = {"head": head[:7], "d": round(-d, 2), "se": round(se, 2), "z": round(-d / se, 2), "seeds": n_}
+                pf["last"] = {"head": head[:7], "d": round(-d, 2), "se": round(se, 2), "z": round(-d / se, 2), "seeds": n_, "reads": len(reads) // 2}
                 # THE COMMIT IT READ, NOT THE LINE'S HEAD NOW (1 November). A proof takes a quarter of an
                 # hour, and at this pace a generation lands inside it: 94a99be read z 4.82 past main and
                 # went nowhere, because two more had landed. So what was proved goes on main, and what
@@ -4757,13 +4772,16 @@ class Plan:
             return []
         text = "# the line's proof: main's values, read as a trial against the line\n" + "\n".join(lines) + "\n"
         jobs = []
+        pooled = pf.get("pooled") or {}
+        nth = len(pooled.get("jobs") or []) // 2 + 1 if (pooled.get("head"), pooled.get("main")) == (line["commit"], main) else 1
         for k in range(2):
             n_ = self.state["proof_n"] = self.state.get("proof_n", 0) + 1
             jid = "pv%04d" % n_
-            jobs.append({"id": jid, "kind": "weights", "title": "proof %d of the line %s against main (%d seeds)" % (k + 1, line["commit"][:7], w["held_seeds"]),
+            jobs.append({"id": jid, "kind": "weights", "title": "proof %d of the line %s against main (%d seeds%s)" % (
+                         k + 1, line["commit"][:7], w["held_seeds"], ", read %d, pooled" % nth if nth > 1 else ""),
                          "needs": self.long_needs(), "after_host": self.after_host(), "cmd": self.census_cmd(text, w["held_seeds"], 700000000 + 200000 * n_, jid),
                          "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 6 * 3600, "priority": "high"})
-        pf.update({"jobs": [j["id"] for j in jobs], "head": line["commit"], "n": len(line.get("promotions", []))})
+        pf.update({"jobs": [j["id"] for j in jobs], "head": line["commit"], "main": main, "n": len(line.get("promotions", []))})
         return jobs
 
     # ---- the board: one process, one screen ------------------------------------------------

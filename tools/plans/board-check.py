@@ -646,3 +646,82 @@ assert tr([("built a team -2.51", -2.51, 0.23, 1.87)], 1.0)[2] == "past", "TRADE
 assert tr([("built", -2.0, 0.2, 1.87), ("road", -3.0, 0.2, 0.8)], 2.5)[2] == "past", "the worst of them decides"
 assert tr([("built", -2.0, 0.2, None)], 2.5)[2] is None, "no floor known: nothing judged"
 print("the trade rule: ok")
+
+# POOLED WHILE THE QUESTION STANDS (Paul, 4 November: "yes pool the reads"). Each proof of one line
+# against one main adds its seeds to those before: two proofs each inside the noise (z 2.1) pool past
+# HELD_Z (z 3.0) and the line goes to main; a new commit on the line starts the pool again.
+pr_root = tempfile.mkdtemp()
+pr_tc = os.path.join(pr_root, "tc")
+os.makedirs(pr_tc)
+for c in (["init", "-q"], ["commit", "-q", "--allow-empty", "-m", "main"]):
+    subprocess.run(["git", "-C", pr_tc, "-c", "user.name=t", "-c", "user.email=t@t"] + c, check=True)
+PR_MAIN = subprocess.run(["git", "-C", pr_tc, "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+subprocess.run(["git", "-C", pr_tc, "update-ref", "refs/remotes/origin/main", PR_MAIN], check=True)
+subprocess.run(["git", "-C", pr_tc, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "line"], check=True)
+PR_LINE = subprocess.run(["git", "-C", pr_tc, "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+
+
+class Proof(P):
+    PROOF_EVERY_MIN = 60
+    def __init__(self):
+        self.q, self.tc, self.home = pr_root, pr_tc, "fleet/q-grove"
+        self.cfg = {"weights": {"held_seeds": 400}}
+        self.state = {"local_line": {"commit": PR_LINE, "promotions": ["r1"]}}
+        self.flags, self.resolved, self.finished = [], [], set()
+    def flag(self, kind, text, key=None, progress=False):
+        self.flags.append((kind, text))
+    def cpu_ready(self):
+        return True
+    def ids(self, *states):
+        return self.finished
+    def _built_everywhere(self):
+        return True
+    def push_target(self):
+        return "origin", "main"
+    def defaults_at(self, c):
+        return {"a": 1.0} if c == PR_MAIN else {"a": 2.0}
+    def census_cmd(self, text, seeds, seed0, jid):
+        return "true"
+    def long_needs(self):
+        return "cpu"
+    def after_host(self):
+        return None
+    def resolve(self, upto=None, carried=None):
+        self.resolved.append(upto)
+    def read(self, jobs, d="-1.00", se="0.665"):
+        """Each job's census, the line ahead of main by 1 a seat: the pair reads z 2.13 alone."""
+        for j in jobs:
+            o = os.path.join(self.q, "results", j, self.home, "out", j, "20261104-200000")
+            os.makedirs(o)
+            open(os.path.join(o, "pooled.txt"), "w").write("every map   %s +/- %s over 400 seeds\n" % (d, se))
+            self.finished.add(j)
+
+
+pv = Proof()
+first = pv.line_proof()
+assert [j["id"] for j in first] == ["pv0001", "pv0002"] and pv.state["proof"]["main"] == PR_MAIN, "a proof knows the main it reads against"
+pv.read(["pv0001", "pv0002"])
+assert pv.line_proof() == [] and not pv.resolved, "one proof inside the noise: no landing"
+assert pv.state["proof"]["last"]["z"] == 2.13 and pv.state["proof"]["last"]["reads"] == 1, pv.state["proof"]
+pv.state["proof"]["last_at"] = 0
+second = pv.line_proof()
+assert [j["id"] for j in second] == ["pv0003", "pv0004"] and "read 2, pooled" in second[0]["title"], second[0]["title"]
+pv.read(["pv0003", "pv0004"])
+pv.line_proof()
+assert pv.state["proof"]["last"]["reads"] == 2 and pv.state["proof"]["last"]["seeds"] == 1600, pv.state["proof"]
+assert pv.state["proof"]["last"]["z"] >= 3.0 and pv.resolved == [PR_LINE], "two proofs pooled pass where neither did"
+# A generation lands on the line: its first proof pools with nothing.
+subprocess.run(["git", "-C", pr_tc, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "g2"], check=True)
+PR_LINE2 = subprocess.run(["git", "-C", pr_tc, "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+pv.state["local_line"]["commit"], pv.state["proof"]["last_at"], pv.resolved = PR_LINE2, 0, []
+third = pv.line_proof()
+assert "pooled" not in third[0]["title"], third[0]["title"]
+pv.read([j["id"] for j in third])
+pv.line_proof()
+assert pv.state["proof"]["pooled"]["jobs"] == ["pv0005", "pv0006"] and pv.state["proof"]["last"]["z"] == 2.13 and not pv.resolved, "a new commit starts the pool"
+# A proof begun before the pool knew its main (today's pv0049 and pv0050) pools with nothing.
+pv.state["proof"] = {"jobs": ["pv0005", "pv0006"], "head": PR_LINE2, "n": 1, "pooled": {"head": PR_LINE2, "main": None, "jobs": ["pv0001"]}}
+pv.line_proof()
+assert pv.state["proof"]["pooled"]["jobs"] == ["pv0005", "pv0006"], "no main known, no pool"
+_sh.rmtree(pr_root)
+print("the line's proof, pooled: every check holds")
