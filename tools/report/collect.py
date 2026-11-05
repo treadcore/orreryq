@@ -46,6 +46,10 @@ CARDS = {
                "The film shows the champion thinking: a crowd of its other duels, its 55 inputs, two layers lit by their strongest "
                "currents, eight seconds of its decisions, the generation. Every screen of orrery and of the game, pictured; a Mind "
                "explorer to play in the page; the films listed on Results, Videos."),
+    "storage-options": ("Fleet · storage",
+                        "Ceph for the recordings and builds at three copies on NVMe, rsync, sftp and the other ways to move files, the Mac "
+                        "and Ceph, and copies by how replaceable the data is. Nothing decided: the space problem is already answered, 33.7 GB "
+                        "in all, and no NVMe in the fleet is free."),
     "x8dt3": ("Fleet · a server",
               "An old dual-Xeon Supermicro computes again: one jumper moved (the SAS controller off), every BIOS setting from "
               "photographs of Setup, and Copal booting from a USB stick on a board with no UEFI, from the stick make sd-pc writes."),

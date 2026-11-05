@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>Storage, Reconsidered</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="index.html">orrery</a> · lab report</strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a><a href="#svi">VI</a><a href="#svii">VII</a><a href="#sviii">VIII</a><a href="#references">References</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">orrery · the fleet · storage options, nothing decided</p>
+    <h1>Shared Storage, Reconsidered: Ceph for the Recordings and Builds, rsync and sftp, and Why Nothing Needs Deciding Yet</h1>
+    <div class="front"><p class="note">Paul Richeson · Lab Report — IEEE Format · 4 November 2026</p><p>Copyright (c) 2026 Paul Richeson. MIT licensed, as orrery.</p><p>Companions: <code>docs/storage-lab-report.md</code> (29 October: the survey of the fleet's 45 disks, the one way through for each job, the plan for a small Ceph); <code>tools/storage.py</code>, <code>tools/recordings.py</code>, <code>tools/growth.py</code>; orrery commit <code>3ab85d0</code> (the sftp test).</p></div>
+  </header>
+  <nav class="toc" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. The question</a></li><li><a href="#sii">II. What the problem was, and what already answers it</a></li><li><a href="#siii">III. Moving files: sftp, scp, rsync, and the rest</a></li><li><a href="#siv">IV. Ceph for the recordings and builds, three copies on NVMe</a></li><li><a href="#sv">V. The Mac and Ceph</a></li><li><a href="#svi">VI. Replication: copies by how replaceable the data is</a></li><li><a href="#svii">VII. What would bring the question back</a></li><li><a href="#sviii">VIII. Discussion</a></li><li><a href="#references">References</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>On the evening of 4 November Paul asked four questions in a row: whether rsync would do better than sftp, whether there is another way than sftp, whether a Ceph mount between the servers could hold the largest data, with the recordings and builds in CephFS at three copies on NVMe, and whether that would solve the problem at all. This report sets out what was found and the options; <strong>nothing is decided</strong>. The problem that started it, disks filled by recordings and builds, is already answered: recordings are dropped once a recipe proves they can be made again, builds are pruned when main moves, and a flag is raised when any place passes 20 GB. At 18:28 on 4 November the whole fleet's training data was 33.7 GB, with no place over the limit. sftp is sound; its one failing test was a fault in the test, fixed. rsync is on every fleet machine but the Mac, which has Apple's openrsync. Ceph would hold the recordings and builds with three copies, but no NVMe in the fleet is free (every one holds a system or someone's data), three drives would have to be added, and the third node would need either a cable or would slow every write to 1 Gb. Ceph runs on Linux only; the Mac would reach it through a gateway, and cannot usefully be part of the cluster. A replication plan that keeps copies by how replaceable the data is would store the recordings and builds once, since a recipe remakes them exactly. The report ends with what would bring the question back.</p></section><section id="si"><h2>I. The question</h2><p>Paul's words, in the order they came:</p><blockquote><p>how about rsync</p></blockquote><blockquote><p>is there any other sftp solution. i have give up on rsync, sorry i thought it was a good idea.</p></blockquote><blockquote><p>what i had in mind was a ceph mount between the servers for the largest size. Can we consider the ceph mount. part of the fleet. what can the mac do with the ceph mount. can it even be part of the server, for the right size. is there a better replication strategy.</p></blockquote><blockquote><p>the recordings and builds; on CephFS x3. prefer nvme.</p></blockquote><blockquote><p>would this solve our problem. seems like sftp is fine. what can you do to delay.</p></blockquote><blockquote><p>talk about these suggestions. lab report. nothing descided yet.</p></blockquote></section><section id="sii"><h2>II. What the problem was, and what already answers it</h2><p>On the morning of 4 November one machine, calber, held 114.5 GB of recordings and another, whitewolf, 18.9 GB: the rules recorded playing, a few hundred bytes a decision, for training nets by imitation. Old builds of the game lay beside them on every machine. Three changes the same day answered it:</p><ul><li><strong>Recordings are dropped once a recipe is proved.</strong> A recording is a function of the program that made it and the seeds it played, so orrery keeps the build, the seeds and the SHA-256 of every shard, makes one shard of each build again, and deletes the shards only when the copy is equal byte for byte. A sweep every six hours does the same for new runs; a run marked <em>keep</em> stays. Calber went from 114.5 GB to 6.5 GB; two runs worth 87.5 GB were dropped.</li><li><strong>Builds are pruned when main moves,</strong> except those a recipe still needs. The first prune freed 45.3 GB.</li><li><strong>Sizes are measured,</strong> and a place over 20 GB raises a flag (Results, Growth; Settings, Long run).</li></ul><p class="note">Table I. Measured on 4 November at 18:28 (Results, Growth): every place under the 20 GB limit, no warnings.</p><div class="table"><table><thead><tr><th>Machine</th><th>Where</th><th>Size</th><th>Most of it</th></tr></thead><tbody><tr><td>mac</td><td>the queue</td><td>12.9 GB</td><td>game logs of the reads: first reads 4.7, read-ons 3.5</td></tr><tr><td>mac</td><td>treadcore build/</td><td>4.5 GB</td><td>the census and gauntlet builds</td></tr><tr><td>mac</td><td>the Mac's lane</td><td>0.7 GB</td><td>its job outputs</td></tr><tr><td>macmini</td><td>~/fleet</td><td>3.4 GB</td><td>job outputs 2.6</td></tr><tr><td>saskatchewan</td><td>~/fleet</td><td>3.1 GB</td><td>job outputs 2.8</td></tr><tr><td>calber</td><td>~/fleet</td><td>2.6 GB</td><td>job outputs 1.5</td></tr><tr><td>boburner</td><td>~/fleet</td><td>2.4 GB</td><td>job outputs 1.9</td></tr><tr><td>whitewolf</td><td>~/fleet</td><td>1.4 GB</td><td>job outputs 0.9</td></tr><tr><td>jaguaribe</td><td>~/fleet</td><td>1.3 GB</td><td>job outputs 0.9</td></tr><tr><td>columbia</td><td>~/fleet</td><td>1.1 GB</td><td>job outputs 0.8</td></tr><tr><td>bosporus</td><td>~/fleet</td><td>0.4 GB</td><td>job outputs 0.2</td></tr><tr><td><strong>all</strong></td><td></td><td><strong>33.7 GB</strong></td><td></td></tr></tbody></table></div></section><section id="siii"><h2>III. Moving files: sftp, scp, rsync, and the rest</h2><p>orrery's Files pane speaks SFTP itself, over SSH, with nothing installed on either end. Its one failing test (<em>a directory lists with sizes and kinds and no dot entries</em>, about one full run in five) was a fault in the test: two tests on threads of one process named their temporary folders by the clock, a Mac's clock moves a microsecond at a time, and two tests handed the same folder listed each other's files. A counter in the name fixed it (<code>3ab85d0</code>; four full runs, 397 tests passed each). SFTP itself was never at fault.</p><p class="note">Table II. rsync on the fleet, 4 November.</p><div class="table"><table><thead><tr><th>Machine</th><th>rsync</th></tr></thead><tbody><tr><td>saskatchewan, columbia, jaguaribe, bosporus (Alpine)</td><td>3.5.0, protocol 3</td></tr><tr><td>calber, boburner, whitewolf (Ubuntu)</td><td>3.2.7, protocol 3</td></tr><tr><td>the Mac</td><td>openrsync, protocol 29 (Apple's, a subset of the options)</td></tr><tr><td>macmini</td><td>did not answer</td></tr></tbody></table></div><p class="note">Table III. The ways to move a file, and what each is for.</p><div class="table"><table><thead><tr><th>Way</th><th>Good for</th><th>Cost</th></tr></thead><tbody><tr><td><strong>SFTP</strong> (orrery's own)</td><td>browsing: list, open, save one file in the Files pane</td><td>none; built</td></tr><tr><td><strong>scp</strong> (in use)</td><td>a file or a few</td><td>none; on every machine</td></tr><tr><td><strong>rsync</strong></td><td>large copies: resumes a broken transfer, sends only what changed, compresses text</td><td>on the fleet; the Mac's openrsync takes only the common options (<code>-a --partial -z</code>), or Homebrew's rsync</td></tr><tr><td><strong>tar over SSH</strong></td><td>a whole folder of many small files, as one stream</td><td>none; Alpine's and macOS's tar both do it</td></tr><tr><td><strong>NFS share</strong> (orrery's Storage view)</td><td>a folder every machine sees, so nothing is copied</td><td>built; the Storage view stages it</td></tr><tr><td><strong>SSHFS</strong></td><td>a remote folder mounted on the Mac</td><td>macFUSE, a kernel extension on the Mac</td></tr></tbody></table></div><p>The connections are shared (SSH ControlMaster for the fleet hosts since 4 November), so each copy reuses an open connection. Nothing in this section is slow enough today to change.</p></section><section id="siv"><h2>IV. Ceph for the recordings and builds, three copies on NVMe</h2><p><strong>What Ceph needs</strong> [1], [2]: three monitors at least, an odd number, for a quorum; about 4 GB of memory for each storage daemon (OSD), and 1 to 2 GB for each monitor and manager; whole devices for the OSDs; and links of 10 Gb between the nodes, since every write waits for all three copies. Its deployment tool, cephadm, wants systemd and containers [3], so it runs on the Ubuntu machines; on Alpine, Ceph's packages exist but the setup is by hand, a procedure the Alpine wiki marks as work in progress [4].</p><p><strong>No NVMe in the fleet is free.</strong> The survey of 4 November (Machines, Storage; as the user, nothing changed):</p><p class="note">Table IV. Every NVMe in the fleet.</p><div class="table"><table><thead><tr><th>Machine</th><th>NVMe</th><th>Use now</th></tr></thead><tbody><tr><td>boburner</td><td>Crucial P3, 4 TB</td><td>the system</td></tr><tr><td>whitewolf</td><td>Samsung 950 PRO, 256 GB</td><td>the system</td></tr><tr><td>calber</td><td>HP EX950, 2 TB</td><td>the system</td></tr><tr><td>calber</td><td>HP EX900, 1 TB</td><td>encrypted (LUKS): someone's data</td></tr><tr><td>saskatchewan</td><td>Samsung 980 PRO, 2 TB</td><td>the system</td></tr><tr><td>saskatchewan</td><td>Samsung 980 PRO 1 TB; Crucial P3 4 TB</td><td>mounted as data volumes</td></tr><tr><td>columbia</td><td>FORESEE, 512 GB</td><td>the system</td></tr></tbody></table></div><p>So the plan of 29 October stands: three NVMe would be added, one a node.</p><p class="note">Table V. What three copies leave, with the 85% full ratio kept free.</p><div class="table"><table><thead><tr><th>Drives</th><th>Raw</th><th>Usable</th></tr></thead><tbody><tr><td>3 × 1 TB</td><td>3 TB</td><td>about 0.85 TB</td></tr><tr><td>3 × 2 TB</td><td>6 TB</td><td>about 1.7 TB</td></tr></tbody></table></div><p>Against Table I's 33.7 GB, 1 TB drives are ample while recordings are dropped; 2 TB would hold recordings kept instead.</p><p class="note">Table VI. Where the three would go.</p><div class="table"><table><thead><tr><th>Node</th><th>Link</th><th>Memory</th><th>Notes</th></tr></thead><tbody><tr><td>boburner</td><td>10 Gb</td><td>31 GB</td><td>Ubuntu, cephadm</td></tr><tr><td>whitewolf</td><td>10 Gb (its fast port is .195)</td><td>63 GB</td><td>Ubuntu, cephadm</td></tr><tr><td>jaguaribe</td><td>10 Gb card, <strong>not cabled</strong></td><td>47 GB</td><td>Alpine: Ceph by hand</td></tr><tr><td>calber</td><td>1 Gb</td><td>63 GB</td><td>Ubuntu, cephadm; every write held to about 110 MB/s</td></tr></tbody></table></div><p><strong>One gain beyond space.</strong> With builds on storage every machine sees, the fleet could build each treadcore commit once for each system (an Alpine build and an Ubuntu build differ) and share it. Today each machine builds its own.</p></section><section id="sv"><h2>V. The Mac and Ceph</h2><p><strong>A client, through a gateway.</strong> macOS has no supported CephFS client. A Ceph node can serve the file system over SMB (Samba) or NFS (Ceph's own NFS service, NFS-Ganesha), and the Mac mounts that, in the Finder or with <code>mount</code>.</p><p><strong>Not a server.</strong> Ceph's daemons do not run on macOS, only in a Linux virtual machine. An OSD in a VM on the Mac would share its 16 GB of memory and its one SSD, sit on 1 Gb, and set off a recovery across the cluster each time the Mac restarts for an update. The Mac does better as the coordinator, its own data backed up to wherever the fleet keeps copies.</p></section><section id="svi"><h2>VI. Replication: copies by how replaceable the data is</h2><p>Three copies of everything spends the most space on what matters least. The data falls into three kinds.</p><p class="note">Table VII. Copies by kind.</p><div class="table"><table><thead><tr><th>Kind</th><th>What</th><th>Where it could live</th><th>Copies</th></tr></thead><tbody><tr><td>small and irreplaceable</td><td>the queue's archive, the films, the nets' vault, configuration</td><td>CephFS at three copies, or ZFS with snapshots</td><td>3, and git for the code</td></tr><tr><td>large and reproducible</td><td>recordings (each with its proved recipe), builds, traces</td><td>one large pool</td><td>1: a recipe remakes them exactly</td></tr><tr><td>large and irreplaceable</td><td>media and datasets on boburner's Hexamir</td><td>ZFS RAID-Z2, shared over NFS</td><td>2: a nightly snapshot copied to the Asustor</td></tr></tbody></table></div><p>The recordings and builds Paul named are the second kind. Three copies would protect bytes a recipe can already remake; one copy and the recipe is the cheaper protection.</p><p><strong>Erasure coding</strong> keeps parity in place of whole copies: a pool of 4 data and 2 parity chunks keeps 67% of its raw space and survives two failures [5]. A CephFS data pool can be erasure-coded (its metadata pool stays replicated) [6]. To survive a whole machine lost, each chunk must sit on its own machine: six machines with Ceph drives for 4+2, where the fleet has three on 10 Gb.</p><p><strong>The Supermicro as the large pool.</strong> The X8DT3-LN4F that came back on 3 November has 48 GB of memory, 24 threads and a drive cage behind an add-in LSI card. ZFS in RAID-Z2 on its cage, shared over NFS, would be the large pool of Table VII without Ceph. Its links are four 1 Gb ports, which can be bonded.</p></section><section id="svii"><h2>VII. What would bring the question back</h2><p>None of these holds today. Any one would:</p><ol><li>Recordings are to be <strong>kept</strong> long-term instead of dropped once their recipe is proved.</li><li>The shared data passes <strong>a few hundred GB</strong>, or a place keeps raising the 20 GB flag after a sweep and a prune.</li><li><strong>Three Ubuntu nodes have 10 Gb,</strong> so Ceph would run at its speed.</li><li>A machine's loss would cost <strong>data with no copy and no recipe.</strong></li></ol></section><section id="sviii"><h2>VIII. Discussion</h2><p class="note">Table VIII. The options, side by side; none chosen.</p><div class="table"><table><thead><tr><th>Option</th><th>It costs</th><th>It gains</th><th>Today</th></tr></thead><tbody><tr><td>Keep what is built (recipes, sweeps, prunes, the 20 GB flag)</td><td>nothing</td><td>the space problem stays answered</td><td>in place</td></tr><tr><td>rsync for the large copies</td><td>a fallback to scp where it is absent</td><td>resumable, change-only copies</td><td>not needed at 33.7 GB</td></tr><tr><td>CephFS ×3 on NVMe for recordings and builds</td><td>three NVMe, a cable or a slow third node, about 4 GB of memory a node, a cluster to keep</td><td>three copies; builds shared once a system</td><td>not needed; no free NVMe</td></tr><tr><td>ZFS RAID-Z2 on the Supermicro, over NFS</td><td>the cage's drives, an HBA in IT mode</td><td>one large pool, two failures survived</td><td>possible once the cage's drives are counted</td></tr><tr><td>Copies by kind (Table VII)</td><td>a rule written down</td><td>the most protection for the space</td><td>a matter of policy</td></tr></tbody></table></div><p><strong>One step costs nothing whichever way this goes:</strong> cabling jaguaribe's 10 Gb port makes a third 10 Gb machine, which NFS uses today and Ceph would need tomorrow.</p><p><strong>What this report does not do.</strong> It formats no disk, buys nothing, and changes no setting. It records the options and the evidence so that the choice, when it comes, starts from here.</p></section><section id="references"><h2>References</h2><p>[1] Ceph Documentation, "Hardware recommendations." https://docs.ceph.com/en/latest/start/hardware-recommendations/</p><p>[2] Ceph Documentation, "Monitor config reference" (monitors, quorum). https://docs.ceph.com/en/latest/rados/configuration/mon-config-ref/</p><p>[3] Ceph Documentation, "cephadm." https://docs.ceph.com/en/latest/cephadm/</p><p>[4] Alpine Linux Wiki, "CEPH" (work in progress). https://wiki.alpinelinux.org/wiki/CEPH</p><p>[5] Ceph Documentation, "Erasure code." https://docs.ceph.com/en/latest/rados/operations/erasure-code/</p><p>[6] Ceph Documentation, "Create a Ceph file system" (erasure-coded data pools). https://docs.ceph.com/en/latest/cephfs/createfs/</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>
