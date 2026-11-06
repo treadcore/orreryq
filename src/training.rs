@@ -114,6 +114,8 @@ pub struct State {
     pub montage: crate::montage::State,
     /// The Videos page: the film chosen (videos.rs).
     pub videos: crate::videos::State,
+    /// The Generations page: its tab and each tab's scroll (generations.rs).
+    pub generations: crate::generations::State,
     /// "KEY VALUE" for fleet-tune.py, from Settings, Long run, for main to run.
     pub tune: Option<String>,
     pub operator: bool,
@@ -367,6 +369,8 @@ pub struct Model {
     pub montage: Option<json::Value>,
     /// The films in orrery's output folder (videos.rs).
     pub videos: Option<json::Value>,
+    /// The lab report Outgrowing Yourself's numbers, live (generations.rs).
+    pub generations: Option<json::Value>,
     /// The planner's bridge: the Gladiator shipped and the reads of the world milestones (growth.rs).
     pub bridge: Option<json::Value>,
     pub quality: Option<Quality>,
@@ -645,6 +649,7 @@ impl Model {
         m.recordings = v.get("recordings").cloned();
         m.montage = v.get("montage").cloned();
         m.videos = v.get("videos").cloned();
+        m.generations = v.get("generations").cloned();
         m.bridge = v.get("bridge").cloned();
         if let Some(x) = v.get("algorhythm").filter(|x| x.get("dials").is_some()) {
             let num = |v: &json::Value, k: &str| v.get(k).and_then(|n| n.as_num()).unwrap_or(0.0);
@@ -748,13 +753,14 @@ fn bar(ui: &mut Ui, r: Rect, frac: f64, c: Rgb) {
 /// the Results' (Candidates, Found, Net, Flags) and the Settings' (Keeper,
 /// Commits), by page number.
 const QUEUE_PAGES: [usize; 2] = [0, 1];
-const RESULTS_PAGES: [usize; 12] = [5, 2, 3, 13, 14, 15, 16, 17, 8, 10, 12, 4];
+const RESULTS_PAGES: [usize; 13] = [5, 2, 3, 13, 14, 18, 15, 16, 17, 8, 10, 12, 4];
 const SETTINGS_PAGES: [usize; 4] = [6, 9, 11, 7];
 
 /// (page number, name, what it shows). Candidates came after the rest and
 /// keeps the number 5, so ORRERY_FRAME_PAGE and a saved page mean what they
 /// meant. Personas (10), Ranges (11) and Gauntlet (12) came on 2 November.
-const PAGES: [(usize, &str, &str); 18] = [
+const PAGES: [(usize, &str, &str); 19] = [
+    (18, "Generations", "the lab report Outgrowing Yourself, live, a tab a figure: the roads to main, the days, every generation's turnaround, what a generation claims and keeps, the GPU's ladder and its elections on the CUDA gauntlet, the hours and what they bought"),
     (15, "Recordings", "the behaviour-cloning recordings: each run's size on its store, its recipe, who reads it; keep, drop, re-record, and a seed read a tank at a time"),
     (16, "Montage", "the generations since the last film, as a film: crucible's world duels, the camera on the best winning tank; make, watch it made, play"),
     (17, "Videos", "the films in orrery's output folder, a list with their data: made, length, size, chapters, generations, the description and chapter marks to paste; open or show one"),
@@ -933,6 +939,7 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State, view: nav::View) -> Option<n
                 crate::montage::draw(ui, page, m.montage.as_ref(), &mut st.montage, operator, &mut st.ctl)
             }
             17 => crate::videos::draw(ui, page, m.videos.as_ref(), &mut st.videos, &mut st.ctl),
+            18 => crate::generations::draw(ui, page, m.generations.as_ref(), &mut st.generations),
             7 => draw_commits_page(ui, page, q, st),
             3 => {
                 if let Some(i) = draw_net(ui, page, m) {

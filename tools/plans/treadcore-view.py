@@ -387,6 +387,27 @@ def bridge():
     return doc
 
 
+def generations():
+    """Results, Generations: the numbers of the lab report Outgrowing Yourself, live (tools/report/
+    outgrowing.py --view writes plan/generations.json). Reading the coordinator's push history takes a few
+    seconds, so the view hands over what is there and asks for a fresh copy in the background when it is
+    ten minutes old; the page says when it was read."""
+    if not QDIR:
+        return None
+    p = os.path.join(QDIR, "plan", "generations.json")
+    doc = load_json(p)
+    age = time.time() - os.path.getmtime(p) if os.path.exists(p) else 1e9
+    stamp = p + ".asked"
+    if age > 600 and not (os.path.exists(stamp) and time.time() - os.path.getmtime(stamp) < 300):
+        open(stamp, "w").close()
+        tool = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "report", "outgrowing.py")
+        subprocess.Popen([sys.executable, "-I", tool, QDIR, "--view", p], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+    if doc is not None:
+        doc["age_s"] = round(age)
+    return doc
+
+
 def videos():
     """The films in orrery's output folder (montage.py copies each there with a .txt of its title,
     description and chapter marks): what Results, Videos lists. A list with data, not a player. A
@@ -638,6 +659,6 @@ if __name__ == "__main__":
     qd = queue()
     doc = {"fleet": FLEET, "queue": qd, "project": "treadcore", "at": time.strftime("%H:%M:%S"),
            "machines": machines(run, qd), "run": run, "loop": loop(), "net": net(), "algorhythm": algorhythm(), "analysis": analysis(), "long_run": long_run(), "quality": quality(),
-           "ranges": ranges(), "personas": personas(), "gauntlet": gauntlet(), "nets": nets(), "growth": growth(), "recordings": recordings(), "montage": montage(), "videos": videos(), "bridge": bridge(),
+           "ranges": ranges(), "personas": personas(), "gauntlet": gauntlet(), "nets": nets(), "growth": growth(), "recordings": recordings(), "montage": montage(), "videos": videos(), "generations": generations(), "bridge": bridge(),
            "held": (lambda p: (lambda t: json.loads(t) if t.strip() else {})(read(p)))(os.path.join(QDIR, "hold.json")) if QDIR else {}}
     print(json.dumps(doc))

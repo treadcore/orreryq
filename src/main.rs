@@ -71,6 +71,7 @@ mod nets;
 mod growth;
 mod montage;
 mod videos;
+mod generations;
 mod recordings;
 mod orchestrate;
 mod pipeline;
@@ -787,6 +788,8 @@ fn write_frame(
                         ..Default::default()
                     },
                     page: std::env::var("ORRERY_FRAME_PAGE").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
+                    // ORRERY_FRAME_GTAB=n draws the Generations page's tab n (0 Roads ... 6 Hours), for review.
+                    generations: generations::State { tab: std::env::var("ORRERY_FRAME_GTAB").ok().and_then(|v| v.parse().ok()).unwrap_or(0), ..Default::default() },
                     // ORRERY_FRAME_SCROLL=px scrolls the Nets page (13); ORRERY_FRAME_OPEN=name opens one card tall.
                     nets: nets::State {
                         off: std::env::var("ORRERY_FRAME_SCROLL").ok().and_then(|v| v.parse().ok()).unwrap_or(0),

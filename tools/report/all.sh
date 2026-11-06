@@ -38,5 +38,7 @@ storage-options|Storage, Reconsidered|orrery · the fleet · storage options, no
 idle-fleet|Fifty-Four Idle Minutes|orrery · the fleet · the line replayed twice, and restarting
 duty-cycle|The Duty Cycle|orrery · the fleet · utilization, waiting and the round table
 line-film|Three Generations, Filmed|orrery · the montage · the line, the crowd and the wires
+outgrowing|Outgrowing Yourself|orrery · the fleet · the GPU, the line, and what a generation keeps
+one-rule|One Rule, Two Machines|orrery · crucible · the trees, the mazes, the CUDA gauntlet and the GPU's generations
 LIST
 python3 ../tools/report/collect.py

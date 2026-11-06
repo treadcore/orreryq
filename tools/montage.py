@@ -112,6 +112,7 @@ SPREAD = 3.0
 SHELL, RING, ZAP = (255, 160, 64), (255, 255, 255), (255, 224, 138)
 # The champions of the chapters before, in the followed duel: lavender, apart from both sides' colours.
 LAV = (200, 168, 255)
+TREES, TREES_E = (20, 64, 30), (14, 46, 22)
 
 
 def now():
@@ -138,7 +139,8 @@ def run(cmd, timeout=600, **kw):
 
 def home_of(q):
     c = (load(os.path.join(q, "plan.json"), {}) or {}).get("crucible") or {}
-    return "crucible" + ("-world" if c.get("world") else "") + ("-hybrid" if c.get("hybrid") else ""), c
+    return ("crucible" + ("-world" if c.get("world") else "") + ("-hybrid" if c.get("hybrid") else "")
+            + ("-forest" if c.get("world") and c.get("forest") else "")), c
 
 
 MS = re.compile(r"^(M\d{4})-(.+)-g(\d+)\.bin$")
@@ -220,7 +222,7 @@ def trace(q, chapters, opps, cfg, duels, seed, want_host, work):
     hosts = gpu_hosts(q)
     if want_host:
         hosts = [h for h in hosts if h[0] == want_host] or hosts
-    flags = ("HYBRID=1 " if cfg.get("hybrid") else "") + ("WORLD=1 " if cfg.get("world") else "")
+    flags = ("HYBRID=1 " if cfg.get("hybrid") else "") + ("WORLD=1 " if cfg.get("world") else "") + ("FOREST=1 " if cfg.get("world") and cfg.get("forest") else "")
     hw = int(cfg.get("h") or (48 if cfg.get("world") else 32))
     flags += "H=%d" % hw if hw != 32 else ""
     if "WORLD=1" not in flags:
@@ -281,12 +283,21 @@ class Trace:
         if self.version >= 2:
             self.nin, self.nh, self.nout = struct.unpack_from("<3i", b, off)
             off += 12
-        na = 3 * self.npl + 2 * self.npb
+        # Version 3 (crucible FOREST, 6 November): how many groves and walls, then they follow the pillboxes.
+        ngr = nwl = 0
+        if self.version >= 3:
+            ngr, nwl = struct.unpack_from("<2i", b, off)
+            off += 8
+        na = 3 * self.npl + 2 * self.npb + 3 * ngr + 4 * nwl
         ar = struct.unpack_from("<%df" % na, b, off)
         off += 4 * na
         p = self.npl
         self.pillars = [(ar[i], ar[p + i], ar[2 * p + i]) for i in range(p)]
         self.boxes = [(ar[3 * p + k], ar[3 * p + self.npb + k]) for k in range(self.npb)]
+        o = 3 * p + 2 * self.npb
+        self.groves = [(ar[o + g], ar[o + ngr + g], ar[o + 2 * ngr + g]) for g in range(ngr) if ar[o + 2 * ngr + g] > 0]
+        o += 3 * ngr
+        self.walls = [tuple(ar[o + 4 * k:o + 4 * k + 4]) for k in range(nwl) if ar[o + 4 * k] <= ar[o + 4 * k + 2]]
         self.opp_of = struct.unpack_from("<%di" % self.nd, b, off)
         off += 4 * self.nd
         self.champs = []
@@ -684,10 +695,19 @@ class Film:
         cv.rect(x0 - 4, y1, x1 - x0 + 8, 4, WALL)
         cv.rect(x0 - 4, y0, 4, y1 - y0, WALL)
         cv.rect(x1, y0, 4, y1 - y0, WALL)
+        # The trees under everything that stands (crucible FOREST): a grove a disc of dark leaves.
+        for (gx, gy, gr) in getattr(tr, "groves", []):
+            sx, sy = self.to_px(gx, gy)
+            cv.disc(sx, sy, int(gr * S), TREES_E)
+            cv.disc(sx, sy, max(1, int((gr - 0.5) * S)), TREES)
         for (px, py, pr) in tr.pillars:
             sx, sy = self.to_px(px, py)
             cv.disc(sx, sy, int(pr * S) + 3, ROCK_E)
             cv.disc(sx, sy, int(pr * S), ROCK)
+        for (wx0, wy0, wx1, wy1) in getattr(tr, "walls", []):
+            ax, ay = self.to_px(wx0, wy0)
+            bx_, by_ = self.to_px(wx1, wy1)
+            cv.rect(min(ax, bx_), min(ay, by_), max(2, abs(bx_ - ax)), max(2, abs(by_ - ay)), WALL)
         # The pillboxes, as they stand in the followed duel.
         for k, (bx, by) in enumerate(tr.boxes):
             sx, sy = self.to_px(bx, by)
@@ -950,7 +970,7 @@ def render_clip(tr, ci, cd, clip, what, net, opps, labels, gen, ttl, out, previe
     film = Film(tr, ci, cd, net if hud else None, tiles, 3.0 if hud else 2.0)
     cap = out[:-4] + "-cap.png"
     o = tr.opp_of[cd]
-    vs = ("a " + ("scripted tank", "Raider", "Castle", "Expander", "Timid")[min(4, -1 - o)]) if o < 0 else opps[o]["name"] if o < len(opps) else "a milestone"
+    vs = ("a " + ("scripted tank", "Raider", "Castle", "Expander", "Timid", "Lurker")[min(5, -1 - o)]) if o < 0 else opps[o]["name"] if o < len(opps) else "a milestone"
     # 21 point: at 22 the longest captions (a replay's, a hardest win's) ran under the generation's panel.
     label_png(cap, "%s  ·  duel %d of %d against %s, %s" % (what, cd + 1, tr.nd, vs, "won" if c["outcome"][cd] == 1 else "lost" if c["outcome"][cd] == -1 else "drawn"), 21, font=FONT)
     ttl = ttl if hud else None

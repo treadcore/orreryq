@@ -58,6 +58,14 @@ CARDS = {
                   "Three generations of the game's brain, each from its first read to its commit, an arrow from every job to the "
                   "one it followed: committed, not yet on main, and why. The film's crowd made 128 different duels, not a dozen "
                   "stacked; the kill shot again at half speed; every wire in its node's colour. The film plays in the page."),
+    "one-rule": ("Crucible · one rule, two machines",
+                 "The card's arena gets the game's forest, walls and takeover and its score; the CUDA gauntlet plays treadcore's "
+                 "gauntlet files on the card, fifteen of them with mazes shaped S, 5 and @, paired; training plays them as tasks; a GPU "
+                 "generation is elected on the weighed gauntlet against a bar that follows the line's projection; the terms explained."),
+    "outgrowing": ("Fleet · what a generation keeps",
+                   "How a GPU result reaches main (a net file, two roads, nothing shipped by either yet; no GPU number in the "
+                   "line's dials), what the cards cost ($1.41 a day) and bought, why the world ladder stopped at a net that never "
+                   "loses, a generation's turnaround (1 h to commit, 4.6 h to main), and how much of its claim it keeps: 0.28."),
     "duty-cycle": ("Fleet · the duty cycle",
                    "The machines are 98% busy and wait on no one; the work waits, in the GPU islands' buffer, at the planner's "
                    "five-minute pass, and in the CPU's last two percent. A round table to see it, four changes with their "

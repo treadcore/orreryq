@@ -100,4 +100,16 @@ def videos(q, argv):
     sys.exit(0)
 
 
-VERBS = {"nets": nets, "growth": growth, "recordings": recordings, "bridge": bridge, "montage": montage, "videos": videos}
+def crucible(q, argv):
+    # `crucible elect`: the forest home elects the window's best at the planner's next pass (the planner's
+    # gpu_force reads plan/crucible-elect and removes it): the best candidate since the last GPU generation
+    # that held every floor and the yardstick and stepped forward on the weighed gauntlet. Nothing else.
+    if argv[2:3] != ["elect"]:
+        print("crucible elect: the forest home elects its window's best at the next pass")
+        sys.exit(2)
+    open(os.path.join(q.d, "plan", "crucible-elect"), "w").close()
+    print("crucible elect: asked; the next planner pass elects the window's best, if one held every floor")
+    sys.exit(0)
+
+
+VERBS = {"nets": nets, "growth": growth, "recordings": recordings, "bridge": bridge, "montage": montage, "videos": videos, "crucible": crucible}

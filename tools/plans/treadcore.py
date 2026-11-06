@@ -4304,12 +4304,16 @@ class Plan:
         simulation expand the matrix dimensions. to the crucible") apart again: the game's rules
         in the arena and twenty more senses, so crucible-world and crucible-world-hybrid."""
         c = self.cfg.get("crucible") or {}
-        return "crucible" + ("-world" if c.get("world") else "") + ("-hybrid" if c.get("hybrid") else "")
+        # The trees (6 November): a forest arena is a home of its own again, begun from the world's.
+        return ("crucible" + ("-world" if c.get("world") else "") + ("-hybrid" if c.get("hybrid") else "")
+                + ("-forest" if c.get("world") and c.get("forest") else ""))
 
     def crucible_parent(self, home):
         """The home a world home's islands begin from: the same kind without the world. Crucible
         widens a loaded net into the bigger layout with zeros where it had nothing, so the
         population carries everything it learned and meets the world's senses from nothing."""
+        if home.endswith("-forest"):
+            return home[:-len("-forest")]
         return home.replace("-world", "") if "-world" in home else None
 
     def ladder_state(self, home=None):
@@ -4319,7 +4323,7 @@ class Plan:
         key = "crucible_ladder" if home in ("crucible", "crucible-hybrid") else "crucible_ladder:" + home
         lad = self.state.get(key)
         if lad is None:
-            lad = self.state[key] = {"milestones": []}
+            lad = self.state[key] = {"milestones": [], "began": time.strftime("%Y-%m-%dT%H:%M:%S")}
             parent = self.crucible_parent(home)
             # A new world home begins with its parent's milestones as its first rungs, copied in
             # (widened by crucible when a segment loads them): the world islands meet the best the
@@ -4395,11 +4399,19 @@ class Plan:
                 exam.append((o, float(w), float(d), float(l), int(n)))
         except (OSError, ValueError):
             pass
+        # The newest milestone's own read of the yardstick on the same seeds: not a rung.
+        yref = [e for e in exam if e[0].startswith("yardstick@")]
+        exam = [e for e in exam if not e[0].startswith("yardstick@")]
         row = {"job": jid, "island": name, "gen": gen, "yard": None, "against": None, "w": None, "d": None, "l": None,
                "margin_se": None, "ladder_mean": None, "result": "kept"}
         rungs = [e for e in exam if e[0] != "yardstick"]
         # A segment from before the exam: its last yardstick read instead.
         row["yard"] = last_yard
+        if yref:
+            row["yard_ref"] = {"of": yref[0][0][len("yardstick@"):], "w": yref[0][1], "n": yref[0][4]}
+        g = self.gauntlet_read(os.path.join(out, "gauntlet.tsv"))
+        if g:
+            row["gauntlet"] = g
         for e in exam:
             if e[0] == "yardstick":
                 row["yard"] = e[1]
@@ -4419,6 +4431,12 @@ class Plan:
             by.setdefault(homes.pop(j, None) or self.segment_home(j), []).append((n, j))
         for home, these in sorted(by.items()):
             self.crucible_ladder_home(these, home)
+        home = self.crucible_home()
+        if home.endswith("-forest"):
+            lad = self.ladder_state(home)
+            top = lad["milestones"][-1]["id"] if lad["milestones"] else None
+            if top and self.gpu_force(lad, home, top):
+                self.ladder_write(home)
         if not by:
             self.ladder_write()
 
@@ -4441,7 +4459,14 @@ class Plan:
         top = lad["milestones"][-1]["id"] if lad["milestones"] else None
         # Strongest first: the margin over the newest milestone; with no
         # milestone yet, the yardstick's wins.
-        rows.sort(key=lambda r: (-(r["margin_se"] if r["margin_se"] is not None else -1e9), -(r["yard"] or 0), r["island"]))
+        # A forest home weighs the gauntlet's step first; the others, the margin head to head.
+        if home.endswith("-forest"):
+            for r in rows:
+                st = self.gpu_step(r, lad, top) if top and r.get("against") == top else None
+                r["_zg"] = st["zg"] if st else -1e9
+            rows.sort(key=lambda r: (-r["_zg"], r["island"]))
+        else:
+            rows.sort(key=lambda r: (-(r["margin_se"] if r["margin_se"] is not None else -1e9), -(r["yard"] or 0), r["island"]))
         os.makedirs(self.crucible_dir("milestones", home=home), exist_ok=True)
         for r in rows:
             if top is None:
@@ -4453,6 +4478,26 @@ class Plan:
             else:
                 ok = r["margin_se"] > 2 and r["ladder_mean"] >= 0
                 why = "beat %s by %.1f se, ladder %+.3f" % (top, r["margin_se"], r["ladder_mean"])
+                st = self.gpu_step(r, lad, top) if home.endswith("-forest") else None
+                if st:
+                    bar, dry = self.gpu_bar(lad)
+                    # Held: every floor, or only small trades paid for by a step well over the bar.
+                    held = st["holds"] or (not st["missed"] and st["zg"] >= bar + self.GPU_TRADE_OVER)
+                    st["holds"] = held
+                    r["step"] = dict(st, bar=round(bar, 2))
+                    better = st["zg"] >= bar or st["zy"] >= bar
+                    ok = held and st["guard"] and (better or ok)
+                    why = "the gauntlet %+.2f z (weighed by difficulty), the yardstick %+.2f z, head to head %+.1f se, against the bar %.2f%s%s%s" % (
+                        st["zg"], st["zy"], r["margin_se"], bar,
+                        "; traded: " + "; ".join(st["traded"][:3]) if st["traded"] and held else "",
+                        "" if held else "; under its floors: " + "; ".join((st["missed"] or st["traded"])[:3]) + (
+                            "" if st["missed"] else " (a small trade, but the step is not %.1f over the bar)" % self.GPU_TRADE_OVER),
+                        "" if st["guard"] else "; worse on the yardstick")
+                    # The window's best that went no way backwards (or traded small for a large step): the
+                    # candidate a forced election takes.
+                    if held and st["guard"] and st["zg"] > 0 and (not lad.get("best") or st["zg"] > lad["best"]["zg"]):
+                        lad["best"] = {"job": r["job"], "island": r["island"], "gen": r["gen"], "zg": st["zg"], "zy": st["zy"], "against": top,
+                                       "margin_se": r["margin_se"], "share": (r["gauntlet"]["share"].get("champion") or {}), "at": time.strftime("%Y-%m-%dT%H:%M:%S")}
             if ok:
                 mid = "M%04d-%s-g%d" % (len(lad["milestones"]) + 1, r["island"], r["gen"])
                 shutil.copyfile(self.crucible_dir("champions", r["job"] + ".bin", home=home), self.crucible_dir("milestones", mid + ".bin", home=home))
@@ -4460,9 +4505,12 @@ class Plan:
                                           "after": top, "margin_se": r["margin_se"], "made": time.strftime("%Y-%m-%dT%H:%M:%S")})
                 r["result"] = "milestone %s: %s" % (mid, why)
                 top = mid
+                if home.endswith("-forest"):
+                    self.gpu_elected(lad, r)
                 self.flag("crucible", "crucible: %s is milestone %s (%s)" % (r["job"], mid, why), key="milestone:%s" % mid, progress=True)
             else:
                 r["result"] = "kept: %s" % why
+            r.pop("_zg", None)
             new = not os.path.exists(self.crucible_dir("lineage.tsv", home=home))
             with open(self.crucible_dir("lineage.tsv", home=home), "a") as f:
                 if new:
@@ -4470,6 +4518,18 @@ class Plan:
                 fm = lambda x: "-" if x is None else ("%.4f" % x if isinstance(x, float) else str(x))
                 f.write("\t".join([time.strftime("%Y-%m-%dT%H:%M:%S"), r["job"], r["island"], str(r["gen"])] +
                                   [fm(r[k]) for k in ("yard", "against", "w", "d", "l", "margin_se", "ladder_mean")] + [r["result"]]) + "\n")
+            # The GPU's elections, a row a segment: what Results, Generations draws.
+            if r.get("step"):
+                st, sh = r["step"], (r.get("gauntlet") or {}).get("share") or {}
+                ep = self.crucible_dir("elect.tsv", home=home)
+                first = not os.path.exists(ep)
+                with open(ep, "a") as f:
+                    if first:
+                        f.write("time\tjob\tisland\tgen\tagainst\tzg\tzy\tbar\tholds\tguard\tmargin_se\tchampion_share\tagainst_share\tresult\n")
+                    mean = lambda d: "%.4f" % (sum(d.values()) / len(d)) if d else "-"
+                    f.write("\t".join([time.strftime("%Y-%m-%dT%H:%M:%S"), r["job"], r["island"], str(r["gen"]), str(r.get("against")), "%.2f" % st["zg"],
+                                        "%.2f" % st["zy"], "%.2f" % st["bar"], "yes" if st["holds"] else "no", "yes" if st["guard"] else "no",
+                                        fm(r.get("margin_se")), mean(sh.get("champion") or {}), mean(sh.get(r.get("against")) or {}), r["result"]]) + "\n")
         self.ladder_write(home)
     def crucible_src(self):
         return os.path.expanduser(self.cfg.get("crucible", {}).get("source", "~/code/crucible"))
@@ -4554,8 +4614,171 @@ class Plan:
     # mode with the push allowed, as a promotion does (Paul, 4 November: "Ship itself in auto mode"),
     # else on a person's press (`fleet-queue.py QUEUE bridge ship LABEL`). The game carries its
     # champion in its binary, so shipping is a commit to treadcore, tested on a worktree of main.
-    BRIDGE_SEEDS = 48
+    # 192, not 48 (6 November): the first read of a forest generation, M0016, took 85 s a census and read
+    # -1.35 +/- 1.79 a seat -- an error as large as any step a generation makes. Four times the seeds halve
+    # it, for about six minutes of one machine a GPU generation.
+    BRIDGE_SEEDS = 192
     BRIDGE_SEED0 = 80000000
+
+    # ---- the GPU's generations: the gauntlet, its floors and the bar (6 November) -------------------
+    # Paul: "fix the promotion to generations via the GPU ... we want incremental improvement. I'm not
+    # observing increments, the hand pick generations need to be automatic and frequent"; "can the
+    # scalars adjust when they detect diminishing returns, and have a good method of still electing the
+    # best"; "make a better designed fitness and make it match difficulty projection".
+    # THE OLD RULE COULD NOT SEE A STEP: a champion had to beat the newest milestone head to head by two
+    # errors, and M0015 had become a net that draws 99.6% of its duels, so in 50 hours and 811 exams none
+    # did. A forest home elects on what can move: the CUDA gauntlet (crucible --gauntlet, treadcore's
+    # gauntlet's files and words), read for the champion and the newest milestone on the same runs, each
+    # file weighed by how hard it is -- 1 for one the milestone never passes, 0.25 for one it always
+    # does -- so a step on a hard file counts four times a step on an easy one; and the yardstick, the
+    # fixed opponent, read for both on the same seeds. A champion is a generation when it holds every
+    # floor (today's success: the newest generation's share less two errors, raised by each one), is not
+    # worse on the yardstick by two errors, and is better by THE BAR on the weighed gauntlet or the
+    # yardstick (or by the old rule, head to head). The bar follows the line's difficulty projection
+    # (ease(): harder after each generation, easier when dry): GPU_BAR_START, +GPU_TIGHTEN after a
+    # generation up to GPU_BAR_MAX, -GPU_EASE for every GPU_DRY_H hours dry down to GPU_BAR_MIN. And when
+    # GPU_FORCE_H hours pass with none, or a person asks (`fleet-queue.py QUEUE crucible elect`), the best
+    # candidate of the window -- the highest weighed step that held every floor and the guard -- is
+    # elected: the best is still chosen when the returns diminish, and never one that went backwards.
+    GPU_BAR_START, GPU_BAR_MIN, GPU_BAR_MAX = 2.0, 1.0, 3.0
+    GPU_TIGHTEN, GPU_EASE, GPU_DRY_H, GPU_FORCE_H = 0.25, 0.25, 1.0, 3.0
+    # SMALL TRADES (Paul, 6 November, asked whether a gain on a hard file may pay for a small loss on an
+    # easy one, after boburner's champion built a base 56 times in 256 where none had, and lost 31 runs of
+    # getting out of a pillbox's ring: "Allow small trades"). A file may fall below its floor by up to two
+    # more of the largest errors its share can have (1/sqrt(n), 0.0625 at 256 runs) when the weighed step
+    # is over the bar by GPU_TRADE_OVER; further below, or with a smaller step, the floor holds as before.
+    GPU_TRADE_OVER = 2.0
+
+    @staticmethod
+    def gauntlet_read(path):
+        """A CUDA gauntlet's tsv: each brain's shares by file, and the paired counts against the first."""
+        try:
+            rows = [l.split("\t") for l in open(path).read().splitlines()[1:]]
+        except OSError:
+            return None
+        out = {"share": {}, "se": {}, "runs": {}, "paired": None, "items": {}}
+        for r in rows:
+            if len(r) < 8:
+                continue
+            if r[0] == "PAIRED":
+                out["paired"] = {"pair": r[1], "b": int(r[2]), "c": int(r[3]), "d": float(r[4]), "se": float(r[5]), "n": int(r[7])}
+            elif r[0] == "PAIRED-ITEM":
+                out["items"][r[9] if len(r) > 9 else ""] = {"b": int(r[2]), "c": int(r[3]), "runs": int(r[7])}
+            else:
+                out["share"].setdefault(r[1], {})[r[0]] = float(r[4])
+                out["se"].setdefault(r[1], {})[r[0]] = float(r[5])
+                out["runs"][r[0]] = int(r[3])
+        return out if out["share"] else None
+
+    def gpu_bar(self, lad):
+        """The bar now: the last one set, eased for every GPU_DRY_H hours since the newest generation."""
+        made = [m for m in lad.get("milestones", []) if m.get("made") and not m.get("carried")]
+        since = (made[-1]["made"] if made else lad.get("began")) or time.strftime("%Y-%m-%dT%H:%M:%S")
+        dry = max(0.0, (time.time() - time.mktime(time.strptime(since[:19], "%Y-%m-%dT%H:%M:%S"))) / 3600.0)
+        bar = lad.get("bar", self.GPU_BAR_START)
+        return max(self.GPU_BAR_MIN, bar - self.GPU_EASE * int(dry / self.GPU_DRY_H)), dry
+
+    @staticmethod
+    def gpu_floor(share, runs):
+        """TODAY'S SUCCESS LESS TWO OF THE LARGEST ERRORS A SHARE OF `runs` CAN HAVE (0.5/sqrt(n)): a
+        file passed 256 times of 256 has no binomial error, and its floor at share less two errors was
+        1.00, which one unlucky run would break (M0016's C1 and C2, 6 November; the CPU's G25 the same
+        day). Less 1/sqrt(n) -- 0.0625 at 256 runs -- is the same for every file and never 1."""
+        return round(max(0.0, share - 1.0 / math.sqrt(max(1, runs))), 4)
+
+    def gpu_floors_rebuilt(self, lad, home):
+        """Floors under the first rule, rebuilt from the newest forest generation's own gauntlet."""
+        lad["floor_rule"] = 2
+        made = [m for m in lad.get("milestones", []) if not m.get("carried") and m.get("job")]
+        lad["floors"] = {}
+        if made:
+            j = made[-1]["job"]
+            g = self.gauntlet_read(os.path.join(self.q, "results", j, self.home, "out", j, "gauntlet.tsv"))
+            for k, v in ((g or {}).get("share") or {}).get("champion", {}).items():
+                lad["floors"][k] = self.gpu_floor(v, (g.get("runs") or {}).get(k, 256))
+
+    def gpu_step(self, r, lad, top):
+        """(holds, guard, z of the weighed gauntlet, z of the yardstick, the floors it missed): a forest
+        champion against the newest generation, both read on the same runs."""
+        g = r.get("gauntlet") or {}
+        shares = g.get("share") or {}
+        me, ref = shares.get("champion"), shares.get(top)
+        if not me or not ref:
+            return None
+        if lad.get("floor_rule") != 2:
+            self.gpu_floors_rebuilt(lad, self.crucible_home())
+        floors = lad.setdefault("floors", {})
+        if not floors:
+            # TODAY'S SUCCESS, the first time: the newest generation's share less 1/sqrt(n) (gpu_floor).
+            for k, v in ref.items():
+                floors[k] = self.gpu_floor(v, (g.get("runs") or {}).get(k, 256))
+        runs = g.get("runs") or {}
+        margin = lambda k: 1.0 / math.sqrt(max(1, runs.get(k, 256)))
+        under = [k for k, f in floors.items() if me.get(k, 0.0) < f - 1e-9]
+        traded = ["%s %.2f < %.2f" % (k, me.get(k, 0.0), floors[k]) for k in under if me.get(k, 0.0) >= floors[k] - margin(k) - 1e-9]
+        missed = ["%s %.2f < %.2f" % (k, me.get(k, 0.0), floors[k]) for k in under if me.get(k, 0.0) < floors[k] - margin(k) - 1e-9]
+        num = var = 0.0
+        for k, c in (g.get("items") or {}).items():
+            n = max(1, c["runs"])
+            wgt = 0.25 + 0.75 * (1.0 - ref.get(k, 0.0))
+            num += wgt * (c["b"] - c["c"]) / n
+            # McNemar's variance, the discordant runs under no difference (b + c), not the plug-in one: when
+            # every discordant run of a file goes one way (an enemy behind, 0% to 100%) the plug-in variance
+            # is zero and the z infinite -- the first forest generation read +166 z (6 November).
+            var += wgt * wgt * (c["b"] + c["c"]) / (n * n)
+        zg = num / math.sqrt(var) if var > 0 else 0.0
+        zy, guard = 0.0, True
+        yr = r.get("yard_ref") or {}
+        if r.get("yard") is not None and yr.get("of") == top and yr.get("n"):
+            a, b, n = r["yard"], yr["w"], yr["n"]
+            se = math.sqrt(max(1e-9, a * (1 - a) / n + b * (1 - b) / n))
+            zy = (a - b) / se
+            guard = zy >= -2.0
+        return {"holds": not missed and not traded, "guard": guard, "zg": round(zg, 2), "zy": round(zy, 2), "missed": missed, "traded": traded, "step": round(num, 4)}
+
+    def gpu_elected(self, lad, r):
+        """After a GPU generation, the projection's step: the bar a notch harder, every floor raised to the
+        new generation's own success less two errors, and the window's best begun again."""
+        bar, _ = self.gpu_bar(lad)
+        lad["bar"] = round(min(self.GPU_BAR_MAX, bar + self.GPU_TIGHTEN), 2)
+        g = r.get("gauntlet") or {}
+        me, runs = (g.get("share") or {}).get("champion") or {}, g.get("runs") or {}
+        fl = lad.setdefault("floors", {})
+        # TODAY'S SUCCESS IS THE NEW GENERATION'S: its own share less 1/sqrt(n) on every file. A file it
+        # traded comes down to where it stands, so its heirs are not held to a skill it gave up; every other
+        # floor rises with it.
+        for k, v in me.items():
+            fl[k] = self.gpu_floor(v, runs.get(k, 256))
+        lad["best"] = None
+
+    def gpu_force(self, lad, home, top):
+        """THE FORCED ELECTION: GPU_FORCE_H hours with no generation, or a person's `crucible elect`
+        (plan/crucible-elect): the window's best candidate -- the largest weighed step on the gauntlet
+        among those that held every floor and were no worse on the yardstick -- is the next generation."""
+        ask = os.path.join(self.pd, "crucible-elect")
+        bar, dry = self.gpu_bar(lad)
+        asked = os.path.exists(ask)
+        b = lad.get("best")
+        if not (asked or dry >= self.GPU_FORCE_H) or not b or b.get("against") != top:
+            if asked and not b:
+                self.flag("crucible", "an election was asked, and no candidate in the window has held every floor with a step forward: it waits for one",
+                          key="elect-wait:%s" % top)
+            return None
+        src = self.crucible_dir("champions", b["job"] + ".bin", home=home)
+        if not os.path.exists(src):
+            lad["best"] = None
+            return None
+        mid = "M%04d-%s-g%d" % (len(lad["milestones"]) + 1, b["island"], b["gen"])
+        shutil.copyfile(src, self.crucible_dir("milestones", mid + ".bin", home=home))
+        why = "elected (%s): the window's best, the gauntlet %+.2f z weighed, the yardstick %+.2f z, every floor held" % (
+            "asked" if asked else "%.1f h without a generation" % dry, b["zg"], b["zy"])
+        lad["milestones"].append({"id": mid, "job": b["job"], "island": b["island"], "gen": b["gen"], "after": top, "margin_se": b.get("margin_se"),
+                                  "made": time.strftime("%Y-%m-%dT%H:%M:%S"), "elected": True, "zg": b["zg"], "zy": b["zy"]})
+        self.gpu_elected(lad, {"gauntlet": {"share": {"champion": b.get("share") or {}}, "runs": {}}})
+        if asked:
+            os.remove(ask)
+        self.flag("crucible", "crucible: %s is milestone %s, %s" % (b["job"], mid, why), key="milestone:%s" % mid, progress=True)
+        return mid
 
     def bridge_ready(self):
         """Does the fleet's commit play a Gladiator that GLADIATOR can swap?"""
@@ -4591,7 +4814,16 @@ class Plan:
                 if c and sh:
                     diff, se = c[0] - sh[0], math.hypot(c[1], sh[1])
                     cur.update({"cand": [c[0], c[1]], "ship": [sh[0], sh[1]], "diff": round(diff, 3), "se": round(se, 3),
-                                "holds": diff > 2 * se, "on": c[3], "read": time.strftime("%Y-%m-%dT%H:%M:%S")})
+                                "holds": diff > 2 * se, "credited": diff > 2 * se, "on": c[3], "read": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                                # Against the rules: the census of the Gladiator's team is read against the
+                                # defaults, so its own number says how far the net stands from replacing the brain.
+                                "vs_rules": [round(c[0], 3), round(c[1], 3), round(c[0] / c[1], 2) if c[1] else 0.0]})
+                    # REPLACE THE BRAIN, OVER TIME (Paul, 6 November): the day a GPU generation reads past the
+                    # rules themselves at the proof's z, a person is told; moving the default brain is Paul's.
+                    if c[1] and c[0] / c[1] >= self.HELD_Z:
+                        self.flag("bridge", "%s reads %+.2f +/- %.2f a seat past the rules themselves (z %.1f, %d seeds): a GPU net could replace the brain; "
+                                  "the default brain is moved only when Paul says" % (cur["label"], c[0], c[1], c[0] / c[1], cur["seeds"]),
+                                  key="replace-brain:%s" % cur["label"])
                     # IN AUTO MODE IT SHIPS ITSELF (Paul, 4 November: "Ship itself in auto mode"), as a
                     # promotion does when the push is allowed; otherwise it waits for the press.
                     auto = diff > 2 * se and self.auto() and self.push_check()["ok"]
@@ -4615,6 +4847,14 @@ class Plan:
                 ms = sorted(glob.glob(os.path.join(self.crucible_dir("milestones", home=home), "M*.bin")))
                 label = os.path.basename(ms[-1])[:-4] if ms else None
                 read = {r.get("label") for r in br.get("reads", [])}
+                # THE CARD ELECTS, THE GAME CREDITS (Paul, 6 November): every GPU generation is read in the
+                # game, the oldest unread after the shipped one first, so each one is credited or not.
+                names = [os.path.basename(m)[:-4] for m in ms]
+                after = names[names.index(br.get("shipped")) + 1:] if br.get("shipped") in names else names[-1:]
+                unread = [n for n in after if n not in read]
+                if unread:
+                    label = unread[0]
+                    ms = [m for m in ms if os.path.basename(m)[:-4] == label]
                 fast = [h["name"] for h in self.hosts if "fast" in h.get("caps", [])] or [h["name"] for h in self.hosts if "cpu" in h.get("caps", [])]
                 if label and label != br.get("shipped") and label not in read and fast:
                     n = br["n"] = br.get("n", 0) + 1
@@ -4861,7 +5101,7 @@ class Plan:
     # crucible's own name, seconds for ticks, and passed to make one variable each (R_VMAX=4.0f): the
     # .flags stamp holds them, so a rule that moves rebuilds every island at its next segment, and a
     # flag says what moved. A rule rules.rs no longer has is left at crucible's own number, and said.
-    WORLD_RULES = (("VMAX", "TANK_SPEED", False), ("ACCEL", "TANK_ACCEL", False), ("BRAKE", "TANK_BRAKE", False),
+    WORLD_RULES = (("CONCEAL_RANGE", "CONCEAL_RANGE", False), ("VMAX", "TANK_SPEED", False), ("ACCEL", "TANK_ACCEL", False), ("BRAKE", "TANK_BRAKE", False),
                    ("TURN", "TANK_TURN", False), ("GUN_RANGE", "DIRECT_RANGE", False), ("SSPEED", "SHELL_SPEED_DIRECT", False),
                    ("RELOAD", "RELOAD_TICKS", True), ("HP", "TANK_ARMOR", False), ("DAMAGE", "DIRECT_DAMAGE", False),
                    ("HIT_R", "DIRECT_HIT_RADIUS", False), ("SHELLS", "TANK_SHELLS", False), ("VISION", "TANK_VISION", False),
@@ -4884,6 +5124,12 @@ class Plan:
                 continue
             v = float(eval(expr, {"__builtins__": {}}, {}))
             out[name] = v / hz if ticks else v
+        # THE SAME SCORE (6 November): the game's scoring constants as crucible's weights, in kills.
+        sc = {k: re.search(r"pub const %s: \w+ = (\d+);" % k, src) for k in ("SCORE_KILL", "SCORE_CAPTURE", "SCORE_HOLD")}
+        if all(sc.values()) and float(sc["SCORE_KILL"].group(1)) > 0:
+            kill = float(sc["SCORE_KILL"].group(1))
+            out["SCORE_CAPTURE_W"] = float(sc["SCORE_CAPTURE"].group(1)) / kill
+            out["SCORE_HOLD_W"] = float(sc["SCORE_HOLD"].group(1)) / kill
         return out, lost
 
     def world_flags(self):
@@ -4963,7 +5209,7 @@ class Plan:
                 c = self.cfg.get("crucible") or {}
                 # The build's flags. A world net is wider in its hidden layers too (H 48: 55 inputs
                 # and two nets of 48 still fit a Pascal card's 48 KB of shared memory).
-                flag = ("HYBRID=1 " if c.get("hybrid") else "") + ("WORLD=1 " if c.get("world") else "")
+                flag = ("HYBRID=1 " if c.get("hybrid") else "") + ("WORLD=1 " if c.get("world") else "") + ("FOREST=1 " if c.get("world") and c.get("forest") else "")
                 hw = int(c.get("h") or (48 if c.get("world") else 32))
                 flag += "H=%d " % hw if hw != 32 else ""
                 if c.get("world"):
@@ -4980,6 +5226,10 @@ class Plan:
                         imports.append("$H/in/%s.bin" % o)
                 send += [{"src": self.crucible_dir("ladder", f), "dst": "~/%s/ladder/%s" % (home, f)}
                          for f in ["slot-%d.bin" % i for i in range(self.LADDER_SLOTS)] + ["ladder.txt"]]
+                forest = bool(c.get("world") and c.get("forest"))
+                if forest:
+                    # The CUDA gauntlet's files: the test each segment's champion sits, and its training's tasks.
+                    send += [{"src": f, "dst": "~/%s/gauntlet/%s" % (home, os.path.basename(f))} for f in sorted(glob.glob(os.path.join(src, "gauntlet", "*.toml")))]
                 seed = 1000 + 97 * (sum(map(ord, name)) % 1000)
                 cmd = (
                     "set -e; H=~/%s; O=~/%s/out/%s; mkdir -p $O $H/in\n"
@@ -4994,8 +5244,12 @@ class Plan:
                     "rm -rf $H/rungs; mkdir -p $H/rungs; R=''\n"
                     "while IFS=\"$(printf '\\t')\" read -r s m; do if [ -n \"$m\" ]; then cp $H/ladder/$s $H/rungs/$m.bin; R=\"$R${R:+,}$H/rungs/$m.bin\"; fi; done < $H/ladder/ladder.txt\n"
                     "./crucible --pop %d --eps %d --gens %d --yard %d --seed %d --lad %s --draw %s $L ${I:+--import $I} ${R:+--ladder $R} "
-                    "--save $H/island.state --export $O/champ.bin --out $O/gens.tsv --exam $O/exam.tsv 2>&1 | tee $O/console.txt | grep '^#'\n"
+                    "--save $H/island.state --export $O/champ.bin --out $O/gens.tsv --exam $O/exam.tsv GAUNTLET_NOW2>&1 | tee $O/console.txt | grep '^#'\n"
                 ) % (home, self.home, jid, ",".join(imports), opt["pop"], opt["eps"], opt["gens"], opt["yard"], seed, opt["lad"], opt["draw"])
+                # The newest rung is the gauntlet's reference: the champion and it, on the same runs.
+                cmd = cmd.replace("GAUNTLET_NOW", (
+                    "--tasks $H/gauntlet --task-p %s --gauntlet $H/gauntlet --gauntlet-runs %d --gauntlet-out $O/gauntlet.tsv ${R:+--gauntlet-ref ${R##*,}} " % (
+                        opt.get("task_p", 0.25), int(opt.get("gauntlet_runs", 256)))) if forest else "")
                 cmd = cmd.replace("FLAGS_NOW ", flag).replace("'FLAGS_NOW'", "'%s'" % flag.strip())
                 cmd = cmd.replace("PARENT_NOW", "%s/%s" % (self.home, parent) if parent else "")
                 job = {"id": jid, "kind": "crucible", "title": "crucible island %s, segment %d" % (name, isl["next"] - 1),
@@ -5209,14 +5463,24 @@ class Plan:
             # side (a generation on the line, a commit to main) starts the pool again, because a commit
             # can change the game. A proof made before the pool knew its main pools with nothing.
             before = pf.get("pooled") or {}
-            same = bool(main_then) and before.get("head") == head and before.get("main") == main_then
+            # KEYED ON WHAT THE GAME IS, NOT ON THE COMMITS (Outgrowing Yourself, recommendation 4; Paul,
+            # 6 November: "The polling technique was a good idea"): a push to main replays the line and
+            # gives it a new head, and a report pushed to main restarted the pool -- 6 of the 26 heads the
+            # proof read had the same generations as the head before. The question is main's game against
+            # the line's: the source trees of both. A report, a doc or a film changes neither and the pool
+            # goes on; a change to the game's code changes one and the pool starts again, as it should.
+            key = pf.get("key")
+            # A pool from before the key (or a proof asked without one) is matched the old way, by head and
+            # main, so the reads it holds are not thrown away at the change.
+            same = bool(main_then) and ((key and before.get("key") == key) or
+                                        ((not key or not before.get("key")) and before.get("head") == head and before.get("main") == main_then))
             reads = ((before.get("jobs") or []) if same else []) + jobs
 
             def found(js):
                 return [d for j in js for d in glob.glob(os.path.join(self.q, "results", j, self.home, "out", j, "*", ""))]
             ds = found(reads)
             p = self.pool(ds) if len(found(jobs)) == len(jobs) else None
-            self.state["proof"] = pf = {"last_at": time.time(), "pooled": {"head": head, "main": main_then, "jobs": reads}}
+            self.state["proof"] = pf = {"last_at": time.time(), "pooled": {"head": head, "main": main_then, "key": key, "jobs": reads}}
             if p and p["every"][1] > 0:
                 d, se, n_ = p["every"]
                 pf["last"] = {"head": head[:7], "d": round(-d, 2), "se": round(se, 2), "z": round(-d / se, 2), "seeds": n_, "reads": len(reads) // 2}
@@ -5263,7 +5527,9 @@ class Plan:
         text = "# the line's proof: main's values, read as a trial against the line\n" + "\n".join(lines) + "\n"
         jobs = []
         pooled = pf.get("pooled") or {}
-        nth = len(pooled.get("jobs") or []) // 2 + 1 if (pooled.get("head"), pooled.get("main")) == (line["commit"], main) else 1
+        key = [self.src_tree(line["commit"]), self.src_tree(main)]
+        key = key if all(key) else None
+        nth = len(pooled.get("jobs") or []) // 2 + 1 if ((key and pooled.get("key") == key) or (pooled.get("head"), pooled.get("main")) == (line["commit"], main)) else 1
         for k in range(2):
             n_ = self.state["proof_n"] = self.state.get("proof_n", 0) + 1
             jid = "pv%04d" % n_
@@ -5271,8 +5537,12 @@ class Plan:
                          k + 1, line["commit"][:7], w["held_seeds"], ", read %d, pooled" % nth if nth > 1 else ""),
                          "needs": self.long_needs(), "after_host": self.after_host(), "cmd": self.census_cmd(text, w["held_seeds"], 700000000 + 200000 * n_, jid),
                          "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 6 * 3600, "priority": "high"})
-        pf.update({"jobs": [j["id"] for j in jobs], "head": line["commit"], "main": main, "n": len(line.get("promotions", []))})
+        pf.update({"jobs": [j["id"] for j in jobs], "head": line["commit"], "main": main, "key": key, "n": len(line.get("promotions", []))})
         return jobs
+
+    def src_tree(self, commit):
+        """The tree of the game's source at a commit: what a proof's question is about."""
+        return run(["git", "-C", self.tc, "rev-parse", "%s:source" % commit]).stdout.strip() or None
 
     # ---- the board: one process, one screen ------------------------------------------------
     # Paul, 1 November: "a single coherent process ... like a gantt chart, showing dependency,
