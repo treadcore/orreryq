@@ -37,5 +37,6 @@ x8dt3|The X8DT3-LN4F, Warm Again|orrery · the fleet · a Supermicro server's ju
 storage-options|Storage, Reconsidered|orrery · the fleet · storage options, nothing decided
 idle-fleet|Fifty-Four Idle Minutes|orrery · the fleet · the line replayed twice, and restarting
 duty-cycle|The Duty Cycle|orrery · the fleet · utilization, waiting and the round table
+line-film|Three Generations, Filmed|orrery · the montage · the line, the crowd and the wires
 LIST
 python3 ../tools/report/collect.py

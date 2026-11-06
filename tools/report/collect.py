@@ -54,6 +54,10 @@ CARDS = {
                    "Eight CPU machines idle for 54 minutes: the line replayed twice, by the keeper and by a report that only reads, "
                    "two records of one commit that disagreed, and a failed build never asked again. Three guards now; and what "
                    "restarting Orrery costs, the app (nothing) and the keeper (7.7 machine-hours a week), with four changes to stop it."),
+    "line-film": ("Montage · the line filmed",
+                  "Three generations of the game's brain, each from its first read to its commit, an arrow from every job to the "
+                  "one it followed: committed, not yet on main, and why. The film's crowd made 128 different duels, not a dozen "
+                  "stacked; the kill shot again at half speed; every wire in its node's colour. The film plays in the page."),
     "duty-cycle": ("Fleet · the duty cycle",
                    "The machines are 98% busy and wait on no one; the work waits, in the GPU islands' buffer, at the planner's "
                    "five-minute pass, and in the CPU's last two percent. A round table to see it, four changes with their "

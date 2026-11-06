@@ -1872,12 +1872,16 @@ def _make(q, most, duels, host, seed, work, since=None):
             cap = os.path.join(work, "cap-%02d-%d%s.png" % (ci, k, "r" if not mind else ""))
             o = tr.opp_of[cd]
             vs = ("a " + ("scripted tank", "Raider", "Castle", "Expander", "Timid")[min(4, -1 - o)]) if o < 0 else opps[o]["name"] if o < len(opps) else "a milestone"
-            label_png(cap, "%s  ·  duel %d of %d against %s, %s" % (what, cd + 1, tr.nd, vs, "won" if c["outcome"][cd] == 1 else "lost" if c["outcome"][cd] == -1 else "drawn"), 22, font=FONT)
+            # 21 point: at 22 the longest captions (a replay's, a hardest win's) ran under the generation's panel.
+            label_png(cap, "%s  ·  duel %d of %d against %s, %s" % (what, cd + 1, tr.nd, vs, "won" if c["outcome"][cd] == 1 else "lost" if c["outcome"][cd] == -1 else "drawn"), 21, font=FONT)
             out = seg_path()
             inputs = (["-i", labels] if hud else []) + ["-i", gen, "-i", cap] + (["-i", ttl] if k == 0 else [])
-            filt = ("[0][1]overlay=0:0[a];[a][2]overlay=%d:%d[b];[b][3]overlay=(W-w)/2:16" % (P_GEN[0], P_GEN[1])
+            # The caption centred in the gap between the inputs' panel and the generation's, not on the frame:
+            # centred on the frame, a long one ran under the generation (film 4).
+            mid = (P_IN[0] + P_IN[2] + P_GEN[0]) // 2
+            filt = ("[0][1]overlay=0:0[a];[a][2]overlay=%d:%d[b];[b][3]overlay=%d-w/2:16" % (P_GEN[0], P_GEN[1], mid)
                     + ("[c];[c][4]overlay=W-w-24:24:enable='lt(t,%.2f)'" % TITLE_S if k == 0 else "")) if hud else \
-                ("[0][1]overlay=%d:%d[b];[b][2]overlay=(W-w)/2:16" % (P_GEN[0], P_GEN[1]))
+                ("[0][1]overlay=%d:%d[b];[b][2]overlay=%d-w/2:16" % (P_GEN[0], P_GEN[1], mid))
             p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", "%dx%d" % (W, H), "-r", str(FPS), "-i", "-"]
                                  + inputs + ["-filter_complex", filt] + X264 + [out], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
             nfr = 0
@@ -1917,7 +1921,7 @@ def _make(q, most, duels, host, seed, work, since=None):
                 replayed = True
                 at = clip.get("at", clip["from"])
                 rc = {"from": max(0, at - 8), "to": min(c["lasted"][cd] - 1 + 3, at + 3), "at": at}
-                frames_total += shoot(k + 100, cd, rc, "Replay, half speed, closer: the kill shot", sub_n=2 * SUB, tiles=20.0, mind=False, hud=False)
+                frames_total += shoot(k + 100, cd, rc, "Replay at half speed: the kill shot", sub_n=2 * SUB, tiles=20.0, mind=False, hud=False)
         mind_doc.append({"chapter": ci + 1, "name": ch["name"], "label": ch["label"], "gen": ch["gen"], "island": ch["island"], "clips": minds})
         summary.append({"chapter": ci + 1, "name": ch["name"], "label": ch["label"], "island": ch["island"], "gen": ch["gen"],
                         "won": w_, "lost": l_, "drawn": d_, "followed": d, "followed_vs": tr.opp_of[d],
