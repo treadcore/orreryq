@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""montage.py QUEUE make [--chapters N] [--duels N] [--host NAME] [--seed S] [--since start|LABEL] | line [OUT.mp4] | status -- the generations
+"""montage.py QUEUE make [--chapters N] [--duels N] [--host NAME] [--seed S] [--since start|LABEL] | trailer [--gens N] [--duels N]
+[--host NAME] | line [OUT.mp4] | status -- the generations
 since the last montage, as a film: crucible's world duels, the camera on the best winning tank, every other
 duel a ghost.
 
@@ -39,6 +40,10 @@ committed, each as its chain of jobs with an arrow from each to the one it follo
 the weights table's words, every try of its promotion with what failed and what mended it, orrery's
 Timeline, Flow and Lineup with its chain lit, and where its commit stands against main. `montage.py QUEUE
 line [OUT.mp4]` renders that act alone.
+
+THE TRAILER (6 November) is the line's news under a minute: the generations committed since the last film
+told them, one champion's duel, where the commits stand. The planner asks for one every 2 generations;
+archive/trailers/NNNN/, output/treadcore-trailer-NNNN.mp4, plan/trailer.json its state.
 
 THE STORY between them is orrery's own pictures: the flowchart, the history (Growth), the terrain and the
 spectrum open the film; each chapter opens on the Growth page with its generation marked and the facts of its
@@ -113,8 +118,11 @@ def now():
     return time.strftime("%Y-%m-%dT%H:%M:%S")
 
 
+STATE = "montage.json"     # the trailer's own is trailer.json: the Montage page follows the film, not it
+
+
 def state(q, **kw):
-    p = os.path.join(q, "plan", "montage.json")
+    p = os.path.join(q, "plan", STATE)
     st = load(p, {}) or {}
     st.update(kw)
     st["at"] = now()
@@ -933,6 +941,52 @@ def flashes(tr, c, d, t, f):
     return out
 
 
+def render_clip(tr, ci, cd, clip, what, net, opps, labels, gen, ttl, out, preview, sub_n=SUB, tiles=30.0, mind=True, hud=True, poster=False):
+    """One clip of chapter ci's duel cd to the segment `out`: the field drawn a frame at a time into
+    ffmpeg, the corners' labels, the generation and the caption laid over, and with `ttl` the generation's
+    0.25 s title over the upper right. hud=False is a replay: no corners, closer. Returns (frames written,
+    the mind's steps, the poster frame when `poster` asks for one)."""
+    c = tr.champs[ci]
+    film = Film(tr, ci, cd, net if hud else None, tiles, 3.0 if hud else 2.0)
+    cap = out[:-4] + "-cap.png"
+    o = tr.opp_of[cd]
+    vs = ("a " + ("scripted tank", "Raider", "Castle", "Expander", "Timid")[min(4, -1 - o)]) if o < 0 else opps[o]["name"] if o < len(opps) else "a milestone"
+    # 21 point: at 22 the longest captions (a replay's, a hardest win's) ran under the generation's panel.
+    label_png(cap, "%s  ·  duel %d of %d against %s, %s" % (what, cd + 1, tr.nd, vs, "won" if c["outcome"][cd] == 1 else "lost" if c["outcome"][cd] == -1 else "drawn"), 21, font=FONT)
+    ttl = ttl if hud else None
+    inputs = (["-i", labels] if hud else []) + ["-i", gen, "-i", cap] + (["-i", ttl] if ttl else [])
+    # The caption centred in the gap between the inputs' panel and the generation's, not on the frame:
+    # centred on the frame, a long one ran under the generation (film 4).
+    mid = (P_IN[0] + P_IN[2] + P_GEN[0]) // 2
+    filt = ("[0][1]overlay=0:0[a];[a][2]overlay=%d:%d[b];[b][3]overlay=%d-w/2:16" % (P_GEN[0], P_GEN[1], mid)
+            + ("[c];[c][4]overlay=W-w-24:24:enable='lt(t,%.2f)'" % TITLE_S if ttl else "")) if hud else \
+        ("[0][1]overlay=%d:%d[b];[b][2]overlay=%d-w/2:16" % (P_GEN[0], P_GEN[1], mid))
+    p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", "%dx%d" % (W, H), "-r", str(FPS), "-i", "-"]
+                         + inputs + ["-filter_complex", filt] + X264 + [out], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+    nfr = 0
+    steps = []
+    poster_ppm = None
+    for t in range(clip["from"], clip["to"] + 1):
+        if mind and net is not None:
+            sc = shot_of(tr, ci, cd, t)
+            steps.append(pack_mind(net, tr, ci, cd, t, {RED_HUD: "hit", AMBER: "pillbox", SKY: "pillbox fired", (240, 248, 240): "shot"}.get(sc, "") if sc else ""))
+        for sub in range(sub_n):
+            fr = film.frame(t, sub / sub_n, flashes(tr, ci, cd, t, sub / sub_n))
+            p.stdin.write(fr)
+            nfr += 1
+            if nfr % 15 == 1:
+                with open(preview + ".part", "wb") as pf:
+                    pf.write(small(fr))
+                os.replace(preview + ".part", preview)
+            if poster and t == clip.get("at", clip["from"]) and sub == 0:
+                poster_ppm = small(fr)
+    p.stdin.close()
+    err = p.stderr.read().decode(errors="replace")
+    if p.wait() != 0:
+        raise RuntimeError("ffmpeg: %s" % err.strip()[-300:])
+    return nfr, steps, poster_ppm
+
+
 def small(frame):
     """A quarter-size copy (320 x 180) for the Montage page's preview, as a PPM."""
     out = bytearray(320 * 180 * 3)
@@ -1050,10 +1104,19 @@ def title_sequence(work, n, chapters, tr, home, field, seg_out):
     """The opening in treadcore.org's look (index.html, site.css): the battlefield behind a veil and its
     scanlines, a brushed-metal plate with four screws, the name etched, an eyebrow label, a phosphor
     screen that types what the film holds, and the newswire along the foot. 3.6 s, faded in."""
-    base = os.path.join(work, "t-base.png")
-    px, py, pw, ph = 190, 120, 900, 360
     first, lastc = chapters[0], chapters[-1]
     gens = "generations %s to %s" % (format(first["gen"], ","), format(lastc["gen"], ","))
+    return plate(work, field, "CRUCIBLE  ·  MONTAGE %d  ·  %s" % (n, home.upper().replace("CRUCIBLE-", "").replace("-", " ")),
+                 "> %s, %s" % (home.replace("crucible-", ""), gens), "  the net's inputs, layers and decisions in the corners",
+                 [("#33f24d", 24, "%d chapters" % len(chapters)), ("#ffbf4d", 190, "%d duels in one world each" % tr.nd),
+                  ("#73c7ff", 520, "the camera follows the best win"), ("#f23326", 880, "every other duel a ghost")], seg_out)
+
+
+def plate(work, field, eyebrow, line1, line2, wire, seg_out):
+    """The plate itself, any film's: `field` behind it, `eyebrow` etched over the name, `line1` and `line2`
+    typed on its screen, `wire` the newswire's (colour, x, words). Leaves t-35.png, the plate whole."""
+    base = os.path.join(work, "t-base.png")
+    px, py, pw, ph = 190, 120, 900, 360
     magick(["-size", "1x3", "xc:none", "-fill", "#00000030", "-draw", "point 0,0", "-write", "mpr:sl", "+delete",
             field, "-modulate", "65,85", "-fill", "#020403", "-colorize", "30",
             "(", "-size", "%dx%d" % (W, H), "radial-gradient:none-#020403c0", ")", "-composite",
@@ -1081,7 +1144,7 @@ def title_sequence(work, n, chapters, tr, home, field, seg_out):
             "-stroke", "none",
             # the eyebrow, the etched name (a highlight a pixel under it), the meta line
             "-font", MONO_B, "-pointsize", "17", "-kerning", "3", "-fill", "#3c3e40",
-            "-annotate", "+%d+%d" % (px + 60, py + 62), "CRUCIBLE  ·  MONTAGE %d  ·  %s" % (n, home.upper().replace("CRUCIBLE-", "").replace("-", " ")),
+            "-annotate", "+%d+%d" % (px + 60, py + 62), eyebrow,
             "-kerning", "0", "-font", FONT_B, "-pointsize", "104",
             "-fill", "#ffffffd8", "-annotate", "+%d+%d" % (px + 56, py + 166), "Treadcore",
             "-fill", "#121214", "-annotate", "+%d+%d" % (px + 56, py + 165), "Treadcore",
@@ -1092,14 +1155,9 @@ def title_sequence(work, n, chapters, tr, home, field, seg_out):
             "-draw", "roundrectangle %d,%d %d,%d 8,8" % (px + 50, py + 196, px + pw - 50, py + 290), "-stroke", "none",
             # the newswire
             "-fill", "#070807", "-draw", "rectangle 0,%d %d,%d" % (H - 58, W, H - 22),
-            "-font", MONO, "-pointsize", "16",
-            "-fill", "#33f24d", "-annotate", "+24+%d" % (H - 34), "%d chapters" % len(chapters),
-            "-fill", "#ffbf4d", "-annotate", "+190+%d" % (H - 34), "%d duels in one world each" % tr.nd,
-            "-fill", "#73c7ff", "-annotate", "+520+%d" % (H - 34), "the camera follows the best win",
-            "-fill", "#f23326", "-annotate", "+880+%d" % (H - 34), "every other duel a ghost",
-            base])
-    line1 = "> %s, %s" % (home.replace("crucible-", ""), gens)
-    line2 = "  the net's inputs, layers and decisions in the corners"
+            "-font", MONO, "-pointsize", "16"]
+           + [a for col, x, words in wire for a in ("-fill", col, "-annotate", "+%d+%d" % (x, H - 34), words)]
+           + [base])
     frames = 36
     for i in range(frames):
         k = int((len(line1) + len(line2)) * min(1.0, i / 22.0))
@@ -1461,9 +1519,10 @@ def arrow_mvg(a, b, col):
             "-stroke", col, "-strokewidth", "2", "-draw", path, "-stroke", "none", "-fill", col, "-draw", head]
 
 
-def chain_frames(work, gi, g, of, story):
+def chain_frames(work, gi, g, of, story, step=0.5, hold=5.0):
     """The chain revealed a job at a time: frame k has the first k jobs and the arrows into them; the
-    last has the story under it. Returns [(png, seconds)]."""
+    last has the story under it. Each job shows `step` seconds before the next, the whole `hold`. Returns
+    [(png, seconds)]."""
     x0, cw, gap = chain_layout(g)
     nodes = g["nodes"]
     span = (max(n["b"] for n in nodes) - g["first_at"]) / 60.0
@@ -1541,21 +1600,27 @@ def chain_frames(work, gi, g, of, story):
                      "Each arrow runs from the job a link followed: the newest of the chain to have ended when it began. Red: a try that failed, and the one after it."]
         png = os.path.join(work, "chain-%d-%02d.png" % (gi, k))
         magick(args + [png])
-        out.append((png, 0.5 if k <= len(nodes) else 5.0))
+        out.append((png, step if k <= len(nodes) else hold))
     return out
 
 
 def frames_to(pairs, out):
-    """Stills with their own durations, one segment."""
+    """Stills with their own durations, one segment. CUT AT THEIR SUM: the concat demuxer drops the last
+    still's duration unless the still is listed again, and listed again it plays that duration twice --
+    each chain's last card held 10 s, not 5, and every chapter mark after the first chain ran early (film 5's
+    added to 112 s of 127). Measured 6 November on ffmpeg 9.0.2: 0.5 + 2.0 asked, 1.03 s without the
+    repeat, 4.53 s with it, 2.50 cut."""
     lst = out + ".txt"
+    total = sum(s for _, s in pairs)
     with open(lst, "w") as f:
         for png, sec in pairs:
             f.write("file '%s'\nduration %.2f\n" % (png, sec))
         f.write("file '%s'\n" % pairs[-1][0])
-    r = run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lst, "-vf", "fps=%d,scale=%d:%d,format=yuv420p" % (FPS, W, H)] + X264 + [out], 300)
+    r = run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lst, "-vf", "fps=%d,scale=%d:%d,format=yuv420p" % (FPS, W, H)]
+            + X264 + ["-t", "%.3f" % total, out], 300)
     if r.returncode != 0:
         raise RuntimeError("ffmpeg chain: %s" % r.stderr.strip()[-300:])
-    return out, sum(s for _, s in pairs)
+    return out, total
 
 
 def text_card(work, name, title, sub, rows):
@@ -1864,46 +1929,13 @@ def _make(q, most, duels, host, seed, work, since=None):
         replayed = False
 
         def shoot(k, cd, clip, what, sub_n=SUB, tiles=30.0, mind=True, hud=True):
-            """One clip to one segment: the field drawn a frame at a time into ffmpeg, the corners' labels,
-            the generation and the caption laid over; on the chapter's first clip the generation's 0.25 s
-            title over the upper right. Returns the frames written."""
+            """One clip through render_clip, on the chapter's first clip the generation's title over the
+            upper right; its frames go into the film, its mind to the page's. Returns the frames written."""
             nonlocal poster_ppm
-            film = Film(tr, ci, cd, nets[ci] if hud else None, tiles, 3.0 if hud else 2.0)
-            cap = os.path.join(work, "cap-%02d-%d%s.png" % (ci, k, "r" if not mind else ""))
-            o = tr.opp_of[cd]
-            vs = ("a " + ("scripted tank", "Raider", "Castle", "Expander", "Timid")[min(4, -1 - o)]) if o < 0 else opps[o]["name"] if o < len(opps) else "a milestone"
-            # 21 point: at 22 the longest captions (a replay's, a hardest win's) ran under the generation's panel.
-            label_png(cap, "%s  ·  duel %d of %d against %s, %s" % (what, cd + 1, tr.nd, vs, "won" if c["outcome"][cd] == 1 else "lost" if c["outcome"][cd] == -1 else "drawn"), 21, font=FONT)
             out = seg_path()
-            inputs = (["-i", labels] if hud else []) + ["-i", gen, "-i", cap] + (["-i", ttl] if k == 0 else [])
-            # The caption centred in the gap between the inputs' panel and the generation's, not on the frame:
-            # centred on the frame, a long one ran under the generation (film 4).
-            mid = (P_IN[0] + P_IN[2] + P_GEN[0]) // 2
-            filt = ("[0][1]overlay=0:0[a];[a][2]overlay=%d:%d[b];[b][3]overlay=%d-w/2:16" % (P_GEN[0], P_GEN[1], mid)
-                    + ("[c];[c][4]overlay=W-w-24:24:enable='lt(t,%.2f)'" % TITLE_S if k == 0 else "")) if hud else \
-                ("[0][1]overlay=%d:%d[b];[b][2]overlay=%d-w/2:16" % (P_GEN[0], P_GEN[1], mid))
-            p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", "%dx%d" % (W, H), "-r", str(FPS), "-i", "-"]
-                                 + inputs + ["-filter_complex", filt] + X264 + [out], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
-            nfr = 0
-            steps = []
-            for t in range(clip["from"], clip["to"] + 1):
-                if mind and nets[ci] is not None:
-                    sc = shot_of(tr, ci, cd, t)
-                    steps.append(pack_mind(nets[ci], tr, ci, cd, t, {RED_HUD: "hit", AMBER: "pillbox", SKY: "pillbox fired", (240, 248, 240): "shot"}.get(sc, "") if sc else ""))
-                for sub in range(sub_n):
-                    fr = film.frame(t, sub / sub_n, flashes(tr, ci, cd, t, sub / sub_n))
-                    p.stdin.write(fr)
-                    nfr += 1
-                    if nfr % 15 == 1:
-                        with open(preview + ".part", "wb") as pf:
-                            pf.write(small(fr))
-                        os.replace(preview + ".part", preview)
-                    if k == 0 and mind and t == clip.get("at", clip["from"]) and sub == 0:
-                        poster_ppm = small(fr)
-            p.stdin.close()
-            err = p.stderr.read().decode(errors="replace")
-            if p.wait() != 0:
-                raise RuntimeError("ffmpeg: %s" % err.strip()[-300:])
+            nfr, steps, pp = render_clip(tr, ci, cd, clip, what, nets[ci], opps, labels, gen, ttl if k == 0 and hud else None, out, preview,
+                                         sub_n, tiles, mind, hud, poster=k == 0 and mind)
+            poster_ppm = pp or poster_ppm
             add(out, nfr / float(FPS))
             if mind:
                 minds.append({"what": what, "duel": cd, "from": clip["from"], "to": clip["to"], "steps": steps})
@@ -1994,7 +2026,9 @@ def _make(q, most, duels, host, seed, work, since=None):
     except OSError as e:
         doc["output_error"] = str(e)
     save(os.path.join(md, "summary.json"), doc)
-    idx["montages"].append({k: doc[k] for k in ("n", "at", "home", "since", "last", "seconds", "mp4", "bytes")} | {"chapters": len(summary)})
+    # line_last: the newest line generation the film told, where the planner's trailer watch counts from.
+    idx["montages"].append({k: doc[k] for k in ("n", "at", "home", "since", "last", "seconds", "mp4", "bytes")}
+                           | {"chapters": len(summary), "line_last": story["gens"][-1]["run"] if story and story.get("gens") else None})
     save(os.path.join(adir, "index.json"), idx)
     with open(os.path.join(q, "events.jsonl"), "a") as f:
         f.write(json.dumps({"t": now(), "event": "montage", "n": n, "chapters": len(summary), "seconds": doc["seconds"], "mp4": doc["mp4"]}) + "\n")
@@ -2006,6 +2040,211 @@ def _make(q, most, duels, host, seed, work, since=None):
     except OSError:
         pass
     print("montage %d: %s (%s s, %d chapters, %d frames, made in %d s)" % (n, mp4, num(doc["seconds"], 0), len(summary), frames_total, doc["made_in"]))
+    return 0
+
+
+# ---- the trailer -------------------------------------------------------------------------------
+#
+# Paul, 6 November, the morning r0209 put w12042 on the line and no film followed: "every 2 line
+# generations, and make montage 5 now. perhaps we should create a shorter more specific montoge. like a
+# quick trailor." A montage runs four and a half minutes (film 4: 275 s), and while the world ladder
+# stands its world chapters are the same ones each time. THE TRAILER IS THE NEWS ALONE, under a minute: the
+# plate, each generation the line committed since the last film told it -- its chain revealed at speed,
+# the dials it moved -- one champion's duel from the GPU islands, and where the commits stand.
+#
+# The duel is not the line's brain. The line moves the game's scripted brain; the islands train nets; and
+# nothing films the game's own brain playing (treadcore-vm's shots are taken by hand). So the duel comes
+# after a card that says whose it is, and a trailer whose trace failed goes on without it rather than not
+# at all: the generations are the news, the duel is the colour.
+
+TRAILER_MOST = 3     # generations one trailer tells; more since the last film, the newest of them
+
+
+def trailer(q, gens=None, duels=64, host=None, seed=7):
+    global STATE
+    STATE = "trailer.json"
+    # The montage's lock: both trace in the same folder on the GPU island, and one would delete the other's.
+    lock = os.path.join(q, "plan", "montage.lock")
+    if os.path.exists(lock) and time.time() - os.path.getmtime(lock) < 3 * 3600:
+        print("a film is being made (plan/montage.json or plan/trailer.json says which)")
+        return 1
+    open(lock, "w").close()
+    work = os.path.join(q, "plan", "trailer-work")
+    shutil.rmtree(work, ignore_errors=True)
+    os.makedirs(work)
+    try:
+        return _trailer(q, gens, duels, host, seed, work)
+    except Exception as e:
+        state(q, state="failed", said=str(e)[:400])
+        print("trailer failed: %s" % e)
+        return 1
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+        try:
+            os.remove(lock)
+        except OSError:
+            pass
+
+
+def _trailer(q, gens, duels, host, seed, work):
+    t0 = time.time()
+    m, p = planner(q)
+    told = m.Plan.line_filmed(q)
+    new = [r for r in p.line_won() if m.Plan.run_no(r) > m.Plan.run_no(told)]
+    k = gens or min(TRAILER_MOST, len(new))
+    story = line_story(q, k) if k > 0 else None
+    if not story:
+        state(q, state="done", progress=1.0, said="no line generation since %s: nothing to tell" % told)
+        print("no line generation since %s" % told)
+        return 0
+    gl = story["gens"]
+    adir = os.path.join(q, "archive", "trailers")
+    os.makedirs(adir, exist_ok=True)
+    idx = load(os.path.join(adir, "index.json"), {"trailers": []}) or {"trailers": []}
+    n = len(idx["trailers"]) + 1
+    preview = os.path.join(q, "plan", "trailer-preview.ppm")
+    segs, marks, clock, seg_n = [], [], [0.0], [0]
+
+    def seg_path():
+        seg_n[0] += 1
+        return os.path.join(work, "seg-%04d.mp4" % seg_n[0])
+
+    def add(path, seconds, mark=None):
+        if mark:
+            marks.append((clock[0], mark))
+        segs.append(path)
+        clock[0] += seconds
+    # ---- the duel's trace first: the plate stands on its field ----
+    homename, cfg = home_of(q)
+    hd = os.path.join(q, homename)
+    ms = milestones(hd)
+    tr = ch = tracer = None
+    if ms:
+        try:
+            chapters, opps, _ = choose(q, hd, ms[-1]["label"], 1)
+            chapters = chapters or [dict(ms[-1], facts=facts_of(hd, ms[-1]["island"], ms[-1]["gen"]))]
+            state(q, state="tracing", progress=0.05, said="the newest champion, %d duels, on a GPU island" % duels)
+            tpath, tracer, _ = trace(q, chapters[:1], opps, cfg, duels, seed, host, work)
+            tr, ch = Trace(tpath), chapters[0]
+        except Exception as e:  # the generations are the news: a trailer without its duel still tells them
+            state(q, said="the duel was left out: %s" % str(e)[:200])
+            tr = None
+    field = os.path.join(work, "field.ppm")
+    if tr:
+        with open(field, "wb") as f:
+            f.write(b"P6\n%d %d\n255\n" % (W, H) + bytes(Film(tr, 0, follow(tr, 0)).frame(0, 0.0, [], bare=True)))
+    else:
+        field = os.path.join(work, "field.png")
+        magick(["-size", "%dx%d" % (W, H), "xc:#0b100d", field])
+    # ---- the plate ----
+    state(q, state="rendering", progress=0.3, said="the plate")
+    newest = gl[-1]
+    h = newest.get("held")
+    seg, sec = plate(work, field, "TRAILER %d  ·  THE LINE  ·  %s" % (n, time.strftime("%-d %B").upper()),
+                     "> %d generation%s committed: %s" % (len(gl), "" if len(gl) == 1 else "s", ", ".join(g["trial"] for g in gl)),
+                     "  newest %s%s, on %s" % (newest["trial"], ", held out %+.2f ± %.2f" % (h[0], h[1]) if h else "", newest["where"]),
+                     [("#33f24d", 24, "%d generation%s" % (len(gl), "" if len(gl) == 1 else "s")), ("#ffbf4d", 190, "each chain from its first read"),
+                      ("#73c7ff", 520, "the dials it moved"), ("#f23326", 880, "one champion's duel" if tr else "where the commits stand")], seg_path())
+    add(seg, sec, "Title")
+    whole = os.path.join(work, "t-35.png")
+    # ---- each generation: its chain at speed, its dials ----
+    for gi, g in enumerate(gl):
+        state(q, state="rendering", progress=0.35 + 0.35 * gi / len(gl), said="%s %s" % (g["run"], g["trial"]))
+        seg, sec = frames_to(chain_frames(work, gi, g, len(gl), story, step=0.25, hold=3.5), seg_path())
+        add(seg, sec, "%s %s: its chain" % (g["run"], g["trial"]))
+        add(still(dial_card(work, gi, g), 4.5, seg_path()), 4.5)
+    # ---- the duel: whose it is, its kill shot and again at half speed, a pillbox fight, the hardest win ----
+    duel = None
+    if tr:
+        state(q, state="rendering", progress=0.75, said="the duel")
+        c = tr.champs[0]
+        w_, l_, d_ = (sum(1 for o in c["outcome"] if o == v) for v in (1, -1, 0))
+        name = ch["name"] if ch["name"] != "now" else "the newest champion"
+        fx = ch.get("facts") or {}
+        add(still(card(work, "duel", None, "Meanwhile, on the GPU islands",
+                       "%s, %s generation %s" % (name, ch["island"].replace("-cuda", ""), format(ch["gen"], ",")),
+                       ["%d won · %d lost · %d drawn, %d duels from one start" % (w_, l_, d_, tr.nd),
+                        "a net of %s, grown by neuroevolution in crucible" % (fx.get("dims") or "%d > %d > %d > %d" % (tr.nin, tr.nh, tr.nh, tr.nout)).replace("-", " > "),
+                        "not the line's brain: the line moves the game's own rules",
+                        "the newest milestone it must beat: %s" % ms[-1]["name"]]), 3.0, seg_path()), 3.0, "Meanwhile, on the GPU islands")
+        net = Net(ch["path"], tr.nin, tr.nh, tr.nout) if tr.version >= 2 else None
+        labels, gen = hud_labels(work), gen_png(work, 0, ch, 1)
+        ttl = os.path.join(work, "ttl.png")
+        label_png(ttl, "Generation %s · %s" % (format(ch["gen"], ","), ch["name"] if ch["name"] != "now" else "now"), 48)
+        d = follow(tr, 0)
+        clips = moments(tr, 0, d)
+        kill = next(((cd, cl) for cd, cl in clips if "Kill shot" in cl["what"] and "hardest" not in cl["what"]), None)
+        pill = next(((cd, cl) for cd, cl in clips if "illbox" in cl["what"] and (cd, cl) != kill), None)
+        hard = next(((cd, cl) for cd, cl in clips if cl["what"].startswith("The hardest win")), None)
+        first = kill or (clips[0] if clips else None)
+        shown = [x for x in (first, pill, hard) if x]
+        for i, (cd, cl) in enumerate(shown):
+            out = seg_path()
+            nfr, _, _ = render_clip(tr, 0, cd, cl, cl["what"], net, opps, labels, gen, ttl if i == 0 else None, out, preview)
+            add(out, nfr / float(FPS))
+            if i == 0 and kill:
+                at = cl.get("at", cl["from"])
+                rc = {"from": max(0, at - 8), "to": min(c["lasted"][cd] - 1 + 3, at + 3), "at": at}
+                out = seg_path()
+                nfr, _, _ = render_clip(tr, 0, cd, rc, "Replay at half speed: the kill shot", net, opps, labels, gen, None, out, preview,
+                                        sub_n=2 * SUB, tiles=20.0, mind=False, hud=False)
+                add(out, nfr / float(FPS))
+        duel = {"champion": ch.get("label"), "gen": ch["gen"], "island": ch["island"], "won": w_, "lost": l_, "drawn": d_,
+                "duels": tr.nd, "followed": d, "traced_on": tracer, "clips": [x[1]["what"] for x in shown]}
+    # ---- where they stand, and the plate again ----
+    add(still(proof_card(work, story), 5.0, seg_path()), 5.0, "Committed, and where it stands")
+    add(still(whole, 2.0, seg_path()), 2.0)
+    # ---- one film ----
+    state(q, state="encoding", progress=0.93, said="joining %d pieces" % len(segs))
+    lst = os.path.join(work, "list.txt")
+    with open(lst, "w") as f:
+        for s in segs:
+            f.write("file '%s'\n" % s.replace("'", "'\\''"))
+    md = os.path.join(adir, "%04d" % n)
+    os.makedirs(md, exist_ok=True)
+    mp4 = os.path.join(md, "trailer.mp4")
+    r = run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", "-movflags", "+faststart", mp4], 900)
+    if r.returncode != 0:
+        raise RuntimeError("ffmpeg concat: %s" % r.stderr.strip()[-300:])
+    shutil.copy(whole, os.path.join(md, "poster.png"))
+    dur = run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", mp4], 60).stdout.strip()
+    doc = {"n": n, "at": now(), "since": told, "runs": [g["run"] for g in gl], "trials": [g["trial"] for g in gl], "line_last": gl[-1]["run"],
+           "duel": duel, "seconds": float(dur or 0), "mp4": os.path.relpath(mp4, q), "bytes": os.path.getsize(mp4),
+           "made_in": round(time.time() - t0), "marks": [[round(a, 2), m_] for a, m_ in marks], "line": story}
+    try:
+        os.makedirs(OUTPUT, exist_ok=True)
+        base = os.path.join(OUTPUT, "treadcore-trailer-%04d" % n)
+        shutil.copy2(mp4, base + ".mp4")
+        with open(base + ".txt", "w") as f:
+            f.write("Treadcore: the line, trailer %d, %s\n\n" % (n, ", ".join(doc["trials"])))
+            f.write("The game's own brain, the %s orrery's line committed since the last film: each chain of jobs from its "
+                    "first read to its commit, and the dials it moved.%s\n\n" % (
+                        "generation" if len(gl) == 1 else "%d generations" % len(gl),
+                        " Then a duel of the newest champion of crucible's GPU islands, a net and not the line's brain, its kill "
+                        "shot again at half speed and its hardest win." if duel else ""))
+            for g in gl:
+                hh = g.get("held")
+                f.write("  %s %s: %s; held out %s; %s on %s\n" % (g["run"], g["trial"], "; ".join("%s %s -> %s" % (x["name"], x["old"], x["new"]) for x in g["dials"]),
+                                                              "%+.2f +/- %.2f on %d seeds" % hh if hh else "-", g["commit"][:7], g["where"]))
+            f.write("\n")
+            for a, m_ in marks:
+                f.write("%s %s\n" % (stamp(a), m_))
+            f.write("\nMIT licensed: https://treadcore.org  Made by orrery (tools/montage.py trailer) on %s.\n" % now()[:10])
+        doc["output"] = base + ".mp4"
+    except OSError as e:
+        doc["output_error"] = str(e)
+    save(os.path.join(md, "summary.json"), doc)
+    idx["trailers"].append({k_: doc[k_] for k_ in ("n", "at", "since", "runs", "line_last", "seconds", "mp4", "bytes")})
+    save(os.path.join(adir, "index.json"), idx)
+    with open(os.path.join(q, "events.jsonl"), "a") as f:
+        f.write(json.dumps({"t": now(), "event": "trailer", "n": n, "runs": doc["runs"], "seconds": doc["seconds"], "mp4": doc["mp4"]}) + "\n")
+    flag(q, "trailer %d is ready: %s, %s s, %s" % (n, ", ".join(doc["trials"]), num(doc["seconds"], 0), doc.get("output") or doc["mp4"]), "trailer:%d" % n)
+    state(q, state="done", progress=1.0, said="trailer %d: %s, %s s" % (n, ", ".join(doc["trials"]), num(doc["seconds"], 0)), mp4=mp4, n=n)
+    try:
+        os.remove(preview)
+    except OSError:
+        pass
+    print("trailer %d: %s (%s s, %s, made in %d s)" % (n, mp4, num(doc["seconds"], 0), ", ".join(doc["trials"]), doc["made_in"]))
     return 0
 
 
@@ -2026,6 +2265,8 @@ def main(a):
         return f(rest[rest.index(k) + 1]) if k in rest else d
     if cmd == "make":
         sys.exit(make(q, opt("--chapters", 12), opt("--duels", 128), opt("--host", None, str), opt("--seed", 7), opt("--since", None, str)))
+    elif cmd == "trailer":
+        sys.exit(trailer(q, opt("--gens", None), opt("--duels", 64), opt("--host", None, str), opt("--seed", 7)))
     elif cmd == "line":
         sys.exit(line_only(q, os.path.abspath(rest[0]) if rest else os.path.join(q, "plan", "montage-line.mp4")))
     elif cmd == "status":

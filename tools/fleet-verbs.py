@@ -68,10 +68,11 @@ def bridge(q, argv):
 
 def montage(q, argv):
     # The generations since the last film, as a film (tools/montage.py). make goes to the background, and the
-    # Montage page follows plan/montage.json; open N plays film N in this machine's own player.
-    if argv[2:3] == ["make"]:
+    # Montage page follows plan/montage.json; open N plays film N in this machine's own player. trailer is the
+    # line's short film (the newest generations committed and one champion's duel), plan/trailer.json its state.
+    if argv[2:3] in (["make"], ["trailer"]):
         background([sys.executable, "-I", os.path.join(HERE, "montage.py"), q.d] + argv[2:])
-        print("montage: begun; the Montage page follows it")
+        print("%s: begun; %s" % (argv[2], "the Montage page follows it" if argv[2] == "make" else "plan/trailer.json follows it"))
         sys.exit(0)
     if argv[2:3] == ["open"] and argv[3:4] and argv[3].isdigit():
         mp4 = os.path.join(q.d, "archive", "montages", "%04d" % int(argv[3]), "montage.mp4")

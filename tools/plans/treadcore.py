@@ -4634,29 +4634,78 @@ class Plan:
 
     # ---- the montage, by itself (Paul, 4 November: "Every 5 new milestones") ----------------------
     MONTAGE_EVERY = 5
+    # ---- and the trailer (Paul, 6 November: "every 2 line generations") ----------------------------
+    # THE WORLD LADDER STOOD STILL FOR TWO DAYS: M0015 at 05:42 on 4 November, and no exam since beat it
+    # by the two errors a milestone takes, so the film every 5 milestones never came, while the line
+    # committed w10839, w11139, w11352 and w12042. The game's own brain was moving and nothing filmed it
+    # unless asked. So a second watch, on the line: every TRAILER_EVERY generations committed (on the
+    # line or on main) since the last film that told the line, a trailer -- the short film of those
+    # generations, not the whole montage again, whose world chapters would be the same twelve each time
+    # the ladder stands. 0 leaves it to the button.
+    TRAILER_EVERY = 2
+
+    @staticmethod
+    def run_no(rid):
+        m = re.match(r"r(\d+)$", rid or "")
+        return int(m.group(1)) if m else -1
+
+    @staticmethod
+    def line_filmed(q):
+        """The newest line generation a film has told, a montage's line act or a trailer: its run id, or
+        None. A montage made before 6 November has no line_last in the index; its summary's act says it."""
+        best = None
+        for kind in ("montages", "trailers"):
+            films = (load(os.path.join(q, "archive", kind, "index.json"), {}) or {}).get(kind) or []
+            if not films:
+                continue
+            rid = films[-1].get("line_last")
+            if not rid and films[-1].get("n"):
+                s = load(os.path.join(q, "archive", kind, "%04d" % films[-1]["n"], "summary.json"), {}) or {}
+                gens = (s.get("line") or {}).get("gens") or []
+                rid = gens[-1]["run"] if gens else None
+            if rid and Plan.run_no(rid) > Plan.run_no(best):
+                best = rid
+        return best
+
+    def line_won(self):
+        """The line's generations, oldest first: every promotion that was committed, on the line or on main."""
+        return [r["id"] for r in self.runs() if r["kind"] == "promote" and self.rstate(r["id"]).get("status") in ("approved", "self-modified")]
 
     def montage_watch(self):
         """A film when the world ladder has gained MONTAGE_EVERY milestones since the last one: tools/
-        montage.py make in the background, as the Montage page's button does. 0 leaves it to the button."""
-        n = int(self.MONTAGE_EVERY)
-        home = self.crucible_home()
-        if n <= 0 or "world" not in home:
-            return
-        idx = load(os.path.join(self.q, "archive", "montages", "index.json"), {}) or {}
-        films = idx.get("montages") or []
-        last = films[-1].get("last") if films else None
-        ms = [os.path.basename(f)[:-4] for f in sorted(glob.glob(os.path.join(self.crucible_dir("milestones", home=home), "M*.bin")))]
-        new = ms[ms.index(last) + 1:] if last in ms else ms
+        montage.py make in the background, as the Montage page's button does. Else a trailer when the line
+        has committed TRAILER_EVERY generations since the last film told it: montage.py trailer. One film
+        at a time -- both trace on the same GPU folder -- and one asked an hour."""
         lock = os.path.join(self.pd, "montage.lock")
         busy = os.path.exists(lock) and time.time() - os.path.getmtime(lock) < 3 * 3600
-        if len(new) < n or busy or time.time() - self.state.get("montage_asked", 0) < 3600:
+        if busy or time.time() - self.state.get("montage_asked", 0) < 3600:
             return
-        self.state["montage_asked"] = time.time()
         tool = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "montage.py")
-        subprocess.Popen([sys.executable, "-I", tool, self.q, "make"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                         stderr=subprocess.DEVNULL, start_new_session=True)
-        self.flag("montage", "montage asked: %d new milestones since %s (%s to %s); Results, Montage follows it" % (
-            len(new), last or "the start", new[0], new[-1]), key="montage-asked:%s" % new[-1], progress=True)
+        ask = lambda verb: subprocess.Popen([sys.executable, "-I", tool, self.q, verb], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                            stderr=subprocess.DEVNULL, start_new_session=True)
+        n = int(self.MONTAGE_EVERY)
+        home = self.crucible_home()
+        if n > 0 and "world" in home:
+            idx = load(os.path.join(self.q, "archive", "montages", "index.json"), {}) or {}
+            films = idx.get("montages") or []
+            last = films[-1].get("last") if films else None
+            ms = [os.path.basename(f)[:-4] for f in sorted(glob.glob(os.path.join(self.crucible_dir("milestones", home=home), "M*.bin")))]
+            new = ms[ms.index(last) + 1:] if last in ms else ms
+            if len(new) >= n:
+                self.state["montage_asked"] = time.time()
+                ask("make")
+                self.flag("montage", "montage asked: %d new milestones since %s (%s to %s); Results, Montage follows it" % (
+                    len(new), last or "the start", new[0], new[-1]), key="montage-asked:%s" % new[-1], progress=True)
+                return
+        e = int(self.TRAILER_EVERY)
+        if e > 0:
+            told = self.line_filmed(self.q)
+            new = [r for r in self.line_won() if self.run_no(r) > self.run_no(told)]
+            if len(new) >= e:
+                self.state["montage_asked"] = time.time()
+                ask("trailer")
+                self.flag("montage", "trailer asked: %d line generations since %s (%s); Results, Videos will list it" % (
+                    len(new), told or "the start", ", ".join(new)), key="trailer-asked:%s" % new[-1], progress=True)
 
     # ---- the clone: the rules cloned again on the GPU each time they move (Paul's step 3) -------
     # Paul, 4 November, of the GPU as a growth step: "GPU trainer as a stage", the net "Re-clone the
