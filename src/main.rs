@@ -843,6 +843,8 @@ fn write_frame(
                     operator: std::env::var("ORRERY_FRAME_OPERATOR").is_ok(),
                     // ORRERY_FRAME_CHAIN=w10839: the Timeline follows that chain, as a click keeps one.
                     chain: std::env::var("ORRERY_FRAME_CHAIN").ok(),
+                    // ORRERY_FRAME_TRACE=w11352: the Flow traces that trial and lights the road it walked.
+                    trace: std::env::var("ORRERY_FRAME_TRACE").ok().and_then(|n| m.traces.iter().position(|x| x.trial == n)).unwrap_or(0),
                     // ORRERY_FRAME_ZOOM=day: the Timeline at that zoom (hour, hours, day, days, weeks, months).
                     zoom: std::env::var("ORRERY_FRAME_ZOOM").ok().and_then(|z| pipeline::ZOOMS.iter().position(|x| *x == z)),
                     // ORRERY_FRAME_BLAME=host or host/job: the Blame page keeps that, as a click does.

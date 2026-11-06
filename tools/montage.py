@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""montage.py QUEUE make [--chapters N] [--duels N] [--host NAME] [--seed S] [--since start|LABEL] | status -- the generations
+"""montage.py QUEUE make [--chapters N] [--duels N] [--host NAME] [--seed S] [--since start|LABEL] | line [OUT.mp4] | status -- the generations
 since the last montage, as a film: crucible's world duels, the camera on the best winning tank, every other
 duel a ghost.
 
@@ -17,16 +17,28 @@ fleet judged better than every one before it, and the newest champion of the isl
 closes the film. More than --chapters (12) are thinned, the first and the last kept.
 
 THE DUELS come from crucible's own --trace, on a GPU island (the islands' build, run once in
-~/fleet/q-NAME/montage): every chapter's champion plays --duels (64) duels in ONE ARENA FROM ONE START, the
-opponents drawn by the duel's index -- half sparring partners of drawn skill, half milestones spread over the
-ladder -- so duel d is the same contest in every chapter and the film compares like with like. The trace
-writes every step (0.1 s) of every duel.
+~/fleet/q-NAME/montage): every chapter's champion plays --duels (128) duels in ONE ARENA, the opponents drawn
+by the duel's index -- half sparring partners of drawn skill, half milestones spread over the ladder -- and
+each duel's tanks moved up to SPREAD (3) tiles from one start by dice that are the duel's index too
+(--trace-spread, 5 November: from one start the 64 duels had been a dozen games, their ghosts stacked). So
+duel d is the same contest in every chapter and the film compares like with like. The trace writes every
+step (0.1 s) of every duel.
 
 THE CLIPS. In each chapter the camera follows the duel the champion won best (the highest fitness among its
 wins; with no win, its best duel), and cuts its kill shot and its pillbox fights -- a pillbox struck, taken,
 or shooting at it -- from 1.0 s before to 0.5 s after each, a step drawn as three frames at 30 a second.
 Every other duel is drawn at the same moment as a ghost: dim, and no thing in one duel touches another. The
 pillboxes are the followed duel's. When the generation changes, a title holds the upper right for 0.25 s.
+Since 5 November each chapter also replays its kill shot at half speed and closer, shows its hardest win
+(against the strongest milestone it beat) and a loss, and draws the champions of the five chapters before it
+in the followed duel, lavender, the older the fainter.
+
+THE LINE comes first (Paul, 5 November: "describe the success story of each generation move ... Show the
+chain, show the arrows in the flowchart"): the game's own brain, the last generations orrery's line
+committed, each as its chain of jobs with an arrow from each to the one it followed, the dials it moved in
+the weights table's words, every try of its promotion with what failed and what mended it, orrery's
+Timeline, Flow and Lineup with its chain lit, and where its commit stands against main. `montage.py QUEUE
+line [OUT.mp4]` renders that act alone.
 
 THE STORY between them is orrery's own pictures: the flowchart, the history (Growth), the terrain and the
 spectrum open the film; each chapter opens on the Growth page with its generation marked and the facts of its
@@ -89,7 +101,12 @@ ME, FOE, ME_G, FOE_G = (108, 196, 255), (232, 88, 79), (44, 84, 108), (88, 46, 4
 # The corners are treadcore.org's screens (site.css): black glass, phosphor green, amber, a dim green rim.
 SCR, SCR_RIM, PHOS, PHOS_DIM, AMBER, SKY, RED_HUD = (7, 8, 7), (29, 138, 44), (51, 242, 77), (29, 138, 44), (255, 191, 77), (115, 199, 255), (242, 51, 38)
 HISTORY = 80               # steps of decisions in the spectrogram: 8 s
+# Each traced duel's tanks moved up to this many tiles from the one start (crucible --trace-spread): one
+# start made 128 duels a dozen games, and the ghosts stood on one another (5 November).
+SPREAD = 3.0
 SHELL, RING, ZAP = (255, 160, 64), (255, 255, 255), (255, 224, 138)
+# The champions of the chapters before, in the followed duel: lavender, apart from both sides' colours.
+LAV = (200, 168, 255)
 
 
 def now():
@@ -222,8 +239,8 @@ def trace(q, chapters, opps, cfg, duels, seed, want_host, work):
             "set -e; cd ~/%(h)s; F='%(f)s'; [ \"$(cat .flags 2>/dev/null)\" = \"$F\" ] || { rm -f crucible; echo \"$F\" > .flags; }; "
             "make -s %(f)s NVCC=${NVCC:-/usr/local/cuda/bin/nvcc} >/dev/null 2>&1 || make %(f)s NVCC=${NVCC:-/usr/local/cuda/bin/nvcc}; "
             "cd in; %(ren)s; cd ..; "
-            "./crucible --trace trace.bin --champions %(c)s %(o)s --trace-duels %(d)d --trace-seed %(s)d | grep '^# trace'"
-        ) % {"h": home, "f": flags.strip(), "ren": ren, "d": duels, "s": seed,
+            "./crucible --trace trace.bin --champions %(c)s %(o)s --trace-duels %(d)d --trace-seed %(s)d --trace-spread %(sp)s | grep '^# trace'"
+        ) % {"h": home, "f": flags.strip(), "ren": ren, "d": duels, "s": seed, "sp": SPREAD,
              "c": ",".join("in/c%02d.bin" % i for i in range(len(chapters))),
              "o": ("--opponents " + ",".join("in/o%02d.bin" % i for i in range(len(opps)))) if opps else ""}
         r = run(["ssh", "-o", "BatchMode=yes", target, "sh -c %s" % shlex.quote(cmd)], 1800)
@@ -445,14 +462,19 @@ def clips_of(ev, lasted, most):
     return clips
 
 
-def moments(tr, c, d, most=4):
+def moments(tr, c, d, most=5):
     """The clips of a chapter, as (duel, clip): the followed duel's kill shot and its pillbox fights --
     and when it fought no pillbox, the pillbox fight of the next best duel the champion won, the camera on
-    that duel's learner for that clip. A plain hit fills in only when there is room, once."""
+    that duel's learner for that clip. A plain hit fills in only when there is room, once.
+
+    THEN TWO MORE DUELS (Paul, 5 November: "show more demonstration of the battles"): the hardest win --
+    the kill shot of the won duel against the strongest opponent, a milestone high on the ladder -- and a
+    loss, its last second and a half, where the champion died. A film of wins alone says nothing of
+    what a generation still cannot do."""
     ch = tr.champs[c]
     ev = events(tr, c, d)
     pill = [e for e in ev if 2 <= e[0] <= 4]
-    keep = [e for e in ev if e[0] == 5] + sorted(pill, key=lambda e: -e[0])[:2]
+    keep = [e for e in ev if e[0] == 5] + sorted(pill, key=lambda e: -e[0])[:3]
     if len(keep) < 3:
         keep += [e for e in ev if e[0] == 1][:1]
     out = [(d, k) for k in clips_of(keep, ch["lasted"][d], most)]
@@ -467,7 +489,24 @@ def moments(tr, c, d, most=4):
     if not out:
         t = max(0, ch["lasted"][d] - 1)
         out = [(d, k) for k in clips_of([(0, t, "The duel's last moments")], ch["lasted"][d], 1)]
-    return sorted(out, key=lambda x: (x[0] != d, x[1]["from"]))
+    out = sorted(out, key=lambda x: (x[0] != d, x[1]["from"]))
+    used = {e for e, _ in out}
+    hard = [e for e in range(tr.nd) if e not in used and ch["outcome"][e] == 1 and tr.opp_of[e] >= 0]
+    if hard:
+        e = max(hard, key=lambda e: (tr.opp_of[e], ch["fit"][e]))
+        kill = [x for x in events(tr, c, e) if x[0] == 5]
+        if kill:
+            for k in clips_of(kill[:1], ch["lasted"][e], 1):
+                k["what"] = "The hardest win: " + k["what"].lower()
+                out.append((e, k))
+                used.add(e)
+    lost = [e for e in range(tr.nd) if e not in used and ch["outcome"][e] == -1]
+    if lost:
+        e = max(lost, key=lambda e: (ch["lasted"][e], ch["fit"][e]))
+        died = next((t for t in range(ch["lasted"][e]) if tr.at(c, e, t)[3] <= 0), ch["lasted"][e] - 1)
+        out.append((e, {"from": max(0, died - BEFORE - 5), "to": min(ch["lasted"][e] - 1 + AFTER, died + AFTER),
+                        "what": "A loss: where it died", "at": died}))
+    return out
 
 
 # ---- the drawing -----------------------------------------------------------------------------
@@ -509,14 +548,17 @@ class Canvas:
             i = (y * W + x) * 3
             self.b[i:i + 3] = cb
 
-    def line(self, x0, y0, x1, y1, c, w=1):
+    def line(self, x0, y0, x1, y1, c, w=1, dots=False):
+        """A line `w` pixels wide; dotted, two on and two off, when `dots`."""
         cb = bytes(c)
         dx, dy = abs(x1 - x0), -abs(y1 - y0)
         sx, sy = (1 if x0 < x1 else -1), (1 if y0 < y1 else -1)
         err, n = dx + dy, 0
         while n < 4000:
             n += 1
-            if w == 1:
+            if dots and (n // 2) % 2:
+                pass
+            elif w == 1:
                 self.put(x0, y0, cb)
             else:
                 for yy in range(y0 - w // 2, y0 + (w + 1) // 2):
@@ -545,6 +587,19 @@ class Canvas:
                 self.hspan(cx - wo, cx + wo, cy + dy, cb)
 
 
+def node_hue(i):
+    """A node's own colour, which every wire leaving it wears (Paul, 5 November: "try for a way so that
+    the wires are different colors so we can see the node connections"): the golden angle round the
+    wheel, so neighbours in the grid never share a hue and 48 stay apart. src/montage.rs's `node_hue`
+    is the same rule, so the film and orrery's Mind player agree wire for wire."""
+    h = math.modf(i * 0.381966011250105)[0] * 6.0
+    s, v = 0.62, 1.0
+    f = h - int(h)
+    p, q, t = v * (1 - s), v * (1 - s * f), v * (1 - s * (1 - f))
+    r, g, b = ((v, t, p), (q, v, p), (p, v, t), (p, q, v), (t, p, v), (v, p, q))[min(5, int(h))]
+    return (int(round(r * 255)), int(round(g * 255)), int(round(b * 255)))
+
+
 def lerp(a, b, f):
     return a + (b - a) * f
 
@@ -570,7 +625,7 @@ def shade(v, signed=True):
 # The corners' places (1280 x 720): inputs top left, the transform bottom left, the decisions bottom right,
 # the generation top right with the arena's map under it. Each panel's first 30 pixels hold its label.
 P_IN = (16, 16, 230, 134)
-P_TX = (16, H - 16 - 154, 476, 154)
+P_TX = (16, H - 16 - 154, 624, 154)    # wide: the wires between the layers need the room to be told apart
 P_DE = (W - 16 - 436, H - 16 - 122, 436, 122)
 P_GEN = (W - 16 - 300, 16, 300, 96)
 MAP = (W - 16 - 150, 124, 150)
@@ -581,9 +636,9 @@ class Film:
     """The frames of one chapter's clips: the followed duel solid, every other duel a ghost, and in the
     corners the champion's net thinking."""
 
-    def __init__(self, tr, c, d, net=None):
-        self.tr, self.c, self.d, self.net = tr, c, d, net
-        self.scale = W / 30.0          # 30 tiles across: the camera's window
+    def __init__(self, tr, c, d, net=None, tiles=30.0, pull=3.0):
+        self.tr, self.c, self.d, self.net, self.pull = tr, c, d, net, pull
+        self.scale = W / tiles         # 30 tiles across: the camera's window; a replay comes closer
         self.blank = bytes(OUT) * (W * H)
         self.cam = None
 
@@ -600,7 +655,7 @@ class Film:
         # shots by the north wall stood under the caption, the foe under the generation).
         bx_, by_ = lerp(s0[7], s1[7], f), lerp(s0[8], s1[8], f)
         if s0[10] > 0 and math.hypot(bx_ - ax, by_ - ay) < 16.0:
-            ax, ay = ax + (bx_ - ax) / 3.0, ay + (by_ - ay) / 3.0
+            ax, ay = ax + (bx_ - ax) / self.pull, ay + (by_ - ay) / self.pull
         want = (min(max(ax, 9.0), tr.arena - 9.0), min(max(ay, 2.4), tr.arena - 2.4))
         self.cam = want if self.cam is None else (lerp(self.cam[0], want[0], 0.25), lerp(self.cam[1], want[1], 0.25))
         cv = Canvas(self.blank)
@@ -639,27 +694,30 @@ class Film:
         # fade is pre-blended with the field's colour -- the field is the mask -- which costs nothing a
         # pixel. The camera is the followed tank's, so the crowd moves with it. A duel already over keeps its
         # tanks where they ended, fading out over three seconds, so the crowd does not empty as the duels
-        # finish (the first film's kill shots stood alone: by then most of the 64 were done).
+        # finish (the first film's kill shots stood alone: by then most of the 64 were done). Six seconds since
+        # 5 November, when the crowd went to 128 duels a chapter.
         gr = max(4, int(0.62 * S))
         for e in range(tr.nd):
             if e == d:
                 continue
             last = tr.champs[c]["lasted"][e]
             over = t - (last - 1)
-            fade = 1.0 if over <= 0 else max(0.0, 1.0 - over / 30.0)
-            if fade <= 0:
-                continue
+            fade = 1.0 if over <= 0 else max(0.0, 1.0 - over / 60.0)
             te = min(t, last - 1)
             g0 = tr.at(c, e, te)
             g1 = tr.at(c, e, te + 1) if over <= 0 else g0
             for (k, col) in ((7, FOE), (0, ME)):
                 if g0[k + 3] <= 0:
                     continue
+                # A tank still standing when its duel ended -- a winner, or both at a draw -- stays in the
+                # crowd at half strength where it stood, so the crowd thins by the dead and not by the clock.
+                a = 0.42 * (fade if over <= 0 else max(fade, 0.5))
+                if a <= 0:
+                    continue
                 x, y = lerp(g0[k], g1[k], f), lerp(g0[k + 1], g1[k + 1], f)
                 sx, sy = self.to_px(x, y)
                 if not (-60 < sx < W + 60 and -60 < sy < H + 60):
                     continue
-                a = 0.36 * fade
                 if k == 0 and over <= 0:
                     for back in (12, 8, 4):
                         p0 = tr.at(c, e, max(0, te - back))
@@ -670,6 +728,33 @@ class Film:
                 cv.disc(sx, sy, gr, mix(GRASS, col, a))
                 hx, hy = self.to_px(x + math.cos(g0[k + 2]) * 1.25, y + math.sin(g0[k + 2]) * 1.25)
                 cv.line(sx, sy, hx, hy, edge, w=3)
+        # THE GENERATIONS BEFORE, IN THIS SAME DUEL (Paul, 5 November: "can you show more ghosts in the
+        # movie"): duel d is one start and one opponent in every chapter, so the champions of the five
+        # chapters before this one played it too. Each is drawn where it stood at this step, lavender, the
+        # older the fainter, with its track behind it -- the eye sees the newest generation take a line
+        # the older ones did not. Only the learner: the foe in their duels answered a different tank.
+        for back, a in ((5, 0.16), (4, 0.21), (3, 0.27), (2, 0.35), (1, 0.46)):
+            pc = c - back
+            if pc < 0:
+                continue
+            last = tr.champs[pc]["lasted"][d]
+            te = min(t, last - 1)
+            g0 = tr.at(pc, d, te)
+            if g0[3] <= 0:
+                continue
+            g1 = tr.at(pc, d, te + 1) if t < last - 1 else g0
+            x, y = lerp(g0[0], g1[0], f), lerp(g0[1], g1[1], f)
+            sx, sy = self.to_px(x, y)
+            if not (-60 < sx < W + 60 and -60 < sy < H + 60):
+                continue
+            for k in range(1, 9):
+                p0 = tr.at(pc, d, max(0, te - 3 * k))
+                px_, py_ = self.to_px(p0[0], p0[1])
+                cv.disc(px_, py_, 2, mix(GRASS, LAV, a * (1.0 - k / 10.0)))
+            cv.disc(sx, sy, int(0.8 * S) + 2, mix(GRASS, (6, 9, 7), a * 1.4))
+            cv.disc(sx, sy, int(0.8 * S), mix(GRASS, LAV, a))
+            hx, hy = self.to_px(x + math.cos(g0[2]) * 1.4, y + math.sin(g0[2]) * 1.4)
+            cv.line(sx, sy, hx, hy, mix(GRASS, (6, 9, 7), a * 1.6), w=3)
         # The followed duel: both tanks, their shells, the hits.
         tank_r = int(0.8 * S)
         for (k, col) in ((7, FOE), (0, ME)):
@@ -718,8 +803,9 @@ class Film:
             g0 = tr.at(c, e, t)
             if g0[3] > 0:
                 cv.disc(mx + int(g0[0] * ms), my + int(g0[1] * ms), 1, ME if e == d else ME_G)
-        wx, wy = mx + int((self.cam[0] - 15) * ms), my + int((self.cam[1] - 8.4) * ms)
-        for (a, b, w, h) in ((wx, wy, int(30 * ms), 1), (wx, wy + int(16.8 * ms), int(30 * ms), 1), (wx, wy, 1, int(16.8 * ms)), (wx + int(30 * ms), wy, 1, int(16.8 * ms))):
+        tw, th = W / self.scale, H / self.scale
+        wx, wy = mx + int((self.cam[0] - tw / 2) * ms), my + int((self.cam[1] - th / 2) * ms)
+        for (a, b, w, h) in ((wx, wy, int(tw * ms), 1), (wx, wy + int(th * ms), int(tw * ms), 1), (wx, wy, 1, int(th * ms)), (wx + int(tw * ms), wy, 1, int(th * ms))):
             cv.rect(a, b, w, h, (200, 200, 200))
         return cv.b
 
@@ -768,18 +854,33 @@ def hud_of(film, cv, t):
     panel(cv, P_TX)
     bx, by = P_TX[0] + 12, P_TX[1] + 34
     g1 = [(bx + (i % 8) * 15 + 6, by + (i // 8) * 15 + 6) for i in range(net.nh)]
-    g2 = [(bx + 187 + (i % 8) * 15 + 6, by + (i // 8) * 15 + 6) for i in range(net.nh)]
-    go = [(bx + 362 + 10, by + k * 28 + 10) for k in range(net.nout)]
-    cur = net.circuits(h1, h2)
+    g2 = [(bx + 300 + (i % 8) * 15 + 6, by + (i // 8) * 15 + 6) for i in range(net.nh)]
+    go = [(bx + 520 + 10, by + k * 28 + 10) for k in range(net.nout)]
+    # The strongest 18 currents between the layers and 9 into the decisions: more and the wires are a mat.
+    cur = net.circuits(h1, h2, 18)
     top = max((e[0] for e in cur), default=1.0) or 1.0
+    # A WIRE WEARS ITS SOURCE NODE'S COLOUR, its brightness the current's size, dotted when it inhibits;
+    # each node is framed in its own colour. The wires are drawn OVER the grids and each begins at a dot
+    # of its colour on the node it left and ends at a ring on the node it feeds, so a connection is read
+    # node to node: under the grids, only the right-hand column's wires could be seen leaving. (Before 5
+    # November every wire was green or amber by its sign, and 42 of them read as one green fan.)
+    for n_, ((cx, cy), v) in enumerate(zip(g1, h1)):
+        cv.rect(cx - 7, cy - 7, 14, 14, node_hue(n_))
+        cv.rect(cx - 5, cy - 5, 10, 10, shade(v))
+    for n_, ((cx, cy), v) in enumerate(zip(g2, h2)):
+        cv.rect(cx - 7, cy - 7, 14, 14, node_hue(n_ + net.nh))
+        cv.rect(cx - 5, cy - 5, 10, 10, shade(v))
     for (mag, layer, i, j, v) in reversed(cur):
         a, b = (g1[i], g2[j]) if layer == 0 else (g2[i], go[j])
         k = (mag / top) ** 0.8
-        cv.line(a[0], a[1], b[0], b[1], mix(SCR, PHOS if v >= 0 else AMBER, 0.25 + 0.75 * k), w=2 if k > 0.6 else 1)
-    for (cx, cy), v in zip(g1, h1):
-        cv.rect(cx - 6, cy - 6, 12, 12, shade(v))
-    for (cx, cy), v in zip(g2, h2):
-        cv.rect(cx - 6, cy - 6, 12, 12, shade(v))
+        hue = node_hue(i + layer * net.nh)
+        cv.line(a[0], a[1], b[0], b[1], mix(SCR, hue, 0.35 + 0.65 * k), w=2 if k > 0.5 else 1, dots=v < 0)
+    for (mag, layer, i, j, v) in cur:
+        a, b = (g1[i], g2[j]) if layer == 0 else (g2[i], go[j])
+        hue = node_hue(i + layer * net.nh)
+        cv.disc(a[0], a[1], 3, hue)
+        if layer == 0:
+            cv.ring(b[0], b[1], 4, hue, 1)
     for (cx, cy), v in zip(go, y):
         cv.rect(cx - 10, cy - 10, 20, 20, shade(v))
     # ---- bottom right: the decisions, a spectrogram of the last eight seconds ----
@@ -922,11 +1023,11 @@ def hud_labels(work):
     out = os.path.join(work, "hud-labels.png")
     args = ["-size", "%dx%d" % (W, H), "xc:none", "-font", MONO, "-pointsize", "13", "-fill", "#9effa8"]
     args += ["-annotate", "+%d+%d" % (P_IN[0] + 12, P_IN[1] + 20), "INPUTS  the 55 numbers it senses"]
-    args += ["-annotate", "+%d+%d" % (P_TX[0] + 12, P_TX[1] + 20), "TRANSFORM  55 > 48 > 48 > 4, tanh; brightest currents lit"]
+    args += ["-annotate", "+%d+%d" % (P_TX[0] + 12, P_TX[1] + 20), "TRANSFORM  55 > 48 > 48 > 4: a wire wears its node's colour, dotted inhibits"]
     args += ["-annotate", "+%d+%d" % (P_DE[0] + 12, P_DE[1] + 20), "DECISIONS  the last 8 s, newest at the right"]
     bx, by = P_TX[0] + 12, P_TX[1] + 34
     for k, word in enumerate(("turn", "speed", "fire", "gate")):
-        args += ["-annotate", "+%d+%d" % (bx + 390, by + k * 28 + 15), word]
+        args += ["-annotate", "+%d+%d" % (bx + 548, by + k * 28 + 15), word]
     for r, word in enumerate(DE_ROWS):
         args += ["-annotate", "+%d+%d" % (P_DE[0] + 12, P_DE[1] + 32 + r * 16 + 11), word]
     magick(args + [out])
@@ -993,7 +1094,7 @@ def title_sequence(work, n, chapters, tr, home, field, seg_out):
             "-fill", "#070807", "-draw", "rectangle 0,%d %d,%d" % (H - 58, W, H - 22),
             "-font", MONO, "-pointsize", "16",
             "-fill", "#33f24d", "-annotate", "+24+%d" % (H - 34), "%d chapters" % len(chapters),
-            "-fill", "#ffbf4d", "-annotate", "+190+%d" % (H - 34), "%d duels from one start each" % tr.nd,
+            "-fill", "#ffbf4d", "-annotate", "+190+%d" % (H - 34), "%d duels in one world each" % tr.nd,
             "-fill", "#73c7ff", "-annotate", "+520+%d" % (H - 34), "the camera follows the best win",
             "-fill", "#f23326", "-annotate", "+880+%d" % (H - 34), "every other duel a ghost",
             base])
@@ -1025,15 +1126,16 @@ def how_to_read(work, frame_png):
             "-annotate", "+820+190", "Top left: what it senses,",
             "-annotate", "+820+220", "55 numbers a step.",
             "-annotate", "+820+275", "Bottom left: the transform,",
-            "-annotate", "+820+305", "two layers of 48, the",
-            "-annotate", "+820+335", "strongest currents lit.",
+            "-annotate", "+820+305", "two layers of 48; a wire",
+            "-annotate", "+820+335", "wears its node's colour.",
             "-annotate", "+820+390", "Bottom right: its decisions,",
             "-annotate", "+820+420", "8 s of turn, speed, fire.",
             "-annotate", "+820+475", "Top right: the generation,",
             "-annotate", "+820+505", "and the arena's map.",
             "-fill", "#33f24d", "-annotate", "+820+560", "Green +, amber -,",
             "-annotate", "+820+590", "black zero.",
-            "-fill", "#9fd4ff", "-annotate", "+40+640", "Faded tanks: the other duels at the same moment, the same start.",
+            "-fill", "#9fd4ff", "-annotate", "+40+628", "Faded tanks: the other duels at the same moment, in the same world.",
+            "-fill", "#c8a8ff", "-annotate", "+40+664", "Lavender: the champions of the chapters before, in this same duel.",
             out])
     return out
 
@@ -1053,9 +1155,577 @@ def pack_mind(net, tr, c, d, t, h):
             "c": [[e[1], e[2], e[3], round(e[4], 2)] for e in cur]}
 
 
+# ---- the line: the game's brain, generation by generation ------------------------------------
+#
+# Paul, 5 November, the evening r0201 put w11352 on the line: "describe the success story of each
+# generation move ... Add this to the montage. Show the chain, show the arrows in the flowchart. In fact.
+# show more investigation." The crucible chapters are the GPU islands' nets; the game's own brain moves
+# by the line -- a trial read on 55 seeds, read on, read on 400 seeds no search has seen, held to its
+# families, its gauntlet and 168 tests, committed -- and none of that was in the film. Now each of the
+# last generations is told as the planner recorded it: every job of its chain on the machine that ran
+# it, an arrow from each to the job it followed, every try of its promotion with the fault that stopped
+# it and the commit that mended it, the dials it moved in the words of treadcore's weights table, and
+# where its commit stands: on the line, or on main.
+
+LINE_GENS = 3
+# The Flow's colours (src/line.rs `colour`), so a stage is one colour in orrery and in the film.
+STAGE_HEX = {"first": "#2a78d6", "read": "#1baf7a", "held": "#eb6834", "families": "#eda100", "gauntlet": "#c9952f",
+             "promote": "#eda100", "line": "#6250d6", "main": "#33f24d"}
+STAGE_WORD = {"first": "First read", "read": "Read on", "held": "Held-out read", "families": "Families",
+              "gauntlet": "Gauntlet", "promote": "Tests, commit", "line": "The line"}
+COLS = ["first", "read", "held", "families", "gauntlet", "promote", "line"]
+
+
+def planner(q):
+    s = importlib.util.spec_from_file_location("orrery_plan", os.path.join(HERE, "plans", "treadcore.py"))
+    m = importlib.util.module_from_spec(s)
+    s.loader.exec_module(m)
+    return m, m.Plan(q)
+
+
+def epoch(s):
+    try:
+        return time.mktime(time.strptime(s[:19], "%Y-%m-%dT%H:%M:%S"))
+    except (TypeError, ValueError):
+        return None
+
+
+def took_words(sec):
+    return "%d s" % sec if sec < 90 else "%.1f min" % (sec / 60.0) if sec < 5400 else "%.1f h" % (sec / 3600.0)
+
+
+def dial_words(tc, ref="origin/main"):
+    """Each dial's description, as treadcore's weights table gives it at main: `Name "dial" default, "words";`."""
+    out = {}
+    for f in ("weights.rs", "tactics.rs"):
+        r = run(["git", "-C", tc, "show", "%s:source/treadcore-brain/src/%s" % (ref, f)], 60)
+        for m in re.finditer(r'^\s*\w+\s+"(\w+)"\s+[^,]+,\s+"(.*)";\s*$', r.stdout, re.M):
+            out.setdefault(m.group(1), m.group(2).replace('\\"', '"'))
+    return out
+
+
+def line_story(q, most=LINE_GENS):
+    """The last `most` generations that were committed, each as its chain of jobs, its tries, its dials
+    and its evidence; the line and main as they stand; the proof between them. Everything is read from
+    the queue's records and git: nothing here is the film's own opinion."""
+    m, p = planner(q)
+    runs = [r for r in p.runs() if r["kind"] == "promote"]
+    st_of = {r["id"]: p.rstate(r["id"]) for r in runs}
+    won = [r for r in runs if st_of[r["id"]].get("status") in ("approved", "self-modified")]
+    pick = won[-most:]
+    if not pick:
+        return None
+    cand_of = lambda r: st_of[r["id"]].get("candidate") or (r.get("params") or {}).get("candidate", "")
+    t_min = min(epoch(r.get("asked", "")) or time.time() for r in pick) - 86400
+    jobs = {}
+    for sub in ("done", "failed", "failed-retried"):
+        for f in glob.glob(os.path.join(q, sub, "*.json")):
+            try:
+                if os.path.getmtime(f) < t_min:
+                    continue
+                j = load(f)
+            except OSError:
+                continue
+            if j and j.get("id") and j["id"] not in jobs:
+                j["_ok"] = sub == "done"
+                jobs[j["id"]] = j
+    starts = {}
+    lo = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(t_min))
+    with open(os.path.join(q, "events.jsonl")) as f:
+        for line in f:
+            if '"started"' in line and line[7:26] >= lo:
+                try:
+                    e = json.loads(line)
+                except ValueError:
+                    continue
+                starts[e["job"]] = e["t"]
+    chains = {}
+    for i, j in jobs.items():
+        chains.setdefault(m.Plan.chain_of(i, j.get("title", "")), []).append(j)
+    tc = p.tc
+    remote_main = run(["git", "-C", tc, "rev-parse", "origin/main"]).stdout.strip()
+    on = lambda sha, ref: bool(sha) and run(["git", "-C", tc, "merge-base", "--is-ancestor", sha, ref]).returncode == 0
+    words = dial_words(tc)
+    gens = []
+    for r in pick:
+        rid, st = r["id"], st_of[r["id"]]
+        cand = cand_of(r)
+        trial = cand.split("/", 1)[-1]
+        nodes, dirs = [], []
+        for j in sorted(chains.get(trial, []), key=lambda x: starts.get(x["id"], x.get("ended", ""))):
+            i, title = j["id"], j.get("title", "")
+            k = p.stage_of(i, title)
+            if i.startswith("gx"):
+                k = "gauntlet"
+            if k not in COLS:
+                continue
+            a, b = epoch(starts.get(i, "")), epoch(j.get("ended", ""))
+            if b is None:
+                continue
+            a = a or b - float(j.get("seconds") or 0)
+            n = {"id": i, "stage": k, "host": j.get("host", ""), "a": a, "b": b, "ok": j["_ok"], "title": title}
+            ds = glob.glob(os.path.join(q, "results", i, p.home, "out", i, "*", ""))
+            one = p.pool(ds) if ds else None
+            if one:
+                d, se, ns = one["every"]
+                n.update(d=d, se=se, n=ns)
+                if k in ("first", "read"):
+                    dirs += ds
+                    al = p.pool(dirs)
+                    if al and al["every"][1]:
+                        n["z"] = al["every"][0] / al["every"][1]
+                        n["pooled"] = al["every"]
+                elif se:
+                    n["z"] = d / se
+            mr = re.match(r"read on (\d+)", title)
+            n["group"] = "read %s" % mr.group(1) if mr else "held" if k == "held" else k if k in ("first", "gauntlet") else i
+            nodes.append(n)
+        # The tries: every promotion of this candidate up to this one, the ones that died at the writer
+        # (no job) among them.
+        tries = []
+        for x in runs:
+            if cand_of(x) != cand:
+                continue
+            s_ = st_of[x["id"]]
+            ok = s_.get("status") in ("approved", "self-modified")
+            tries.append({"run": x["id"], "asked": x.get("asked", ""), "ok": ok, "why": s_.get("why", ""), "job": s_.get("job"), "by": x.get("by", "")})
+            if not s_.get("job"):
+                t_ = epoch(x.get("asked", "")) or 0
+                nodes.append({"id": x["id"], "stage": "promote", "host": "orrery", "a": t_, "b": t_ + 1, "ok": False, "group": x["id"],
+                              "title": "the writer", "fault": s_.get("why") or ""})
+            if x["id"] == rid:
+                break
+        for n in nodes:
+            if n["stage"] == "promote" and not n["ok"] and "fault" not in n:
+                why = next((t["why"] for t in tries if t["job"] == n["id"]), "")
+                mm = re.search(r"\(([^)]*)\)", why)
+                n["fault"] = why
+        sha = st.get("commit", "")
+        appr = epoch(st.get("approved", "")) or (max(n["b"] for n in nodes) if nodes else 0)
+        where = "main" if on(sha, remote_main) else "the line" if on(sha, p.LINE) else "replayed"
+        nodes.append({"id": sha[:7], "stage": "line", "host": "every machine", "a": appr, "b": appr + 1, "ok": True, "group": "line",
+                      "title": "on " + where})
+        nodes.sort(key=lambda n: n["a"])
+        # Each job's arrow: from the newest job that had ended when it began, not one of its own siblings.
+        for k_, n in enumerate(nodes):
+            before = [x for x in nodes[:k_] if x["b"] <= n["a"] + 3 and x["group"] != n["group"]]
+            n["prev"] = nodes.index(max(before, key=lambda x: x["b"])) if before else None
+        out = os.path.join(q, "results", st.get("job") or "-", p.home, "out", st.get("job") or "-")
+        tests = families = gauntlet = ""
+        try:
+            tests = next((l for l in open(os.path.join(out, "tests.txt")) if l.startswith("test result")), "").strip()
+            fl = [l for l in open(os.path.join(out, "families.txt")) if l.startswith("family")]
+            families = "%d of %d families hold" % (sum(1 for l in fl if l.rstrip().endswith(")") and "holds" in l), len(fl))
+        except OSError:
+            pass
+        try:
+            gauntlet = next((l.strip() for l in open(os.path.join(q, "logs", st.get("job", "") + ".log")) if l.startswith("gauntlet")), "")
+        except OSError:
+            pass
+        mt = re.search(r"(\d+) passed", tests)
+        held = None
+        for n in nodes:
+            if n["stage"] == "held":
+                hid = n["id"].split("-p")[0]
+                pd = p.piece_dir(hid)
+                one = p.pool([pd]) if pd else None
+                if one:
+                    held = one["every"]
+                elif "d" in n and n.get("n", 0) >= 400:
+                    held = (n["d"], n["se"], n["n"])
+        dials = []
+        for c in st.get("changed", []):
+            mm = re.match(r"(\w+) (\S+) -> (\S+)", c)
+            if mm:
+                dials.append({"name": mm.group(1), "old": mm.group(2), "new": mm.group(3), "words": words.get(mm.group(1), "")})
+        # The fixes: commits in orrery and treadcore that name a failed try or the candidate, made between the
+        # first failure and an hour after the generation landed (a fix is often committed after it was live).
+        fixes = []
+        failed = [t for t in tries if not t["ok"]]
+        if failed:
+            since, upto = failed[0]["asked"], time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(appr + 3600))
+            seen = set()
+            for repo, name in ((ROOT, "orrery"), (tc, "treadcore")):
+                for key in [t["run"] for t in failed] + [trial]:
+                    g = run(["git", "-C", repo, "log", "--all", "--since", since, "--until", upto, "--grep", key, "--format=%h\t%ad\t%s", "--date=format:%H:%M"], 60)
+                    for l in g.stdout.splitlines():
+                        h, at, subj = (l.split("\t") + ["", ""])[:3]
+                        if h not in seen and not subj.startswith("promote "):
+                            seen.add(h)
+                            fixes.append({"repo": name, "sha": h, "at": at, "subject": subj})
+        subj = run(["git", "-C", tc, "log", "-1", "--format=%s", sha], 30).stdout.strip() if sha else ""
+        hosts = sorted({n["host"] for n in nodes if n["stage"] not in ("line",) and n["host"] not in ("orrery", "4 machines")})
+        gens.append({"run": rid, "trial": trial, "note": "", "dials": dials, "nodes": nodes, "tries": tries, "fixes": fixes,
+                     "commit": sha, "subject": subj, "where": where, "approved": st.get("approved", ""),
+                     "census": (st.get("evidence") or {}).get("census"), "held": held, "tests": int(mt.group(1)) if mt else None,
+                     "families": families, "gauntlet": gauntlet, "hosts": hosts, "by": r.get("by", ""),
+                     "first_at": min((n["a"] for n in nodes), default=appr), "detail": st.get("detail", "")})
+    line = p.state.get("local_line") or {}
+    pf = p.state.get("proof") or {}
+    main_gen = next((r["id"] for r in reversed(runs) if st_of[r["id"]].get("status") == "approved"), None)
+    return {"gens": gens, "main": remote_main[:7], "main_gen": main_gen, "main_cand": cand_of(next(r for r in runs if r["id"] == main_gen)) if main_gen else "",
+            "main_changed": st_of[main_gen].get("changed", []) if main_gen else [], "line": (line.get("commit") or "")[:7],
+            "line_runs": line.get("promotions", []), "proof": pf.get("last"), "proof_pool_head": ((pf.get("pooled") or {}).get("head") or "")[:7],
+            "proof_next": (pf.get("last_at") or 0) + p.PROOF_EVERY_MIN * 60, "held_z": p.HELD_Z,
+            "bar": (p.state.get("difficulty") or {}).get("held_z")}
+
+
+def short_num(v):
+    """A dial's value as a person writes it: 99.2672 as 99.27, 0.0249411 as 0.0249, 24 as 24."""
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        return str(v)
+    if x == int(x):
+        return "%d" % x
+    return ("%.4f" % x).rstrip("0") if abs(x) < 1 else ("%.2f" % x).rstrip("0").rstrip(".")
+
+
+def clock_of(t):
+    return time.strftime("%H:%M", time.localtime(t))
+
+
+def wrap(text, n):
+    out, cur = [], ""
+    for w in text.split():
+        if cur and len(cur) + 1 + len(w) > n:
+            out.append(cur)
+            cur = w
+        else:
+            cur = (cur + " " + w).strip()
+    return out + ([cur] if cur else [])
+
+
+def chain_layout(g):
+    """Each node's box: its stage's column, stacked in the order the jobs began."""
+    x0, gap, top, bottom = 24, 10, 196, 590
+    cw = (W - 2 * x0 - (len(COLS) - 1) * gap) // len(COLS)
+    per = {}
+    for n in g["nodes"]:
+        per.setdefault(n["stage"], []).append(n)
+    for k, ns in per.items():
+        step = min(84, (bottom - top) // max(1, len(ns)))
+        for r_, n in enumerate(ns):
+            col = COLS.index(k)
+            n["box"] = (x0 + col * (cw + gap), top + r_ * step, cw, min(72, step - 8))
+    return x0, cw, gap
+
+
+def fault_words(why):
+    """A failure's own words, short enough for a box: the job's wrapper and the log's address taken off."""
+    w = re.sub(r"^the promotion job failed \((.*)\): see logs/.*$", r"\1", why or "")
+    w = re.sub(r"^fatal: ", "", w)
+    w = re.sub(r" \(got .*$| \(nothing written\)$", "", w)
+    return w
+
+
+def node_lines(n):
+    """A box's words: the job, its machine and time, then what it read or how it failed. 22 a line."""
+    lines = [n["id"], "%s · %s" % (n["host"][:12], took_words(max(1, n["b"] - n["a"]))) if n["stage"] != "line" else "at " + clock_of(n["a"])]
+    if n["stage"] == "line":
+        lines = [n["id"], n["title"] + " at " + clock_of(n["a"]), "built everywhere"]
+    elif "fault" in n:
+        lines += wrap(fault_words(n["fault"]), 22)[:2]
+    elif "d" in n:
+        lines.append("%d seeds %+.2f±%.2f" % (n["n"], n["d"], n["se"]))
+        if "z" in n:
+            lines.append(("pooled " if n["stage"] in ("first", "read") else "") + "z %+.2f" % n["z"])
+    elif n["stage"] == "families":
+        lines.append("every family holds" if n["ok"] else "failed")
+    elif n["stage"] == "gauntlet":
+        lines.append("the floors read" if n["ok"] else "failed")
+    elif n["stage"] == "promote":
+        lines.append("committed" if n["ok"] else "failed")
+    return lines
+
+
+def arrow_mvg(a, b, col):
+    """An MVG bezier from box a to box b with its head, and the dark line under it."""
+    ax, ay, aw, ah = a
+    bx, by, bw, bh = b
+    if bx > ax + aw:
+        s, e, d = (ax + aw + 1, ay + ah // 2), (bx - 3, by + bh // 2), (1, 0)
+    elif bx + bw < ax:
+        s, e, d = (ax - 1, ay + ah // 2), (bx + bw + 3, by + bh // 2), (-1, 0)
+    elif by > ay:
+        s, e, d = (ax + aw // 2, ay + ah + 1), (bx + bw // 2, by - 3), (0, 1)
+    else:
+        s, e, d = (ax + aw // 2, ay - 1), (bx + bw // 2, by + bh + 3), (0, -1)
+    k = max(20, abs(e[0] - s[0]) // 2 if d[1] == 0 else abs(e[1] - s[1]) // 2)
+    c1, c2 = (s[0] + d[0] * k, s[1] + d[1] * k), (e[0] - d[0] * k, e[1] - d[1] * k)
+    path = "bezier %d,%d %d,%d %d,%d %d,%d" % (s + c1 + c2 + e)
+    hx, hy = e
+    px, py = -d[1], d[0]
+    head = "polygon %d,%d %d,%d %d,%d" % (hx + d[0] * 2, hy + d[1] * 2, hx - d[0] * 11 + px * 6, hy - d[1] * 11 + py * 6, hx - d[0] * 11 - px * 6, hy - d[1] * 11 - py * 6)
+    return ["-fill", "none", "-stroke", "#050705", "-strokewidth", "6", "-draw", path,
+            "-stroke", col, "-strokewidth", "2", "-draw", path, "-stroke", "none", "-fill", col, "-draw", head]
+
+
+def chain_frames(work, gi, g, of, story):
+    """The chain revealed a job at a time: frame k has the first k jobs and the arrows into them; the
+    last has the story under it. Returns [(png, seconds)]."""
+    x0, cw, gap = chain_layout(g)
+    nodes = g["nodes"]
+    span = (max(n["b"] for n in nodes) - g["first_at"]) / 60.0
+    dials = " · ".join("%s %s → %s" % (d["name"], short_num(d["old"]), short_num(d["new"])) for d in g["dials"])
+    base = ["-size", "%dx%d" % (W, H), "xc:#0b100d",
+            "-font", FONT_B, "-pointsize", "38", "-fill", "white", "-annotate", "+24+60", "Generation %s · %s" % (g["run"], g["trial"]),
+            "-font", MONO, "-pointsize", "16", "-fill", "#9fd4ff", "-annotate", "+24+96", dials,
+            "-font", FONT, "-pointsize", "19", "-fill", "#ffbf4d", "-annotate", "+24+126",
+            "%s, %s to %s, %s · %d jobs on %d machines · generation %d of the %d told" % (
+                time.strftime("%-d %b", time.localtime(g["first_at"])), clock_of(g["first_at"]), clock_of(max(n["b"] for n in nodes)),
+                took_words(span * 60), sum(1 for n in nodes if n["stage"] != "line"), len(g["hosts"]), gi + 1, of)]
+    held = g.get("held")
+    for k in COLS:
+        x = x0 + COLS.index(k) * (cw + gap)
+        base += ["-font", FONT_B, "-pointsize", "17", "-fill", STAGE_HEX[k], "-annotate", "+%d+168" % x, STAGE_WORD[k]]
+        sub = ""
+        if k == "held" and held:
+            sub = "%+.2f±%.2f, z %.2f" % (held[0], held[1], held[0] / held[1] if held[1] else 0)
+        elif k == "read":
+            pooled = [n for n in nodes if n["stage"] in ("first", "read") and "pooled" in n]
+            if pooled:
+                sub = "%d seeds, z %.2f" % (pooled[-1]["pooled"][2], pooled[-1]["z"])
+        elif k == "promote" and g.get("tests"):
+            sub = "%d tests pass" % g["tests"]
+        if sub:
+            base += ["-font", MONO, "-pointsize", "12", "-fill", "#8fa396", "-annotate", "+%d+185" % x, sub]
+    out = []
+    for k in range(1, len(nodes) + 2):
+        shown = nodes[:min(k, len(nodes))]
+        args = list(base)
+        for n in shown:
+            if n["prev"] is not None:
+                a = nodes[n["prev"]]
+                col = "#f23326" if (a["stage"] == "promote" and not a["ok"]) else "#ffbf4d"
+                args += arrow_mvg(a["box"], n["box"], col)
+        for n in shown:
+            x, y, w_, h_ = n["box"]
+            bad = not n["ok"]
+            stroke = "#f23326" if bad else STAGE_HEX[n["stage"]]
+            newest = n is shown[-1] and k <= len(nodes)
+            args += ["-fill", "#2a1210" if bad else "#121a15", "-stroke", "#ffffff" if newest else stroke, "-strokewidth", "3" if newest else "2",
+                     "-draw", "roundrectangle %d,%d %d,%d 6,6" % (x, y, x + w_, y + h_), "-stroke", "none"]
+            for li, t in enumerate(node_lines(n)[:4]):
+                if 15 + li * 15 > h_:
+                    break
+                args += ["-font", MONO_B if li == 0 else MONO, "-pointsize", "13" if li == 0 else "11",
+                         "-fill", "white" if li == 0 else ("#ff8f80" if bad and li >= 2 else "#cfe0d4"), "-annotate", "+%d+%d" % (x + 8, y + 16 + li * 15), t]
+        if g["where"] != "main" and k > len(nodes):
+            x, y, w_, h_ = nodes[-1]["box"]
+            y2 = y + h_ + 40
+            args += ["-fill", "none", "-stroke", "#33f24d", "-strokewidth", "2", "-draw", "stroke-dasharray 7 5 roundrectangle %d,%d %d,%d 6,6" % (x, y2, x + w_, y2 + 56), "-stroke", "none",
+                     "-font", MONO_B, "-pointsize", "13", "-fill", "#33f24d", "-annotate", "+%d+%d" % (x + 8, y2 + 18), "main",
+                     "-font", MONO, "-pointsize", "12", "-fill", "#9fd49f", "-annotate", "+%d+%d" % (x + 8, y2 + 34), "after the proof",
+                     "-annotate", "+%d+%d" % (x + 8, y2 + 49), "past z %.1f" % story["held_z"]]
+            args += arrow_mvg(nodes[-1]["box"], (x, y2, w_, 56), "#33f24d")
+        if k > len(nodes):
+            args += ["-fill", "#0f1712", "-draw", "rectangle 0,608 %d,%d" % (W, H)]
+            ev = []
+            if g.get("census"):
+                ev.append("census %+.2f ± %.2f" % tuple(g["census"][:2]))
+            if held:
+                ev.append("held out %+.2f ± %.2f on %d unseen seeds (z %.2f)" % (held[0], held[1], held[2], held[0] / held[1] if held[1] else 0))
+            if g.get("families"):
+                ev.append(g["families"])
+            if g.get("gauntlet"):
+                ev.append(g["gauntlet"].replace("gauntlet: holds", "the gauntlet holds"))
+            tries = g["tries"]
+            said = "committed %s by %s, %s" % (g["commit"][:7], "orrery's auto mode" if g["by"] == "auto" else g["by"] or "a person",
+                                               "on main" if g["where"] == "main" else "on the line, waiting for the proof against main")
+            if len(tries) > 1:
+                said = "%d tries: %s; %s" % (len(tries), ", ".join("%s %s" % (t["run"], "landed" if t["ok"] else "failed") for t in tries), said)
+            args += ["-font", FONT, "-pointsize", "19", "-fill", "#33f24d", "-annotate", "+36+640", " · ".join(ev),
+                     "-fill", "#e8e8e8", "-annotate", "+36+672", said,
+                     "-font", FONT, "-pointsize", "15", "-fill", "#8fa396", "-annotate", "+36+700",
+                     "Each arrow runs from the job a link followed: the newest of the chain to have ended when it began. Red: a try that failed, and the one after it."]
+        png = os.path.join(work, "chain-%d-%02d.png" % (gi, k))
+        magick(args + [png])
+        out.append((png, 0.5 if k <= len(nodes) else 5.0))
+    return out
+
+
+def frames_to(pairs, out):
+    """Stills with their own durations, one segment."""
+    lst = out + ".txt"
+    with open(lst, "w") as f:
+        for png, sec in pairs:
+            f.write("file '%s'\nduration %.2f\n" % (png, sec))
+        f.write("file '%s'\n" % pairs[-1][0])
+    r = run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lst, "-vf", "fps=%d,scale=%d:%d,format=yuv420p" % (FPS, W, H)] + X264 + [out], 300)
+    if r.returncode != 0:
+        raise RuntimeError("ffmpeg chain: %s" % r.stderr.strip()[-300:])
+    return out, sum(s for _, s in pairs)
+
+
+def text_card(work, name, title, sub, rows):
+    """A card of rows, each (text, colour, point size, font); long rows wrapped."""
+    args = ["-size", "%dx%d" % (W, H), "xc:#0b100d", "-font", FONT_B, "-pointsize", "40", "-fill", "white", "-annotate", "+40+70", title]
+    if sub:
+        args += ["-font", FONT, "-pointsize", "24", "-fill", "#9fd4ff", "-annotate", "+40+112", sub]
+    y = 160
+    for text, col, pt, font in rows:
+        if text is None:
+            y += pt // 2
+            continue
+        chars = int(1190 / (pt * (0.62 if font in (MONO, MONO_B) else 0.5)))
+        for l in wrap(text, chars) or [""]:
+            args += ["-font", font, "-pointsize", str(pt), "-fill", col, "-annotate", "+40+%d" % y, l]
+            y += int(pt * 1.3)
+        if y > H - 20:
+            break
+    out = os.path.join(work, name + ".png")
+    magick(args + [out])
+    return out
+
+
+def dial_card(work, gi, g):
+    rows = []
+    for d in g["dials"]:
+        rows.append(("%s   %s  →  %s" % (d["name"], d["old"], d["new"]), "#33f24d", 26, MONO_B))
+        rows.append((d["words"] or "(no words in the weights table)", "#e8e8e8", 19, FONT))
+        rows.append((None, None, 30, None))
+    rows.append(("%s  %s" % (g["commit"][:7], g["subject"][:150]), "#8fa396", 15, MONO))
+    return text_card(work, "dials-%d" % gi, "What %s moved" % g["run"], "%s, in the words of treadcore's weights table at main" % g["trial"], rows)
+
+
+def tries_card(work, gi, g):
+    rows = []
+    for t in g["tries"]:
+        col = "#33f24d" if t["ok"] else "#ff6b5e"
+        rows.append(("%s  asked %s by %s  %s" % (t["run"], t["asked"][11:16], t["by"] or "?", "LANDED" if t["ok"] else "FAILED"), col, 24, MONO_B))
+        if t["why"]:
+            rows.append((t["why"], "#e8e8e8", 19, FONT))
+        rows.append((None, None, 30, None))
+    if g["fixes"]:
+        rows.append(("What mended it, found by the run and the trial named in each commit:", "#9fd4ff", 20, FONT))
+        for f in sorted(g["fixes"], key=lambda f: f["at"])[:4]:
+            rows.append(("%s %s %s  %s" % (f["repo"], f["sha"], f["at"], f["subject"]), "#e8e8e8", 16, MONO))
+    # What the failures were, said from their own words: a failure at the tests, a family or the gauntlet
+    # is the candidate's numbers judged; anything else stopped before they were.
+    judged = [t for t in g["tries"] if not t["ok"] and re.search(r"tests failed|family|gauntlet", t["why"])]
+    sub = ("every failure stopped before its numbers were judged" if not judged else
+           "%d of the failures were its own numbers judged" % len(judged))
+    if all(t["by"] == "auto" for t in g["tries"]):
+        sub += "; every try asked by the auto mode"
+    return text_card(work, "tries-%d" % gi, "The investigation: %s took %d tries" % (g["trial"], len(g["tries"])), sub, rows)
+
+
+def act_card(work, story):
+    rows = []
+    for g in story["gens"]:
+        h = g.get("held")
+        rows.append(("%s  %s  %s  held %s  %d %s  %s on %s" % (
+            g["run"], g["trial"], g["approved"][11:16], "%+.2f±%.2f" % (h[0], h[1]) if h else "-", len(g["tries"]),
+            "try " if len(g["tries"]) == 1 else "tries", g["commit"][:7], g["where"]), "#e8e8e8", 22, MONO))
+        rows.append(("    " + "; ".join("%s %s → %s" % (d["name"], d["old"], d["new"]) for d in g["dials"]), "#8fa396", 16, MONO))
+        rows.append((None, None, 26, None))
+    rows.append(("main is %s, its last generation %s (%s: %s)" % (story["main"], story["main_gen"] or "-", story["main_cand"].split("/")[-1],
+                                                                  "; ".join(story["main_changed"])), "#33f24d", 20, MONO))
+    return text_card(work, "line-act", "The line: the game's brain, a generation at a time",
+                     "the last %d generations, each from a question to a commit" % len(story["gens"]), rows)
+
+
+def proof_card(work, story):
+    pf = story.get("proof") or {}
+    gens = story["gens"]
+    on_line = [g for g in gens if g["where"] != "main"]
+    rows = [("Committed: yes. %s on the line, head %s." % (", ".join(story["line_runs"]) or "nothing", story["line"] or "-"), "#33f24d", 24, FONT),
+            ("The line is a branch on the coordinator (orrery/accepted). Every machine builds it, plays it and reads new trials against it.", "#e8e8e8", 19, FONT),
+            (None, None, 14, None),
+            ("Pushed to main: %s. Main is %s; its last generation is %s." % ("not yet" if on_line else "yes", story["main"], story["main_gen"] or "-"),
+             "#ffbf4d" if on_line else "#33f24d", 24, FONT),
+            ("Main takes the line by a proof: main's values read as a trial against the line, 800 seeds an hour, pooled while neither moves; "
+             "the line past main at z %.1f, and no map given up past the trade rule." % story["held_z"], "#e8e8e8", 19, FONT),
+            (None, None, 14, None)]
+    if pf:
+        rows.append(("The last proof read the line at %s: %+.2f ± %.2f over %s seeds, z %.2f of %.1f." % (
+            pf.get("head", "?"), pf.get("d", 0), pf.get("se", 0), format(pf.get("seeds", 0), ","), pf.get("z", 0), story["held_z"]), "#e8e8e8", 22, FONT))
+        if story["line"] and pf.get("head") and not story["line"].startswith(pf["head"][:7]):
+            rows.append(("A new generation on the line starts the pool again: the next proof reads %s, due about %s." % (story["line"], clock_of(story["proof_next"])),
+                         "#9fd4ff", 20, FONT))
+    return text_card(work, "proof", "Committed, not yet on main" if on_line else "On main", "where the commits stand, %s" % time.strftime("%-d %B %H:%M"), rows)
+
+
+def line_act(q, work, add, seg_path, status, most=LINE_GENS):
+    """The act, segment by segment, through `add`. Returns the story, or None when nothing was committed."""
+    story = line_story(q, most)
+    if not story:
+        return None
+    pj = os.path.join(q, "plan", "pipeline.json")
+    pipe = load(pj, {}) or {}
+    add(still(act_card(work, story), 6.0, seg_path()), 6.0, "The line: the game's brain")
+    newest = story["gens"][-1]["trial"]
+    if any(t.get("trial") == newest for t in pipe.get("traces") or []):
+        png = orrery_frame(work, pj, "flow-road", "pipeline", {"ORRERY_FRAME_PAGE": "1", "ORRERY_FRAME_TRACE": newest})
+        if png:
+            add(still(captioned(work, png, "The flowchart, %s's road lit: each stage it walked, numbered, and the one it waits at" % newest), 4.0, seg_path()), 4.0)
+    chained = {j[5] for l in ((pipe.get("timeline") or {}).get("lanes") or []) for j in (l.get("jobs") or []) if len(j) > 5}
+    for gi, g in enumerate(story["gens"]):
+        seg, sec = frames_to(chain_frames(work, gi, g, len(story["gens"]), story), seg_path())
+        add(seg, sec, "%s %s: its chain" % (g["run"], g["trial"]))
+        add(still(dial_card(work, gi, g), 6.0, seg_path()), 6.0)
+        if len(g["tries"]) > 1:
+            add(still(tries_card(work, gi, g), 8.0, seg_path()), 8.0, "The investigation: %s's %d tries" % (g["trial"], len(g["tries"])))
+        if g["trial"] in chained:
+            png = orrery_frame(work, pj, "tl-%s" % g["trial"], "pipeline", {"ORRERY_FRAME_PAGE": "2", "ORRERY_FRAME_CHAIN": g["trial"]})
+            if png:
+                add(still(captioned(work, png, "The Timeline follows %s: each job on its machine, an arrow from the one it followed" % g["trial"]), 4.0, seg_path()), 4.0)
+    for name, env, cap in (("tl-day", {"ORRERY_FRAME_PAGE": "2", "ORRERY_FRAME_ZOOM": "day"}, "The day: a green line each generation, the bins coloured by stage"),
+                           ("lineup", {"ORRERY_FRAME_PAGE": "6", "ORRERY_FRAME_LINEUP": "trials"}, "The Lineup: every trial's chain, how far it went, how it ended"),
+                           ("parade", {"ORRERY_FRAME_PAGE": "7"}, "The Hit Parade: the day's counts")):
+        png = orrery_frame(work, pj, name, "pipeline", env)
+        if png:
+            add(still(captioned(work, png, cap), 3.0, seg_path()), 3.0)
+    add(still(proof_card(work, story), 8.0, seg_path()), 8.0, "Committed, and where it stands")
+    return story
+
+
+def captioned(work, png, cap):
+    lab = os.path.join(work, os.path.basename(png)[:-4] + "-cap.png")
+    label_png(lab, cap, 26)
+    comp = os.path.join(work, os.path.basename(png)[:-4] + "-card.png")
+    magick([png, lab, "-gravity", "south", "-geometry", "+0+20", "-composite", comp])
+    return comp
+
+
+def line_only(q, out):
+    """`montage.py QUEUE line OUT.mp4`: the line's act alone, for a look before a whole film."""
+    work = os.path.join(q, "plan", "montage-line-work")
+    shutil.rmtree(work, ignore_errors=True)
+    os.makedirs(work)
+    segs, marks, clock, n = [], [], [0.0], [0]
+
+    def seg_path():
+        n[0] += 1
+        return os.path.join(work, "seg-%04d.mp4" % n[0])
+
+    def add(path, seconds, mark=None):
+        if mark:
+            marks.append((clock[0], mark))
+        segs.append(path)
+        clock[0] += seconds
+    story = line_act(q, work, add, seg_path, None)
+    if not story:
+        print("nothing committed to tell")
+        return 1
+    lst = os.path.join(work, "list.txt")
+    with open(lst, "w") as f:
+        for s in segs:
+            f.write("file '%s'\n" % s)
+    r = run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", "-movflags", "+faststart", out], 600)
+    if r.returncode != 0:
+        raise RuntimeError(r.stderr[-300:])
+    save(out + ".json", story)
+    for a, m_ in marks:
+        print(stamp(a), m_)
+    print("%s: %.0f s; frames in %s" % (out, clock[0], work))
+    return 0
+
+
 # ---- the film --------------------------------------------------------------------------------
 
-def make(q, most=12, duels=64, host=None, seed=7, since=None):
+def make(q, most=12, duels=128, host=None, seed=7, since=None):
     lock = os.path.join(q, "plan", "montage.lock")
     if os.path.exists(lock) and time.time() - os.path.getmtime(lock) < 3 * 3600:
         print("a montage is being made (plan/montage.json says where it is)")
@@ -1153,6 +1823,13 @@ def _make(q, most, duels, host, seed, work, since=None):
         comp = os.path.join(work, name + "-card.png")
         magick([png, lab, "-gravity", "south", "-geometry", "+0+24", "-composite", comp])
         add(still(comp, 2.5, seg_path()), 2.5, cap.split(":")[0] if name == "pipeline" else None)
+    # ---- the line: the game's brain, the last generations committed, each from its question to its commit ----
+    state(q, state="rendering", progress=0.12, said="the line's generations")
+    try:
+        story = line_act(q, work, add, seg_path, status)
+    except Exception as e:  # the act is the film's news, not its spine: a fault in it says so and the film goes on
+        story = None
+        state(q, said="the line's act was left out: %s" % str(e)[:200])
     # ---- the chapters ----
     summary = []
     mind_doc = []
@@ -1184,46 +1861,63 @@ def _make(q, most, duels, host, seed, work, since=None):
         label_png(ttl, "Generation %s · %s" % (format(ch["gen"], ","), ch["name"] if ch["name"] != "now" else "now"), 48)
         gen = gen_png(work, ci, ch, len(chapters))
         minds = []
-        for k, (cd, clip) in enumerate(clips):
-            film = Film(tr, ci, cd, nets[ci])
-            clip["duel"] = cd
-            cap = os.path.join(work, "cap-%02d-%d.png" % (ci, k))
+        replayed = False
+
+        def shoot(k, cd, clip, what, sub_n=SUB, tiles=30.0, mind=True, hud=True):
+            """One clip to one segment: the field drawn a frame at a time into ffmpeg, the corners' labels,
+            the generation and the caption laid over; on the chapter's first clip the generation's 0.25 s
+            title over the upper right. Returns the frames written."""
+            nonlocal poster_ppm
+            film = Film(tr, ci, cd, nets[ci] if hud else None, tiles, 3.0 if hud else 2.0)
+            cap = os.path.join(work, "cap-%02d-%d%s.png" % (ci, k, "r" if not mind else ""))
             o = tr.opp_of[cd]
             vs = ("a " + ("scripted tank", "Raider", "Castle", "Expander", "Timid")[min(4, -1 - o)]) if o < 0 else opps[o]["name"] if o < len(opps) else "a milestone"
-            label_png(cap, "%s  ·  duel %d of %d against %s, %s" % (clip["what"], cd + 1, tr.nd, vs, "won" if c["outcome"][cd] == 1 else "lost" if c["outcome"][cd] == -1 else "drawn"), 22, font=FONT)
+            label_png(cap, "%s  ·  duel %d of %d against %s, %s" % (what, cd + 1, tr.nd, vs, "won" if c["outcome"][cd] == 1 else "lost" if c["outcome"][cd] == -1 else "drawn"), 22, font=FONT)
             out = seg_path()
-            # The corners' labels, the generation, the caption at the top's middle; on the chapter's first
-            # clip the generation's 0.25 s title over the upper right.
-            inputs = ["-i", labels, "-i", gen, "-i", cap] + (["-i", ttl] if k == 0 else [])
+            inputs = (["-i", labels] if hud else []) + ["-i", gen, "-i", cap] + (["-i", ttl] if k == 0 else [])
             filt = ("[0][1]overlay=0:0[a];[a][2]overlay=%d:%d[b];[b][3]overlay=(W-w)/2:16" % (P_GEN[0], P_GEN[1])
-                    + ("[c];[c][4]overlay=W-w-24:24:enable='lt(t,%.2f)'" % TITLE_S if k == 0 else ""))
+                    + ("[c];[c][4]overlay=W-w-24:24:enable='lt(t,%.2f)'" % TITLE_S if k == 0 else "")) if hud else \
+                ("[0][1]overlay=%d:%d[b];[b][2]overlay=(W-w)/2:16" % (P_GEN[0], P_GEN[1]))
             p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", "%dx%d" % (W, H), "-r", str(FPS), "-i", "-"]
                                  + inputs + ["-filter_complex", filt] + X264 + [out], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
-            film.cam = None
             nfr = 0
             steps = []
             for t in range(clip["from"], clip["to"] + 1):
-                if nets[ci] is not None:
+                if mind and nets[ci] is not None:
                     sc = shot_of(tr, ci, cd, t)
                     steps.append(pack_mind(nets[ci], tr, ci, cd, t, {RED_HUD: "hit", AMBER: "pillbox", SKY: "pillbox fired", (240, 248, 240): "shot"}.get(sc, "") if sc else ""))
-                for sub in range(SUB):
-                    fr = film.frame(t, sub / SUB, flashes(tr, ci, cd, t, sub / SUB))
+                for sub in range(sub_n):
+                    fr = film.frame(t, sub / sub_n, flashes(tr, ci, cd, t, sub / sub_n))
                     p.stdin.write(fr)
                     nfr += 1
                     if nfr % 15 == 1:
                         with open(preview + ".part", "wb") as pf:
                             pf.write(small(fr))
                         os.replace(preview + ".part", preview)
-                    if k == 0 and t == clip.get("at", clip["from"]) and sub == 0:
+                    if k == 0 and mind and t == clip.get("at", clip["from"]) and sub == 0:
                         poster_ppm = small(fr)
             p.stdin.close()
             err = p.stderr.read().decode(errors="replace")
             if p.wait() != 0:
                 raise RuntimeError("ffmpeg: %s" % err.strip()[-300:])
             add(out, nfr / float(FPS))
+            if mind:
+                minds.append({"what": what, "duel": cd, "from": clip["from"], "to": clip["to"], "steps": steps})
+            return nfr
+
+        for k, (cd, clip) in enumerate(clips):
+            clip["duel"] = cd
+            nfr = shoot(k, cd, clip, clip["what"])
             frames_total += nfr
             clip["frames"] = nfr
-            minds.append({"what": clip["what"], "duel": cd, "from": clip["from"], "to": clip["to"], "steps": steps})
+            # THE KILL SHOT AGAIN, at half speed and closer (Paul, 5 November: "show more demonstration of
+            # the battles"): the second before it and the moment after, 20 tiles across instead of 30, so
+            # the shell's flight and the turn that aimed it can be watched. Once a chapter, the first kill.
+            if not replayed and "Kill shot" in clip["what"] and "hardest" not in clip["what"]:
+                replayed = True
+                at = clip.get("at", clip["from"])
+                rc = {"from": max(0, at - 8), "to": min(c["lasted"][cd] - 1 + 3, at + 3), "at": at}
+                frames_total += shoot(k + 100, cd, rc, "Replay, half speed, closer: the kill shot", sub_n=2 * SUB, tiles=20.0, mind=False, hud=False)
         mind_doc.append({"chapter": ci + 1, "name": ch["name"], "label": ch["label"], "gen": ch["gen"], "island": ch["island"], "clips": minds})
         summary.append({"chapter": ci + 1, "name": ch["name"], "label": ch["label"], "island": ch["island"], "gen": ch["gen"],
                         "won": w_, "lost": l_, "drawn": d_, "followed": d, "followed_vs": tr.opp_of[d],
@@ -1255,7 +1949,7 @@ def _make(q, most, duels, host, seed, work, since=None):
     doc = {"n": n, "at": now(), "home": homename, "since": last, "last": chapters[-1]["label"] if chapters[-1]["name"] != "now" else (chapters[-2]["label"] if len(chapters) > 1 else last),
            "chapters": summary, "opponents": [o["label"] for o in opps], "duels": tr.nd, "seed": seed, "traced_on": tracer, "trace": lines,
            "seconds": float(dur or 0), "frames": frames_total, "mp4": os.path.relpath(mp4, q), "bytes": os.path.getsize(mp4),
-           "made_in": round(time.time() - t0)}
+           "made_in": round(time.time() - t0), "spread": SPREAD, "line": story}
     # Its last milestone is the next montage's start; a chapter "now" is not a milestone and is filmed again.
     if chapters[-1]["name"] == "now":
         doc["last"] = next((c["label"] for c in reversed(chapters) if c["name"] != "now"), last)
@@ -1272,10 +1966,23 @@ def _make(q, most, duels, host, seed, work, since=None):
         shutil.copy2(mp4, base + ".mp4")
         with open(base + ".txt", "w") as f:
             f.write("Treadcore: crucible montage %d, %s\n\n" % (n, "generations %s to %s" % (format(chapters[0]["gen"], ","), format(chapters[-1]["gen"], ","))))
-            f.write("Champions of crucible's GPU islands, trained by neuroevolution under treadcore's rules, each playing "
-                    "%d duels from one start. The camera follows the duel each won best; the faded tanks are the other duels "
-                    "at the same moment. In the corners, the champion's net thinking: its inputs, its two hidden layers with "
-                    "the strongest currents lit, its decisions over the last eight seconds, and the generation.\n\n" % tr.nd)
+            if story:
+                f.write("First, the game's own brain: the last %d generations committed by orrery's line, each followed from "
+                        "its first read to its commit, every job on the machine that ran it and an arrow from each to the one it "
+                        "followed.\n" % len(story["gens"]))
+                for g in story["gens"]:
+                    h = g.get("held")
+                    f.write("  %s %s: %s; held out %s; %s on %s%s\n" % (
+                        g["run"], g["trial"], "; ".join("%s %s -> %s" % (d["name"], d["old"], d["new"]) for d in g["dials"]),
+                        "%+.2f +/- %.2f on %d seeds" % h if h else "-", g["commit"][:7], g["where"],
+                        "" if len(g["tries"]) == 1 else " (%d tries)" % len(g["tries"])))
+                f.write("  main is %s; the line reaches it when the hourly proof reads it past main at z %.1f.\n\n" % (story["main"], story["held_z"]))
+            f.write("Then the champions of crucible's GPU islands, trained by neuroevolution under treadcore's rules, each playing "
+                    "%d duels in one arena, each duel from a start moved up to %.0f tiles. The camera follows the duel each won best, "
+                    "then its kill shot again at half speed, its hardest win and a loss; the faded tanks are the other duels at the "
+                    "same moment, the lavender ones the champions before it in the same duel. In the corners, the champion's net "
+                    "thinking: its inputs, its two hidden layers with the strongest currents lit, each wire in its node's colour, "
+                    "its decisions over the last eight seconds, and the generation.\n\n" % (tr.nd, SPREAD))
             for a, m in marks:
                 f.write("%s %s\n" % (stamp(a), m))
             f.write("\nMIT licensed: https://treadcore.org  Made by orrery (tools/montage.py) on %s.\n" % now()[:10])
@@ -1314,7 +2021,9 @@ def main(a):
     def opt(k, d, f=int):
         return f(rest[rest.index(k) + 1]) if k in rest else d
     if cmd == "make":
-        sys.exit(make(q, opt("--chapters", 12), opt("--duels", 64), opt("--host", None, str), opt("--seed", 7), opt("--since", None, str)))
+        sys.exit(make(q, opt("--chapters", 12), opt("--duels", 128), opt("--host", None, str), opt("--seed", 7), opt("--since", None, str)))
+    elif cmd == "line":
+        sys.exit(line_only(q, os.path.abspath(rest[0]) if rest else os.path.join(q, "plan", "montage-line.mp4")))
     elif cmd == "status":
         print(json.dumps(load(os.path.join(q, "plan", "montage.json"), {}), indent=1))
     else:

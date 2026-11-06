@@ -3039,8 +3039,11 @@ class Plan:
                                else "build of %s failed" % failed if failed else "waiting for its build")
             st["hosts"] = hosts
             ok = [n for n, v in hosts.items() if v.startswith("confirmed")]
-            st["detail"] = "on main at %s; values confirmed on %d of %d machines%s" % (
-                st.get("commit", "")[:7], len(ok), len(hosts),
+            # "Self-modified" is a commit on the LOCAL LINE, not on main: main moves only when the line's
+            # proof reads it past main (5 November: r0196, r0199 and r0201 said "on main at" while
+            # origin/main still stood at r0186, and a person asked whether they were pushed).
+            st["detail"] = "on %s at %s; values confirmed on %d of %d machines%s" % (
+                "the line" if st.get("status") == "self-modified" else "main", st.get("commit", "")[:7], len(ok), len(hosts),
                 "" if len(ok) == len(hosts) else " (" + "; ".join("%s: %s" % (n, v) for n, v in hosts.items() if n not in ok) + ")")
             if hosts and len(ok) == len(hosts):
                 st["confirmed"] = time.strftime("%Y-%m-%dT%H:%M:%S")

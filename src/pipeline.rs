@@ -860,6 +860,37 @@ fn flowing<'a>(m: &'a Model, id: &str) -> Option<&'a Flowing> {
     m.flow.iter().find(|(k, _)| k == id).map(|(_, f)| f)
 }
 
+/// The stages one trial reached, in order. Its reads say how far it was READ; only its run says
+/// how it ENDED: a promotion that committed went through the families, the tests and onto the
+/// line, which every machine then builds; a failed one reached the tests and stopped there. A
+/// trial with no run is still where its reads leave it.
+pub fn walked(tr: &Trace) -> Vec<&'static str> {
+    let mut v = vec!["search"];
+    for s in ["first", "read", "held"] {
+        if tr.reads.iter().any(|r| r.stage == s) {
+            v.push(s);
+        }
+    }
+    match tr.status.as_str() {
+        "approved" | "self-modified" => v.extend(["families", "promote", "build"]),
+        "failed" => v.extend(["families", "promote"]),
+        _ => {}
+    }
+    v
+}
+
+/// Where a walked road goes next: a generation on the line waits for the proof against main; a
+/// trial still being read waits at the stage after its last read. A failed one goes nowhere.
+fn next_stage(walked: &[&str]) -> Option<&'static str> {
+    match walked.last().copied() {
+        Some("build") => Some("proof"),
+        Some("first") => Some("read"),
+        Some("read") => Some("held"),
+        Some("held") => Some("families"),
+        _ => None,
+    }
+}
+
 /// The Flow: every stage as a box, the road between them, and under them the box chosen and one
 /// real trial's numbers as they moved. A BOX NOTHING FLOWS OUT OF IS THE POINT OF THE PICTURE: the
 /// red ones are where the fleet's work stops short of treadcore.
@@ -894,6 +925,27 @@ fn flow(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
             ui.c.hline(rb.x + rb.w / 2, y, ra.x - rb.x - rb.w / 2, c);
             ui.c.vline(rb.x + rb.w / 2, rb.bottom(), y - rb.bottom(), c);
         }
+    }
+    // THE ROAD THE TRIAL BELOW WALKED, lit over the road everyone shares (Paul, 5 November: "show
+    // the chain, show the arrows in the flowchart"): the Timeline's amber, dark under it so it reads
+    // over any box. The stage it waits at next is framed and not entered -- an arrow into the proof
+    // before the proof has read would claim a step the line has not taken.
+    let walked = m.traces.get(st.trace.min(m.traces.len().saturating_sub(1))).map(walked).unwrap_or_default();
+    let next = next_stage(&walked);
+    let road = line::edges();
+    for pair in walked.windows(2) {
+        let (Some(ra), Some(rb)) = (at_id(pair[0]), at_id(pair[1])) else { continue };
+        if !road.iter().any(|(a, b)| *a == pair[0] && *b == pair[1]) {
+            continue;
+        }
+        let (a, b) = if rb.y > ra.y && rb.x == ra.x {
+            ((ra.x + ra.w / 2, ra.bottom() + 1), (rb.x + rb.w / 2, rb.y - 2))
+        } else {
+            ((ra.right() + 1, ra.y + ra.h / 2), (rb.x - 2, rb.y + rb.h / 2))
+        };
+        pointer(ui, (a.0 + 1, a.1 + 1), (b.0 + 1, b.1 + 1), t.base);
+        pointer(ui, (a.0 - 1, a.1 - 1), (b.0 - 1, b.1 - 1), t.base);
+        pointer(ui, a, b, t.warn);
     }
     for (i, s) in stages.iter().enumerate() {
         let r = cell(s);
@@ -933,6 +985,22 @@ fn flow(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
             if y + 10 <= r.bottom() {
                 ui.label_in(r.x + 8, y, r.w - 10, &format!("{:.0} on, {:.0} waiting", f.running, f.queued), &F6X10, t.dim);
             }
+        }
+        // The walked stages numbered in the order the trial reached them, the next one marked.
+        let step = walked.iter().position(|w| *w == s.id);
+        if step.is_some() || next == Some(s.id) {
+            let failed = step.is_some() && s.id == "promote" && m.traces.get(st.trace).is_some_and(|x| x.status == "failed");
+            let c = if failed { t.alarm } else { t.warn };
+            if step.is_some() {
+                ui.outline2(rect(r.x - 2, r.y - 2, r.w + 4, r.h + 4), c);
+            } else {
+                ui.outline(rect(r.x - 2, r.y - 2, r.w + 4, r.h + 4), c);
+            }
+            let tag = step.map(|k| format!("{}", k + 1)).unwrap_or_else(|| "next".to_string());
+            let tw = F6X10.measure(&tag) as i32 + 6;
+            let b = rect(r.right() - tw - 1, r.y - 7, tw, 12);
+            ui.c.rect(b.x, b.y, b.w, b.h, if step.is_some() { c } else { t.base });
+            ui.label(b.x + 3, b.y + 1, &tag, &F6X10, if step.is_some() { t.base } else { c });
         }
         if ui.button_hit(r) {
             st.node = Some(i);
@@ -1038,6 +1106,8 @@ fn trace(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
     let end = match tr.status.as_str() {
         "" => "Ended: dropped at its read, or still waiting on a bar.".to_string(),
         "failed" => format!("Ended: {} failed. {}", tr.run, tr.why),
+        "self-modified" => format!("Ended: {} committed it to the line; main takes it when the line's proof passes.", tr.run),
+        "approved" => format!("Ended: {} committed it, and it is on main.", tr.run),
         s => format!("Ended: {} {}.", tr.run, s),
     };
     ui.label_in(at.x + 8, at.bottom() - 15, at.w - 16, &end, &F8X13, if tr.status == "failed" { t.alarm } else { t.ink });
@@ -3031,6 +3101,21 @@ mod tests {
         assert_eq!(took(0.4), "<1 min");
         assert_eq!(took(30.0), "30 min");
         assert_eq!(took(180.0), "3.0 h");
+    }
+
+    #[test]
+    fn the_flow_lights_the_road_a_trial_walked_and_frames_where_it_waits() {
+        let read = |s: &str| Read { stage: s.to_string(), ..Default::default() };
+        let on_line = Trace { reads: vec![read("first"), read("read"), read("read"), read("held")], status: "self-modified".into(), ..Default::default() };
+        assert_eq!(walked(&on_line), vec!["search", "first", "read", "held", "families", "promote", "build"]);
+        assert_eq!(next_stage(&walked(&on_line)), Some("proof"));
+        // Every step of a committed generation's road is a road the Flow draws.
+        let road = line::edges();
+        assert!(walked(&on_line).windows(2).all(|p| road.iter().any(|(a, b)| *a == p[0] && *b == p[1])));
+        let failed = Trace { reads: vec![read("first"), read("held")], status: "failed".into(), ..Default::default() };
+        assert_eq!((walked(&failed).last().copied(), next_stage(&walked(&failed))), (Some("promote"), None));
+        let reading = Trace { reads: vec![read("first")], ..Default::default() };
+        assert_eq!((walked(&reading), next_stage(&walked(&reading))), (vec!["search", "first"], Some("read")));
     }
 
     #[test]

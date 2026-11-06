@@ -104,12 +104,40 @@ fn shade(v: f32, signed: bool) -> Rgb {
     crate::draw::mix(SCR, if a >= 0.0 { PHOS } else { AMBER }, k)
 }
 
-fn seg(ui: &mut Ui, (x0, y0): (i32, i32), (x1, y1): (i32, i32), c: Rgb) {
+/// A node's own colour, which every wire leaving it wears (Paul, 5 November: "try for a way so
+/// that the wires are different colors so we can see the node connections"). The golden angle
+/// round the wheel: neighbours in the grid never share a hue, and 48 stay apart. The same rule
+/// as tools/montage.py's `node_hue`, so the film and this player agree wire for wire.
+pub fn node_hue(i: usize) -> Rgb {
+    let h = (i as f64 * 0.381_966_011_250_105).fract() * 6.0;
+    let (s, v) = (0.62, 1.0);
+    let f = h.fract();
+    let (p, q, t) = (v * (1.0 - s), v * (1.0 - s * f), v * (1.0 - s * (1.0 - f)));
+    let (r, g, b) = match h as u32 {
+        0 => (v, t, p),
+        1 => (q, v, p),
+        2 => (p, v, t),
+        3 => (p, q, v),
+        4 => (t, p, v),
+        _ => (v, p, q),
+    };
+    let c = |x: f64| (x * 255.0).round() as u32;
+    (c(r) << 16) | (c(g) << 8) | c(b)
+}
+
+fn seg(ui: &mut Ui, a: (i32, i32), b: (i32, i32), c: Rgb) {
+    dashed(ui, a, b, c, false)
+}
+
+/// A line, dotted when `dots`: a wire that inhibits, the sign a colour can no longer carry.
+fn dashed(ui: &mut Ui, (x0, y0): (i32, i32), (x1, y1): (i32, i32), c: Rgb, dots: bool) {
     let (dx, dy) = ((x1 - x0).abs(), -(y1 - y0).abs());
     let (sx, sy) = (if x0 < x1 { 1 } else { -1 }, if y0 < y1 { 1 } else { -1 });
     let (mut x, mut y, mut err) = (x0, y0, dx + dy);
-    for _ in 0..4096 {
-        ui.c.set(x, y, c);
+    for n in 0..4096 {
+        if !dots || (n / 2) % 2 == 0 {
+            ui.c.set(x, y, c);
+        }
         if x == x1 && y == y1 {
             break;
         }
@@ -170,18 +198,22 @@ fn draw_mind(ui: &mut Ui, at: Rect, path: &str, film_n: i64, st: &mut State, now
     let g2 = |k: usize| (tx + 150 + (k % 8) as i32 * 12 + 5, ty + 16 + (k / 8) as i32 * 12 + 5);
     let go = |k: usize| (tx + 290 + 8, ty + 16 + k as i32 * 20 + 8);
     let top = step.cur.iter().fold(1e-6f32, |a, e| a.max(e.3.abs()));
+    // A WIRE WEARS ITS SOURCE NODE'S COLOUR, its brightness the current's size, dotted when it
+    // inhibits; each node is framed in its own colour, so a wire is followed back to where it left.
     for &(layer, a, b, v) in step.cur.iter().rev() {
         let (p, q) = if layer == 0 { (g1(a), g2(b)) } else { (g2(a), go(b)) };
-        let k = ((v.abs() / top).powf(0.8) * 200.0) as u8 + 40;
-        seg(ui, p, q, crate::draw::mix(SCR, if v >= 0.0 { PHOS } else { AMBER }, k));
+        let k = ((v.abs() / top).powf(0.8) * 200.0) as u8 + 55;
+        dashed(ui, p, q, crate::draw::mix(SCR, node_hue(a + layer as usize * 48), k), v < 0.0);
     }
     for (k, v) in step.h1.iter().enumerate() {
         let (cx, cy) = g1(k);
-        ui.c.rect(cx - 5, cy - 5, 10, 10, shade(*v, true));
+        ui.c.rect(cx - 5, cy - 5, 10, 10, node_hue(k));
+        ui.c.rect(cx - 4, cy - 4, 8, 8, shade(*v, true));
     }
     for (k, v) in step.h2.iter().enumerate() {
         let (cx, cy) = g2(k);
-        ui.c.rect(cx - 5, cy - 5, 10, 10, shade(*v, true));
+        ui.c.rect(cx - 5, cy - 5, 10, 10, node_hue(k + 48));
+        ui.c.rect(cx - 4, cy - 4, 8, 8, shade(*v, true));
     }
     for (k, v) in step.y.iter().enumerate() {
         let (cx, cy) = go(k);
@@ -244,7 +276,7 @@ fn draw_mind(ui: &mut Ui, at: Rect, path: &str, film_n: i64, st: &mut State, now
         st.mind_at = Some(first_of(step.ch + 1));
         st.mind_t0 = now;
     }
-    ui.label_in(at.x + 296, by + 5, at.w - 296, &format!("step {} of {}  green +, amber -, black 0; a step is 0.1 s", i + 1, total), &F6X10, t.dim);
+    ui.label_in(at.x + 296, by + 5, at.w - 296, &format!("step {} of {}  green +, amber -, black 0; a wire wears its source node's colour, dotted when it inhibits; a step is 0.1 s", i + 1, total), &F6X10, t.dim);
     h
 }
 
@@ -449,5 +481,24 @@ pub fn draw(ui: &mut Ui, at: Rect, doc: Option<&Value>, st: &mut State, operator
             v
         });
         ry += 16;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_node_wears_the_films_colour_and_no_neighbour_shares_it() {
+        // The film (tools/montage.py `node_hue`) prints these for nodes 0, 1, 2, 47 and 95.
+        let want = [(0, 0xff6161), (1, 0x61ff8f), (2, 0xbd61ff), (47, 0xff618e), (95, 0x8dff61)];
+        for (i, c) in want {
+            assert_eq!(node_hue(i), c, "node {}", i);
+        }
+        // Eight a row in the corner: the node beside and the node under never wear one colour.
+        for i in 0..48 {
+            assert_ne!(node_hue(i), node_hue(i + 1));
+            assert_ne!(node_hue(i), node_hue(i + 8));
+        }
     }
 }
