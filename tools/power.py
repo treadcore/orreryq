@@ -25,6 +25,7 @@ the parts of a box add up to the box and each job is charged its own lane's watt
 """
 import json
 import os
+import re
 import statistics as st
 import subprocess
 import sys
@@ -38,6 +39,14 @@ KEEP_DAYS = 7
 # seeds, where a 24-thread server ran 9% busy (jaguaribe, 14:20 on 5 November).
 MIN_SAMPLES = 6
 BUSY = ("running", "delivering", "fetching", "sending")
+# ORRERY'S OWN PROCESSES, the Orchestrator (Paul, 5 November: "show the process of Orrery and its
+# orchestration scripts, count them as Orchestrator of Orrery"), on the machine the keeper runs on:
+# the first pattern a command matches names it.
+ORCH = (("planner", re.compile(r"plans/treadcore\.py")),
+        ("keeper", re.compile(r"fleet-queue\.py")),
+        ("console", re.compile(r"Orrery\.app|/orrery --gui|/orrery --operator")),
+        ("chores", re.compile(r"/orrery/tools/[\w-]+\.py|treadcore-view\.py")),
+        ("ssh", re.compile(r"^(ssh|scp|rsync)[ :]")))
 # One command for every box: the Mac's top, or Linux's /proc/stat twice and the GPU's draw.
 PROBE = ('if [ "$(uname)" = Darwin ]; then top -l 2 -n 0 -s 2 | grep "CPU usage" | tail -1; else '
          'head -1 /proc/stat; sleep 2; head -1 /proc/stat; '
@@ -65,6 +74,31 @@ def rate(q, m=None):
 
 def box_of(m, lane):
     return (m.get("lanes") or {}).get(lane, lane)
+
+
+def orch_of(ps_out, me=None):
+    """{part: % of one core} of Orrery's own processes, from `ps -Ao pid=,pcpu=,command=`; the
+    sampler's own process (`me`) left out, or it would count itself reading."""
+    out = {}
+    for line in ps_out.splitlines():
+        p = line.strip().split(None, 2)
+        if len(p) != 3 or p[0] == str(me):
+            continue
+        try:
+            pct = float(p[1])
+        except ValueError:
+            continue
+        for name, rx in ORCH:
+            if rx.search(p[2]):
+                out[name] = round(out.get(name, 0.0) + pct, 1)
+                break
+    return out
+
+
+def per_core(m, box):
+    """A box's watts at the wall for one busy core of its CPU."""
+    b = (m.get("boxes") or {}).get(box) or {}
+    return (b.get("cpu_full_w", 0) - b.get("cpu_idle_w", 0)) / max(1, b.get("threads", 8)) / eff(m, box)
 
 
 def eff(m, box):
@@ -103,31 +137,41 @@ def calib(m, smp):
     fewer than MIN_SAMPLES say."""
     out = {}
     gpu_lane = {box: lane for lane, box in (m.get("lanes") or {}).items()}
+    threads = lambda b: max(1, b.get("threads", 8))
     for box, b in (m.get("boxes") or {}).items():
         mine = [s for s in smp if s.get("box") == box]
-        busy = [s["cpu"] for s in mine if s.get("cpu") is not None and (s.get("busy") or {}).get(box)]
-        idle = [s["cpu"] for s in mine if s.get("cpu") is not None and not (s.get("busy") or {}).get(box)]
+        # The machine the keeper runs on: its job lane's use is the machine's less Orrery's own.
+        use = lambda s: max(0.0, s["cpu"] - sum((s.get("orch") or {}).values()) / 100 / threads(b))
+        busy = [use(s) for s in mine if s.get("cpu") is not None and (s.get("busy") or {}).get(box)]
+        idle = [use(s) for s in mine if s.get("cpu") is not None and not (s.get("busy") or {}).get(box)]
         gl = gpu_lane.get(box)
         gb = [sum(s["gpu_w"]) for s in mine if gl and s.get("gpu_w") and (s.get("busy") or {}).get(gl)]
         gi = [sum(s["gpu_w"]) for s in mine if gl and s.get("gpu_w") and not (s.get("busy") or {}).get(gl)]
         enough = lambda v: len(v) >= MIN_SAMPLES
-        out[box] = {"busy_util": round(st.mean(busy), 3) if enough(busy) else m.get("busy_util", 0.9),
+        out[box] = {"busy_util": round(st.mean(busy), 3) if enough(busy) else b.get("busy_util", m.get("busy_util", 0.9)),
                     "idle_util": round(st.mean(idle), 3) if enough(idle) else m.get("idle_util", 0.03),
                     "gpu_busy_w": round(st.median(gb), 1) if enough(gb) else round(b.get("gpu_limit_w", 0) * m.get("gpu_busy_share", 0.6), 1),
                     "gpu_idle_w": round(st.median(gi), 1) if enough(gi) else b.get("gpu_idle_w", 0),
                     "measured": {"cpu": len(busy) + len(idle), "gpu": len(gb) + len(gi)}}
+    o = m.get("orchestrator") or {}
+    steady = [(sum(s["orch"].values()) - s["orch"].get("planner", 0)) / 100 for s in smp if s.get("orch")]
+    out["orchestrator"] = {"steady_cores": round(st.mean(steady), 3) if enough(steady) else o.get("steady_cores", 0.3), "measured": len(steady)}
     return out
 
 
 def lane_watts(m, cal, lane, busy):
     """A lane's part of its box at the wall, busy that share of the time (0 to 1): a CPU lane its
     box's rest and CPU, a GPU lane its card. None for a lane the model has no box for."""
+    busy = max(0.0, min(1.0, busy))
+    if lane == "orchestrator":
+        # A planner pass is one core while it runs; the console, keeper, chores and ssh the rest.
+        o = m.get("orchestrator") or {}
+        return (busy + (cal.get("orchestrator") or {}).get("steady_cores", o.get("steady_cores", 0.3))) * per_core(m, o.get("box", "mac"))
     box = box_of(m, lane)
     b = (m.get("boxes") or {}).get(box)
     if not b:
         return None
     c = cal.get(box) or {}
-    busy = max(0.0, min(1.0, busy))
     if lane != box:
         return (busy * c.get("gpu_busy_w", 0) + (1 - busy) * c.get("gpu_idle_w", 0)) / eff(m, box)
     util = busy * c.get("busy_util", 0.9) + (1 - busy) * c.get("idle_util", 0.03)
@@ -136,7 +180,7 @@ def lane_watts(m, cal, lane, busy):
 
 def full_tilt(m, cal, box):
     """A box's watts at the wall at full tilt: every core busy, its card at its measured draw."""
-    gpu = sum((cal.get(box) or {}).get("gpu_busy_w", 0) for l, b in (m.get("lanes") or {}).items() if b == box)
+    gpu = sum((cal.get(box) or {}).get("gpu_busy_w", 0) for l, b in (m.get("lanes") or {}).items() if b == box and l != "orchestrator")
     w = watts(m, box, 1.0, gpu)
     return w["wall"] if w else 0.0
 
@@ -176,6 +220,13 @@ def targets(q, m):
             out.setdefault(box, {"target": None, "lanes": []})["lanes"].append(h["name"])
             if h["name"] == box:
                 out[box]["target"] = h.get("target")
+    # The machine the keeper runs on is sampled whether or not it has a lane: the Orchestrator is on it.
+    o = (m.get("orchestrator") or {}).get("box")
+    if o in (m.get("boxes") or {}):
+        out.setdefault(o, {"target": "-", "lanes": []})
+        out[o]["target"] = out[o]["target"] or "-"
+        if "orchestrator" not in out[o]["lanes"]:
+            out[o]["lanes"].append("orchestrator")
     return {b: v for b, v in out.items() if v["target"]}
 
 
@@ -184,10 +235,18 @@ def sample(q):
     now = time.time()
     got = {}
 
+    orch = {}
+
     def one(box, target):
         try:
-            r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=6", target, PROBE],
-                               capture_output=True, text=True, timeout=30)
+            if target == "-":
+                # This machine: and Orrery's own processes on it, the Orchestrator.
+                r = subprocess.run(["bash", "-c", PROBE], capture_output=True, text=True, timeout=30)
+                ps = subprocess.run(["ps", "-Ao", "pid=,pcpu=,command="], capture_output=True, text=True, timeout=10)
+                orch[box] = orch_of(ps.stdout, os.getpid())
+            else:
+                r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=6", target, PROBE],
+                                   capture_output=True, text=True, timeout=30)
             got[box] = parse(r.stdout)
         except (subprocess.TimeoutExpired, OSError):
             got[box] = None
@@ -204,7 +263,12 @@ def sample(q):
             ln = load(os.path.join(q, "lanes", lane + ".json"), {}) or {}
             busy[lane] = ln.get("state") in BUSY or bool(ln.get("job"))
         cpu, gw, gu = got.get(box) or (None, [], [])
-        rows.append({"t": round(now, 1), "box": box, "cpu": cpu, "gpu_w": gw, "gpu_util": gu, "busy": busy, "ok": got.get(box) is not None})
+        row = {"t": round(now, 1), "box": box, "cpu": cpu, "gpu_w": gw, "gpu_util": gu, "busy": busy, "ok": got.get(box) is not None}
+        if box in orch:
+            row["orch"] = orch[box]
+            # The Orchestrator is busy while a planner pass runs.
+            busy["orchestrator"] = orch[box].get("planner", 0) >= 50
+        rows.append(row)
     path = os.path.join(q, "plan", "power-samples.jsonl")
     with open(path, "a") as f:
         for r in rows:

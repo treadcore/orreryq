@@ -5488,6 +5488,14 @@ class Plan:
             except ValueError:
                 continue
             ev, job = e.get("event"), e.get("job")
+            if ev == "planned" and e.get("seconds"):
+                t1 = parse(e["t"])
+                if t1 >= since:
+                    t0 = t1 - float(e["seconds"])
+                    bars.setdefault("orchestrator", []).append([round((max(t0, since) - now_) / 60, 1), round((t1 - now_) / 60, 1), "plan", 1])
+                    by = busy.setdefault("orchestrator", {})
+                    by["plan"] = round(by.get("plan", 0.0) + (t1 - max(t0, since)) / 60, 1)
+                continue
             if not job:
                 continue
             if ev == "started":
@@ -5546,6 +5554,9 @@ class Plan:
         for n in hosts:
             lanes.append({"host": n, "up": free.get(n) is not None, "past": self.merge_bars(bars.get(n, [])), "next": future.get(n, [])[:12],
                           "jobs": sorted(each.get(n, []))})
+        # The Orchestrator's own row: Orrery's planner passes, on the Mac the keeper runs on.
+        lanes.append({"host": "orchestrator", "up": True, "past": self.merge_bars(bars.get("orchestrator", [])), "next": [], "jobs": []})
+        hosts = hosts + ["orchestrator"]
         seg_min = {n: round(st.median([j[1] - j[0] for j in each.get(n, []) if j[2] == "islands" and j[3] == 1]), 1)
                    for n in hosts if any(j[2] == "islands" and j[3] == 1 for j in each.get(n, []))}
         # Its own clock: every minute on the page is from this moment, not the pass's start.
@@ -5598,8 +5609,8 @@ class Plan:
             size = os.path.getsize(path)
         except OSError:
             return c
-        if c.get("v") != 4 or c.get("offset", 0) > size:
-            c = {"v": 4, "offset": 0, "open": {}, "fine": {}, "coarse": {}, "first": None, "energy": {}, "down": {}, "tally": {}}
+        if c.get("v") != 5 or c.get("offset", 0) > size:
+            c = {"v": 5, "offset": 0, "open": {}, "fine": {}, "coarse": {}, "first": None, "energy": {}, "down": {}, "tally": {}}
         # EACH JOB'S ENERGY AS IT IS HANDED OFF (Paul, 5 November: "have each computer report its power
         # estimate participation ... as it hands it off"): its lane's watts while busy (power.py: a CPU
         # lane its box's rest and CPU at the use measured, a GPU lane its card as measured) for the
@@ -5627,7 +5638,7 @@ class Plan:
                         cell[k] = round(cell.get(k, 0) + part, 1)
                     b += 1
         for l in data[:whole].split(b"\n"):
-            if b'"job"' not in l and b'"host"' not in l:
+            if b'"job"' not in l and b'"host"' not in l and b'"planne' not in l:
                 continue
             try:
                 e = json.loads(l)
@@ -5638,6 +5649,18 @@ class Plan:
             ev, job = e.get("event"), e.get("job")
             # A MACHINE OFF DRAWS NOTHING: from the keeper finding it unreachable or powering it off,
             # until it is back or starts a job, its time is `~off` (not a stage; the watts leave it out).
+            # THE ORCHESTRATOR (Paul, 5 November: "count them as Orchestrator of Orrery"): each planner
+            # pass the keeper logs with its seconds is the orchestrator's lane busy planning; a pass
+            # that failed is counted not done.
+            if ev == "planned" and e.get("seconds"):
+                add("orchestrator", "plan", t - float(e["seconds"]), t)
+                w = busy_w("orchestrator")
+                tl_ = c["tally"].setdefault(time.strftime("%Y-%m-%d", time.localtime(t)), {}).setdefault("orchestrator", {}).setdefault("plan", [0, 0, 0.0, 0.0])
+                tl_[0] += 1
+                tl_[2] = round(tl_[2] + float(e["seconds"]), 1)
+                tl_[3] = round(tl_[3] + (w or 0) * float(e["seconds"]) / 3600, 1)
+            elif ev == "planner failed":
+                c["tally"].setdefault(time.strftime("%Y-%m-%d", time.localtime(t)), {}).setdefault("orchestrator", {}).setdefault("plan", [0, 0, 0.0, 0.0])[1] += 1
             if ev in ("host unreachable", "powered off") and e.get("host"):
                 c["down"].setdefault(e["host"], t)
             elif ev in ("host back", "started") and e.get("host") in c["down"]:
@@ -5911,8 +5934,13 @@ class Plan:
                 continue
             x = last.get(box) if last.get(box) and now_ - last[box]["t"] < 900 and last[box].get("ok") else None
             busy = (live.get(h) or {}).get("state") in P.BUSY or bool((live.get(h) or {}).get("job"))
-            if x and h == box and x.get("cpu") is not None:
-                lanes_now[h] = round(P.watts(pm, box, x["cpu"], 0.0)["wall"])
+            if h == "orchestrator":
+                cores = sum((x.get("orch") or {}).values()) / 100 if x and x.get("orch") is not None else None
+                lanes_now[h] = round(cores * P.per_core(pm, box) if cores is not None else P.lane_watts(pm, cal, h, 0.5), 1)
+            elif x and h == box and x.get("cpu") is not None:
+                # The machine the keeper runs on: its job lane less Orrery's own, which is the orchestrator's.
+                th = max(1, b.get("threads", 8))
+                lanes_now[h] = round(P.watts(pm, box, max(0.0, x["cpu"] - sum((x.get("orch") or {}).values()) / 100 / th), 0.0)["wall"])
             elif x and h != box and x.get("gpu_w"):
                 lanes_now[h] = round(sum(x["gpu_w"]) / P.eff(pm, box))
             else:
@@ -5928,7 +5956,16 @@ class Plan:
                           "now_w": sum(v for h, v in lanes_now.items() if P.box_of(pm, h) == box),
                           "busy_util": c.get("busy_util"), "gpu_busy_w": c.get("gpu_busy_w") if b.get("gpu") else None,
                           "samples": c.get("measured", {}), "why": b.get("why", "")})
-        return {"rate": rate, "lanes_now": lanes_now, "fleet_now_w": sum(lanes_now.values()), "fleet_full_w": sum(full.values()),
+        # The Orchestrator: Orrery's own processes on the Mac, by part, as the last sample read them, and
+        # today's planner passes.
+        ob = (pm.get("orchestrator") or {}).get("box", "mac")
+        xo = last.get(ob) or {}
+        plans = ((bins.get("tally") or {}).get(time.strftime("%Y-%m-%d", time.localtime(now_)), {}).get("orchestrator") or {}).get("plan") or [0, 0, 0.0, 0.0]
+        orch = {"by": xo.get("orch") or {}, "cores": round(sum((xo.get("orch") or {}).values()) / 100, 2), "watts": lanes_now.get("orchestrator"),
+                "steady_cores": (cal.get("orchestrator") or {}).get("steady_cores"), "samples": (cal.get("orchestrator") or {}).get("measured", 0),
+                "passes_today": plans[0], "failed_today": plans[1], "pass_s": round(plans[2] / plans[0], 1) if plans[0] else None,
+                "wh_today": plans[3], "box": ob}
+        return {"rate": rate, "lanes_now": lanes_now, "fleet_now_w": sum(lanes_now.values()), "fleet_full_w": sum(full.values()), "orchestrator": orch,
                 "kwh_24h": round(kwh, 2), "usd_24h": round(kwh * rate, 2), "usd_30d": round(kwh * rate * 30, 2),
                 "jobs_today": {h: [n, round(wh, 1)] for h, (n, wh) in today.items()}, "boxes": boxes,
                 "sampled": time.strftime("%H:%M", time.localtime(max((x["t"] for x in smp), default=0))) if smp else "",
@@ -6115,6 +6152,12 @@ class Plan:
                 queues[n].append({"id": l["job"], "title": l.get("title", ""), "stage": self.stage_of(l["job"], l.get("title", "")), "state": "running",
                                   "wait": "", "on": "", "on_host": "", "start_min": -round((now_ - l.get("since", now_)) / 60, 1), "end_min": None, "high": False})
         unplaced = []
+        # The Orchestrator at the table too: Orrery's planner, busy the share of the hours it planned.
+        ob_ = busy.get("orchestrator", {})
+        nodes.append({"host": "orchestrator", "gpu": False, "state": "planning", "job": "", "stage": "plan", "for_min": 0.0,
+                      "busy_pct": round(100 * min(sum(ob_.values()), win) / win, 1), "help_pct": 0.0,
+                      "by_stage": [[k, v] for k, v in ob_.items()],
+                      "backup": "none: it is the table's own planner, Orrery on the Mac, asking for every job the others run"})
         waits = {}
         for j in self.queue_jobs():
             jid, a = j.get("id", ""), dealt.get(j.get("id", ""))

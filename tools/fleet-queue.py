@@ -343,6 +343,28 @@ class Child:
             pass
 
 
+CPU_STEPS = (1, 2, 4, 8, 16, 32, 64, 128)
+
+
+def limiter(host):
+    """THE CPU LIMITER (Paul, 5 November: "a CPU limiter where we use 2^n CPUs, so 1, 2, 4, 8 ...
+    I don't want it to be stressed"). A host's "cpus" in config.json, a power of two, is the number
+    of CPUs its jobs are told the machine has: every job asks `nproc` (or, on a Mac, `sysctl -n
+    hw.ncpu`) how many seeds or threads to run at once, so both answer the limit, for the job and
+    every shell under it; cargo, rayon and OpenMP are told the same, and THREADS where a job reads it.
+    A host's "background", on a Mac, runs the job at the background policy (taskpolicy -b): the
+    efficiency cores and the lowest priority, so a person at the machine does not feel it."""
+    out = ""
+    n = host.get("cpus")
+    if n in CPU_STEPS:
+        out += ("nproc() { echo %d; }; export -f nproc\n"
+                "sysctl() { if [ \"$*\" = \"-n hw.ncpu\" ]; then echo %d; else command sysctl \"$@\"; fi; }; export -f sysctl\n"
+                "export CARGO_BUILD_JOBS=%d RAYON_NUM_THREADS=%d OMP_NUM_THREADS=%d THREADS=%d\n") % ((n,) * 6)
+    if host.get("background"):
+        out += "command -v taskpolicy >/dev/null && taskpolicy -b -p $$ >/dev/null 2>&1\n"
+    return out
+
+
 def run_job(q, host, job, log, t0=None, adopted=None):
     """The job's command, in its own process group on the host, its pid kept
     in ~/.fleet-queue/ID.pid so stop-now can stop the whole group. Its exit code;
@@ -353,7 +375,7 @@ def run_job(q, host, job, log, t0=None, adopted=None):
     deadline = t0 + job.get("timeout_s", 4 * 3600)
     # A host's "nice" (config.json) lowers the whole job, its children too.
     nice = "renice -n %d -p $$ >/dev/null 2>&1\n" % host["nice"] if host.get("nice") else ""
-    wrapper = nice + (
+    wrapper = nice + limiter(host) + (
         "mkdir -p ~/.fleet-queue; cd ~; set -m\n"
         "( %s ) &\n"
         "echo $! > ~/.fleet-queue/%s.pid\n"
@@ -1652,8 +1674,11 @@ def roster(q, cfg, pid):
             able = [x for x in ls if d.get("caps", "cpu") in x.get("caps", ["cpu"])]
             on[p] = None if not able else not all(p in x.get("off", ()) for x in able)
         benched = any(name in (b["name"], b.get("lane_of")) for b in cfg.get("bench", []))
+        cpu_lanes = [x for x in ls if "cuda" not in x.get("caps", [])]
         rows.append({"name": name, "target": h.get("target", ""), "state": word, "joined": bool(ls), "bench": benched,
-                     "paused": paused, "jobs": jobs, "on": on})
+                     "paused": paused, "jobs": jobs, "on": on,
+                     "cpus": next((x["cpus"] for x in cpu_lanes if x.get("cpus")), None),
+                     "cores": int(((reg.get(name) or {}).get("facts") or {}).get("cpus") or 0) or None})
     return rows
 
 
@@ -1827,6 +1852,30 @@ def machine(q, name, how):
         return
     if not ls:
         sys.exit("%s is not in the queue" % name)
+    if how.startswith("cpus"):
+        # "cpus N": its CPU lanes' jobs told N CPUs, a power of two no more than it has; "cpus all" lifts it.
+        word = how.split()[1] if " " in how else ""
+        try:
+            cores = int((json.load(open(q.p("machines.json"))).get(name, {}).get("facts") or {}).get("cpus") or 0)
+        except (OSError, ValueError):
+            cores = 0
+        if word == "all":
+            n = None
+        elif word.isdigit() and int(word) in CPU_STEPS and (not cores or int(word) <= cores):
+            n = int(word)
+        else:
+            sys.exit("cpus is 1, 2, 4, 8 ... (a power of two) up to %s, or all" % (cores or "its cores"))
+        for h in ls:
+            if "cuda" in h.get("caps", []):
+                continue
+            if n:
+                h["cpus"] = n
+            else:
+                h.pop("cpus", None)
+        save_config(q, cfg)
+        q.event("machine cpus", host=name, cpus=n or "all")
+        print("%s's jobs are told %s CPUs from its next job" % (name, n or "all its"))
+        return
     if how == "remove":
         cfg["hosts"] = [h for h in cfg["hosts"] if not mine(h)]
         cfg["bench"] = [h for h in cfg.get("bench", []) if not mine(h)] + ls
@@ -1911,8 +1960,8 @@ def main(argv):
         resume(q)
     elif cmd == "machine":
         if len(argv) < 4:
-            sys.exit("machine NAME pause|stop|resume|remove|add")
-        machine(q, argv[2], argv[3])
+            sys.exit("machine NAME pause|stop|resume|remove|add|cpus N")
+        machine(q, argv[2], " ".join(argv[3:5]) if argv[3] == "cpus" else argv[3])
     elif cmd == "assign":
         if len(argv) < 5:
             sys.exit("assign NAME PROJECT on|off")

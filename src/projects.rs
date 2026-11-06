@@ -394,7 +394,8 @@ fn draw_roster_matrix(ui: &mut Ui, at: Rect, m: &Model, q: &crate::training::Que
     let row_h = lh + 16;
     let x_name = at.x + 22;
     let x_hw = at.x + 136;
-    let side = if st.operator { 320 } else { 0 };
+    // The machine's buttons, its CPU limiter with them (1 2 4 8 16 all, up to 210 pixels more).
+    let side = if st.operator { 530 } else { 0 };
     let x_tc = at.x + 300;
     let x_cr = x_tc + (at.w - 300 - side) / 2;
     ui.label(at.x, at.y, "Which machine runs which", &F8X13, t.accent);

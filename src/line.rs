@@ -127,6 +127,8 @@ pub fn colour(stage: &str) -> Rgb {
         "proof" | "anchor" => 0xe87ba4,
         "transform" => 0x008300,
         "islands" => 0xc0c0c0,
+        // The Orchestrator's planner passes: Orrery's own work, in the seal's gold.
+        "plan" => 0xc9952f,
         _ => 0x707070,
     }
 }
@@ -144,6 +146,7 @@ pub fn short(stage: &str) -> &'static str {
         "anchor" => "Anchor",
         "transform" => "Transform",
         "islands" => "GPU island",
+        "plan" => "Planning",
         _ => "Asked for",
     }
 }

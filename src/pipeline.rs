@@ -144,6 +144,22 @@ pub struct Power {
     pub jobs_today: Vec<(String, f64, f64)>,
     pub boxes: Vec<BoxPower>,
     pub sampled: String,
+    pub orch: Orchestrator,
+}
+
+/// ORRERY ITSELF, THE ORCHESTRATOR (Paul, 5 November: "show the process of Orrery and its
+/// orchestration scripts, count them as Orchestrator of Orrery"): its processes on the Mac by part
+/// (% of one core, as the last sample read them), its cores and watts, and today's planner passes.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Orchestrator {
+    pub by: Vec<(String, f64)>,
+    pub cores: f64,
+    pub watts: f64,
+    pub steady: f64,
+    pub passes: f64,
+    pub failed: f64,
+    pub pass_s: f64,
+    pub wh: f64,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -515,6 +531,14 @@ impl Model {
                     why: s(b, "why"),
                 }).collect(),
                 sampled: s(p, "sampled"),
+                orch: p.get("orchestrator").map(|o| Orchestrator {
+                    by: match o.get("by") {
+                        Some(json::Value::Obj(b)) => b.iter().filter_map(|(k, x)| Some((k.clone(), x.as_num()?))).collect(),
+                        _ => Vec::new(),
+                    },
+                    cores: n(o, "cores"), watts: n(o, "watts"), steady: n(o, "steady_cores"), passes: n(o, "passes_today"),
+                    failed: n(o, "failed_today"), pass_s: n(o, "pass_s"), wh: n(o, "wh_today"),
+                }).unwrap_or_default(),
             }).unwrap_or_default(),
             chains: match v.get("timeline").and_then(|t| t.get("chains")) {
                 Some(json::Value::Obj(c)) => c.iter().map(|(k, x)| ChainMeta {
@@ -1215,7 +1239,7 @@ fn timeline(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
     // The key: every colour named, and what a line means.
     let mut x = at.x + 4;
     let y = at.bottom() - foot + 8;
-    for k in ["first", "read", "held", "families", "build", "proof", "transform", "islands", "other"] {
+    for k in ["first", "read", "held", "families", "build", "proof", "transform", "islands", "plan", "other"] {
         ui.c.rect(x, y + 2, 10, 10, line::colour(k));
         x = ui.label(x + 13, y, line::short(k), &F8X13, t.dim) + 10;
     }
@@ -2057,6 +2081,17 @@ fn detail_pane(ui: &mut Ui, r: Rect, m: &Model, focus: Option<&Focus>, kept: boo
             Some(j) => job_tip(j, h),
             None => vec![format!("{} is no longer in {}'s queue.", id, h)],
         },
+        Some((h, None)) if h == "orchestrator" => {
+            let o = &m.power.orch;
+            let mut by = o.by.clone();
+            by.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+            vec![
+                format!("The Orchestrator: Orrery itself on the Mac, {:.2} cores now, {:.1} W at the wall", o.cores, o.watts),
+                format!("Its processes: {}.", by.iter().map(|(k, v)| format!("{} {:.0}%", k, v)).collect::<Vec<_>>().join(", ")),
+                format!("Today {:.0} planner passes ({:.0} failed), {:.0} s each on average, {:.2} kWh; between passes the console, keeper, chores and ssh hold {:.2} cores.", o.passes, o.failed, o.pass_s, o.wh / 1000.0, o.steady),
+                "It runs no job of the queue: it asks for every one the others run.".to_string(),
+            ]
+        }
         Some((h, None)) => match b.seats.iter().find(|x| &x.host == h) {
             Some(x) => {
                 let q = b.queue_of(h);
@@ -2646,7 +2681,7 @@ fn hour_ticks(ui: &mut Ui, plot: Rect, h: i32, past_min: f64, ahead_min: f64, z:
 /// The Hit Parade's windows.
 pub const PARADE_WINDOWS: [&str; 3] = ["today", "week", "all"];
 /// The kinds of job, the columns of the wall, in the line's order.
-const PARADE_KINDS: [&str; 10] = ["first", "read", "held", "families", "promote", "build", "proof", "transform", "islands", "other"];
+const PARADE_KINDS: [&str; 11] = ["first", "read", "held", "families", "promote", "build", "proof", "transform", "islands", "plan", "other"];
 
 /// THE HIT PARADE (Paul, 5 November: "generate a graph, a rate of type per machine, and keep the
 /// statistic in a chart: a new screen, it's like a success counter matrix, a wall of success.

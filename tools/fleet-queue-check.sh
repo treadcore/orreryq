@@ -68,9 +68,19 @@ q machine a remove >/dev/null; wait_for removed lane a
 python3 -c "import json;c=json.load(open('$Q/config.json'));assert [h['name'] for h in c['bench']]==['a']" && echo "ok  a removed machine waits on the bench"
 q machine a add >/dev/null; wait_for idle lane a
 q machine spare add >/dev/null; wait_for idle lane spare
+# THE CPU LIMITER: a machine told 2 CPUs runs its jobs believing it has 2, a shell under it too;
+# a number not a power of two is refused; "all" lifts it.
+q machine a cpus 2 >/dev/null; q machine spare cpus 2 >/dev/null
+job c1 k1 'echo $(nproc 2>/dev/null || sysctl -n hw.ncpu) $THREADS $(bash -c \"nproc 2>/dev/null || sysctl -n hw.ncpu\") > '"$Q"'/cpus.txt'
+wait_for done where c1
+[ "$(cat "$Q/cpus.txt")" = "2 2 2" ] && echo "ok  a machine told 2 CPUs: its job, its threads and a shell under it all see 2"
+q machine a cpus 3 >/dev/null 2>&1 && { echo "FAILED: 3 CPUs taken"; exit 1; } || echo "ok  3 is not a power of two: refused"
+q machine a cpus all >/dev/null
+python3 -c "import json;c=json.load(open('$Q/config.json'));a=[h for h in c['hosts'] if h['name']=='a'][0];assert 'cpus' not in a" && echo "ok  all lifts the limit"
 q status --json | python3 -c "
 import json,sys
 r={x['name']:x for x in json.load(sys.stdin)['roster']}
 assert r['spare']['joined'] and r['a']['joined'] and r['b']['paused'], r
-assert r['a']['on']=={'one':True,'two':True}, r['a']" && echo "ok  the status says all of it"
+assert r['a']['on']=={'one':True,'two':True}, r['a']
+assert r['spare']['cpus']==2 and r['a']['cpus'] is None, (r['spare'], r['a'])" && echo "ok  the status says all of it, each machine's CPUs with it"
 echo "PASS"

@@ -205,6 +205,9 @@ pub struct Roster {
     /// A project, and whether it takes that project's jobs; None when it has
     /// no lane that could (crucible on a machine with no card).
     pub on: Vec<(String, Option<bool>)>,
+    /// The CPUs its jobs are told it has (a power of two), if limited; and the cores it has.
+    pub cpus: Option<i64>,
+    pub cores: Option<i64>,
 }
 
 /// The fleet-queue (orrery's tools/fleet-queue.py) as its status said.
@@ -1119,6 +1122,39 @@ pub fn machine_buttons(ui: &mut Ui, right: i32, y: i32, r: &Roster, armed: &mut 
         } else if button(ui, 70, "Pause") {
             ask = Some(format!("machine {} pause", r.name));
         }
+        // THE CPU LIMITER (Paul, 5 November: "a CPU limiter where we use 2^n CPUs, so 1, 2, 4, 8"):
+        // the CPUs its jobs are told it has, a power of two up to its cores, or all; the one in
+        // force pressed. Live from its next job.
+        let top = r.cores.unwrap_or(8).max(1);
+        let mut steps: Vec<(String, Option<i64>)> = Vec::new();
+        let mut n = 1;
+        while n <= top {
+            steps.push((n.to_string(), Some(n)));
+            n *= 2;
+        }
+        // "all" where its cores are not a power of two (24 threads: 1 2 4 8 16 all).
+        let whole = top & (top - 1) == 0;
+        if !whole {
+            steps.push(("all".to_string(), None));
+        }
+        // Right to left, so they read 1 2 4 8 from the left.
+        for (label, v) in steps.iter().rev() {
+            let on = r.cpus == *v || (r.cpus.is_none() && whole && *v == Some(top));
+            let w = if label == "all" { 30 } else { 24 };
+            x -= w;
+            if ui.button(rect(x, y, w, h), label, !on) {
+                ask = Some(format!("machine {} cpus {}", r.name, match v { Some(n) if !(whole && *n == top) => n.to_string(), _ => "all".to_string() }));
+            }
+            if on {
+                ui.c.rect(x + 3, y + h, w - 6, 2, ui.t.up);
+            }
+            x -= 2;
+        }
+        x -= 4;
+        let say = "CPUs";
+        x -= F8X13.measure(say) as i32 + 4;
+        ui.label(x, y + (h - 13) / 2, say, &F8X13, ui.t.dim);
+        x -= gap;
     }
     (x, ask)
 }
@@ -2191,6 +2227,8 @@ fn parse_roster(r: &json::Value) -> Roster {
             Some(json::Value::Obj(m)) => m.iter().map(|(k, v)| (k.clone(), v.as_bool())).collect(),
             _ => Vec::new(),
         },
+        cpus: r.get("cpus").and_then(|x| x.as_num()).map(|x| x as i64),
+        cores: r.get("cores").and_then(|x| x.as_num()).map(|x| x as i64),
     }
 }
 
