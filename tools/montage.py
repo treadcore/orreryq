@@ -140,7 +140,8 @@ def run(cmd, timeout=600, **kw):
 def home_of(q):
     c = (load(os.path.join(q, "plan.json"), {}) or {}).get("crucible") or {}
     return ("crucible" + ("-world" if c.get("world") else "") + ("-hybrid" if c.get("hybrid") else "")
-            + ("-forest" if c.get("world") and c.get("forest") else "")), c
+            + ("-forest" if c.get("world") and c.get("forest") else "")
+            + ("-nav" if c.get("world") and c.get("forest") and c.get("nav") else "")), c
 
 
 MS = re.compile(r"^(M\d{4})-(.+)-g(\d+)\.bin$")
@@ -223,6 +224,7 @@ def trace(q, chapters, opps, cfg, duels, seed, want_host, work):
     if want_host:
         hosts = [h for h in hosts if h[0] == want_host] or hosts
     flags = ("HYBRID=1 " if cfg.get("hybrid") else "") + ("WORLD=1 " if cfg.get("world") else "") + ("FOREST=1 " if cfg.get("world") and cfg.get("forest") else "")
+    flags += "NAV=1 " if cfg.get("world") and cfg.get("forest") and cfg.get("nav") else ""
     hw = int(cfg.get("h") or (48 if cfg.get("world") else 32))
     flags += "H=%d" % hw if hw != 32 else ""
     if "WORLD=1" not in flags:
@@ -354,7 +356,7 @@ def widen(src, nin, nh, nout, path):
     inputs in place, a hybrid's three rules at 32 to 34, the world's twenty at 35; every new weight zero,
     so its answers are what they were; a hybrid's new confidence shut (-0.5). The ladder's first
     milestones are of the old arena's net."""
-    for (k_in, k_out) in ((32, 3), (35, 4), (52, 3), (55, 4)):
+    for (k_in, k_out) in ((32, 3), (35, 4), (52, 3), (55, 4), (61, 5), (64, 6)):
         for h in range(1, 513):
             n = nw_of(k_in, h, k_out)
             if n == len(src):
@@ -370,15 +372,20 @@ def widen(src, nin, nh, nout, path):
         raise RuntimeError("%s: %d weights, of no net's shape" % (path, len(src)))
     if k_in > nin or h > nh or k_out > nout:
         raise RuntimeError("%s: a %d-%d-%d-%d net does not shrink into %d-%d-%d-%d" % (path, k_in, h, h, k_out, nin, nh, nh, nout))
-    rules = k_in in (35, 55)
+    rules = k_in in (35, 55, 64)
     at = 35 if rules else 32
+    # crucible's input_to: the world's twenty after the rules, the maze's nine (NAV) after the world's.
+    world = 20 if k_in in (52, 55, 61, 64) else 0
+    at_world = 35 if nin in (35, 55, 64) else 32
 
     def to(i):
         if i < 32:
             return i
         if rules and i < 35:
             return i
-        return 35 + (i - at)
+        if i < at + world:
+            return at_world + (i - at)
+        return at_world + 20 + (i - at - world)
     out = [0.0] * nw_of(nin, nh, nout)
     sW1, sb1 = 0, k_in * h
     sW2, sb2 = sb1 + h, sb1 + h + h * h
@@ -397,8 +404,8 @@ def widen(src, nin, nh, nout, path):
         for i in range(h):
             out[W3 + k * nh + i] = src[sW3 + k * h + i]
         out[b3 + k] = src[sb3 + k]
-    if k_out < nout:
-        out[b3 + nout - 1] = -0.5
+    if k_out < 4 <= nout:
+        out[b3 + 3] = -0.5                     # a hybrid's confidence is output 3; the memory comes after it
     return out
 
 
@@ -660,6 +667,7 @@ class Film:
         self.scale = W / tiles         # 30 tiles across: the camera's window; a replay comes closer
         self.blank = bytes(OUT) * (W * H)
         self.cam = None
+        self.fixed = None              # a still camera, (x, y): the whole of a maze (report/maze_film.py)
 
     def to_px(self, x, y):
         return int((x - self.cam[0]) * self.scale + W / 2), int((y - self.cam[1]) * self.scale + H / 2)
@@ -675,7 +683,7 @@ class Film:
         bx_, by_ = lerp(s0[7], s1[7], f), lerp(s0[8], s1[8], f)
         if s0[10] > 0 and math.hypot(bx_ - ax, by_ - ay) < 16.0:
             ax, ay = ax + (bx_ - ax) / self.pull, ay + (by_ - ay) / self.pull
-        want = (min(max(ax, 9.0), tr.arena - 9.0), min(max(ay, 2.4), tr.arena - 2.4))
+        want = self.fixed or (min(max(ax, 9.0), tr.arena - 9.0), min(max(ay, 2.4), tr.arena - 2.4))
         self.cam = want if self.cam is None else (lerp(self.cam[0], want[0], 0.25), lerp(self.cam[1], want[1], 0.25))
         cv = Canvas(self.blank)
         S = self.scale
@@ -818,6 +826,8 @@ class Film:
             return cv.b
         if self.net is not None:
             hud_of(self, cv, t)
+        if self.fixed:
+            return cv.b                # the whole maze is the frame: no generation panel, no small map
         panel(cv, P_GEN)
         # The arena whole, small, top right under the generation: every duel's learner a dot, the camera's
         # window a frame.

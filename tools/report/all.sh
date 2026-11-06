@@ -40,5 +40,6 @@ duty-cycle|The Duty Cycle|orrery · the fleet · utilization, waiting and the ro
 line-film|Three Generations, Filmed|orrery · the montage · the line, the crowd and the wires
 outgrowing|Outgrowing Yourself|orrery · the fleet · the GPU, the line, and what a generation keeps
 one-rule|One Rule, Two Machines|orrery · crucible · the trees, the mazes, the CUDA gauntlet and the GPU's generations
+round-corner|Round the Corner|orrery · crucible · maze navigation: the senses, the errand, the proving ground and the breach
 LIST
 python3 ../tools/report/collect.py

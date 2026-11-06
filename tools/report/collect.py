@@ -58,6 +58,10 @@ CARDS = {
                   "Three generations of the game's brain, each from its first read to its commit, an arrow from every job to the "
                   "one it followed: committed, not yet on main, and why. The film's crowd made 128 different duels, not a dozen "
                   "stacked; the kill shot again at half speed; every wire in its node's colour. The film plays in the page."),
+    "round-corner": ("Crucible · round the corner",
+                     "What a net needs to pass a maze, from the robotics and neuroevolution literature: a route sense, its own "
+                     "future along three arcs, two memory cells, progress paid along the route. Senses alone passed no maze in "
+                     "three arms; the rules' errand, the game's own routing under the net, passed every route. The proving ground, the breach."),
     "one-rule": ("Crucible · one rule, two machines",
                  "The card's arena gets the game's forest, walls and takeover and its score; the CUDA gauntlet plays treadcore's "
                  "gauntlet files on the card, fifteen of them with mazes shaped S, 5 and @, paired; training plays them as tasks; a GPU "

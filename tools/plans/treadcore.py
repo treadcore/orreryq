@@ -4306,13 +4306,17 @@ class Plan:
         c = self.cfg.get("crucible") or {}
         # The trees (6 November): a forest arena is a home of its own again, begun from the world's.
         return ("crucible" + ("-world" if c.get("world") else "") + ("-hybrid" if c.get("hybrid") else "")
-                + ("-forest" if c.get("world") and c.get("forest") else ""))
+                + ("-forest" if c.get("world") and c.get("forest") else "")
+                # The maze (6 November): the route sense, the arcs and the memory; 64 inputs, so a home apart.
+                + ("-nav" if c.get("world") and c.get("forest") and c.get("nav") else ""))
 
     def crucible_parent(self, home):
         """The home a world home's islands begin from: the same kind without the world. Crucible
         widens a loaded net into the bigger layout with zeros where it had nothing, so the
         population carries everything it learned and meets the world's senses from nothing."""
-        if home.endswith("-forest"):
+        if home.endswith("-nav"):
+            return home[:-len("-nav")]
+        if self.gpu_home(home):
             return home[:-len("-forest")]
         return home.replace("-world", "") if "-world" in home else None
 
@@ -4432,7 +4436,7 @@ class Plan:
         for home, these in sorted(by.items()):
             self.crucible_ladder_home(these, home)
         home = self.crucible_home()
-        if home.endswith("-forest"):
+        if self.gpu_home(home):
             lad = self.ladder_state(home)
             top = lad["milestones"][-1]["id"] if lad["milestones"] else None
             if top and self.gpu_force(lad, home, top):
@@ -4460,7 +4464,7 @@ class Plan:
         # Strongest first: the margin over the newest milestone; with no
         # milestone yet, the yardstick's wins.
         # A forest home weighs the gauntlet's step first; the others, the margin head to head.
-        if home.endswith("-forest"):
+        if self.gpu_home(home):
             for r in rows:
                 st = self.gpu_step(r, lad, top) if top and r.get("against") == top else None
                 r["_zg"] = st["zg"] if st else -1e9
@@ -4478,20 +4482,20 @@ class Plan:
             else:
                 ok = r["margin_se"] > 2 and r["ladder_mean"] >= 0
                 why = "beat %s by %.1f se, ladder %+.3f" % (top, r["margin_se"], r["ladder_mean"])
-                st = self.gpu_step(r, lad, top) if home.endswith("-forest") else None
+                st = self.gpu_step(r, lad, top) if self.gpu_home(home) else None
                 if st:
                     bar, dry = self.gpu_bar(lad)
                     # Held: every floor, or only small trades paid for by a step well over the bar.
-                    held = st["holds"] or (not st["missed"] and st["zg"] >= bar + self.GPU_TRADE_OVER)
+                    held = st["holds"] or self.gpu_trade_ok(st, bar)
                     st["holds"] = held
                     r["step"] = dict(st, bar=round(bar, 2))
                     better = st["zg"] >= bar or st["zy"] >= bar
                     ok = held and st["guard"] and (better or ok)
                     why = "the gauntlet %+.2f z (weighed by difficulty), the yardstick %+.2f z, head to head %+.1f se, against the bar %.2f%s%s%s" % (
                         st["zg"], st["zy"], r["margin_se"], bar,
-                        "; traded: " + "; ".join(st["traded"][:3]) if st["traded"] and held else "",
-                        "" if held else "; under its floors: " + "; ".join((st["missed"] or st["traded"])[:3]) + (
-                            "" if st["missed"] else " (a small trade, but the step is not %.1f over the bar)" % self.GPU_TRADE_OVER),
+                        "; traded: " + "; ".join((st["traded"] + st["missed"])[:3]) if st["short"] and held else "",
+                        "" if held else "; under its floors: " + "; ".join((st["missed"] + st["traded"])[:3]) + (
+                            " (the step does not pay for it, or the total did not rise)"),
                         "" if st["guard"] else "; worse on the yardstick")
                     # The window's best that went no way backwards (or traded small for a large step): the
                     # candidate a forced election takes.
@@ -4505,7 +4509,7 @@ class Plan:
                                           "after": top, "margin_se": r["margin_se"], "made": time.strftime("%Y-%m-%dT%H:%M:%S")})
                 r["result"] = "milestone %s: %s" % (mid, why)
                 top = mid
-                if home.endswith("-forest"):
+                if self.gpu_home(home):
                     self.gpu_elected(lad, r)
                 self.flag("crucible", "crucible: %s is milestone %s (%s)" % (r["job"], mid, why), key="milestone:%s" % mid, progress=True)
             else:
@@ -4679,6 +4683,11 @@ class Plan:
         return max(self.GPU_BAR_MIN, bar - self.GPU_EASE * int(dry / self.GPU_DRY_H)), dry
 
     @staticmethod
+    def gpu_home(home):
+        """A home that elects on the CUDA gauntlet: the forest's, and the maze's that grows from it."""
+        return home.endswith("-forest") or home.endswith("-forest-nav")
+
+    @staticmethod
     def gpu_floor(share, runs):
         """TODAY'S SUCCESS LESS TWO OF THE LARGEST ERRORS A SHARE OF `runs` CAN HAVE (0.5/sqrt(n)): a
         file passed 256 times of 256 has no binomial error, and its floor at share less two errors was
@@ -4715,8 +4724,11 @@ class Plan:
         runs = g.get("runs") or {}
         margin = lambda k: 1.0 / math.sqrt(max(1, runs.get(k, 256)))
         under = [k for k, f in floors.items() if me.get(k, 0.0) < f - 1e-9]
-        traded = ["%s %.2f < %.2f" % (k, me.get(k, 0.0), floors[k]) for k in under if me.get(k, 0.0) >= floors[k] - margin(k) - 1e-9]
-        missed = ["%s %.2f < %.2f" % (k, me.get(k, 0.0), floors[k]) for k in under if me.get(k, 0.0) < floors[k] - margin(k) - 1e-9]
+        # How far under, in margins (1/sqrt(n)): the trade a step may pay for (gpu_trade_ok).
+        short = {k: (floors[k] - me.get(k, 0.0)) / margin(k) for k in under}
+        traded = ["%s %.2f < %.2f" % (k, me.get(k, 0.0), floors[k]) for k in under if short[k] <= 1.0 + 1e-9]
+        missed = ["%s %.2f < %.2f" % (k, me.get(k, 0.0), floors[k]) for k in under if short[k] > 1.0 + 1e-9]
+        total = sum(c["b"] - c["c"] for c in (g.get("items") or {}).values())
         num = var = 0.0
         for k, c in (g.get("items") or {}).items():
             n = max(1, c["runs"])
@@ -4734,7 +4746,19 @@ class Plan:
             se = math.sqrt(max(1e-9, a * (1 - a) / n + b * (1 - b) / n))
             zy = (a - b) / se
             guard = zy >= -2.0
-        return {"holds": not missed and not traded, "guard": guard, "zg": round(zg, 2), "zy": round(zy, 2), "missed": missed, "traded": traded, "step": round(num, 4)}
+        return {"holds": not missed and not traded, "guard": guard, "zg": round(zg, 2), "zy": round(zy, 2), "missed": missed, "traded": traded,
+                "short": {k: round(v, 2) for k, v in short.items()}, "total": total, "step": round(num, 4)}
+
+    def gpu_trade_ok(self, st, bar):
+        """THE TOTAL SCORE (Paul, 6 November: "spending time on one type of goal will reduce its metrics in
+        other things. We need a total score consideration, if things are vastly better, then we can allow a
+        differing of goal priorities as long as we have improvement"). A step over the bar by GPU_TRADE_OVER
+        may pay for a file one margin (1/sqrt(n)) under its floor; by twice that, two margins; by three times
+        or more, three. And the total -- every file's runs gained less lost, unweighed -- must still rise."""
+        if not st["short"]:
+            return True
+        allow = min(3.0, (st["zg"] - bar) / self.GPU_TRADE_OVER) if st["zg"] > bar else 0.0
+        return allow >= 1.0 and all(v <= allow + 1e-9 for v in st["short"].values()) and st["total"] > 0
 
     def gpu_elected(self, lad, r):
         """After a GPU generation, the projection's step: the bar a notch harder, every floor raised to the
@@ -4781,8 +4805,11 @@ class Plan:
         return mid
 
     def bridge_ready(self):
-        """Does the fleet's commit play a Gladiator that GLADIATOR can swap?"""
+        """Does the fleet's commit play a Gladiator that GLADIATOR can swap -- and, for the maze's 64-input
+        nets, one that computes the maze's senses (the route, the arcs, the memory) as the card does?"""
         src = run(["git", "-C", self.tc, "show", "%s:source/treadcore-brain/src/styles.rs" % self.sha()]).stdout
+        if self.crucible_home().endswith("-nav") and "fn nav_senses" not in src:
+            return False
         return "fn gladiator_file" in src
 
     def shipped_gladiator(self, home):
@@ -5210,6 +5237,7 @@ class Plan:
                 # The build's flags. A world net is wider in its hidden layers too (H 48: 55 inputs
                 # and two nets of 48 still fit a Pascal card's 48 KB of shared memory).
                 flag = ("HYBRID=1 " if c.get("hybrid") else "") + ("WORLD=1 " if c.get("world") else "") + ("FOREST=1 " if c.get("world") and c.get("forest") else "")
+                flag += "NAV=1 " if c.get("world") and c.get("forest") and c.get("nav") else ""
                 hw = int(c.get("h") or (48 if c.get("world") else 32))
                 flag += "H=%d " % hw if hw != 32 else ""
                 if c.get("world"):

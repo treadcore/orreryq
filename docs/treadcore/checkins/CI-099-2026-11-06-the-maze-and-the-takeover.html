@@ -1,0 +1,138 @@
+<meta charset="utf-8">
+<title>The Maze and the Takeover as Tests Both Machines Read</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="../../reports.html">lab reports</a> · <a href="../../index.html">orrery</a></strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a><a href="#svi">VI</a><a href="#svii">VII</a></div></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">treadcore · check-in report CI-099</p>
+    <h1>The Maze and the Takeover as Tests Both Machines Read: Walls in a Scenario, and G23 to G28</h1>
+    <div class="front"><p><strong>Check-in report CI-099.</strong> Paul Richeson, treadcore.org; Claude Code (Claude Opus 5.5) as the pair. 6 November 2026, morning. Companion records: <code>LAB-REPORT-BRAIN.md</code> section 150; journal 0127; orrery's lab report <em>One Rule, Two Machines</em>.</p><p class="note">Source: <a href="https://github.com/treadcore/treadcore/blob/main/documentation/checkins/CI-099-2026-11-06-the-maze-and-the-takeover.md">documentation/checkins/CI-099-2026-11-06-the-maze-and-the-takeover.md</a>, built by orrery's tools/report/collect.py.</p></div>
+  </header>
+  <nav class="toc" id="contents" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Intent</a></li><li><a href="#sii">II. Decision log</a></li><li><a href="#siii">III. Method</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Discussion</a></li><li><a href="#svi">VI. What is not built</a></li><li><a href="#svii">VII. Paul's decisions</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>The fleet's two machines now read the same single-decision tests for navigation and takeover. A scenario's terrain may be a wall, and six gauntlet files put a maze shaped S, 5 or @ between a tank and a pillbox it must take, or a pillbox and a base to take or to build. The rules, on 200 runs each, pass the S 99.5%, the 5 66.5%, the @ 100%, take a pillbox 99.5%, take a defended base 3.5% and build a base 88.0%; their floors are today's success less two errors. Crucible plays the same files' words on the GPU.</p></section><section id="si"><h2>I. Intent</h2><p>Paul: "Specifically the goal is to naviate a simple maze, Like a maze of S shaped and 5 Shaped, and @ (ampersat at-sign) shaped mazes on test gauntlet maps of player vs environment, where we add takeover takss like Pillbox capture, Base capture, Building a base capture. A series of rewards need to be placed into the GPU and CPU such they can simulate the same score, or at least correlate their fitness." And: "Code the implimentation of more tests, coded in Cuda, for GPU and CPU." Then, asked what to do with the work: "Commit and push both."</p></section><section id="sii"><h2>II. Decision log</h2><div class="table"><table><thead><tr><th>Decision</th><th>Cause</th></tr></thead><tbody><tr><td>A wall as a terrain kind, nothing else in the loader</td><td>the gauntlet's files already lay rectangles of terrain; a maze is rectangles of wall</td></tr><tr><td>The mazes take a pillbox at their end</td><td>the net's senses point at the nearest pillbox, so a GPU net can be asked the same task; the rules navigate by the map</td></tr><tr><td><code>pillbox_owned_by</code> as the pass</td><td>treadcore's word for a takeover; crucible reads it as its own capture</td></tr><tr><td>Floors at today's success less two errors at 200 runs, G25 at 0.95</td><td>LR 141's rule; a 100% share has no error, and a floor of 1.00 fails a promotion on one run</td></tr><tr><td>The same coordinates in both gauntlets</td><td>so a share on the card and a share on the CPU are shares of the same maze</td></tr></tbody></table></div></section><section id="siii"><h2>III. Method</h2><p><code>GAUNTLET=1 GAUNTLET_BRAINS=scripted GAUNTLET_RUNS=200 cargo test -p treadcore-brain --release --lib -- --ignored learn::harness::train</code>, on the Mac, seeds 9,500,000 onward as every gauntlet read; the brain's unit tests, <code>cargo test -p treadcore-brain --release --lib</code>.</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th>File</th><th>The rules, 200 runs</th><th>Floor</th></tr></thead><tbody><tr><td>G23 the S maze</td><td>0.995</td><td>0.95</td></tr><tr><td>G24 the 5 maze</td><td>0.665</td><td>0.55</td></tr><tr><td>G25 the @ maze</td><td>1.000</td><td>0.95</td></tr><tr><td>G26 take a pillbox</td><td>0.995</td><td>0.95</td></tr><tr><td>G27 take the base</td><td>0.035</td><td>0.00</td></tr><tr><td>G28 build a base</td><td>0.880</td><td>0.80</td></tr></tbody></table></div><p>The brain's 168 tests pass; the whole gauntlet, the six included, reads in 1.8 s at 20 runs.</p></section><section id="sv"><h2>V. Discussion</h2><p>The 5 is the hard maze for the rules: its bowl turns back on itself, and a third of the runs end short of the pillbox. A defended base is nearly never taken: the enemy's tank and pillbox together outgun one tank, and G27's floor is zero until the rules learn it. On the card the GPU's nets passed none of the mazes on their first day, and one of them built a base 56 times in 256 after two segments of training on the tasks.</p></section><section id="svi"><h2>VI. What is not built</h2><p>The mazes are open fields with walls, not the fleet's maps; the takeover's squad and carrying are the game's own and not tested here.</p></section><section id="svii"><h2>VII. Paul's decisions</h2><p>Commit and push (6 November).</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>
