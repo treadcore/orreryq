@@ -17,7 +17,7 @@ Paul asked what it takes for a net to make the two-part move round a corner: wha
 - two memory cells;
 - progress paid along the route.
 
-It also has breakable walls, a breach file (B1), a one-bar file (M0), treadcore's `ends_near` ask, and four route-only mazes (N0 to N3). The net grows from 55-48-48-4 to 64-48-48-6 at +10% of its weights. A generation costs 1.8× the forest build's, measured: the cost is register spills, not the wave.
+It also has breakable walls, a breach file (B1), a one-bar file (M0), treadcore's `ends_near` ask, and four route-only mazes (N0 to N3). The net grows from 55-48-48-4 to 64-48-48-6 at +10% of its weights. A generation costs 1.8× the forest build's; the wave is about 8 seconds of the 18 extra, and the rest is not yet found.
 
 **The senses were not enough.** Four arms of 30 generations, in two controlled pairs, passed no maze. The senses tripled the paired step (+0.0108 ± 0.0023 against +0.0034 ± 0.0021), but on other files, and their weights never grew past mutation's drift: a norm of 1 against an old input's 55.
 
@@ -258,14 +258,29 @@ Each film follows one run of a gauntlet file, the best of 16 (a pass first), wit
 
 *Table V. Tank-steps a second is crucible's own count (`steps_per_s`).*
 
-**The senses cost 1.8× a generation, and the lazy wave saved nothing: the wave was never the cost.** The compiler's own account shows where it goes. The play kernel is held to 128 registers a thread (two blocks of 128 per SM). With `NAV` its stack frame grows from 792 bytes to 6,560 (the fields and the wave's queue), and its spill traffic doubles: stores from 652 bytes to 1,548, loads from 884 to 1,724. The route numbers, the memory cells and their counter ride in each tank every step, and push the net's own working values out of registers. **The fix is not fewer waves but fewer live numbers:** write the route sense straight into the net's input array on the steps it is refreshed, and keep the fields outside the play loop's frame. That is the next piece of work, measured the same way. Under it the time could fall toward the 10% the wider net alone asks.
+**The senses cost 1.8× a generation, and the lazy wave saved nothing.** Four more builds were timed the same way to find where the time goes:
+
+| Build | Seconds a generation | What it tests |
+|---|---|---|
+| `NAV`, `MINB=1` (241 registers a thread, no spills) | 38.2 | the spills |
+| `NAV`, the first layer's loop unrolled by 8 | 44.9 | fewer live inputs |
+| `NAV`, the wave made once a duel | 31.7 | the wave's whole cost |
+| `NAV`, the drivable line in place of the line of sight | 36.2 | fewer waves |
+
+*Table VI. Mean of generations 2 to 4, as Table V.*
+
+- **The spills are not the cost.** The compiler's account had looked like the answer. The play kernel is held to 128 registers a thread, and with `NAV` its stack grows from 792 bytes to 6,560 and its spill traffic doubles. But a build with no spills at all is only 4% faster.
+- **The wave is about 8 of the 18 extra seconds.** The lazy test asks whether the line of *sight* is clear, and in the forest arena a grove blocks sight. So the wave still runs about as often as before.
+- **Testing whether the line can be *driven* is not the answer.** It saves 3.5 seconds, but it routes the tank straight into a grove. F2, "round the trees", fell from 256 runs to 0, and F3 from 90 to 10. It is not kept.
+
+**The other 10 seconds are not yet found.** The wave made once a duel is still 1.45× the forest build. That is more than the wider net (+10%) and the route sense's few tests every third step should cost. The profiler (Nsight Compute, on boburner) is the next tool.
 
 ## X. What is not built, and what comes next
 
 **Decided (Paul, 6 November, evening).**
 
 - The trade cap stays, and training goes on (section V).
-- The cost is cut before the maze build goes to the fleet. The route numbers move out of the per-step tank state, measured as Table V was, and then crucible's forest branch is merged and the planner switched to the nav home.
+- The cost is cut before the maze build goes to the fleet, measured as Table V was. Then crucible's forest branch is merged and the planner switched to the nav home.
 - Both treadcore changes are built, each with its own LR: `nav_senses` for the Gladiator, so the game can read and credit a maze net, and the `w_breach` intrusion dial.
 
 **What the experiments say to do next, cheapest first:**
@@ -283,9 +298,9 @@ Each film follows one run of a gauntlet file, the best of 16 (a pass first), wit
 3. `nav_senses`: the bearing and length of `map.route_kept` to the goal, the walled flag, and the three arcs stepped against the map's walls.
 4. The rules' answer it reads (inputs 32 to 34) made as the errand makes it: toward the route's next waypoint when the line to the enemy is shut. Where the line is clear, the errand is the old script, so a duel in the open already matches.
 
-Until treadcore has `fn nav_senses`, the planner holds the bridge for the nav home (`bridge_ready`). The card can elect its generations, but the game cannot credit them. Building `nav_senses` is a treadcore change, with its own LR, when Paul says.
+**Built since (treadcore LR 152, not yet committed):** all four, with six tests. Crucible's trained maze champion played eight games as the Gladiator without a fault. Once it is on treadcore's main, the planner's `bridge_ready` lets the bridge read the nav home's generations.
 
-**The intrusion dial** (`w_breach`, section IV) is designed and not built. It also changes treadcore's brain.
+**The intrusion dial** (`w_breach`, section IV) is built since (treadcore LR 153, not yet committed). It is 0 by default, so the brain plays as it did until a census finds its value; the press temper moves its bar.
 
 **On the card:**
 
