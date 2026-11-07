@@ -6905,6 +6905,19 @@ def chores(qdir, tools=None):
                 open(stamp, "w").close()
             begin("recordings " + verb[0], [sys.executable, "-I", os.path.join(tools, "recordings.py"), qdir] + verb, then_rm=run_)
             break
+    # THE NIGHTLY PACK (Paul, 6 November: "the queue is too big ... is it all needed right now?", then
+    # "Nightly, by the keeper"): the game logs of finished census reads past a day, packed into
+    # archive/packs and proved before they go (growth.py pack-logs). Between 03:00 and 06:00, once a
+    # night; a night missed (the Mac asleep, the keeper down) is made up once 36 hours have passed. The
+    # growth page's refresh is held off while it runs, both writing plan/growth.json.
+    f = os.path.join(pd, "pack-logs.stamp")
+    run_ = f + ".run"
+    hour = time.localtime().tm_hour
+    if (3 <= hour < 6 and age(f) > 20 * 3600 or age(f) > 36 * 3600) and age(run_) > 3 * 3600:
+        open(run_, "w").close()
+        open(f, "w").close()
+        open(os.path.join(pd, "growth.json.lock"), "w").close()
+        begin("pack-logs", [sys.executable, "-I", os.path.join(tools, "growth.py"), qdir, "pack-logs"], then_rm=run_)
     return began
 
 

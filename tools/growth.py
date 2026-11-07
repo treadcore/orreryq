@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""growth.py QUEUE refresh [--sizes] | sizes | purge [--keep-days N] [--do] | prune-builds -- crucible's generations
+"""growth.py QUEUE refresh [--sizes] | sizes | purge [--keep-days N] [--do] | prune-builds | pack-logs [--keep-days N]
+-- crucible's generations
 sampled, and the disks the fleet's generations fill.
 
 Paul, 3 November: "the rules and simulation of generations, we want to sample its growth in an
@@ -33,6 +34,13 @@ THE PURGE. `purge` LISTS; `purge --do` REMOVES. Three things go, and only these:
         in MANIFEST.tsv with their sha256), and the new pack read back against its rows before a
         file is removed. The reading itself -- pooled.txt, trial.weights, base.weights, run.env --
         stays, so the terrain, the temperament matrix and the planner read exactly what they did.
+THE NIGHTLY PACK. `pack-logs` is the purge's third item alone, done without a press: the game logs of
+finished census reads past PACK_KEEP_DAYS (1; tuning.json pack_keep_days), packed and proved as above.
+The planner's chores begin it once a night (Paul, 6 November, of 17.65 GB of game logs in a 20.6 GB
+queue: "the queue is too big ... is it all needed right now?"; then "Pack all but 1 day" and "Nightly,
+by the keeper"). Nothing reads a game log past a day: the ledger, the terrain, the temperament and the
+seed reads take pooled.txt and the weights; the logs serve the live work of hours -- held-out pieces
+merged, a candidate's side reads, a training round's judge.
 NOT PURGED, said rather than done: training recordings (*/shards: recordings.py drops a run's
 shards once nothing reads them, its recipe proved and kept -- not this purge's business), a
 run's results (r*, train-*, gauntlet-*: the reports read their logs), crucible's populations and
@@ -57,6 +65,7 @@ import time
 SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8"]
 LIMIT_GB = 20.0
 KEEP_DAYS = 3
+PACK_KEEP_DAYS = 1
 KEEP_NEWEST_BUILDS = 2
 # The net kinds crucible builds, as (inputs, outputs): plain, hybrid (the rules' three answers in,
 # a confidence out), and each with the world's twenty senses. A champion file is NW floats with no
@@ -785,6 +794,11 @@ def main(a):
         if "--keep-days" in rest:
             keep = int(rest[rest.index("--keep-days") + 1])
         purge(q, max(1, keep), "--do" in rest)
+    elif cmd == "pack-logs":
+        keep = int(tuning(q, "pack_keep_days", PACK_KEEP_DAYS))
+        if "--keep-days" in rest:
+            keep = int(rest[rest.index("--keep-days") + 1])
+        purge(q, max(1, keep), True, kinds={"logs"}, by="the nightly pack: game logs past %d day%s" % (max(1, keep), "" if keep <= 1 else "s"))
     elif cmd == "prune-builds":
         # The planner's, each time main moves: old commit builds alone, no press.
         purge(q, int(tuning(q, "purge_keep_days", KEEP_DAYS)), True, kinds={"builds"}, by="main moved: builds pruned")
