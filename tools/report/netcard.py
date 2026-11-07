@@ -16,6 +16,12 @@ index HOME/cards.json:
              always its forebear: an island's population may come down another line, and then it moves far)
   game       the bridge's census of it as the Gladiator, if one was read
   footage    its tests' passes, if filmed
+  training   (Paul, 6 November: "Net cards every pass") what made it: the build's flags, the segment's seed, the
+             crucible commit the working copy was at when the segment started, the source's size, the task mix, the
+             net and the rules as the segment's console says them
+  gauntlet   each gauntlet file's share, the champion's own, as its segment read it
+
+The planner writes them every ten minutes (netcard_watch).
 
 The cards cost one read of each file; a refresh only writes the new ones.
 """
@@ -24,7 +30,11 @@ import csv
 import json
 import math
 import os
+import re
+import subprocess
 import sys
+
+CRUCIBLE = os.path.expanduser("~/code/crucible")
 
 SHAPES = {2340: (35, 32, 4), 5236: (55, 48, 4), 5766: (64, 48, 6)}
 GROUPS = [("rays", 0, 24), ("body", 24, 32), ("rules", 32, 35), ("world", 35, 55), ("route", 55, 59), ("arcs", 59, 62), ("memory", 62, 64)]
@@ -63,6 +73,60 @@ def moved(w, p):
     return out
 
 
+_REFLOG = None
+
+
+def main_at(when):
+    """crucible's main at a time (YYYY-MM-DDTHH:MM:SS, local), from its reflog: the newest move at or before it."""
+    global _REFLOG
+    if _REFLOG is None:
+        r = subprocess.run(["git", "-C", CRUCIBLE, "reflog", "--date=format-local:%Y-%m-%dT%H:%M:%S", "--format=%gd %h", "main"],
+                           capture_output=True, text=True)
+        _REFLOG = []
+        for line in r.stdout.splitlines():
+            m = re.match(r"main@\{(\S+)\} (\w+)", line)
+            if m:
+                _REFLOG.append((m.group(1), m.group(2)))
+    before = [h for t, h in _REFLOG if t <= when]
+    return before[0] if before else None
+
+
+def segment_facts(q, job, started):
+    """What a segment's own records say of the net it made: its log, its console, its gauntlet."""
+    out = {}
+    log = os.path.join(q, "logs", job + ".log")
+    if os.path.exists(log):
+        txt = open(log, errors="replace").read()
+        m = re.search(r"make -s ([^;>]*?) NVCC=", txt)
+        out["flags"] = m.group(1).strip() if m else None
+        m = re.search(r"--seed (\d+)", txt)
+        out["seed"] = int(m.group(1)) if m else None
+        m = re.search(r"crucible\.cu -> \S+ \((\d+) bytes", txt)
+        out["source_bytes"] = int(m.group(1)) if m else None
+    od = os.path.join(q, "results", job, "fleet", os.path.basename(q.rstrip("/")) and "q-" + os.path.basename(q.rstrip("/")), "out", job)
+    con = os.path.join(od, "console.txt")
+    if os.path.exists(con):
+        for line in open(con, errors="replace"):
+            for key, pre in (("net", "# net "), ("rules", "# rules: "), ("tasks", "# tasks: ")):
+                if line.startswith(pre) and key not in out:
+                    out[key] = line[len(pre):].strip()
+    if started:
+        # Where main WAS when the segment started: the reflog says when the working copy moved, which a commit's own
+        # date does not (a branch fast-forwarded in the evening carries the afternoon's dates).
+        out["crucible_commit"] = main_at(started)
+    shares = None
+    g = os.path.join(od, "gauntlet.tsv")
+    if os.path.exists(g):
+        shares = {}
+        for row in csv.reader(open(g), delimiter="\t"):
+            if len(row) > 4 and row[1] == "champion":
+                try:
+                    shares[row[0]] = float(row[4])
+                except ValueError:
+                    pass
+    return out, shares
+
+
 def main(a):
     if not a:
         print(__doc__)
@@ -76,6 +140,16 @@ def main(a):
         for r in json.load(open(bp)).get("reads") or []:
             if r.get("label"):
                 bridge[r["label"]] = {k: r.get(k) for k in ("diff", "se", "holds", "vs_rules", "read")}
+    started = {}
+    ev = os.path.join(q, "events.jsonl")
+    if os.path.exists(ev):
+        for line in open(ev, errors="replace"):
+            if '"started"' in line and '"crucible"' in line:
+                try:
+                    e = json.loads(line)
+                    started[e["job"]] = e["t"]
+                except (ValueError, KeyError):
+                    pass
     for home in homes:
         hd = os.path.join(q, home)
         lad = st.get("crucible_ladder:" + home) or {}
@@ -106,6 +180,8 @@ def main(a):
                     "election": elect.get(m["id"]), "shape": {"inputs": nin, "hidden": h, "outputs": nout, "weights": len(w)},
                     "senses": groups(w), "moved": moved(w, weights(pp)) if parent and os.path.exists(pp) and len(weights(pp)) in SHAPES else None,
                     "game": bridge.get(m["id"]), "footage": foot.get(m["id"])}
+            if m.get("job") and not m.get("carried"):
+                card["training"], card["gauntlet"] = segment_facts(q, m["job"], started.get(m["job"]))
             old = json.load(open(card_path)) if os.path.exists(card_path) else None
             if old != card:
                 json.dump(card, open(card_path, "w"), indent=1)

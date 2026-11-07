@@ -12,7 +12,7 @@ On the evening of 6 November the maze build went to the fleet, and Paul asked fo
 
 - **The walls of the two games made one.** A wall now takes the gun in the game as on the card (treadcore LR 154, game 9). Two direct hits aimed at a wall tile bring it and its neighbour down, a gap two tiles wide; crucible's walls open three, for its wider tank. The mortar still fells a wall at once.
 - **The card filled.** Each block keeps its net's weights in shared memory, so a Pascal SM holds two blocks; a second population on the card would add none. Two hundred and fifty-six duels a net instead of 128 double the threads that share the weights, 12% occupancy to 25%. A generation plays twice the duels in 1.57× the time, and the islands play 256 since that evening.
-- **Every new generation filmed.** When the GPU's home makes a generation, an island traces nine tests eight runs each, this Mac films them, and the nine play at once on one sheet; the sheets join into a reel. The forest home's own generations of the day, M0016 to M0020, passed none of their 72 test runs: the baseline the maze home's footage will be read against.
+- **Every new generation filmed.** When the GPU's home makes a generation, an island traces twelve tests eight runs each (nine at first, the three camps since that night), this Mac films them, and they play at once on one sheet; the sheets join into a reel. The forest home's own generations of the day, M0016 to M0020, passed none of their 72 test runs: the baseline the maze home's footage will be read against.
 - **A camp of rewards.** A test can now be a chain of stages: reach a beacon, and a castle rises to be taken; take it, and a second rises to be razed. Each stage pays its reward, twice it if done at once, falling to the reward itself at its quick time. The trained maze champion passes the beacon camp and the corridors in all 128 runs, and the unravelling in 30. M0016 passes 0, 128 and 10.
 - **Telling a verdict sooner.** Over 10,793 stored censuses, a naval seed tells a candidate's verdict about four times as well as a europe seed. The proving ground, which LR 151 put into the census's rotation, tells nothing.
 - **What to keep about each net.** A card now sits beside every GPU generation: its lineage, its election, how much weight it puts on each group of senses and how far each moved, the game's read and its footage.
@@ -162,7 +162,7 @@ Six tests hold it: among them, a maze champion widened from a world one (every n
 
 !html(full-card/fig-footage.html)
 
-*Fig. 19. The footage of every generation (`tools/report/footage.py`, asked by the planner's `footage_watch`). When the GPU's home makes a generation of its own (not one carried from the home before) and it has no footage, an island builds crucible with that home's flags and traces nine tests eight runs each: the routes N1 and N3, the mazes M0 to M3, the walled base B1, the takeovers T1 and T2. This Mac films each, every film sped to twelve seconds, and the nine play at once on one sheet under a card. The sheets join into a reel, output/treadcore-footage.mp4.*
+*Fig. 19. The footage of every generation (`tools/report/footage.py`, asked by the planner's `footage_watch`). When the GPU's home makes a generation of its own (not one carried from the home before) and it has no footage, an island builds crucible with that home's flags and traces its tests eight runs each: the routes N1 and N3, the mazes M0 to M3, the walled base B1, the takeovers T1 and T2, and since that night the camps K1 to K3. This Mac films each, every film sped to twelve seconds, and they play at once on one sheet under a card, four by three. The sheets join into a reel, output/treadcore-footage.mp4.*
 
 !html(full-card/vid-footage-forest-reel.html)
 
@@ -303,20 +303,12 @@ A milestone is 20 to 23 KB of floats and nothing else. A card now sits beside ea
 
 **Two things the cards showed at once.** The senses' norms are the whole story of *Round the Corner* in one column: in a maze generation, a route and arc norm near 1 against the rays' 280 says the senses are not yet used. And the elections: two of the day's generations were elected on head to head while the weighed gauntlet read them worse (†). At Paul's word the planner now requires the gauntlet too: head to head still elects, but only when the weighed gauntlet is not below zero.
 
-**What else is worth keeping.** Each card could also hold:
-
-- the crucible source tree it was trained on, its build flags and the rules' numbers;
-- the task mix and duels a net;
-- the segment's seed;
-- each gauntlet file's share, not only the weighed step;
-- the mutation step size each block of weights had.
-
-With these, a later look can ask which training made which change, and which blocks are worth mutating.
+**What each card keeps since that night** (Paul: "Net cards every pass"). The segment's own records add a training section: the build's flags, the segment's seed, the source's size, the task mix, the net and the rules as its console says them, and the crucible commit the working copy was at when the segment started. That commit is read from crucible's reflog, which says when the working copy moved, where a commit's own date does not. A gauntlet section adds each file's share. The planner writes the cards every ten minutes (`netcard_watch`). Not yet kept: the mutation step size each block of weights had.
 
 ## XIII. What comes next
 
-1. **The maze home's first generations**, read on the gauntlet, filmed, and read in the game once the line includes LR 152.
-2. **The camp on the islands.** K1 to K3 are on crucible's forest branch (40bf07f), all four builds compiled. Paul moves the islands' working copy to it, and the maze home then trains and is elected on them too.
+1. **The maze home's first generations.** Its first segment's champion read +12.97 z on the weighed gauntlet and was refused: it could no longer round one bar (M0 0 of 256 against a floor of 0.85), crawling at 0.2 tiles a second against the route, as M0016 had in the S maze. It had trained a quarter of its runs on tasks spread over all the files; the arm that learned the mazes trained half on the maze and camp files. At Paul's word the maze home now trains half its runs on tasks over all 24 files (`crucible.task_p` 0.5), and its fifteen segments queued at a quarter were planned again. Its generations will be read on the gauntlet, filmed, and read in the game once the line includes LR 152.
+2. **The camp on the islands.** Paul moved the islands' working copy to crucible 40bf07f that evening; the segments planned since carry the three camps among their 24 files.
 3. **A last chance in the camp**: a second life at the last beacon, the stages done kept and paid less.
 4. **The probe seeds read as items**, once a few hundred candidates have played them.
 5. **The read-along videos in AV1** by default.

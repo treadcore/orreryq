@@ -10,9 +10,9 @@ the newly trained ones."
 MAKE. For each milestone the GPU's home made itself (a carried one, from the home before, is old footage and
 is skipped) that has no footage yet: on a GPU island, as the montage traces, crucible is built with the home's
 flags and plays TESTS -- the routes N1 and N3, the mazes M0 to M3 with their pillboxes, the walled base B1,
-the takeovers T1 and T2 -- RUNS runs each (`--trace-scen`). The traces come back; each is a film
+the takeovers T1 and T2, and the camps K1 to K3 -- RUNS runs each (`--trace-scen`). The traces come back; each is a film
 (report/maze_film.py: the whole arena, the best run followed, the others its ghosts), every film sped to the
-same length; the nine play at once on one sheet, three by three, under a card that names the generation and
+same length; the twelve play at once on one sheet, four by three, under a card that names the generation and
 its passes. Written to QUEUE/archive/footage/HOME/ID/ (the films, sheet.mp4, result.json) and the index.
 
 REEL. Every filmed generation's sheet in order, oldest first: QUEUE/archive/footage/HOME/reel.mp4 and
@@ -28,12 +28,16 @@ import sys
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+# The camps since 6 November (Paul: "Camps in the footage"): twelve tests, four by three.
 TESTS = ["n1-the-s-maze-reach", "n3-the-at-maze-reach", "m0-one-bar", "m1-the-s-maze", "m2-the-5-maze",
-         "m3-the-at-maze", "b1-breach-the-walled-base", "t1-take-a-pillbox", "t2-take-the-base"]
+         "m3-the-at-maze", "b1-breach-the-walled-base", "t1-take-a-pillbox", "t2-take-the-base",
+         "k1-the-beacon-camp", "k2-the-corridors", "k3-the-unravelling"]
 SHORT = {"n1": "N1 the S, the route", "n3": "N3 the @, the route", "m0": "M0 one bar", "m1": "M1 the S maze",
-         "m2": "M2 the 5 maze", "m3": "M3 the @ maze", "b1": "B1 the walled base", "t1": "T1 take a pillbox", "t2": "T2 take the base"}
+         "m2": "M2 the 5 maze", "m3": "M3 the @ maze", "b1": "B1 the walled base", "t1": "T1 take a pillbox", "t2": "T2 take the base",
+         "k1": "K1 the beacon camp", "k2": "K2 the corridors", "k3": "K3 the unravelling"}
 FRAMES = 180          # each test's film: twelve seconds at 15 frames a second, however long the run
-TILE = (426, 240)     # a test on the sheet; three by three is 1278 x 720
+TILE = (320, 180)     # a test on the sheet; four by three is 1280 x 540, the card's strip above it
+COLS = 4
 
 
 def load_mod(name, path):
@@ -108,13 +112,13 @@ def trace_on_island(q, mt, c, mid, path, runs, work):
 
 
 def sheet(mt, films, results, out, title):
-    """The nine films three by three, each padded to the longest, a card over the top."""
-    order = [t[:2] for t in TESTS]
+    """The films COLS across, each padded to the longest, a card in a strip above; a test with no film is left out."""
+    order = [t[:2] for t in TESTS if t[:2] in films]
     ins, parts = [], []
     for i, k in enumerate(order):
         ins += ["-i", films[k]]
         parts.append("[%d:v]scale=%d:%d,tpad=stop_mode=clone:stop_duration=15[v%d]" % (i, TILE[0], TILE[1], i))
-    layout = "|".join("%d_%d" % ((i % 3) * TILE[0], (i // 3) * TILE[1]) for i in range(len(order)))
+    layout = "|".join("%d_%d" % ((i % COLS) * TILE[0], (i // COLS) * TILE[1]) for i in range(len(order)))
     card = out[:-4] + "-card.png"
     mt.label_png(card, title, 18, font=mt.FONT_B, pad=10)
     ins += ["-loop", "1", "-i", card]
@@ -193,7 +197,7 @@ def resheet(q, home=None):
     idx = json.load(open(os.path.join(base, "index.json")))
     for g in idx["generations"]:
         work = os.path.join(base, g["id"])
-        films = {t[:2]: os.path.join(work, "%s.mp4" % t[:2]) for t in TESTS}
+        films = {t[:2]: os.path.join(work, "%s.mp4" % t[:2]) for t in TESTS if os.path.exists(os.path.join(work, "%s.mp4" % t[:2]))}
         title = "%s  \u00b7  made %s  \u00b7  %d of %d test runs passed" % (g["id"], g["made"].replace("T", " ")[:16], g["passed"], g["runs"])
         sheet(mt, films, g["results"], os.path.join(work, "sheet.mp4"), title)
     reel(q, home)

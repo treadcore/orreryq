@@ -5011,6 +5011,20 @@ class Plan:
         self.flag("footage", "footage asked: %d new generation(s) of %s (%s); archive/footage/%s, and output/treadcore-footage.mp4" % (
             len(todo), home, ", ".join(todo), home), key="footage-asked:%s" % todo[-1], progress=True)
 
+    # ---- a card beside every GPU generation (Paul, 6 November: "Net cards every pass") ----------------
+    NETCARD_EVERY_S = 600
+
+    def netcard_watch(self):
+        """Every NETCARD_EVERY_S, tools/report/netcard.py in the background: a card beside each milestone of every
+        GPU home (its lineage, election, senses, what it moved, its training and gauntlet, the game's read, its
+        footage), and HOME/cards.json; a card unchanged is not written again."""
+        if time.time() - self.state.get("netcards_asked", 0) < self.NETCARD_EVERY_S:
+            return
+        self.state["netcards_asked"] = time.time()
+        tool = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "report", "netcard.py")
+        subprocess.Popen([sys.executable, "-I", tool, self.q], stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+
     # ---- the census's maps, kept in a history (Paul, 6 November: "how much worse is it to do them all. and keep
     # a history and a passrate") ------------------------------------------------------------------------
     MAP_EVERY_S = 6 * 3600
@@ -5460,6 +5474,10 @@ class Plan:
             self.map_watch()
         except Exception as e:  # a line missed is written at the next plan
             print("maps: %s" % e, file=sys.stderr)
+        try:
+            self.netcard_watch()
+        except Exception as e:  # cards missed are written at the next plan
+            print("netcards: %s" % e, file=sys.stderr)
         # The rules cloned on the card each time they move (Paul's step 3).
         try:
             jobs += self.clone_jobs()
