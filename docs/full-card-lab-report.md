@@ -273,11 +273,10 @@ Every census of the line's search plays fresh seeds (its `SEED0` is the job's nu
 
 *Table III. "Telling" is the agreement over the spread (times ten). Information goes as its square: a naval seed is worth about fourteen europe seeds toward the verdict.*
 
-**What it says to do:**
+**What was done, at Paul's word:**
 
-1. **Play the telling maps first.** The census already stops in stages when a candidate cannot win. Ordering a census's first stage naval, constanine, island, industry, generated would bring that stop sooner, and a sequential test [4] stops a loser sooner the more each sample tells.
-2. **A probe set of seeds.** Give the first eight seeds of every census the same numbers for every candidate. Then each seed's difficulty and discrimination can be read over thousands of candidates, as an exam's items are [5], and the census can play the most telling seed next.
-3. **The proving ground out of the rotation.** LR 151 put the proving ground and A Flame War Modified into the census's "every map" (MAP=all). The proving ground was built as a test map. Its scores agree with nothing, so for now it only adds noise to every verdict: the decision is Paul's.
+1. **The telling maps first, as probe seeds** (treadcore LR 155). A census on every map now plays eight probe seeds before its own: the same seed numbers for every candidate, each chosen to land on naval, constanine, island, industry or the generated map. They are part of its seeds, not more, and they run first, so a sequential census's first look [4] reads them. With the same seeds for every candidate, each seed's difficulty and discrimination can now be read over thousands of candidates, as an exam's items are [5], and later the census can play the most telling seed next. Tried on this Mac: the first three probes played naval, constanine and island.
+2. **All thirteen maps kept, with a history and a pass rate.** Paul asked how much worse it is to play them all. The two new maps take 15% of a census's 55 seeds and tell almost nothing, so a verdict on all thirteen needs 18% more seeds for the same confidence; at the same seeds, its standard error is 8.6% wider. Every six hours the planner (`map_watch`) appends to plan/maps-history.jsonl. Each line holds every map's agreement, spread, telling and pass rate, over every census and over those since the line before. The first line already shows the proving ground's pass rate is its own: a candidate beats the defaults there 27% of the time, against about 40% on the other maps.
 
 ## XII. What to keep about each net
 
@@ -302,7 +301,7 @@ A milestone is 20 to 23 KB of floats and nothing else. A card now sits beside ea
 
 *Table IV. The forest home's own generations, from their cards. \* Read with the plug-in variance of the first election; the planner's McNemar variance reads it +16.3 [2]. † Elected by the old rule, two standard errors ahead head to head, with the weighed gauntlet below the one it replaced. ‡ M0018 came down boburner's line, not M0017's calber line, so it moved far from the milestone it beat.*
 
-**Two things the cards showed at once.** The senses' norms are the whole story of *Round the Corner* in one column: in a maze generation, a route and arc norm near 1 against the rays' 280 says the senses are not yet used. And the elections: two of the day's generations were elected on head to head while the weighed gauntlet read them worse (†). The election accepts either rule; whether a generation worse on the card's gauntlet should be elected on head to head alone is a question for Paul.
+**Two things the cards showed at once.** The senses' norms are the whole story of *Round the Corner* in one column: in a maze generation, a route and arc norm near 1 against the rays' 280 says the senses are not yet used. And the elections: two of the day's generations were elected on head to head while the weighed gauntlet read them worse (†). At Paul's word the planner now requires the gauntlet too: head to head still elects, but only when the weighed gauntlet is not below zero.
 
 **What else is worth keeping.** Each card could also hold:
 
@@ -317,11 +316,10 @@ With these, a later look can ask which training made which change, and which blo
 ## XIII. What comes next
 
 1. **The maze home's first generations**, read on the gauntlet, filmed, and read in the game once the line includes LR 152.
-2. **A last chance in the camp**: a second life at the last beacon, the stages done kept and paid less.
-3. **The camp files in the gauntlet and the tasks**: K1 to K3 are in crucible's forest branch (40bf07f), all four builds compiled; once the islands' working copy is moved to it, the maze home trains and is elected on them too.
-4. **The census's map order and a probe set of seeds** (section XI), in treadcore's census, with Paul's word.
-5. **The proving ground out of the census's rotation**, and **the head-to-head path of the election**, if Paul says so.
-6. **The read-along videos in AV1** by default, and the camp (crucible 40bf07f) on the islands once Paul says.
+2. **The camp on the islands.** K1 to K3 are on crucible's forest branch (40bf07f), all four builds compiled. Paul moves the islands' working copy to it, and the maze home then trains and is elected on them too.
+3. **A last chance in the camp**: a second life at the last beacon, the stages done kept and paid less.
+4. **The probe seeds read as items**, once a few hundred candidates have played them.
+5. **The read-along videos in AV1** by default.
 
 ## References
 

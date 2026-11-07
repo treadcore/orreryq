@@ -4490,7 +4490,10 @@ class Plan:
                     st["holds"] = held
                     r["step"] = dict(st, bar=round(bar, 2))
                     better = st["zg"] >= bar or st["zy"] >= bar
-                    ok = held and st["guard"] and (better or ok)
+                    # HEAD TO HEAD STILL ELECTS, BUT NOT AGAINST THE GAUNTLET (Paul, 6 November: "Require the gauntlet
+                    # too"): M0017 and M0020 came in two se ahead head to head with the weighed gauntlet at -2.09 and
+                    # -4.11 z, below the generations they replaced.
+                    ok = held and st["guard"] and (better or (ok and st["zg"] >= 0))
                     why = "the gauntlet %+.2f z (weighed by difficulty), the yardstick %+.2f z, head to head %+.1f se, against the bar %.2f%s%s%s" % (
                         st["zg"], st["zy"], r["margin_se"], bar,
                         "; traded: " + "; ".join((st["traded"] + st["missed"])[:3]) if st["short"] and held else "",
@@ -5008,6 +5011,24 @@ class Plan:
         self.flag("footage", "footage asked: %d new generation(s) of %s (%s); archive/footage/%s, and output/treadcore-footage.mp4" % (
             len(todo), home, ", ".join(todo), home), key="footage-asked:%s" % todo[-1], progress=True)
 
+    # ---- the census's maps, kept in a history (Paul, 6 November: "how much worse is it to do them all. and keep
+    # a history and a passrate") ------------------------------------------------------------------------
+    MAP_EVERY_S = 6 * 3600
+
+    def map_watch(self):
+        """Every MAP_EVERY_S, tools/report/seed_sense.py in the background appends a line to plan/maps-history.jsonl:
+        each census map's agreement with the verdict, a seed's spread, its telling and its pass rate, over every census
+        and over those since the line before."""
+        hist = os.path.join(self.pd, "maps-history.jsonl")
+        if os.path.exists(hist) and time.time() - os.path.getmtime(hist) < self.MAP_EVERY_S:
+            return
+        if time.time() - self.state.get("maps_asked", 0) < self.MAP_EVERY_S:
+            return
+        self.state["maps_asked"] = time.time()
+        tool = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "report", "seed_sense.py")
+        subprocess.Popen([sys.executable, "-I", tool, self.q, "--history", hist], stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+
     # ---- the clone: the rules cloned again on the GPU each time they move (Paul's step 3) -------
     # Paul, 4 November, of the GPU as a growth step: "GPU trainer as a stage", the net "Re-clone the
     # rules", judged by "Census + gauntlets". The Scholar (style 6) is a net that learned by imitating the
@@ -5435,6 +5456,10 @@ class Plan:
             self.footage_watch()
         except Exception as e:  # footage missed is asked again at the next plan
             print("footage: %s" % e, file=sys.stderr)
+        try:
+            self.map_watch()
+        except Exception as e:  # a line missed is written at the next plan
+            print("maps: %s" % e, file=sys.stderr)
         # The rules cloned on the card each time they move (Paul's step 3).
         try:
             jobs += self.clone_jobs()
