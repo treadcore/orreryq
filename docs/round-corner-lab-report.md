@@ -17,7 +17,7 @@ Paul asked what it takes for a net to make the two-part move round a corner: wha
 - two memory cells;
 - progress paid along the route.
 
-It also has breakable walls, a breach file (B1), a one-bar file (M0), treadcore's `ends_near` ask, and four route-only mazes (N0 to N3). The net grows from 55-48-48-4 to 64-48-48-6 at +10% of its weights. A generation costs 1.8× the forest build's; the wave is about 8 seconds of the 18 extra, and the rest is not yet found.
+It also has breakable walls, a breach file (B1), a one-bar file (M0), treadcore's `ends_near` ask, and four route-only mazes (N0 to N3). The net grows from 55-48-48-4 to 64-48-48-6 at +10% of its weights. On a card of its own it plays as fast as the forest build; beside another process it runs at half speed.
 
 **The senses were not enough.** Four arms of 30 generations, in two controlled pairs, passed no maze. The senses tripled the paired step (+0.0108 ± 0.0023 against +0.0034 ± 0.0021), but on other files, and their weights never grew past mutation's drift: a norm of 1 against an old input's 55.
 
@@ -258,7 +258,7 @@ Each film follows one run of a gauntlet file, the best of 16 (a pass first), wit
 
 *Table V. Tank-steps a second is crucible's own count (`steps_per_s`).*
 
-**The senses cost 1.8× a generation, and the lazy wave saved nothing.** Four more builds were timed the same way to find where the time goes:
+**Beside the island's segment the senses cost 1.8× a generation, and the lazy wave saved nothing.** Four more builds were timed the same way to find where the time goes:
 
 | Build | Seconds a generation | What it tests |
 |---|---|---|
@@ -273,7 +273,21 @@ Each film follows one run of a gauntlet file, the best of 16 (a pass first), wit
 - **The wave is about 8 of the 18 extra seconds.** The lazy test asks whether the line of *sight* is clear, and in the forest arena a grove blocks sight. So the wave still runs about as often as before.
 - **Testing whether the line can be *driven* is not the answer.** It saves 3.5 seconds, but it routes the tank straight into a grove. F2, "round the trees", fell from 256 runs to 0, and F3 from 90 to 10. It is not kept.
 
-**The other 10 seconds are not yet found.** The wave made once a duel is still 1.45× the forest build. That is more than the wider net (+10%) and the route sense's few tests every third step should cost. The profiler (Nsight Compute, on boburner) is the next tool.
+**The other 10 seconds were the card's other tenant.** Every timing above was made on boburner beside its island's own segment, which was running most of the time. Two builds instrumented with the GPU's own clock (`clock64`, one lane a warp, since its performance counters need root) were run when the card was free. They played **21.5 million steps a second for the forest build and 22.5 for the maze build**. On a card of its own the maze build costs no more a step.
+
+| Part of a decision | Forest build | Maze build |
+|---|---|---|
+| The route sense (its wave included) | — | 33% |
+| The arcs | — | 6% |
+| The senses (rays, pillboxes, groves) | 41% | 26% |
+| The rules and the errand | 2% | 2% |
+| The net (`think`) | 57% | 34% |
+
+*Table VII. Shares of the clock spent in a decision, ten generations each. The two builds played different work: the maze build passes its tasks and stops early.*
+
+Beside another process, the maze build drops to about 10 million steps a second, while the forest build holds about 21. The maze build moves much more per-thread memory (a 6.5 KB stack against 0.8 KB, its route fields and the wave's queue), and the other process's kernels evict it from the cache. On an island the segment has the card to itself, so the maze home pays little.
+
+**Filling the card.** Each block holds its net's weights in shared memory (46 KB), so a Pascal SM, with 96 KB, holds two blocks: 256 threads of the 2,048 it could run (12%). A second population, in this process or another, needs the same 46 KB a block and adds no blocks; it only splits the card. More duels a net does fill it: at `--eps 256` a block is 256 threads sharing the same weights. That doubles occupancy to 25% for no shared memory, and a generation plays twice the duels in 1.57× the time (12.1 against 10.4 million steps a second, both beside the island's segment).
 
 ## X. What is not built, and what comes next
 
@@ -282,6 +296,13 @@ Each film follows one run of a gauntlet file, the best of 16 (a pass first), wit
 - The trade cap stays, and training goes on (section V).
 - The cost is cut before the maze build goes to the fleet, measured as Table V was. Then crucible's forest branch is merged and the planner switched to the nav home.
 - Both treadcore changes are built, each with its own LR: `nav_senses` for the Gladiator, so the game can read and credit a maze net, and the `w_breach` intrusion dial.
+
+**Done the same night (Paul's answers).**
+
+- **The maze home is on the fleet.** crucible main fast-forwarded to the forest branch, `crucible.nav = true`: the home `crucible-world-hybrid-forest-nav`, its parent the forest home. Its milestones were carried over and widened.
+- **A wall takes the gun in both games** (treadcore LR 154, game 9; crucible bf0c99d). Two aimed direct hits open a treadcore wall two tiles wide; every crucible wall breaks the same way, opening three tiles for its wider tank. The mortar still fells walls, and the breach uses the gun in range. Game 8's queued `weights` jobs were stopped.
+- **256 duels a net** on the islands (`crucible.eps`), for twice the occupancy.
+- **treadcore LR 152 and 153 pushed**: the Gladiator reads maze nets, and the intrusion dial is in, off by default.
 
 **What the experiments say to do next, cheapest first:**
 
