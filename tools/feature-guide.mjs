@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Paul Richeson
 //
-// THE FEATURE GUIDE'S PICTURES, TAKEN. docs/FEATURE_GUIDE.md is a tour of the
+// THE MUSEUM GUIDE'S PICTURES, TAKEN. docs/MUSEUM_GUIDE.md is a tour of the
 // console in pictures; this is what took them, and running it again retakes
 // every one from the binary as it stands.
 //

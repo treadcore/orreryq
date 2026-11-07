@@ -140,8 +140,8 @@ drew of the running fleet with its own `--frame` renderer, no screen involved.
 </tr>
 </table>
 
-[docs/FEATURE_GUIDE.md](docs/FEATURE_GUIDE.md) tours the older screens in
-pictures, taken from the demo fixture; [orreryq.com](https://orreryq.com) has
+[docs/FEATURE_GUIDE.md](docs/FEATURE_GUIDE.md) tours every chapter and every
+page in pictures, from the live queue; [orreryq.com](https://orreryq.com) has
 the rest.
 
 ## What it makes
@@ -190,7 +190,7 @@ model. This repository is two of them and then some:
 All three render the same read model, and that model is `copal fleet state` and
 nothing else.
 
-[docs/FEATURE_GUIDE.md](docs/FEATURE_GUIDE.md) is a tour of all three in pictures, taken from the demo fixture.
+[docs/MUSEUM_GUIDE.md](docs/MUSEUM_GUIDE.md) is a tour of all three in pictures, taken from the demo fixture.
 
 ### The rule it inherits
 

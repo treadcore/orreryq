@@ -1,0 +1,51 @@
+# docs/FEATURE_GUIDE.md's pictures: every chapter of the window and every page in it, from the live queue,
+# in the window's own order. Run by double-shots.sh (SHOTS=this OUT=docs/features/live).
+# 1 Machines
+shot 1-machines machines $T/machines.json
+shot 1-media media ""
+shot 1-storage storage $T/storage.json
+# 2 Projects
+shot 2-projects projects $J
+# 3 Queue: the queue's two pages, then the Pipeline's eight
+shot 3-fleet queue $J ORRERY_FRAME_PAGE=0
+shot 3-runs queue $J ORRERY_FRAME_PAGE=1
+shot 3-board pipeline $P ORRERY_FRAME_PAGE=0
+shot 3-flow pipeline $P ORRERY_FRAME_PAGE=1
+shot 3-timeline pipeline $P ORRERY_FRAME_PAGE=2
+shot 3-queued pipeline $P ORRERY_FRAME_PAGE=3
+shot 3-values pipeline $P ORRERY_FRAME_PAGE=4
+shot 3-blame pipeline $P ORRERY_FRAME_PAGE=5
+shot 3-lineup pipeline $P ORRERY_FRAME_PAGE=6
+shot 3-parade pipeline $P ORRERY_FRAME_PAGE=7
+# 4 Results, the rail's order
+shot 4-candidates results $J ORRERY_FRAME_PAGE=5
+shot 4-found results $J ORRERY_FRAME_PAGE=2
+shot 4-net results $J ORRERY_FRAME_PAGE=3
+shot 4-nets results $J ORRERY_FRAME_PAGE=13
+shot 4-growth results $J ORRERY_FRAME_PAGE=14
+shot 4-generations results $J ORRERY_FRAME_PAGE=18 ORRERY_FRAME_GTAB=0
+shot 4-generations-gpu results $J ORRERY_FRAME_PAGE=18 ORRERY_FRAME_GTAB=4
+shot 4-generations-gauntlet results $J ORRERY_FRAME_PAGE=18 ORRERY_FRAME_GTAB=5
+shot 4-recordings results $J ORRERY_FRAME_PAGE=15
+shot 4-montage results $J ORRERY_FRAME_PAGE=16
+shot 4-videos results $J ORRERY_FRAME_PAGE=17
+shot 4-algorhythm results $J ORRERY_FRAME_PAGE=8 ORRERY_FRAME_TAB=0
+shot 4-terrain results $J ORRERY_FRAME_PAGE=8 ORRERY_FRAME_TAB=1
+shot 4-matrices results $J ORRERY_FRAME_PAGE=8 ORRERY_FRAME_TAB=3
+shot 4-personas results $J ORRERY_FRAME_PAGE=10
+shot 4-gauntlet results $J ORRERY_FRAME_PAGE=12
+shot 4-flags results $J ORRERY_FRAME_PAGE=4
+# 5 Watch
+shot 5-lab lab ""
+shot 5-sessions sessions ""
+# 6 Fleet
+shot 6-orchestrate fleet $T/fleet.json
+shot 6-chat chat $T/chat.json
+# 7 Settings
+shot 7-keeper settings $J ORRERY_FRAME_PAGE=6
+shot 7-longrun settings $J ORRERY_FRAME_PAGE=9
+shot 7-ranges settings $J ORRERY_FRAME_PAGE=11
+shot 7-commits settings $J ORRERY_FRAME_PAGE=7
+# On every page: the inspector under the pointer, and "About this screen" open
+shot 0-inspector pipeline $P ORRERY_FRAME_PAGE=0 ORRERY_FRAME_HOVER=300,190
+shot 0-about queue $J ORRERY_FRAME_PAGE=0 ORRERY_FRAME_ABOUT=1

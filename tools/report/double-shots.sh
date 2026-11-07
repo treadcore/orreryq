@@ -1,8 +1,10 @@
 #!/bin/sh
 # double-shots.sh QUEUE: every screen of Orrery from the live run, for docs/double-report.md, by the
 # program's own --frame renderer. shot NAME VIEW DOC [ENV=VALUE ...]: a picture at 1400x860.
+# SHOTS=list OUT=folder ORRERY_BIN=binary take another set: the feature guide's is
+#   SHOTS=tools/report/feature-shots.list OUT=docs/features/live tools/report/double-shots.sh QUEUE
 set -u
-Q=$1; cd "$(dirname "$0")/../.."; D=docs/double; T=$(mktemp -d); B=target/release/orrery; mkdir -p $D
+Q=$1; cd "$(dirname "$0")/../.."; D=${OUT:-docs/double}; T=$(mktemp -d); B=${ORRERY_BIN:-target/release/orrery}; mkdir -p $D
 python3 -I tools/plans/treadcore-view.py --queue "$Q" > $T/status.json
 python3 tools/machines.py "$Q" status > $T/machines.json 2>/dev/null
 python3 tools/storage.py "$Q" status > $T/storage.json 2>/dev/null
