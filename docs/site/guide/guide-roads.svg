@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" width="960" height="640" role="img" aria-label="Two roads into the game. On CPUs the census reads a trial of the brain&#x27;s dials on 55 seeds, reads on, holds it out on 400 new seeds, puts it through 9 families, 22 gauntlets and 168 tests, and onto the line and main. On CUDA a population evolves a segment of 100 generations, is weighed on crucible&#x27;s gauntlet against the bar, is elected a milestone, filmed on 12 tests, read by the census as the Gladiator and shipped as a net file.">
+<title>Two roads into the game. On CPUs the census reads a trial of the brain&#x27;s dials on 55 seeds, reads on, holds it out on 400 new seeds, puts it through 9 families, 22 gauntlets and 168 tests, and onto the line and main. On CUDA a population evolves a segment of 100 generations, is weighed on crucible&#x27;s gauntlet against the bar, is elected a milestone, filmed on 12 tests, read by the census as the Gladiator and shipped as a net file.</title>
+<rect x="0.5" y="0.5" width="959" height="639" rx="14" fill="#0a0c0a" stroke="#2b2c2e"/>
+<text x="36" y="44" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#ffbf4d" font-weight="700" text-anchor="start" letter-spacing="1.2">THE CENSUS, ON CPUs</text>
+<text x="36" y="62" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">the hand-written brain&#x27;s dials</text>
+<text x="524" y="44" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#73c7ff" font-weight="700" text-anchor="start" letter-spacing="1.2">THE ISLANDS, ON CUDA</text>
+<text x="524" y="62" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">the learned net, crucible&#x27;s</text>
+<rect x="36" y="80" width="400" height="72" rx="7" fill="#111511" stroke="#ffbf4d" stroke-width="1.4"/>
+<circle cx="56" cy="99" r="10" fill="#ffbf4d"/>
+<text x="56" y="103.5" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#0a0c0a" font-weight="800" text-anchor="middle">1</text>
+<text x="74" y="104" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#e6ede6" font-weight="700" text-anchor="start">Trial</text>
+<text x="48" y="124" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">a few dials moved, drawn from the fit</text>
+<text x="48" y="140" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">of every census so far (suggest.py)</text>
+<rect x="36" y="170" width="400" height="72" rx="7" fill="#111511" stroke="#ffbf4d" stroke-width="1.4"/>
+<circle cx="56" cy="189" r="10" fill="#ffbf4d"/>
+<text x="56" y="193.5" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#0a0c0a" font-weight="800" text-anchor="middle">2</text>
+<text x="74" y="194" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#e6ede6" font-weight="700" text-anchor="start">First read</text>
+<text x="48" y="214" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">55 seeds against today&#x27;s defaults;</text>
+<text x="48" y="230" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">the hopeless are dropped for the price</text>
+<defs><marker id="m16" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#ffbf4d"/></marker></defs>
+<polyline points="236,152 236,168" fill="none" stroke="#ffbf4d" stroke-width="2" marker-end="url(#m16)"/>
+<rect x="36" y="260" width="400" height="72" rx="7" fill="#111511" stroke="#ffbf4d" stroke-width="1.4"/>
+<circle cx="56" cy="279" r="10" fill="#ffbf4d"/>
+<text x="56" y="283.5" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#0a0c0a" font-weight="800" text-anchor="middle">3</text>
+<text x="74" y="284" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#e6ede6" font-weight="700" text-anchor="start">Read on, then held out</text>
+<text x="48" y="304" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">more seeds until it is decided (about 190);</text>
+<text x="48" y="320" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">then 400 seeds no search has seen</text>
+<defs><marker id="m24" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#ffbf4d"/></marker></defs>
+<polyline points="236,242 236,258" fill="none" stroke="#ffbf4d" stroke-width="2" marker-end="url(#m24)"/>
+<rect x="36" y="350" width="400" height="72" rx="7" fill="#111511" stroke="#ffbf4d" stroke-width="1.4"/>
+<circle cx="56" cy="369" r="10" fill="#ffbf4d"/>
+<text x="56" y="373.5" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#0a0c0a" font-weight="800" text-anchor="middle">4</text>
+<text x="74" y="374" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#e6ede6" font-weight="700" text-anchor="start">Families, gauntlet, tests</text>
+<text x="48" y="394" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">9 families, 22 gauntlets, 168 tests,</text>
+<text x="48" y="410" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">each at its floor</text>
+<defs><marker id="m32" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#ffbf4d"/></marker></defs>
+<polyline points="236,332 236,348" fill="none" stroke="#ffbf4d" stroke-width="2" marker-end="url(#m32)"/>
+<rect x="36" y="440" width="400" height="72" rx="7" fill="#111511" stroke="#ffbf4d" stroke-width="1.4"/>
+<circle cx="56" cy="459" r="10" fill="#ffbf4d"/>
+<text x="56" y="463.5" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#0a0c0a" font-weight="800" text-anchor="middle">5</text>
+<text x="74" y="464" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#e6ede6" font-weight="700" text-anchor="start">The line</text>
+<text x="48" y="484" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">committed on orrery/accepted,</text>
+<text x="48" y="500" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">built on every machine</text>
+<defs><marker id="m40" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#ffbf4d"/></marker></defs>
+<polyline points="236,422 236,438" fill="none" stroke="#ffbf4d" stroke-width="2" marker-end="url(#m40)"/>
+<rect x="36" y="530" width="400" height="72" rx="7" fill="#111511" stroke="#33f24d" stroke-width="1.4"/>
+<circle cx="56" cy="549" r="10" fill="#33f24d"/>
+<text x="56" y="553.5" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#0a0c0a" font-weight="800" text-anchor="middle">6</text>
+<text x="74" y="554" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#e6ede6" font-weight="700" text-anchor="start">Main</text>
+<text x="48" y="574" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">main&#x27;s values against the line,</text>
+<text x="48" y="590" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">800 seeds an hour, until z ≥ 3</text>
+<defs><marker id="m48" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#33f24d"/></marker></defs>
+<polyline points="236,512 236,528" fill="none" stroke="#33f24d" stroke-width="2" marker-end="url(#m48)"/>
+<rect x="524" y="80" width="400" height="72" rx="7" fill="#111511" stroke="#73c7ff" stroke-width="1.4"/>
+<circle cx="544" cy="99" r="10" fill="#73c7ff"/>
+<text x="544" y="103.5" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#0a0c0a" font-weight="800" text-anchor="middle">1</text>
+<text x="562" y="104" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#e6ede6" font-weight="700" text-anchor="start">A segment</text>
+<text x="536" y="124" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">100 generations of a population on one card:</text>
+<text x="536" y="140" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">trees, walls, takeovers, mazes and camps</text>
+<rect x="524" y="170" width="400" height="72" rx="7" fill="#111511" stroke="#73c7ff" stroke-width="1.4"/>
+<circle cx="544" cy="189" r="10" fill="#73c7ff"/>
+<text x="544" y="193.5" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#0a0c0a" font-weight="800" text-anchor="middle">2</text>
+<text x="562" y="194" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#e6ede6" font-weight="700" text-anchor="start">The CUDA gauntlet</text>
+<text x="536" y="214" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">24 files, weighed by how hard each is:</text>
+<text x="536" y="230" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">a z against the bar, and every floor held</text>
+<defs><marker id="m62" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#73c7ff"/></marker></defs>
+<polyline points="724,152 724,168" fill="none" stroke="#73c7ff" stroke-width="2" marker-end="url(#m62)"/>
+<rect x="524" y="260" width="400" height="72" rx="7" fill="#111511" stroke="#73c7ff" stroke-width="1.4"/>
+<circle cx="544" cy="279" r="10" fill="#73c7ff"/>
+<text x="544" y="283.5" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#0a0c0a" font-weight="800" text-anchor="middle">3</text>
+<text x="562" y="284" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#e6ede6" font-weight="700" text-anchor="start">Elected: a milestone</text>
+<text x="536" y="304" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">every floor held, no worse on the yardstick,</text>
+<text x="536" y="320" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">over the bar, or ahead of the champion head to head</text>
+<defs><marker id="m70" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#73c7ff"/></marker></defs>
+<polyline points="724,242 724,258" fill="none" stroke="#73c7ff" stroke-width="2" marker-end="url(#m70)"/>
+<rect x="524" y="350" width="400" height="72" rx="7" fill="#111511" stroke="#73c7ff" stroke-width="1.4"/>
+<circle cx="544" cy="369" r="10" fill="#73c7ff"/>
+<text x="544" y="373.5" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#0a0c0a" font-weight="800" text-anchor="middle">4</text>
+<text x="562" y="374" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#e6ede6" font-weight="700" text-anchor="start">Filmed</text>
+<text x="536" y="394" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">12 tests, 8 runs each, a sheet and a reel;</text>
+<text x="536" y="410" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">a card with what made the net</text>
+<defs><marker id="m78" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#73c7ff"/></marker></defs>
+<polyline points="724,332 724,348" fill="none" stroke="#73c7ff" stroke-width="2" marker-end="url(#m78)"/>
+<rect x="524" y="440" width="400" height="72" rx="7" fill="#111511" stroke="#73c7ff" stroke-width="1.4"/>
+<circle cx="544" cy="459" r="10" fill="#73c7ff"/>
+<text x="544" y="463.5" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#0a0c0a" font-weight="800" text-anchor="middle">5</text>
+<text x="562" y="464" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#e6ede6" font-weight="700" text-anchor="start">Bridge read</text>
+<text x="536" y="484" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">the census plays it as style 17, the Gladiator:</text>
+<text x="536" y="500" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">two censuses of 48 seeds, every map</text>
+<defs><marker id="m86" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#73c7ff"/></marker></defs>
+<polyline points="724,422 724,438" fill="none" stroke="#73c7ff" stroke-width="2" marker-end="url(#m86)"/>
+<rect x="524" y="530" width="400" height="72" rx="7" fill="#111511" stroke="#33f24d" stroke-width="1.4"/>
+<circle cx="544" cy="549" r="10" fill="#33f24d"/>
+<text x="544" y="553.5" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#0a0c0a" font-weight="800" text-anchor="middle">6</text>
+<text x="562" y="554" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#e6ede6" font-weight="700" text-anchor="start">nets/gladiator.bin</text>
+<text x="536" y="574" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">on main beside the milestones;</text>
+<text x="536" y="590" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" fill="#9fb0a2" font-weight="400" text-anchor="start">it ships itself</text>
+<defs><marker id="m94" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#33f24d"/></marker></defs>
+<polyline points="724,512 724,528" fill="none" stroke="#33f24d" stroke-width="2" marker-end="url(#m94)"/>
+<defs><marker id="m96" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#73c7ff"/></marker></defs>
+<polyline points="452,476 520,476" fill="none" stroke="#73c7ff" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#m96)"/>
+<text x="482" y="467" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" fill="#73c7ff" font-weight="600" text-anchor="middle">the CPUs</text>
+<text x="482" y="495" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" fill="#73c7ff" font-weight="600" text-anchor="middle">play it</text>
+<text x="480" y="200" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" fill="#6f7f72" font-weight="400" text-anchor="middle">no GPU number</text>
+<text x="480" y="214" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" fill="#6f7f72" font-weight="400" text-anchor="middle">reaches</text>
+<text x="480" y="228" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" fill="#6f7f72" font-weight="400" text-anchor="middle">the dials</text>
+</svg>

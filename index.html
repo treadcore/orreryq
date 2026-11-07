@@ -3,24 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Orrery — the fleet that trains treadcore's bots</title>
-<meta name="description" content="Orrery is the console and the fleet that train treadcore's bots: one queue across a room of machines, a planner that decides what to read next, and a line from a guessed number to a commit in the game. Rust with no crates, a brushed-metal console on macOS, Linux nodes, CUDA islands.">
+<title>Orreryq — the Orrery Queue</title>
+<meta name="description" content="Orreryq, the Orrery Queue, is the console and the fleet that train treadcore's bots: one queue across a room of machines, a planner that decides what to read next, and a line from a guessed number to a commit in the game. Rust with no crates, a brushed-metal console on macOS, Linux nodes, CUDA islands.">
 <link rel="canonical" href="https://orreryq.com/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Orrery — the fleet that trains treadcore's bots">
-<meta property="og:description" content="Eleven machines, ninety-eight percent busy, one queue, one brain. The console, the keeper and the planner behind treadcore's generations.">
+<meta property="og:title" content="Orreryq — the Orrery Queue">
+<meta property="og:description" content="A room of ordinary machines, one queue, and the console that runs them: the planner, the keeper and the islands behind treadcore's generations.">
 <meta property="og:url" content="https://orreryq.com/">
 <meta property="og:image" content="https://orreryq.com/docs/site/shots/pipe-board.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="docs/site/assets/site.css">
 <style>
-/* Orrery's own few lines over treadcore.org's stylesheet: the numbers table and the readme list. */
+/* Orreryq's own few lines over treadcore.org's stylesheet: the numbers table, the readme list, and the guide. */
 .facts{width:100%;border-collapse:collapse;font:500 .92rem/1.4 var(--mono)}
 .facts th,.facts td{padding:.55rem .8rem;text-align:left;border-bottom:1px solid rgba(255,255,255,.08)}
 .facts th{font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.72rem}
 .facts td.n{text-align:right;white-space:nowrap}
 .tiles .screen{height:11rem}
 .readmes code{font-size:.8em}
+.guide-fig{margin:0 auto 1.6rem;max-width:62rem}
+.guide-fig .monitor img{image-rendering:auto;display:block}
+.guide-fig figcaption{margin:.7rem .4rem 0;font:.82rem/1.5 var(--mono);color:var(--ink);text-shadow:0 1px 3px #000}
+.pieces{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr));margin:0 0 2.4rem}
+.pieces>div{padding:1rem 1.15rem;border-radius:12px;color:var(--etch);min-width:0}
+.pieces .label{margin:0 0 .4rem}
+.pieces b{display:block;font:800 1.12rem/1.25 var(--sans);margin-bottom:.35rem}
+.pieces span{display:block;font-size:.9rem;color:var(--etch-soft)}
+.pieces code{font-size:.82em;background:rgba(0,0,0,.12);padding:.05em .3em;border-radius:4px;overflow-wrap:anywhere}
 </style>
 <script src="docs/site/assets/site.js" defer></script>
 <script src="docs/site/assets/field.js" defer></script>
@@ -30,9 +39,10 @@
 <canvas class="field" aria-hidden="true"></canvas><div class="veil" aria-hidden="true"></div>
 
 <nav class="nav" aria-label="Site"><div class="wrap"><div class="bar metal">
-<a class="brand etched" href="index.html"><svg viewBox="0 0 13 13" aria-hidden="true"><rect x="5" y="5" width="3" height="3" fill="#ffbf4d"/><rect x="1" y="6" width="2" height="1" fill="#111"/><rect x="10" y="6" width="2" height="1" fill="#111"/><rect x="6" y="1" width="1" height="2" fill="#111"/><rect x="6" y="10" width="1" height="2" fill="#111"/><rect x="2" y="2" width="2" height="2" fill="#73c7ff"/><rect x="9" y="9" width="2" height="2" fill="#bfa070"/><rect x="10" y="2" width="1" height="1" fill="#805e40"/></svg>ORRERY</a>
+<a class="brand etched" href="index.html"><svg viewBox="0 0 13 13" aria-hidden="true"><rect x="5" y="5" width="3" height="3" fill="#ffbf4d"/><rect x="1" y="6" width="2" height="1" fill="#111"/><rect x="10" y="6" width="2" height="1" fill="#111"/><rect x="6" y="1" width="1" height="2" fill="#111"/><rect x="6" y="10" width="1" height="2" fill="#111"/><rect x="2" y="2" width="2" height="2" fill="#73c7ff"/><rect x="9" y="9" width="2" height="2" fill="#bfa070"/><rect x="10" y="2" width="1" height="1" fill="#805e40"/></svg>ORRERYQ</a>
 <ul>
 <li><a class="btn lit" href="docs/reports.html">Lab reports</a></li>
+<li class="wide"><a class="btn" href="#guide">The guide</a></li>
 <li class="wide"><a class="btn" href="#tour">The console</a></li>
 <li class="wide"><a class="btn" href="docs/index.html">The design set</a></li>
 <li class="wide"><a class="btn" href="#source">READMEs</a></li>
@@ -43,11 +53,12 @@
 
 <header class="hero"><div class="wrap">
 <div class="plate metal screws"><span class="foot"></span>
-<p class="eyebrow label etched">Eleven machines &middot; one queue &middot; one brain</p>
-<h1 class="etched">Orrery</h1>
-<p class="lcd screen scan phos">The fleet that trains <a href="https://treadcore.org/">treadcore</a>'s bots, and the console that runs it. <b>A planner guesses a number, the machines read it, and what holds goes into the game.</b></p>
+<p class="eyebrow label etched">The Orrery Queue &middot; nine machines &middot; one brain</p>
+<h1 class="etched">Orreryq</h1>
+<p class="lcd screen scan phos">A room of ordinary machines, one queue, and the console that runs them: the fleet that trains <a href="https://treadcore.org/">treadcore</a>'s bots. <b>A planner guesses a number, the machines read it, and what holds goes into the game.</b></p>
 <div class="cta">
 <a class="btn lit" href="docs/reports.html">Lab reports</a>
+<a class="btn" href="#guide">What it is</a>
 <a class="btn" href="#tour">The console</a>
 <a class="btn" href="https://github.com/treadcore/orreryq">Source</a>
 </div>
@@ -62,6 +73,22 @@
 </div></header>
 
 <main id="main">
+<section class="sec" id="guide"><div class="wrap">
+<div class="head metal reveal"><h2 class="etched">What Orreryq is</h2><p>The Orrery Queue. Every job the fleet runs is a file in one folder, and every answer comes back as one: no server, no database, no message bus. A folder, ssh, and a program that reads both.</p></div>
+<figure class="guide-fig reveal"><div class="monitor metal"><div class="screen"><img src="docs/site/guide/guide-loop.svg" width="960" height="600" alt="The Orrery Queue in one picture: the planner writes jobs into one queue on the Mac; the keeper hands each free lane its next job over ssh; nine CPU lanes play the game's census and three GPU lanes evolve crucible's nets; every job comes back as a file the planner reads; what holds goes onto the line and then treadcore's main, and an elected net ships to nets/"><span class="sheen"></span></div></div>
+<figcaption>The loop: the planner writes, the keeper hands out, the lanes play, a file comes back, the planner reads. What held goes to the game.</figcaption></figure>
+<div class="pieces">
+<div class="metal reveal"><p class="label etched">1 &middot; the planner</p><b class="etched">Guesses, reads, promotes.</b><span>Reads every result each pass and writes the next jobs: what to try, what to read on, what to hold out. Read fresh each pass, so a change to it needs no restart. <code>tools/plans/treadcore.py</code></span></div>
+<div class="metal reveal"><p class="label etched">2 &middot; the queue</p><b class="etched">A folder, and nothing more.</b><span><code>plan.json</code>, a job a file, <code>results/</code> and <code>events.jsonl</code>. It is the only state there is, and a person can read all of it.</span></div>
+<div class="metal reveal"><p class="label etched">3 &middot; the keeper</p><b class="etched">A free lane, a next job.</b><span>Hands it over ssh with the code it needs, copies the answer back, and keeps its running jobs across its own restart. <code>tools/fleet-queue.py</code></span></div>
+<div class="metal reveal"><p class="label etched">4 &middot; the lanes</p><b class="etched">Nine machines, twelve lanes.</b><span>Nine CPU lanes play treadcore's census, the game itself with no screen. Three CUDA cards, in three of the same machines, run crucible's islands.</span></div>
+<div class="metal reveal"><p class="label etched">5 &middot; the line</p><b class="etched">What held, committed.</b><span><code>orrery/accepted</code> in treadcore, built on every machine. It goes to <code>main</code> when main's own values fall three standard errors behind it.</span></div>
+<div class="metal reveal"><p class="label etched">6 &middot; the console</p><b class="etched">One window, every file drawn.</b><span>Seven chapters, a button for each thing a person may do and none for anything else. Rust with an empty <code>[dependencies]</code>.</span></div>
+</div>
+<figure class="guide-fig reveal"><div class="monitor metal"><div class="screen"><img src="docs/site/guide/guide-roads.svg" width="960" height="640" alt="Two roads into the game. On CPUs the census reads a trial of the brain's dials on 55 seeds, reads on, holds it out on 400 new seeds, puts it through 9 families, 22 gauntlets and 168 tests, and onto the line and main. On CUDA a population evolves a segment of 100 generations, is weighed on crucible's gauntlet against the bar, is elected a milestone, filmed on 12 tests, read by the census as the Gladiator and shipped as a net file" loading="lazy"><span class="sheen"></span></div></div>
+<figcaption>Two roads into the game. The census tunes the hand-written brain's dials; the islands evolve the learned net. No GPU number reaches the dials: the one bridge is the census, which plays an elected net as a style, the Gladiator, and ships it when it holds.</figcaption></figure>
+</div></section>
+
 <section class="sec" id="tour"><div class="wrap">
 
 <article class="show">
@@ -82,10 +109,10 @@
 <article class="show flip">
 <div class="text metal reveal">
 <p class="label etched">The machines</p>
-<h3 class="etched">Eleven lanes, <span class="dim">ninety-eight percent busy.</span></h3>
+<h3 class="etched">Twelve lanes, <span class="dim">ninety-eight percent busy.</span></h3>
 <ul class="beats">
-<li class="screen"><b>Eight CPU machines</b> play the census, three thousand jobs a day, the search's first reads and read-ons most of it.</li>
-<li class="screen"><b>Three GPU cards</b> evolve crucible's islands, a population per card, a segment every twelve minutes.</li>
+<li class="screen"><b>Nine CPU lanes</b> play the census, four thousand jobs a day, the search's first reads and read-ons most of it.</li>
+<li class="screen"><b>Three GPU cards</b> evolve crucible's islands, a population per card, a segment at a time.</li>
 <li class="screen"><b>The keeper</b> hands each free lane its next job, and keeps its running jobs across its own restart.</li>
 </ul>
 <p class="deck">Left of now is measured; right of now is a forecast, and says so.</p>
@@ -124,16 +151,52 @@
 <figcaption>Results, Algorhythm: the terrain the search climbs, and where its maxima are.</figcaption></figure>
 </article>
 
+<article class="show">
+<div class="text metal reveal">
+<p class="label etched">The islands</p>
+<h3 class="etched">Three cards, <span class="dim">one net.</span></h3>
+<ul class="beats">
+<li class="screen"><b>A segment</b> is 100 generations of a population on one card: trees, walls, takeovers, mazes and reward camps.</li>
+<li class="screen"><b>Elected on the gauntlet:</b> 24 files weighed by how hard each is, every floor held, the bar cleared or the champion beaten head to head.</li>
+<li class="screen"><b>Read in the game:</b> the census plays the newest as the Gladiator, and it ships when it holds.</li>
+</ul>
+<p class="deck">The bar eases while the islands are dry and tightens after each election.</p>
+</div>
+<figure class="shot" style="--glow:rgba(115,199,255,.3)"><div class="monitor metal"><div class="screen"><img src="docs/site/shots/res-gen-gauntlet.png" width="1400" height="860" alt="Results, Generations, Gauntlet: each GPU segment's weighed step on the gauntlet against the bar, and a table of the last four segments with their verdicts" loading="lazy"><span class="sheen"></span></div></div>
+<figcaption>Generations, Gauntlet: each segment's step against the bar. M0020 was elected at +25.92 z; the other three segments were read and not elected.</figcaption></figure>
+</article>
+
+<article class="show flip">
+<div class="text metal reveal">
+<p class="label etched">On film</p>
+<h3 class="etched">Every new generation, <span class="dim">twelve tests.</span></h3>
+<ul class="beats">
+<li class="screen"><b>Traced on a card:</b> each new milestone plays 12 tests, 8 runs each: mazes, walls, camps.</li>
+<li class="screen"><b>Filmed on the Mac:</b> a sheet four by three, and a reel that grows a generation at a time.</li>
+<li class="screen"><b>A card beside it:</b> the forebear, the election, the flags, the seed, the crucible commit, the tasks it trained on.</li>
+</ul>
+<p class="deck">Only the newly trained are filmed; each tile names its test and how many of its runs passed.</p>
+</div>
+<figure class="shot" style="--glow:rgba(51,242,77,.3)"><div class="monitor metal"><div class="screen"><img src="docs/full-card/footage-sheet-m0020.png" width="1278" height="768" alt="Footage sheet of milestone M0020 on nine tests, each a small film of the net driving a maze or a course, with its pass count" loading="lazy"><span class="sheen"></span></div></div>
+<figcaption>M0020 on the first nine tests: 0 of 72 runs passed. The baseline the maze home has to beat.</figcaption></figure>
+</article>
+
 </div></section>
 
 <section class="sec" id="screens"><div class="wrap">
-<div class="head metal reveal"><h2 class="etched">Every screen</h2><p>Captured from the running fleet at 10:05 on 5 November by the console's own <code>--frame</code> renderer. Seven chapters, one header: Machines, Projects, Queue, Results, Watch, Fleet, Settings.</p></div>
+<div class="head metal reveal"><h2 class="etched">Every screen</h2><p>Captured from the running fleet on 5 and 6 November by the console's own <code>--frame</code> renderer. Seven chapters, one header: Machines, Projects, Queue, Results, Watch, Fleet, Settings.</p></div>
 <div class="tiles">
 <a class="metal reveal" href="docs/site/shots/pipe-queued.png"><div class="screen"><img src="docs/site/shots/pipe-queued.png" alt="Queued" loading="lazy"></div><div class="cap"><b>Queued</b><span>What runs and waits, each saying why it is there.</span></div></a>
 <a class="metal reveal" href="docs/site/shots/pipe-values.png"><div class="screen"><img src="docs/site/shots/pipe-values.png" alt="Values" loading="lazy"></div><div class="cap"><b>Values</b><span>The numbers that set how hard a generation is.</span></div></a>
-<a class="metal reveal" href="docs/site/shots/queue-fleet.png"><div class="screen"><img src="docs/site/shots/queue-fleet.png" alt="Queue, Fleet" loading="lazy"></div><div class="cap"><b>Fleet</b><span>Each machine and its job, with the buttons.</span></div></a>
+<a class="metal reveal" href="docs/site/shots/queue-fleet-6nov.png"><div class="screen"><img src="docs/site/shots/queue-fleet-6nov.png" alt="Queue, Fleet" loading="lazy"></div><div class="cap"><b>Fleet</b><span>Each machine and its job, with the buttons.</span></div></a>
 <a class="metal reveal" href="docs/site/shots/machines.png"><div class="screen"><img src="docs/site/shots/machines.png" alt="Machines" loading="lazy"></div><div class="cap"><b>Machines</b><span>Probe, recipes, join: a fresh node from the console.</span></div></a>
 <a class="metal reveal" href="docs/site/shots/projects.png"><div class="screen"><img src="docs/site/shots/projects.png" alt="Projects" loading="lazy"></div><div class="cap"><b>Projects</b><span>treadcore and crucible, and which machine runs which.</span></div></a>
+<a class="metal reveal" href="docs/site/shots/res-gen-roads.png"><div class="screen"><img src="docs/site/shots/res-gen-roads.png" alt="Results, Generations, Roads" loading="lazy"></div><div class="cap"><b>Generations</b><span>The two roads to main, live, a box a stage.</span></div></a>
+<a class="metal reveal" href="docs/site/shots/res-nets.png"><div class="screen"><img src="docs/site/shots/res-nets.png" alt="Results, Nets" loading="lazy"></div><div class="cap"><b>Nets</b><span>Every learned net: its journey, its reads, its weights.</span></div></a>
+<a class="metal reveal" href="docs/site/shots/res-gauntlet.png"><div class="screen"><img src="docs/site/shots/res-gauntlet.png" alt="Results, Gauntlet" loading="lazy"></div><div class="cap"><b>Gauntlet</b><span>A row a test, a column a brain, red under the floor.</span></div></a>
+<a class="metal reveal" href="docs/site/shots/res-growth.png"><div class="screen"><img src="docs/site/shots/res-growth.png" alt="Results, Growth" loading="lazy"></div><div class="cap"><b>Growth</b><span>The islands as they grow, and the disks they fill.</span></div></a>
+<a class="metal reveal" href="docs/site/shots/res-personas.png"><div class="screen"><img src="docs/site/shots/res-personas.png" alt="Results, Personas" loading="lazy"></div><div class="cap"><b>Personas</b><span>The styles the census plays, the Gladiator among them.</span></div></a>
+<a class="metal reveal" href="docs/site/shots/res-videos.png"><div class="screen"><img src="docs/site/shots/res-videos.png" alt="Results, Videos" loading="lazy"></div><div class="cap"><b>Videos</b><span>The films the fleet made, with their data.</span></div></a>
 <a class="metal reveal" href="docs/site/shots/res-candidates.png"><div class="screen"><img src="docs/site/shots/res-candidates.png" alt="Candidates" loading="lazy"></div><div class="cap"><b>Candidates</b><span>Trials past both held-out reads.</span></div></a>
 <a class="metal reveal" href="docs/site/shots/algo-matrices.png"><div class="screen"><img src="docs/site/shots/algo-matrices.png" alt="Matrices" loading="lazy"></div><div class="cap"><b>Matrices</b><span>A champion's layers, a cell a weight.</span></div></a>
 <a class="metal reveal" href="docs/site/shots/set-keeper.png"><div class="screen"><img src="docs/site/shots/set-keeper.png" alt="Settings, Keeper" loading="lazy"></div><div class="cap"><b>Keeper</b><span>Is it running as it should: every check, a line each.</span></div></a>
@@ -185,7 +248,7 @@
 <a class="metal reveal" href="https://treadcore.org/"><p class="label etched">treadcore.org</p><b class="etched">The game's site</b><span>Download, how to play, the paper, and the lab reports posted there.</span><code class="screen phos">treadcore.org</code></a>
 </div>
 <ul class="links">
-<li><a class="btn lit" href="https://github.com/treadcore/orreryq">orrery on GitHub</a></li>
+<li><a class="btn lit" href="https://github.com/treadcore/orreryq">Orreryq on GitHub</a></li>
 <li><a class="btn" href="https://github.com/treadcore/treadcore">treadcore on GitHub</a></li>
 <li><a class="btn" href="https://github.com/treadcore/orreryq/tree/main/tools/plans">The planner</a></li>
 <li><a class="btn" href="https://github.com/treadcore/orreryq/blob/main/tools/fleet-queue.py">The keeper</a></li>
@@ -197,7 +260,7 @@
 
 <footer><div class="wrap"><div class="bar metal">
 <ul><li><a href="docs/reports.html">Lab reports</a></li><li><a href="docs/index.html">The design set</a></li><li><a href="https://treadcore.org/">treadcore.org</a></li><li><a href="https://github.com/treadcore/orreryq">GitHub</a></li></ul>
-<p>orrery &mdash; MIT. Copyright &copy; 2026 Paul Richeson. The style is treadcore.org's, with its stylesheet. Every picture on this page is a frame the console drew of the running fleet.</p>
+<p>Orreryq, the Orrery Queue &mdash; MIT. Copyright &copy; 2026 Paul Richeson. The style is treadcore.org's, with its stylesheet. Every screen on this page is a frame the console drew of the running fleet; the films are crucible's own traces, drawn by orrery's report tools.</p>
 </div></div></footer>
 </body>
 </html>
