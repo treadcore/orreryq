@@ -246,8 +246,10 @@ Six tests hold it: among them, a maze champion widened from a world one (every n
 |---|---|
 | The MP4, 44.7 minutes, 1280 × 720, 15 frames a second, x264 | 26.3 MB |
 | The bundle: the page as seven WebP tiles (2.1 MB), its 9 films (1 MB), the timeline (32 KB), the player | 3.2 MB |
+| *Every Generation on Film*, read along: 41.4 minutes, the same size and rate, AV1 (SVT-AV1, screen-content tools on) | 14.0 MB |
+| Its bundle: the page's tiles, timeline and player (1.75 MB), and its 15 films (17.5 MB, 12.2 MB of them montage 4) | 19.2 MB |
 
-*Table II. A minute of the video is 0.59 MB; the bundle, which a browser plays as smoothly, is an eighth of it. The bundle is the new format Paul allowed for: `index.html`, `timeline.json`, `page-NN.webp` and `films/`.*
+*Table II. A minute of the x264 video is 0.59 MB and of the AV1 video 0.34 MB (two pages, but alike in kind: text, diagrams and films). The bundle, which a browser plays as smoothly, carries the page itself in under 2 MB; what it weighs beyond that is its films, which it plays as they are. It is the new format Paul allowed for: `index.html`, `timeline.json`, `page-NN.webp` and `films/`.*
 
 ## XI. Telling a verdict sooner
 
@@ -316,10 +318,10 @@ With these, a later look can ask which training made which change, and which blo
 
 1. **The maze home's first generations**, read on the gauntlet, filmed, and read in the game once the line includes LR 152.
 2. **A last chance in the camp**: a second life at the last beacon, the stages done kept and paid less.
-3. **The camp files in the gauntlet and the tasks** (K1 to K3 are in crucible's gauntlet directory: the maze home will train and be elected on them from its next build).
+3. **The camp files in the gauntlet and the tasks**: K1 to K3 are in crucible's forest branch (40bf07f), all four builds compiled; once the islands' working copy is moved to it, the maze home trains and is elected on them too.
 4. **The census's map order and a probe set of seeds** (section XI), in treadcore's census, with Paul's word.
 5. **The proving ground out of the census's rotation**, and **the head-to-head path of the election**, if Paul says so.
-6. **AV1 for the read-along video**, measured against x264 on the same page.
+6. **The read-along videos in AV1** by default, and the camp (crucible 40bf07f) on the islands once Paul says.
 
 ## References
 

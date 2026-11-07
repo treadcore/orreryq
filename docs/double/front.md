@@ -4,7 +4,7 @@
 
 Copyright (c) 2026 Paul Richeson. MIT licensed, as orrery and treadcore.
 
-Part One is the design of the process. Part Two is the story of how data becomes a bot's instructions, the amendment, and the guide to every screen, with pictures. Sources: [Orrery](https://github.com/vonglurt/orrery), [treadcore](https://github.com/treadcore/treadcore), [its documents](https://github.com/treadcore/treadcore/blob/main/documentation/INDEX.md).
+Part One is the design of the process. Part Two is the story of how data becomes a bot's instructions, the amendment, and the guide to every screen, with pictures. Sources: [Orrery](https://github.com/treadcore/orreryq), [treadcore](https://github.com/treadcore/treadcore), [its documents](https://github.com/treadcore/treadcore/blob/main/documentation/INDEX.md).
 
 ---
 
