@@ -151,7 +151,7 @@ are how a person can tell whether a generation learned anything.
 
 <table>
 <tr>
-<td width="50%"><img src="docs/full-card/footage-sheet-m0020.png" alt="A footage sheet: milestone M0020 on nine tests, each a small film of the net driving, with its pass count"><br><b>Every generation on film.</b> Each new GPU milestone is traced on twelve tests, eight runs each, and filmed as a sheet; the reel adds each one as it comes. <code>tools/report/footage.py</code></td>
+<td width="50%"><img src="docs/site/shots/footage-sheet-m0022.png" alt="A footage sheet: milestone M0022 on twelve tests, each a small film of the net driving, with its pass count; 95 of 96 runs passed"><br><b>Every generation on film.</b> Each new GPU milestone is traced on twelve tests, eight runs each, and filmed as a sheet; the reel adds each one as it comes. M0022, the maze home's, passed 95 of 96. <code>tools/report/footage.py</code></td>
 <td width="50%"><img src="docs/round-corner/m1-trained-middle.png" alt="The S maze: a tank with its route drawn round two walls to a pillbox at the far end"><br><b>Round the corner.</b> A trained net in the S maze, its route drawn: crucible's mazes teach a tank to find a way it cannot see.</td>
 </tr>
 <tr>
