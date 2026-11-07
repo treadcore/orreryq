@@ -638,7 +638,9 @@ def view(q, out):
              "main": g.get("main"), "held": g.get("held"), "census": g.get("census"), "changed": g.get("changed")} for g in D["gens"]]
     gh = sum(v[0] for v in D["hours"].values()); ch = sum(v[1] for v in D["hours"].values())
     ge = sum(v[0] for v in D["energy"].values()); ce = sum(v[1] for v in D["energy"].values())
-    fh = homes.get("crucible-world-hybrid-forest") or {}
+    # The GPU's home now: the maze home once it is on (6 November, crucible.nav), else the forest home.
+    gpu_home = next((h for h in ("crucible-world-hybrid-forest-nav", "crucible-world-hybrid-forest") if h in homes), "crucible-world-hybrid-forest")
+    fh = homes.get(gpu_home) or {}
     bought = {"gpu": [["milestones", len([x for x in D["milestones"] if not x.get("carried")])],
                       ["forest generations", len([x for x in fh.get("milestones", []) if not x.get("carried")])],
                       ["nets on main", len(D["ships"])], ["clone rounds", len(D["clone"])],
@@ -652,7 +654,7 @@ def view(q, out):
            "hours": [[d, v[0], v[1], (D["energy"].get(d) or [0, 0])[0], (D["energy"].get(d) or [0, 0])[1]] for d, v in sorted(D["hours"].items())],
            "totals": {"gpu_h": gh, "cpu_h": ch, "gpu_kwh": ge, "cpu_kwh": ce, "rate": D["rate"]}, "bought": bought,
            "ships": D["ships"], "clone": [{"n": c.get("n"), "asked": c.get("asked"), "diff": c.get("diff"), "se": c.get("se"), "holds": c.get("holds")} for c in D["clone"]],
-           "versions": D["versions"], "homes": homes, "proof": D.get("proof_last"), "line": D["line"]}
+           "versions": D["versions"], "homes": homes, "gpu_home": gpu_home, "proof": D.get("proof_last"), "line": D["line"]}
     tmp = out + ".part"
     with open(tmp, "w") as f:
         json.dump(doc, f, default=str)

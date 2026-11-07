@@ -235,7 +235,7 @@ fn roads(ui: &mut Ui, at: Rect, doc: &Value) {
     let (g, c, m) = (gpu(ui), cpu(ui), t.up);
     let w = ((at.w - 60) / 2).min(420);
     let (xg, xc) = (at.x, at.x + w + 60);
-    let forest = doc.get("homes").and_then(|h| h.get("crucible-world-hybrid-forest"));
+    let forest = gpu_home(doc);
     let bar = forest.and_then(|f| n(f, "bar")).map(|b| format!("the bar now {:.2} z (eases when dry, tightens after each)", b)).unwrap_or_else(|| "the bar: 2 se head to head (the world home)".into());
     let floors = forest.map(|f| f.get("floors").and_then(|x| obj(x)).map(|o| o.len()).unwrap_or(0)).unwrap_or(0);
     let best = forest.and_then(|f| f.get("best")).filter(|b| !matches!(b, Value::Null));
@@ -307,7 +307,7 @@ fn lanes(ui: &mut Ui, at: Rect, doc: &Value) {
             marks.push((r, vec![s(m, "id"), format!("made {}, {:.1} se over the one before", s(m, "made").replace('T', " "), n(m, "margin").unwrap_or(0.0))]));
         }
     }
-    if let Some(f) = doc.get("homes").and_then(|h| h.get("crucible-world-hybrid-forest")) {
+    if let Some(f) = gpu_home(doc) {
         // THE CARD ELECTS, THE GAME CREDITS: filled when the game's census confirmed it (the bridge shipped
         // it), a ring when the game read it and did not, a small dot while it waits for its read.
         for m in arr(f, "milestones").iter().filter(|m| !matches!(m.get("carried"), Some(Value::Bool(true)))) {
@@ -533,12 +533,21 @@ fn ladder(ui: &mut Ui, at: Rect, doc: &Value) {
     }
 }
 
+/// The GPU's home now, as outgrowing.py names it (`gpu_home`): the maze home once it is on, else the forest's.
+fn gpu_home(doc: &Value) -> Option<&Value> {
+    let name = doc.get("gpu_home").and_then(|v| match v {
+        Value::Str(s) => Some(s.as_str()),
+        _ => None,
+    });
+    doc.get("homes").and_then(|h| h.get(name.unwrap_or("crucible-world-hybrid-forest")))
+}
+
 /// The forest home's elections: each segment's weighed step on the CUDA gauntlet against the bar, the
 /// newest champion's files against the newest generation's, the floors, the window's best.
 fn elections(ui: &mut Ui, at: Rect, doc: &Value, off: &mut usize) {
     let t = ui.t;
-    let Some(f) = doc.get("homes").and_then(|h| h.get("crucible-world-hybrid-forest")) else {
-        ui.label_in(at.x, at.y, at.w, "No forest home yet: plan.json's crucible.forest turns it on.", &F8X13, t.dim);
+    let Some(f) = gpu_home(doc) else {
+        ui.label_in(at.x, at.y, at.w, "No GPU home yet: plan.json's crucible.forest (and .nav, the maze) turns it on.", &F8X13, t.dim);
         return;
     };
     let el = arr(f, "elections");

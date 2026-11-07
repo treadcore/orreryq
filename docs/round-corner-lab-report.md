@@ -25,11 +25,11 @@ It also has breakable walls, a breach file (B1), a one-bar file (M0), treadcore'
 
 **The breach** worked once a bug the film exposed was fixed: a fallen wall had become the whole plane to every ray.
 
-**The total score.** The planner's own election refuses this generation. It lost building a base entirely, and two files fell past the three-margin cap. Whether that trade should be allowed is Paul's to decide.
+**The total score.** The planner's own election refuses this generation: it lost building a base entirely, and two files fell past the three-margin cap. Paul kept the cap; the maze home trains on until they come back within it.
 
 **The proving ground.** Built from Birdman's tile sheet with A Flame War Modified's walled city. Its four gauntlet files pass for the game's rules at 100, 100, 100 and 95.5%.
 
-Nothing here is on the fleet yet.
+The maze home, the errand, game 9's wall rule and 256 duels a net went on the fleet that evening (section X).
 
 *Index Terms*: maze navigation, local minima, potential fields, bug algorithms, dynamic window, recurrent neuroevolution, curriculum, reward shaping, path planning, CUDA.
 
@@ -83,9 +83,9 @@ The net corrects them, as it corrects the Commander in the game (`errand`; `ERRA
 
 ## IV. The breach, and intrusion
 
-**On the card, a walled base can be broken into.** A gauntlet file's walls may be `breakable = true`, and a breakable wall falls to two direct hits (WALL_HP 90). **B1** puts the enemy's pillbox inside a ring of four such walls with no gap. The route sense reads *walled*, so the way in is through a wall. This differs from the game, where a direct shot does not bring a wall down: a mortar's splash turns it to rubble (treadcore-sim, the indirect shell's impact). Crucible's tanks have no mortar, so the direct shot stands in for it in B1 only. The training arena's walls do not fall, as the game's do not to the gun. **On the card the breach now works:** under the errand the rules shell a wall that shuts the goal in, and the trained net takes B1 in 255 of 256 runs (Table IV), after a fix to how a fallen wall is removed (section VII).
+**A walled base can be broken into, in both games.** A wall falls to the gun in the game as on the card (treadcore LR 154, game 9). In the game two direct hits aimed at a wall tile bring down it and its neighbour along the wall, a gap two tiles wide, and the mortar's splash still fells a wall at once. On the card every wall takes the shells that stop on it, and two hits open a gap of three tiles where they struck: crucible's tank is two tiles wide, treadcore's one and a half. **B1** puts the enemy's pillbox inside a ring of four walls with no gap; the route sense reads *walled*, so the way in is through a wall. Under the errand the rules shell the wall that shuts the goal in, and the trained net takes B1 in 255 of 256 runs (Table IV), after a fix to how a fallen wall is removed (section VII).
 
-**In the game, the rules already intrude.** On the proving ground (section VI), G33 puts the enemy's pillbox inside a compound of wall and concrete with no gate. The rules take it in 95.5% of 200 runs, by aiming the mortar at the pillbox inside, whose splash brings down the wall in between. The brain's code already breaches as a by-product of attacking. What it does not have is intrusion as a choice: going through a wall when there is a way round, or breaching to reach a base without a pillbox. **Designed, not built:** a dial `w_breach` in the weights table. When a target's route is longer than its straight line by more than `w_breach` times, the commander aims the mortar at the wall tile where the straight line meets the wall. Its default would be the census's to find, and temperament would scale it as the twelve temper_ dials scale aggression today. It changes treadcore's brain, so it waits for Paul's word and gets its own LR.
+**In the game, the rules already intrude, and now by choice.** On the proving ground (section VI), G33 puts the enemy's pillbox inside a compound of wall and concrete with no gate. The rules take it in 95.5% of 200 runs by aiming the mortar at the pillbox inside, whose splash brings down the wall in between: a breach as a by-product of attacking. **The intrusion dial** (treadcore LR 153) makes it a choice: `w_breach` in the weights table, 0 by default. A tank storming a base with no gun left to shell, whose straight line meets a wall first and whose way in is shut or longer than `w_breach` times that line, shells the wall: with the gun when the wall is within direct range and in sight, else with the mortar, else from a firing position it drives to. The press row of the temperament matrix moves the bar as it moves `press_odds`. Its value is the census's to find.
 
 ## V. The total score
 
@@ -97,7 +97,7 @@ Paul: "spending time on one type of goal will reduce its metrics in other things
 - C8 0.62 margins under its floor and N2 1.94, both within the trade;
 - **N3 3.88 margins under and T3 3.69, past the cap of three.**
 
-So it would not elect. This is the rule doing what it was written to do: a generation that takes the S, the 5 and the walled base, and loses building a base entirely, is the trade the cap was put there to stop. Whether "vastly better" should buy a whole lost skill is Paul's to decide. There are three ways:
+So it would not elect. This is the rule doing what it was written to do: a generation that takes the S, the 5 and the walled base, and loses building a base entirely, is the trade the cap was put there to stop. Whether "vastly better" should buy a whole lost skill was Paul's to decide. The three ways put to him:
 
 1. **Keep the cap.** Train on until T3 and N3 come back within three margins. Their tasks are in the training mix (`--tasks`), so the floors pull them back.
 2. **Let the cap grow with the step** (here 26.8 − 2 = 24.8 z over the bar, 12 margins), with one rule kept: no file a net passed at least a fifth of the time may fall to nothing. That rule would still refuse this generation, for T3 (0.29 to 0).
@@ -195,7 +195,7 @@ Every route file passes in every run, and so does nearly every pillbox in the op
 
 **What the senses did.** Measured as the L2 norm of each input's column in the first layer, an old input weighs 55. The nine new ones weigh about 1 in all three trained arms (route 1.1 to 1.2, arcs 1.0 to 1.3, memory 0.9 to 1.2). That is what 30 generations of mutation from zero give, not use. **The mazes were won by the errand under the net and by training the net to stop overriding it, not by the new senses.** New structure that starts at zero and is mutated at the same rate as the old does not catch up in 30 generations. NEAT protects a new gene for this reason [18]. Section X proposes the cheap equivalent.
 
-**A bug the film found.** In the first read the breach was 0 for every net. The trace showed a tank that had shot a wall down, driven in, and could then neither hit the pillbox beside it nor be hit by it. A fallen wall is removed by giving it an empty box (x₀ > x₁), and `ray_box`'s slab test, which takes the lesser and greater of each pair, turned that into the whole plane. After the first wall fell, every shell stopped at its muzzle and no pillbox could see a tank. Only B1's walls ever fall, so only B1 was wrong. `ray_box` now returns no hit for an empty box. The fix moved B1 from 0 to 255 for the trained net and from 0 to 50 for M0016, and nothing else (Table IV is read with it).
+**A bug the film found.** In the first read the breach was 0 for every net. The trace showed a tank that had shot a wall down, driven in, and could then neither hit the pillbox beside it nor be hit by it. A fallen wall is removed by giving it an empty box (x₀ > x₁), and `ray_box`'s slab test, which takes the lesser and greater of each pair, turned that into the whole plane. After the first wall fell, every shell stopped at its muzzle and no pillbox could see a tank. Only B1's walls could fall then, so only B1 was wrong; since game 9 every wall can, and the fix covers them all. `ray_box` now returns no hit for an empty box. The fix moved B1 from 0 to 255 for the trained net and from 0 to 50 for M0016, and nothing else (Table IV is read with it).
 
 ## VIII. The maze, filmed
 
@@ -247,33 +247,7 @@ Each film follows one run of a gauntlet file, the best of 16 (a pass first), wit
 
 **What a step costs.** The arcs are 18 points a refresh, each tested against the walls and pillars, every third step. The route sense tests the straight line to the goal every third step. The wave visits at most 1,024 cells and 4,096 neighbours, and runs only when that line is shut and its field is missing or stale.
 
-**Measured.** Four builds, one after another on boburner's GTX 1070 Ti beside its island's own segment. Each played four generations from the same state with the same tasks (the ten of `tasks-errand`, half the warps). The table gives the mean of the last three:
-
-| Build | Seconds a generation | Million tank-steps a second |
-|---|---|---|
-| `FOREST` (no senses) | 21.9 | 20.7 |
-| `NAV`, the wave every 3 s | 39.7 | 11.5 |
-| `NAV`, the wave lazy | 40.4 | 11.3 |
-| `NAV`, lazy, with the errand | 39.7 | 10.0 |
-
-*Table V. Tank-steps a second is crucible's own count (`steps_per_s`).*
-
-**Beside the island's segment the senses cost 1.8× a generation, and the lazy wave saved nothing.** Four more builds were timed the same way to find where the time goes:
-
-| Build | Seconds a generation | What it tests |
-|---|---|---|
-| `NAV`, `MINB=1` (241 registers a thread, no spills) | 38.2 | the spills |
-| `NAV`, the first layer's loop unrolled by 8 | 44.9 | fewer live inputs |
-| `NAV`, the wave made once a duel | 31.7 | the wave's whole cost |
-| `NAV`, the drivable line in place of the line of sight | 36.2 | fewer waves |
-
-*Table VI. Mean of generations 2 to 4, as Table V.*
-
-- **The spills are not the cost.** The compiler's account had looked like the answer. The play kernel is held to 128 registers a thread, and with `NAV` its stack grows from 792 bytes to 6,560 and its spill traffic doubles. But a build with no spills at all is only 4% faster.
-- **The wave is about 8 of the 18 extra seconds.** The lazy test asks whether the line of *sight* is clear, and in the forest arena a grove blocks sight. So the wave still runs about as often as before.
-- **Testing whether the line can be *driven* is not the answer.** It saves 3.5 seconds, but it routes the tank straight into a grove. F2, "round the trees", fell from 256 runs to 0, and F3 from 90 to 10. It is not kept.
-
-**The other 10 seconds were the card's other tenant.** Every timing above was made on boburner beside its island's own segment, which was running most of the time. Two builds instrumented with the GPU's own clock (`clock64`, one lane a warp, since its performance counters need root) were run when the card was free. They played **21.5 million steps a second for the forest build and 22.5 for the maze build**. On a card of its own the maze build costs no more a step.
+**On a card of its own the maze build costs no more a step.** Timed by the GPU's own clock (`clock64`, one lane a warp; the card's performance counters need root) on boburner with nothing else on it, ten generations each, the forest build played 21.5 million tank-steps a second and the maze build 22.5. The route sense and the arcs take two fifths of a decision (Table VII). The maze build's runs also end sooner, since it passes its tasks and stops.
 
 | Part of a decision | Forest build | Maze build |
 |---|---|---|
@@ -283,50 +257,53 @@ Each film follows one run of a gauntlet file, the best of 16 (a pass first), wit
 | The rules and the errand | 2% | 2% |
 | The net (`think`) | 57% | 34% |
 
-*Table VII. Shares of the clock spent in a decision, ten generations each. The two builds played different work: the maze build passes its tasks and stops early.*
+*Table VII. Shares of the clock spent in a decision, ten generations each.*
 
-Beside another process, the maze build drops to about 10 million steps a second, while the forest build holds about 21. The maze build moves much more per-thread memory (a 6.5 KB stack against 0.8 KB, its route fields and the wave's queue), and the other process's kernels evict it from the cache. On an island the segment has the card to itself, so the maze home pays little.
+**Beside another process it runs at half speed.** An island's segment has its card to itself; a test run made beside it does not. Sharing boburner's card with its island's segment, the forest build held about 21 million steps a second and the maze build fell to 10. The maze build moves much more per-thread memory (a stack of 6.5 KB against 0.8 KB: its route fields and the wave's queue), and the other process's kernels evict it from the cache. Tables V and VI were taken that way. Their 1.8× is the shared card's, not the senses'. They still tell what the maze build's own time goes to:
 
-**Filling the card.** Each block holds its net's weights in shared memory (46 KB), so a Pascal SM, with 96 KB, holds two blocks: 256 threads of the 2,048 it could run (12%). A second population, in this process or another, needs the same 46 KB a block and adds no blocks; it only splits the card. More duels a net does fill it: at `--eps 256` a block is 256 threads sharing the same weights. That doubles occupancy to 25% for no shared memory, and a generation plays twice the duels in 1.57× the time (12.1 against 10.4 million steps a second, both beside the island's segment).
+| Build, beside the island's segment | Seconds a generation | Million tank-steps a second |
+|---|---|---|
+| `FOREST` (no senses) | 21.9 | 20.7 |
+| `NAV`, the wave every 3 s | 39.7 | 11.5 |
+| `NAV`, the wave lazy | 40.4 | 11.3 |
+| `NAV`, lazy, with the errand | 39.7 | 10.0 |
 
-## X. What is not built, and what comes next
+*Table V. Four generations from the same state with the same tasks (the ten of `tasks-errand`, half the warps), the mean of the last three; tank-steps a second is crucible's own count.*
 
-**Decided (Paul, 6 November, evening).**
+| Build, beside the island's segment | Seconds a generation | What it tests |
+|---|---|---|
+| `NAV`, `MINB=1` (241 registers a thread, no spills) | 38.2 | the spills |
+| `NAV`, the first layer's loop unrolled by 8 | 44.9 | fewer live inputs |
+| `NAV`, the wave made once a duel | 31.7 | the wave's whole cost |
+| `NAV`, the drivable line in place of the line of sight | 36.2 | fewer waves |
 
-- The trade cap stays, and training goes on (section V).
-- The cost is cut before the maze build goes to the fleet, measured as Table V was. Then crucible's forest branch is merged and the planner switched to the nav home.
-- Both treadcore changes are built, each with its own LR: `nav_senses` for the Gladiator, so the game can read and credit a maze net, and the `w_breach` intrusion dial.
+*Table VI. The same way as Table V.*
 
-**Done the same night (Paul's answers).**
+- **Spills cost little.** The play kernel is held to 128 registers a thread, and with `NAV` its stack grows from 792 bytes to 6,560 and its spill traffic doubles. A build with no spills at all is 4% faster.
+- **The wave is about a fifth of the maze build's own time.** The lazy test asks whether the line of *sight* is clear, and in the forest arena a grove blocks sight, so the wave runs about as often as it did every 3 s.
+- **The drivable line is not kept.** It saves 3.5 seconds, but it routes the tank straight into a grove: F2, "round the trees", fell from 256 runs to 0 and F3 from 90 to 10.
 
-- **The maze home is on the fleet.** crucible main fast-forwarded to the forest branch, `crucible.nav = true`: the home `crucible-world-hybrid-forest-nav`, its parent the forest home. Its milestones were carried over and widened.
-- **A wall takes the gun in both games** (treadcore LR 154, game 9; crucible bf0c99d). Two aimed direct hits open a treadcore wall two tiles wide; every crucible wall breaks the same way, opening three tiles for its wider tank. The mortar still fells walls, and the breach uses the gun in range. Game 8's queued `weights` jobs were stopped.
-- **256 duels a net** on the islands (`crucible.eps`), for twice the occupancy.
-- **treadcore LR 152 and 153 pushed**: the Gladiator reads maze nets, and the intrusion dial is in, off by default.
+**Filling the card.** Each block holds its net's weights in shared memory (46 KB), so a Pascal SM, with 96 KB, holds two blocks: 256 threads of the 2,048 it could run (12%). A second population, in this process or another, needs the same 46 KB a block and adds no blocks; it only splits the card. More duels a net do fill it: at `--eps 256` a block is 256 threads sharing the same weights. That doubles occupancy to 25% for no shared memory, and a generation plays twice the duels in 1.57× the time (12.1 against 10.4 million steps a second, both beside the island's segment). The islands play 256 since the evening of 6 November.
+
+## X. What is on the fleet, and what comes next
+
+**On the fleet since the evening of 6 November.**
+
+- **The maze home.** crucible main bf0c99d: the senses, the lazy field, the errand, `ends_near`, the N files, M0, B1, the `ray_box` fix, and every wall breakable. `crucible.nav = true` makes the home `crucible-world-hybrid-forest-nav`, its parent the forest home, its milestones carried over and widened. Its election is the forest home's (`gpu_home`), and the trade cap stands (section V).
+- **256 duels a net** on every island (section IX).
+- **Treadcore game 9** (LR 154): a wall takes the gun. **LR 152:** the Gladiator reads a 64-in, 6-out maze net. Its `nav_senses` give it the route by `route_kept`, the walled flag, the arcs and the two kept numbers, and the rules' answer turns round a wall as the errand does. The planner's bridge reads the maze home's generations in the game once the fleet's line includes it (`bridge_ready`). **LR 153:** the intrusion dial, 0 by default (section IV).
+- **Orrery's Generations page** follows the GPU's home (`gpu_home` in generations.json).
 
 **What the experiments say to do next, cheapest first:**
 
 1. **Give new senses a head start.** The new weights drifted to a norm of 1 against the old 55. Mutating a widening's new weights at the old weights' scale for its first generations is the cheap form of NEAT's protection of new structure [18]. It is a step-size table, with no change to the net or its cost.
 2. **More of M3 in the tasks.** The @ maze drew about six of the 60 task draws. Drawing a file in proportion to how far it is from passing (a pass rate of 0 draws most) is the curriculum's own rule [15], [16], for the cost of a table.
-3. **Decide the trade's cap** (section V): the first maze generation stands refused by it.
+3. **A camp of stages** with rewards that fall with the time taken: the companion report, *Every Generation on Film*.
 
-**Built, and not yet on the fleet.** The `NAV` build (the senses, the lazy field, the errand, `ends_near`, the N files and the `ray_box` fix) lives uncommitted in crucible's `forest` worktree. It has been compiled in all four variants (plain, `WORLD HYBRID`, `FOREST`, `FOREST NAV`) and run only in boburner's test directory. The fleet's islands build from the crucible working copy, so merging it is a deployment, and it waits for Paul. With `crucible.nav = true` in plan.json the planner would make a new home, `crucible-world-hybrid-forest-nav`, with the forest home as its parent. Its milestones are widened from the forest's, as the forest's were from the world's, and its card election is the forest home's (`gpu_home`).
+**Still different between the two games:**
 
-**What the game needs before it can credit a nav generation.** The bridge reads a GPU net in the game through the Gladiator, whose senses are crucible's 55 (treadcore `styles.rs`, `world_senses`). A 64-in, 6-out net needs:
-
-1. `Champion` sized for 5,766 weights.
-2. The two memory outputs fed back as inputs.
-3. `nav_senses`: the bearing and length of `map.route_kept` to the goal, the walled flag, and the three arcs stepped against the map's walls.
-4. The rules' answer it reads (inputs 32 to 34) made as the errand makes it: toward the route's next waypoint when the line to the enemy is shut. Where the line is clear, the errand is the old script, so a duel in the open already matches.
-
-**Built since (treadcore LR 152, not yet committed):** all four, with six tests. Crucible's trained maze champion played eight games as the Gladiator without a fault. Once it is on treadcore's main, the planner's `bridge_ready` lets the bridge read the nav home's generations.
-
-**The intrusion dial** (`w_breach`, section IV) is built since (treadcore LR 153, not yet committed). It is 0 by default, so the brain plays as it did until a census finds its value; the press temper moves its bar.
-
-**On the card:**
-
-- B1 is breached by the gun, the game's walls by the mortar. Crucible has no mortar.
-- The Generations dashboard reads the forest home by name. A nav home would need its own column there.
+- Crucible's shells stop on any wall they meet; treadcore's gun fires at a wall only when aimed at it. Crucible's tank fires along its hull, with no aim point.
+- Crucible has no mortar.
 - The CPU twins of N0 to N3 (G30 to G32 on the proving ground) ask for the capture, as M0 to M3 do. Treadcore's `ends_near` can ask for the route alone once a brain has a goal to route to without a target.
 
 ## References

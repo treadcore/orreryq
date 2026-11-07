@@ -58,6 +58,10 @@ CARDS = {
                   "Three generations of the game's brain, each from its first read to its commit, an arrow from every job to the "
                   "one it followed: committed, not yet on main, and why. The film's crowd made 128 different duels, not a dozen "
                   "stacked; the kill shot again at half speed; every wire in its node's colour. The film plays in the page."),
+    "full-card": ("Crucible · every generation on film",
+                  "The maze home on the fleet; one wall rule in two games (game 9); 256 duels a net to fill the card; every new "
+                  "generation's tests filmed and reeled; a camp of stages whose rewards fall with time; which census maps tell a "
+                  "verdict soonest; a card beside every net; and a page that scrolls itself and becomes a small video."),
     "round-corner": ("Crucible · round the corner",
                      "What a net needs to pass a maze, from the robotics and neuroevolution literature: a route sense, its own "
                      "future along three arcs, two memory cells, progress paid along the route. Senses alone passed no maze in "

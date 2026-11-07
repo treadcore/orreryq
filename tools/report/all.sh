@@ -41,5 +41,6 @@ line-film|Three Generations, Filmed|orrery · the montage · the line, the crowd
 outgrowing|Outgrowing Yourself|orrery · the fleet · the GPU, the line, and what a generation keeps
 one-rule|One Rule, Two Machines|orrery · crucible · the trees, the mazes, the CUDA gauntlet and the GPU's generations
 round-corner|Round the Corner|orrery · crucible · maze navigation: the senses, the errand, the proving ground and the breach
+full-card|Every Generation on Film|orrery · crucible · treadcore · the maze home, one wall, the camp, a full card, the footage and a page that reads itself
 LIST
 python3 ../tools/report/collect.py

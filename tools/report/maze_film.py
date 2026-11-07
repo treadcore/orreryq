@@ -27,10 +27,14 @@ def main(a):
     if len(a) < 2:
         print(__doc__)
         sys.exit(2)
-    trace, out = a[0], a[1]
     every = int(a[a.index("--every") + 1]) if "--every" in a else 2
     title = a[a.index("--title") + 1] if "--title" in a else ""
-    m = montage()
+    print(film(a[0], a[1], every, title)["said"])
+
+
+def film(trace, out, every=2, title="", stills=True, m=None):
+    """One maze trace as a film (and its first, middle and last stills): {"runs", "passed", "steps", "said"}."""
+    m = m or montage()
     tr = m.Trace(trace)
     c = tr.champs[0]
     # The run to follow: a pass, the longest-lived first among them; else the best fitness.
@@ -52,7 +56,7 @@ def main(a):
         fr = film.frame(t, 0.0, m.flashes(tr, 0, d, t, 0.0))
         p.stdin.write(fr)
         near = min(keep, key=lambda k: abs(k - t))
-        if abs(near - t) < every and keep.get(near):
+        if stills and abs(near - t) < every and keep.get(near):
             ppm = "%s-%s.ppm" % (stills, keep[near])
             with open(ppm, "wb") as f:
                 f.write(b"P6\n%d %d\n255\n" % (W, H) + bytes(fr))
@@ -64,7 +68,8 @@ def main(a):
     if p.wait() != 0:
         raise SystemExit("ffmpeg: %s" % err[-300:])
     os.remove(cap)
-    print("%s: %d runs, %d passed, followed run %d over %d steps" % (out, tr.nd, len(passes), d + 1, last))
+    return {"runs": tr.nd, "passed": len(passes), "steps": last,
+            "said": "%s: %d runs, %d passed, followed run %d over %d steps" % (out, tr.nd, len(passes), d + 1, last)}
 
 
 if __name__ == "__main__":

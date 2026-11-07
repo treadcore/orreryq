@@ -720,6 +720,8 @@ class Film:
         for k, (bx, by) in enumerate(tr.boxes):
             sx, sy = self.to_px(bx, by)
             hp = s0[14 + k]
+            if hp < -500:
+                continue           # a camp's castle not yet risen (crucible writes -999 until its stage spawns it)
             half = int(0.55 * S)
             cv.rect(sx - half, sy - half, 2 * half, 2 * half, PB if hp > 0 else PB_DEAD)
             if hp > 0:

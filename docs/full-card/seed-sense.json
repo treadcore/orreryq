@@ -1,0 +1,96 @@
+{
+ "censuses": 10793,
+ "maps": [
+  {
+   "map": "naval",
+   "censuses": 10793,
+   "agreement": 0.249,
+   "seed_sd": 3.62,
+   "telling": 0.688
+  },
+  {
+   "map": "constanine",
+   "censuses": 10793,
+   "agreement": 0.289,
+   "seed_sd": 4.32,
+   "telling": 0.669
+  },
+  {
+   "map": "island",
+   "censuses": 10793,
+   "agreement": 0.322,
+   "seed_sd": 5.21,
+   "telling": 0.619
+  },
+  {
+   "map": "industry",
+   "censuses": 10793,
+   "agreement": 0.311,
+   "seed_sd": 5.1,
+   "telling": 0.611
+  },
+  {
+   "map": "generated",
+   "censuses": 10793,
+   "agreement": 0.304,
+   "seed_sd": 5.28,
+   "telling": 0.577
+  },
+  {
+   "map": "atlantic",
+   "censuses": 10793,
+   "agreement": 0.234,
+   "seed_sd": 5.39,
+   "telling": 0.435
+  },
+  {
+   "map": "fortressislesx",
+   "censuses": 10793,
+   "agreement": 0.202,
+   "seed_sd": 4.72,
+   "telling": 0.429
+  },
+  {
+   "map": "fortressisles2",
+   "censuses": 10793,
+   "agreement": 0.212,
+   "seed_sd": 5.61,
+   "telling": 0.377
+  },
+  {
+   "map": "fidos-airstrip",
+   "censuses": 10793,
+   "agreement": 0.183,
+   "seed_sd": 5.1,
+   "telling": 0.36
+  },
+  {
+   "map": "big-lizard",
+   "censuses": 10793,
+   "agreement": 0.207,
+   "seed_sd": 8.63,
+   "telling": 0.239
+  },
+  {
+   "map": "europe",
+   "censuses": 10793,
+   "agreement": 0.14,
+   "seed_sd": 7.74,
+   "telling": 0.181
+  },
+  {
+   "map": "flame-war-modified",
+   "censuses": 161,
+   "agreement": 0.032,
+   "seed_sd": 5.28,
+   "telling": 0.062
+  },
+  {
+   "map": "proving",
+   "censuses": 161,
+   "agreement": -0.057,
+   "seed_sd": 3.92,
+   "telling": -0.145
+  }
+ ]
+}
