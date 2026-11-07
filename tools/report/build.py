@@ -37,7 +37,7 @@ toc_list = "".join('<li><a href="#%s">%s</a></li>' % (sid, inline(t)) for sid, t
 
 page = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "page.html")).read()
 short = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3] else re.sub(r"`", "", title.split(":")[0]).strip()
-eyebrow = sys.argv[4] if len(sys.argv) > 4 else "orrery · lab report"
+eyebrow = sys.argv[4] if len(sys.argv) > 4 else "Orreryq · lab report"
 page = page.replace("{{SHORT}}", html.escape(short)).replace("{{EYEBROW}}", html.escape(eyebrow)).replace("{{TITLE}}", inline(title)).replace("{{FRONT}}", front).replace("{{NAV}}", nav)
 page = page.replace("{{TOC}}", toc_list).replace("{{MAIN}}", main)
 open(OUT, "w").write(page)

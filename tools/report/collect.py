@@ -120,8 +120,8 @@ def stale(src, out, force):
 
 def page(title, short, eyebrow, front, nav, toc, main, up):
     p = open(TEMPLATE).read()
-    p = p.replace('<strong><a href="index.html">orrery</a> · lab report</strong>',
-                  '<strong><a href="%sreports.html">lab reports</a> · <a href="%sindex.html">orrery</a></strong>' % (up, up))
+    p = p.replace('<strong><a href="index.html">Orreryq</a> · lab report</strong>',
+                  '<strong><a href="%sreports.html">lab reports</a> · <a href="%sindex.html">Orreryq</a></strong>' % (up, up))
     p = p.replace('<nav class="toc"', '<nav class="toc" id="contents"', 1)
     p = p.replace("{{SHORT}}", html.escape(short)).replace("{{EYEBROW}}", html.escape(eyebrow)).replace("{{TITLE}}", title)
     p = p.replace("{{FRONT}}", front).replace("{{NAV}}", nav).replace("{{TOC}}", toc).replace("{{MAIN}}", main)
@@ -210,7 +210,7 @@ def collect(force=False):
         eb = eyebrows.get(key)
         if not eb:
             m = re.search(r'<p class="eyebrow">(.*?)</p>', open(os.path.join(DOCS, key + "-lab-report.html")).read())
-            eb = html.unescape(m.group(1)) if m else "orrery · lab report"
+            eb = html.unescape(m.group(1)) if m else "Orreryq · lab report"
         lines = [l for l in text.split("\n") if l.strip()]
         title = next((l.lstrip("# ").strip() for l in lines if l.startswith("# ")), key)
         orrery.append({"title": title, "date": written_date(text, git_date(src)), "href": key + "-lab-report.html", "md": name, "topic": eb, "key": key})
@@ -245,7 +245,7 @@ def write_list(orrery, tc_reports, checkins, posts):
     sec4 = rows('<tr><td>%s</td><td><a href="%s">%s</a></td></tr>' % (day(p["date"]), p["href"], e(p["title"])) for p in posts)
     tbl = lambda head, body: '<div class="table"><table><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>' % ("".join("<th>%s</th>" % h for h in head), body)
     main = (
-        '<section id="orrery"><h2>I. orrery\'s lab reports</h2><p>The console\'s own reports, each built from its Markdown by <code>tools/report/build.py</code> (or, for one with a working figure, written as its page). %d in all.</p>%s</section>'
+        '<section id="orrery"><h2>I. Orreryq\'s lab reports</h2><p>The console\'s own reports, each built from its Markdown by <code>tools/report/build.py</code> (or, for one with a working figure, written as its page). %d in all.</p>%s</section>'
         % (len(orrery), tbl(["Written", "Report", "About", ""], sec1))
         + '<section id="treadcore"><h2>II. treadcore\'s lab reports</h2><p>The game\'s reports, from <code>documentation/</code> in its repository, as pages here. The brain\'s report grows a section a step; its newest is named.</p>%s</section>'
         % tbl(["Updated", "Report", "Sections", "Newest section", ""], sec2)
@@ -254,13 +254,13 @@ def write_list(orrery, tc_reports, checkins, posts):
         + '<section id="posted"><h2>IV. Posted on treadcore.org</h2><p>The reports put on the game\'s site, %d in all; these links leave this folder.</p>%s</section>'
         % (len(posts), tbl(["Posted", "Report"], sec4))
     )
-    toc = [("orrery", "I. orrery's lab reports"), ("treadcore", "II. treadcore's lab reports"), ("checkins", "III. treadcore's check-in reports"), ("posted", "IV. Posted on treadcore.org")]
+    toc = [("orrery", "I. Orreryq's lab reports"), ("treadcore", "II. treadcore's lab reports"), ("checkins", "III. treadcore's check-in reports"), ("posted", "IV. Posted on treadcore.org")]
     front = ('<p class="note">Collected by <code>tools/report/collect.py</code>, which <code>tools/report/all.sh</code> runs after building orrery\'s reports.</p>'
-             '<p>%d lab reports of orrery, %d of treadcore, %d check-in reports and %d reports posted on treadcore.org. Every page is HTML in this folder but the last, which link to the game\'s site.</p>'
+             '<p>%d lab reports of Orreryq, %d of treadcore, %d check-in reports and %d reports posted on treadcore.org. Every page is HTML in this folder but the last, which link to the game\'s site.</p>'
              % (len(orrery), len(tc_reports), len(checkins), len(posts)))
     nav = "".join('<a href="#%s">%s</a>' % (sid, t.split(".")[0]) for sid, t in toc)
     toc_list = "".join('<li><a href="#%s">%s</a></li>' % (sid, html.escape(t)) for sid, t in toc)
-    p = page("Every Lab Report: orrery's and treadcore's, in One Place", "Every Lab Report", "orrery · treadcore · the lab reports, collected", front, nav, toc_list, main, "")
+    p = page("Every Lab Report: Orreryq's and treadcore's, in One Place", "Every Lab Report", "Orreryq · treadcore · the lab reports, collected", front, nav, toc_list, main, "")
     with open(os.path.join(DOCS, "reports.html") + ".part", "w") as f:
         f.write(p)
     os.replace(os.path.join(DOCS, "reports.html") + ".part", os.path.join(DOCS, "reports.html"))
@@ -285,7 +285,7 @@ def write_cards(orrery, tc_reports, checkins, posts):
         lead = re.search(r'<section id="abstract">.*?<p>(.*?)</p>', open(os.path.join(DOCS, newest["href"])).read(), re.S)
         text = re.sub(r"<[^>]+>", "", lead.group(1)) if lead else ""
         text = (text[:330].rsplit(" ", 1)[0] + "...") if len(text) > 330 else text
-        topic = newest["topic"].replace("orrery · ", "").split(" · ")[0].capitalize()
+        topic = newest["topic"].replace("Orreryq · ", "").replace("orrery · ", "").split(" · ")[0].capitalize()
         topic, text = CARDS.get(newest["key"], (topic, text))
         links = [(newest["href"], "the full report"), (newest["md"], "the Markdown")]
         if os.path.exists(os.path.join(DOCS, "visual", "montage.mp4")) and newest["key"] == "visual":
@@ -295,8 +295,8 @@ def write_cards(orrery, tc_reports, checkins, posts):
         if posted:
             links.append((posted["href"], "on treadcore.org"))
         cards += card(day(newest["date"]), topic, inline(newest["title"]), newest["href"], html.escape(text), links, new=True)
-    cards += card(day(max([r["date"] for r in orrery] + [c["date"] for c in checkins])), "Collected", "Every Lab Report, orrery's and treadcore's", "reports.html",
-                  "%d of orrery's, %d of treadcore's, %d check-in reports and %d posted on treadcore.org, as pages here, newest first. Rebuilt with orrery's own each time <code>tools/report/all.sh</code> runs." % (len(orrery), len(tc_reports), len(checkins), len(posts)),
+    cards += card(day(max([r["date"] for r in orrery] + [c["date"] for c in checkins])), "Collected", "Every Lab Report, Orreryq's and treadcore's", "reports.html",
+                  "%d of Orreryq's, %d of treadcore's, %d check-in reports and %d posted on treadcore.org, as pages here, newest first. Rebuilt with orrery's own each time <code>tools/report/all.sh</code> runs." % (len(orrery), len(tc_reports), len(checkins), len(posts)),
                   [("reports.html", "the list"), ("reports.html#checkins", "the check-ins")], new=True)
     brain = next((r for r in tc_reports if r["slug"] == "lab-report-brain"), None)
     if brain:

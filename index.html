@@ -67,8 +67,8 @@
 <figure class="monitor metal" style="margin-top:2.2rem;margin-left:auto;margin-right:auto;max-width:60rem">
 <div class="screen"><img src="docs/site/shots/pipe-board.png" width="1400" height="860" alt="Orrery's Pipeline Board at 10:05 on 5 November: the line from the next trial to the game's brain as a Gantt chart with its machines and expected times, and below it the tasks as a kanban of waiting, running and done"><span class="sheen"></span></div>
 </figure>
-<div class="wire screen scan" aria-label="Lines from the fleet's event log, 5 November"><div class="run phos">
-<span>05:46 the keeper restarted on new code: 11 jobs handed over, none run again</span><span class="amber">07:54 r0186: grove/w10040 promoted onto the line, 167 tests, every family, the gauntlet</span><span>08:27 run r0188 finished: bio, 400 seeds</span><span class="red">08:27 grove/w10689 refused by the trade rule: it gives up fights</span><span>10:00 r0187 handed back to the planner, step 16 of 30</span><span class="sky">10:05 busy, last 6 h: CPUs 95 to 98%, GPUs 100%</span><span>the GPU islands keep six segments ahead, on purpose</span>
+<div class="wire screen scan" aria-label="Lines from the fleet's event log, 6 November"><div class="run phos">
+<span>15:55 the maze home goes live on the three cards: crucible-world-hybrid-forest-nav</span><span class="red">17:55 x-calber-cuda-3310 refused: +12.97 z on the gauntlet, but M0 and T2 under their floors</span><span class="amber">18:14 M0020 elected on boburner: the gauntlet +25.92 z</span><span>20:05 r0220: grove/w12958 promoted onto the line, landfall_memory 30 to 120</span><span>20:43 nasser and xinanjiang forgotten: a return is a fresh Join</span><span class="sky">20:45 busy, last 24 h: CPUs 98.0%, GPUs 97.5%</span><span>a day's funnel: 1,543 first reads, 658 read on, 79 held out, 2 generations</span>
 </div></div>
 </div></header>
 
@@ -208,18 +208,18 @@
 </div></section>
 
 <section class="sec" id="numbers"><div class="wrap">
-<div class="head metal reveal"><h2 class="etched">This morning</h2><p>Read from the queue's own records at 10:00 on 5 November; the method is in <a href="docs/duty-cycle-lab-report.html">The Duty Cycle</a>.</p></div>
+<div class="head metal reveal"><h2 class="etched">Tonight</h2><p>Read from the queue's own records at 20:45 on 6 November, the last 24 hours unless a row says otherwise; the method is in <a href="docs/duty-cycle-lab-report.html">The Duty Cycle</a>.</p></div>
 <div class="gridwrap screen scan reveal">
 <table class="facts">
 <thead><tr><th>Measure</th><th>Value</th><th>Note</th></tr></thead>
 <tbody>
-<tr><td>CPU lanes busy</td><td class="n">99.3%</td><td>eight machines, since the low water counts only CPU work (was 97.7% over 12 h)</td></tr>
-<tr><td>GPU lanes busy, last 12 h</td><td class="n">99.8%</td><td>three cards, crucible's islands</td></tr>
-<tr><td>Jobs a day</td><td class="n">3,955</td><td>1,519 first reads, 1,505 read-ons, 378 GPU segments, 120 held-out reads</td></tr>
-<tr><td>Generations, last 7 days</td><td class="n">27</td><td>a median 2.2 hours apart</td></tr>
-<tr><td>The search's funnel, a day</td><td class="n">1,520 &rarr; 3</td><td>652 read on, 75 held out, 3 generations</td></tr>
-<tr><td>Jobs run again since the handover</td><td class="n">0</td><td>the keeper keeps its jobs across its own restart</td></tr>
-<tr><td>A transform step, end to end</td><td class="n">2.3 min</td><td>was 7.6: the keeper asks the planner when a chain's step returns, and a pass takes 43 s, was 105</td></tr>
+<tr><td>CPU lanes busy</td><td class="n">98.0%</td><td>nine lanes, a job in hand 98 minutes in every hundred; 97.8% over the last 12 h</td></tr>
+<tr><td>GPU lanes busy</td><td class="n">97.5%</td><td>three cards, crucible's islands; 95.3% over 12 h, after fifteen queued segments were stopped and planned again for the maze home</td></tr>
+<tr><td>Jobs</td><td class="n">4,569</td><td>1,543 first reads, 1,820 read-ons, 304 held-out reads, 444 run steps, 300 GPU segments, 158 others</td></tr>
+<tr><td>Generations, last 7 days</td><td class="n">28</td><td>commits on the line, a median 2.2 hours apart; the newest, w12958, at 20:05 tonight</td></tr>
+<tr><td>The search's funnel</td><td class="n">1,543 &rarr; 2</td><td>658 trials read on, 79 held out, 2 generations</td></tr>
+<tr><td>Jobs run again since the handover</td><td class="n">0</td><td>on 5 November: the keeper keeps its jobs across its own restart</td></tr>
+<tr><td>A transform step, end to end</td><td class="n">2.3 min</td><td>on 5 November, was 7.6: the keeper asks the planner when a chain's step returns, and a pass takes 43 s, was 105</td></tr>
 </tbody>
 </table>
 </div>
@@ -240,9 +240,9 @@
 <section class="sec" id="source"><div class="wrap">
 <div class="head metal reveal"><h2 class="etched">READMEs and source</h2><p>Everything is MIT, with the code. Start with a README.</p></div>
 <div class="chan readmes">
-<a class="metal reveal" href="https://github.com/treadcore/orreryq/blob/main/README.md"><p class="label etched">orrery</p><b class="etched">README</b><span>The console: the wall, the seat, the museum interface, and the verbs that act on a room full of machines.</span><code class="screen phos">github.com/treadcore/orreryq</code></a>
-<a class="metal reveal" href="https://github.com/treadcore/orreryq/blob/main/docs/README.md"><p class="label etched">orrery &middot; docs/</p><b class="etched">The documents' README</b><span>The design set, the guides and the lab reports, and how each is built.</span><code class="screen phos">docs/README.md</code></a>
-<a class="metal reveal" href="docs/index.html"><p class="label etched">orrery &middot; the design set</p><b class="etched">Orrery Documents</b><span>The museum interface, the verbs, the credential rule, the twelve phases and what can go wrong.</span><code class="screen phos">docs/index.html</code></a>
+<a class="metal reveal" href="https://github.com/treadcore/orreryq/blob/main/README.md"><p class="label etched">Orreryq</p><b class="etched">README</b><span>What Orreryq is: the pieces, the two roads into the game, the words, what the console shows and what the fleet makes; then the console underneath.</span><code class="screen phos">github.com/treadcore/orreryq</code></a>
+<a class="metal reveal" href="https://github.com/treadcore/orreryq/blob/main/docs/README.md"><p class="label etched">Orreryq &middot; docs/</p><b class="etched">The documents' README</b><span>The design set, the guides and the lab reports, and how each is built.</span><code class="screen phos">docs/README.md</code></a>
+<a class="metal reveal" href="docs/index.html"><p class="label etched">Orreryq &middot; the design set</p><b class="etched">Orreryq Documents</b><span>The museum interface, the verbs, the credential rule, the twelve phases and what can go wrong.</span><code class="screen phos">docs/index.html</code></a>
 <a class="metal reveal" href="https://github.com/treadcore/treadcore/blob/main/README.md"><p class="label etched">treadcore</p><b class="etched">The game's README</b><span>The tank game the fleet trains: build it, play it, and where its brain lives.</span><code class="screen phos">github.com/treadcore/treadcore</code></a>
 <a class="metal reveal" href="https://github.com/treadcore/treadcore/blob/main/documentation/LAB-REPORT-BRAIN.md"><p class="label etched">treadcore &middot; the brain</p><b class="etched">LAB-REPORT-BRAIN.md</b><span>A numbered section a step, 148 of them: every rule, dial and test of the bots.</span><code class="screen phos">documentation/LAB-REPORT-BRAIN.md</code></a>
 <a class="metal reveal" href="https://treadcore.org/"><p class="label etched">treadcore.org</p><b class="etched">The game's site</b><span>Download, how to play, the paper, and the lab reports posted there.</span><code class="screen phos">treadcore.org</code></a>

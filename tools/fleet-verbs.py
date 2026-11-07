@@ -112,4 +112,62 @@ def crucible(q, argv):
     sys.exit(0)
 
 
-VERBS = {"nets": nets, "growth": growth, "recordings": recordings, "bridge": bridge, "montage": montage, "videos": videos, "crucible": crucible}
+def forget(q, argv):
+    # `forget NAME`: a machine on the bench leaves every record the console reads -- the bench in config.json,
+    # machines.json, storage.json and the Fleet chapter's orchestrate.json -- so its row is gone, not "Removed".
+    # ONLY FROM THE BENCH: a machine still in the queue is removed first, so that its job in hand finishes and
+    # nothing pinned to it is stranded (Paul, 6 November, of nasser and xinanjiang: "Forget them"). A return is
+    # a fresh Join on the Machines screen.
+    import json
+    name = argv[2] if len(argv) > 2 else ""
+    if not name:
+        print("forget NAME: a removed machine leaves the fleet's records")
+        sys.exit(2)
+    path = os.path.join(q.d, "config.json")
+    cfg = json.load(open(path))
+    if any(name in (h["name"], h.get("lane_of")) for h in cfg["hosts"]):
+        print("%s is in the queue: remove it first, then forget it" % name)
+        sys.exit(1)
+    gone = []
+
+    def rewrite(file, change):
+        f = os.path.join(q.d, file)
+        try:
+            d = json.load(open(f))
+        except (OSError, ValueError):
+            return
+        if change(d):
+            tmp = os.path.join(q.d, "." + file + ".tmp")
+            with open(tmp, "w") as out:
+                json.dump(d, out, indent=1)
+            os.replace(tmp, f)
+            gone.append(file)
+
+    def bench(d):
+        keep = [h for h in d.get("bench", []) if name not in (h["name"], h.get("lane_of"))]
+        hit = len(keep) != len(d.get("bench", []))
+        d["bench"] = keep
+        return hit
+
+    def by_key(d):
+        return d.pop(name, None) is not None
+
+    def fleet(d):
+        keep = [m for m in d.get("machines", []) if m.get("name") != name]
+        hit = len(keep) != len(d.get("machines", []))
+        d["machines"] = keep
+        return hit
+
+    rewrite("config.json", bench)
+    rewrite("machines.json", by_key)
+    rewrite("storage.json", by_key)
+    rewrite("orchestrate.json", fleet)
+    if not gone:
+        print("%s is in none of the fleet's records" % name)
+        sys.exit(1)
+    q.event("machine forgotten", host=name)
+    print("%s forgotten: %s; a return is a fresh Join" % (name, ", ".join(gone)))
+    sys.exit(0)
+
+
+VERBS = {"nets": nets, "growth": growth, "recordings": recordings, "bridge": bridge, "montage": montage, "videos": videos, "crucible": crucible, "forget": forget}
