@@ -77,7 +77,7 @@ SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10"]
 # A fetched census's commit and its one-map verdict, read once a process (a pass): they do not change.
 _COMMITS, _ONE_MAP = {}, {}
 # Read once a process too: a census pooled (its files are fetched once and kept), and weights.rs's blob
-# at a commit named in full (a commit is what it is; a branch's name is not memoised).
+# at a commit named by its hash (a commit is what it is; a branch's name is not memoised).
 _POOLS, _BLOBS = {}, {}
 # Whether a census dir holds trial.weights, for the dirs census-dirs.json keeps (a finished job's).
 _TRIAL_W = {}
@@ -104,6 +104,17 @@ def keep_cache(p, v):
             os.remove(tmp)
         except OSError:
             pass
+
+
+def cache_due(p, fresh, dropped):
+    """Whether a cache's file is written now: something gone from it, fifty entries new, or ten
+    minutes since it was. Its writing was a second and a half a pass, 11 MB for a job or two, and what
+    is not written is only read again at the next pass."""
+    try:
+        aged = time.time() - os.stat(p).st_mtime > 600
+    except OSError:
+        aged = True
+    return bool(dropped or fresh >= 50 or (fresh and aged))
 
 
 def names_in(d):
@@ -350,8 +361,9 @@ class Plan:
 
     # ---- the commit -----------------------------------------------------------------
     def weights_rs(self, commit):
-        # Asked 300 times a pass, a git process each (8 November): a commit named in full has one blob.
-        whole = isinstance(commit, str) and re.fullmatch(r"[0-9a-f]{40}", commit)
+        # Asked 300 times a pass, a git process each (8 November): a commit named by its hash, short
+        # (run.env's seven) or whole, has one blob; a branch's name moves and is asked each time.
+        whole = isinstance(commit, str) and re.fullmatch(r"[0-9a-f]{7,40}", commit)
         if whole and commit in _BLOBS:
             return _BLOBS[commit]
         r = run(["git", "-C", self.tc, "rev-parse", "%s:source/treadcore-brain/src/weights.rs" % commit])
@@ -631,22 +643,25 @@ class Plan:
             # kept in plan/census-dirs.json. Every other result (running, failed, a held-out read the
             # planner merges itself) is looked through each pass, as before. The same directories,
             # in the same order.
-            # Each dir is kept with its commit (run.env) and whether it holds trial.weights, both
-            # fetched with it: sequential() asked the two of 13,000 dirs each pass, five seconds.
+            # Each dir is kept with its commit (run.env), whether it holds trial.weights, and whether
+            # it read only one map (one_map), all fetched with it: sequential() asked the first two of
+            # 13,000 dirs each pass, five seconds, and remembered() the third of 29,500, nine.
             # (A planner without a plan directory, a test's, keeps nothing and looks through them all.)
             cache_f = os.path.join(self.pd, "census-dirs.json") if getattr(self, "pd", None) else None
             cache = (load(cache_f, {}) or {}) if cache_f else {}
-            had = cache.get("dirs", {}) if cache.get("home") == self.home and cache.get("v") == 2 else {}
+            had = cache.get("dirs", {}) if cache.get("home") == self.home and cache.get("v") == 3 else {}
             done = self.ids("done") if cache_f else set()
-            kept, found, fresh = {}, [], False
+            kept, found, fresh = {}, [], 0
             for jid in (names_in(os.path.join(self.q, "results")) or ([], False))[0]:
                 if jid in had:
                     kept[jid] = had[jid]
-                    for rel, commit, tw in had[jid]:
+                    for rel, commit, tw, om in had[jid]:
                         d = os.path.join(self.q, rel)
                         found.append(d)
                         if commit is not False:
                             _COMMITS[d] = commit
+                        if om is not None:
+                            _ONE_MAP[d] = om
                         _TRIAL_W[d] = tw
                     continue
                 mine = []
@@ -662,13 +677,16 @@ class Plan:
                     for rel in mine:
                         d = os.path.join(self.q, rel)
                         commit = Plan.census_commit(d)
-                        # False: run.env could not be read, so nothing is kept and it is read as before.
-                        entries.append([rel, commit if d in _COMMITS else False, os.path.exists(os.path.join(d, "trial.weights"))])
+                        Plan.one_map(d)
+                        # False and None: run.env or pooled.txt could not be read, so nothing is kept
+                        # of it and it is read as before.
+                        entries.append([rel, commit if d in _COMMITS else False, os.path.exists(os.path.join(d, "trial.weights")),
+                                        _ONE_MAP.get(d)])
                     kept[jid] = entries
-                    fresh = True
+                    fresh += 1
                 found += [os.path.join(self.q, d) for d in mine]
-            if cache_f and (fresh or len(kept) != len(had)):
-                keep_cache(cache_f, {"home": self.home, "v": 2, "dirs": kept})
+            if cache_f and cache_due(cache_f, fresh, len(had) - (len(kept) - fresh)):
+                keep_cache(cache_f, {"home": self.home, "v": 3, "dirs": kept})
             self._census_dirs = sorted(d for d in found if not re.search(r"-p\d+(r\d+)?$", d.rstrip("/").split(os.sep)[-2]))
         return list(self._census_dirs)
 
@@ -701,7 +719,7 @@ class Plan:
                         fresh += 1
                     kept[n] = hit
                     out[hit[0]] = hit[1]
-                if fresh or len(kept) != len(cache):
+                if cache_due(cache_f, fresh, len(cache) - (len(kept) - fresh)):
                     keep_cache(cache_f, kept)
             self._done_titles = out
         return self._done_titles
@@ -5545,7 +5563,7 @@ class Plan:
         # plan/crucible-rows.json by the file's size and time, and read again if either moves.
         cache_f = os.path.join(self.pd, "crucible-rows.json")
         cache = load(cache_f, {}) or {}
-        kept, fresh = {}, False
+        kept, fresh = {}, 0
         names = sorted((names_in(os.path.join(self.q, "results")) or ([], False))[0])
         for name, isl in self.state.get("crucible", {}).items():
             gens, msteps, yard, ladder = [], [], [], []
@@ -5580,7 +5598,7 @@ class Plan:
                            [(int(r[0]) + 1, float(r[7])) for r in rows if len(r) > 9 and float(r[7]) >= 0][-40:],
                            [(int(r[0]) + 1, float(r[10]), float(r[11])) for r in rows
                             if len(r) > 11 and float(r[10]) > -1.5 and not (r[10] == r[11] == "-1.0000")][-40:]]
-                    fresh = True
+                    fresh += 1
                 kept[f] = hit
                 if hit[2] is not None:
                     gens.append(hit[2])
@@ -5591,7 +5609,7 @@ class Plan:
                          "generations": max(gens or [0]),
                          "yard": yard[-1] if yard else None, "yard_curve": yard[-40:], "ladder_curve": ladder[-40:],
                          "msteps": max(msteps or [0])}
-        if fresh or len(kept) != len(cache):
+        if cache_due(cache_f, fresh, len(cache) - (len(kept) - fresh)):
             keep_cache(cache_f, kept)
         lad = self.ladder_state().get("milestones", [])
         lineage = []
