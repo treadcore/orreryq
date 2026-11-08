@@ -76,6 +76,50 @@ import time
 SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10"]
 # A fetched census's commit and its one-map verdict, read once a process (a pass): they do not change.
 _COMMITS, _ONE_MAP = {}, {}
+# Read once a process too: a census pooled (its files are fetched once and kept), and weights.rs's blob
+# at a commit named in full (a commit is what it is; a branch's name is not memoised).
+_POOLS, _BLOBS = {}, {}
+# Whether a census dir holds trial.weights, for the dirs census-dirs.json keeps (a finished job's).
+_TRIAL_W = {}
+
+
+def has_trial(d):
+    """trial.weights in a census dir: from census-dirs.json for a finished job's, else looked at."""
+    if d in _TRIAL_W:
+        return _TRIAL_W[d]
+    return os.path.exists(os.path.join(d, "trial.weights"))
+
+
+def keep_cache(p, v):
+    """A cache's file, written under a name of this process's own and then put in place: two planners
+    at once (a pass, and a button's command) each leave a whole file, the last one's, and neither dies
+    on the other's rename (the keeper's flags of 8 November). A cache not kept is made again."""
+    tmp = "%s.%d.tmp" % (p, os.getpid())
+    try:
+        with open(tmp, "w") as f:
+            json.dump(v, f, separators=(",", ":"))
+        os.replace(tmp, p)
+    except OSError:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+
+
+def names_in(d):
+    """The names in a directory that a glob's * gives (no dot names), and whether one of them is a
+    directory; None when the directory is not there."""
+    try:
+        with os.scandir(d) as it:
+            out, nested = [], False
+            for e in it:
+                if e.name.startswith("."):
+                    continue
+                out.append(e.name)
+                nested = nested or e.is_dir()
+            return out, nested
+    except (FileNotFoundError, NotADirectoryError):
+        return None
 
 
 def load(p, default=None):
@@ -230,7 +274,8 @@ class Plan:
         d = os.path.join(self.q, "flags")
         os.makedirs(d, exist_ok=True)
         key = key or "%s:%s" % (kind, text)
-        for f in glob.glob(os.path.join(d, "*.json")):
+        f = self.flag_keys().get(key)
+        if f:
             j = load(f, {}) or {}
             if j.get("key") == key:
                 # One raised before candidates were news: it becomes news.
@@ -239,8 +284,23 @@ class Plan:
                     save(f, j)
                 return
         fid = "%d-%s" % (int(time.time() * 1000), kind)
-        save(os.path.join(d, fid + ".json"), {"id": fid, "t": time.strftime("%Y-%m-%dT%H:%M:%S"), "kind": kind, "text": text, "key": key,
-                                              "ack": None, "progress": bool(progress)})
+        f = os.path.join(d, fid + ".json")
+        save(f, {"id": fid, "t": time.strftime("%Y-%m-%dT%H:%M:%S"), "kind": kind, "text": text, "key": key,
+                 "ack": None, "progress": bool(progress)})
+        self._flag_keys[key] = f
+
+    def flag_keys(self):
+        """{key: file} of every flag, read once a pass. flag() read all 1,171 of them each time it was
+        asked, 188 times a pass (8 November); a key raised stays raised, so once a pass is enough,
+        and flag() adds what it raises."""
+        if self.__dict__.get("_flag_keys") is None:
+            keys = {}
+            for f in sorted(glob.glob(os.path.join(self.q, "flags", "*.json"))):
+                j = load(f, {}) or {}
+                if isinstance(j, dict) and j.get("key") and j["key"] not in keys:
+                    keys[j["key"]] = f
+            self._flag_keys = keys
+        return self._flag_keys
 
     def keep(self):
         for rid, r in self._newruns:
@@ -252,16 +312,53 @@ class Plan:
         self._rsaves = {}
 
     def ids(self, *subs):
+        """The job ids in the queue's directories (queue, running, done, failed, stopped).
+
+        A DIRECTORY IS LISTED AGAIN ONLY WHEN IT CHANGED (8 November). done/ held 38,704 jobs and was
+        globbed 73 times a pass, 45 of them by prepared(), eleven of the pass's seconds. A flat
+        directory's own time moves whenever a job is moved in or out, so its ids are kept with that
+        time and are never older than the directory; one with directories in it (running/, a lane
+        each) is read each time, as before."""
         out = set()
+        memo = self.__dict__.setdefault("_ids", {})
         for sub in subs:
-            for f in glob.glob(os.path.join(self.q, sub, "**", "*.json"), recursive=True):
-                out.add(re.sub(r"^\d+-", "", os.path.basename(f))[:-5])
+            d = os.path.join(self.q, sub)
+            try:
+                before = os.stat(d).st_mtime_ns
+            except OSError:
+                continue
+            hit = memo.get(sub)
+            if hit and hit[0] == before:
+                out |= hit[1]
+                continue
+            listed = names_in(d)
+            if listed is None:
+                continue
+            names, nested = listed
+            if nested:
+                out |= {re.sub(r"^\d+-", "", os.path.basename(f))[:-5]
+                        for f in glob.glob(os.path.join(d, "**", "*.json"), recursive=True)}
+                continue
+            got = {re.sub(r"^\d+-", "", n)[:-5] for n in names if n.endswith(".json")}
+            try:
+                if os.stat(d).st_mtime_ns == before:
+                    memo[sub] = (before, got)
+            except OSError:
+                pass
+            out |= got
         return out
 
     # ---- the commit -----------------------------------------------------------------
     def weights_rs(self, commit):
+        # Asked 300 times a pass, a git process each (8 November): a commit named in full has one blob.
+        whole = isinstance(commit, str) and re.fullmatch(r"[0-9a-f]{40}", commit)
+        if whole and commit in _BLOBS:
+            return _BLOBS[commit]
         r = run(["git", "-C", self.tc, "rev-parse", "%s:source/treadcore-brain/src/weights.rs" % commit])
-        return r.stdout.strip() if r.returncode == 0 else ""
+        blob = r.stdout.strip() if r.returncode == 0 else ""
+        if whole and r.returncode == 0:
+            _BLOBS[commit] = blob
+        return blob
 
     def defaults_at(self, commit):
         """The weights! table's defaults at a commit: {name: number}, read
@@ -527,8 +624,52 @@ class Plan:
         if self.__dict__.get("_census_dirs") is None:
             # A held-out read's pieces (hNNNN-pI) are read as the one census they make, never alone:
             # in the ledger as well they would count each seed twice.
-            self._census_dirs = sorted(d for d in glob.glob(os.path.join(self.q, "results", "*", self.home, "out", "*", "*", ""))
-                                       if not re.search(r"-p\d+(r\d+)?$", d.rstrip("/").split(os.sep)[-2]))
+            # A FINISHED JOB'S CENSUSES ARE KEPT BETWEEN PASSES (8 November): the glob looked through
+            # 38,851 results three levels down each pass, seven of its seconds, for directories that
+            # do not change once their job is done. The queue takes no id it has seen (Queue.add) and
+            # nothing moves a job out of done/, so a job there never runs again; what it fetched is
+            # kept in plan/census-dirs.json. Every other result (running, failed, a held-out read the
+            # planner merges itself) is looked through each pass, as before. The same directories,
+            # in the same order.
+            # Each dir is kept with its commit (run.env) and whether it holds trial.weights, both
+            # fetched with it: sequential() asked the two of 13,000 dirs each pass, five seconds.
+            # (A planner without a plan directory, a test's, keeps nothing and looks through them all.)
+            cache_f = os.path.join(self.pd, "census-dirs.json") if getattr(self, "pd", None) else None
+            cache = (load(cache_f, {}) or {}) if cache_f else {}
+            had = cache.get("dirs", {}) if cache.get("home") == self.home and cache.get("v") == 2 else {}
+            done = self.ids("done") if cache_f else set()
+            kept, found, fresh = {}, [], False
+            for jid in (names_in(os.path.join(self.q, "results")) or ([], False))[0]:
+                if jid in had:
+                    kept[jid] = had[jid]
+                    for rel, commit, tw in had[jid]:
+                        d = os.path.join(self.q, rel)
+                        found.append(d)
+                        if commit is not False:
+                            _COMMITS[d] = commit
+                        _TRIAL_W[d] = tw
+                    continue
+                mine = []
+                out = os.path.join(self.q, "results", jid, self.home, "out")
+                for x in (names_in(out) or ([], False))[0]:
+                    if not os.path.isdir(os.path.join(out, x)):
+                        continue
+                    for stamp in (names_in(os.path.join(out, x)) or ([], False))[0]:
+                        if os.path.isdir(os.path.join(out, x, stamp)):
+                            mine.append(os.path.join("results", jid, self.home, "out", x, stamp, ""))
+                if jid in done:
+                    entries = []
+                    for rel in mine:
+                        d = os.path.join(self.q, rel)
+                        commit = Plan.census_commit(d)
+                        # False: run.env could not be read, so nothing is kept and it is read as before.
+                        entries.append([rel, commit if d in _COMMITS else False, os.path.exists(os.path.join(d, "trial.weights"))])
+                    kept[jid] = entries
+                    fresh = True
+                found += [os.path.join(self.q, d) for d in mine]
+            if cache_f and (fresh or len(kept) != len(had)):
+                keep_cache(cache_f, {"home": self.home, "v": 2, "dirs": kept})
+            self._census_dirs = sorted(d for d in found if not re.search(r"-p\d+(r\d+)?$", d.rstrip("/").split(os.sep)[-2]))
         return list(self._census_dirs)
 
     def done_titles(self):
@@ -536,10 +677,32 @@ class Plan:
         loaded all 27,000 of them, five and seven times a pass."""
         if self.__dict__.get("_done_titles") is None:
             out = {}
-            for f in glob.glob(os.path.join(self.q, "done", "**", "*.json"), recursive=True):
-                j = load(f, {}) or {}
-                if j.get("id"):
-                    out[j["id"]] = j.get("title", "")
+            d = os.path.join(self.q, "done")
+            listed = names_in(d)
+            if listed is None or listed[1] or not getattr(self, "pd", None):
+                for f in glob.glob(os.path.join(d, "**", "*.json"), recursive=True):
+                    j = load(f, {}) or {}
+                    if j.get("id"):
+                        out[j["id"]] = j.get("title", "")
+            else:
+                # KEPT BETWEEN PASSES (8 November): 38,704 files read each pass for an id and a title,
+                # neither of which a finished job changes. Each file's pair is kept by its name, in
+                # plan/done-titles.json, and only the names new since the last pass are read.
+                cache_f = os.path.join(self.pd, "done-titles.json")
+                cache = load(cache_f, {}) or {}
+                kept, fresh = {}, 0
+                for n in sorted(n for n in listed[0] if n.endswith(".json")):
+                    hit = cache.get(n)
+                    if hit is None:
+                        j = load(os.path.join(d, n), {}) or {}
+                        if not j.get("id"):
+                            continue
+                        hit = [j["id"], j.get("title", "")]
+                        fresh += 1
+                    kept[n] = hit
+                    out[hit[0]] = hit[1]
+                if fresh or len(kept) != len(cache):
+                    keep_cache(cache_f, kept)
             self._done_titles = out
         return self._done_titles
 
@@ -1659,7 +1822,15 @@ class Plan:
     @staticmethod
     def pool(dirs):
         """The censuses of one trial pooled, by inverse variance: {"every":
-        (d, se, seeds), "below": a map more than two errors under}."""
+        (d, se, seeds), "below": a map more than two errors under}. Once a process: the same reads
+        are pooled by sequential() four times a pass, and by raise_found()."""
+        key = tuple(dirs)
+        if key not in _POOLS:
+            _POOLS[key] = Plan._pool(dirs)
+        return dict(_POOLS[key]) if _POOLS[key] is not None else None
+
+    @staticmethod
+    def _pool(dirs):
         every, maps = [], {}
         for d in dirs:
             if Plan.one_map(d):
@@ -1721,7 +1892,7 @@ class Plan:
         base = self.cfg["weights"]["seeds"]
         out = {}
         for jid, ds in reads.items():
-            if not os.path.exists(os.path.join(ds[0], "trial.weights")) or not self.same_defaults(self.census_commit(ds[0])):
+            if not has_trial(ds[0]) or not self.same_defaults(self.census_commit(ds[0])):
                 continue
             p = self.pool(ds)
             if not p:
@@ -4253,7 +4424,13 @@ class Plan:
     def raise_found(self):
         """Flags for what the fleet found: a trial past both held-out reads,
         and a candidate under a family's floor."""
+        keys = self.flag_keys()
         for jid, ds in self.held_pairs().items():
+            # Raised already, and as news: flag() would do nothing, so nothing is read for it. Every
+            # trial that ever passed was read again each pass, 14 of its seconds (8 November).
+            f = keys.get("candidate:%s" % jid)
+            if f and (load(f, {}) or {}).get("progress"):
+                continue
             if self.held_pass(ds):
                 c = self.job_census(jid)
                 held = [self.job_census(d.rstrip("/").split(os.sep)[-2]) for d in ds]
@@ -5362,33 +5539,60 @@ class Plan:
         """plan/crucible.json for orrery's Projects view: each island's
         segments, generations, last yardstick and speed, from its results."""
         out = {}
+        # EACH SEGMENT'S ROWS ARE SUMMED UP ONCE (8 November): every pass read every segment any
+        # island ever ran, 1.1 million rows, seven of its seconds, for a maximum, a speed and two
+        # curves' last forty points. A segment's gens.tsv is fetched once; its summary is kept in
+        # plan/crucible-rows.json by the file's size and time, and read again if either moves.
+        cache_f = os.path.join(self.pd, "crucible-rows.json")
+        cache = load(cache_f, {}) or {}
+        kept, fresh = {}, False
+        names = sorted((names_in(os.path.join(self.q, "results")) or ([], False))[0])
         for name, isl in self.state.get("crucible", {}).items():
-            rows = []
-            for d in sorted(glob.glob(os.path.join(self.q, "results", "x-%s-*" % name))):
-                jid = os.path.basename(d)
-                f = os.path.join(d, self.home, "out", jid, "gens.tsv")
+            gens, msteps, yard, ladder = [], [], [], []
+            for jid in (n for n in names if n.startswith("x-%s-" % name)):
+                f = os.path.join(self.q, "results", jid, self.home, "out", jid, "gens.tsv")
                 try:
-                    for line in open(f).read().splitlines()[1:]:
-                        r = line.split("\t")
-                        # A ROW A CUT LEFT AS ZEROS IS ONE ROW, NOT THE PLANNER (8 November). calber's
-                        # x-calber-cuda-3345 ran again after the cut and wrote on after the 116 bytes
-                        # the cut kept from its disk; every pass from 08:46 to 09:23 died on that row, and
-                        # for forty minutes nothing was planned. A row whose numbers do not read is
-                        # passed over.
-                        try:
-                            int(r[0])
-                            [float(r[i]) for i in (4, 7, 10, 11) if i < len(r)]
-                        except ValueError:
-                            continue
-                        rows.append(r)
+                    st = os.stat(f)
                 except OSError:
-                    pass
-            yard = [(int(r[0]) + 1, float(r[7])) for r in rows if len(r) > 9 and float(r[7]) >= 0]
-            ladder = [(int(r[0]) + 1, float(r[10]), float(r[11])) for r in rows if len(r) > 11 and float(r[10]) > -1.5 and not (r[10] == r[11] == "-1.0000")]
+                    continue
+                hit = cache.get(f)
+                if not hit or hit[0] != st.st_size or hit[1] != st.st_mtime_ns:
+                    rows = []
+                    try:
+                        for line in open(f).read().splitlines()[1:]:
+                            r = line.split("\t")
+                            # A ROW A CUT LEFT AS ZEROS IS ONE ROW, NOT THE PLANNER (8 November).
+                            # calber's x-calber-cuda-3345 ran again after the cut and wrote on after
+                            # the 116 bytes the cut kept from its disk; every pass from 08:46 to 09:23
+                            # died on that row, and for forty minutes nothing was planned. A row whose
+                            # numbers do not read is passed over.
+                            try:
+                                int(r[0])
+                                [float(r[i]) for i in (4, 7, 10, 11) if i < len(r)]
+                            except ValueError:
+                                continue
+                            rows.append(r)
+                    except OSError:
+                        continue
+                    hit = [st.st_size, st.st_mtime_ns,
+                           max([int(r[0]) + 1 for r in rows]) if rows else None,
+                           max([float(r[4]) / 1e6 for r in rows]) if rows else None,
+                           [(int(r[0]) + 1, float(r[7])) for r in rows if len(r) > 9 and float(r[7]) >= 0][-40:],
+                           [(int(r[0]) + 1, float(r[10]), float(r[11])) for r in rows
+                            if len(r) > 11 and float(r[10]) > -1.5 and not (r[10] == r[11] == "-1.0000")][-40:]]
+                    fresh = True
+                kept[f] = hit
+                if hit[2] is not None:
+                    gens.append(hit[2])
+                    msteps.append(hit[3])
+                yard += [tuple(y) for y in hit[4]]
+                ladder += [tuple(x) for x in hit[5]]
             out[name] = {"segments": isl["seg"], "running": (isl.get("queued") or [""])[0], "failures": isl["failures"],
-                         "generations": max([int(r[0]) + 1 for r in rows] or [0]),
+                         "generations": max(gens or [0]),
                          "yard": yard[-1] if yard else None, "yard_curve": yard[-40:], "ladder_curve": ladder[-40:],
-                         "msteps": max([float(r[4]) / 1e6 for r in rows] or [0])}
+                         "msteps": max(msteps or [0])}
+        if fresh or len(kept) != len(cache):
+            keep_cache(cache_f, kept)
         lad = self.ladder_state().get("milestones", [])
         lineage = []
         try:

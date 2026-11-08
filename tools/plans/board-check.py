@@ -883,16 +883,18 @@ for t in ("analysis.py", "nets.py", "growth.py", "recordings.py", "power.py"):
     open(os.path.join(ct, t), "w").write("import sys, time\ntime.sleep(0.5)\nopen(sys.argv[1] + '/asked', 'a').write(' '.join(['%s'] + sys.argv[2:]) + '\\n')\n" % t[:-3])
 asked = lambda: sorted(open(os.path.join(cq, "asked")).read().splitlines()) if os.path.exists(os.path.join(cq, "asked")) else []
 wait = lambda n: [time.sleep(0.05) for _ in range(100) if len(asked()) < n]
-assert m.chores(cq, ct) == ["analysis", "nets", "growth", "power", "recordings list"]
+# A queue with no pack on record has missed its night (7 November: the logs packed once a night, a
+# missed night made up after 36 hours), so the pack begins with the rest.
+assert m.chores(cq, ct) == ["analysis", "nets", "growth", "power", "recordings list", "pack-logs"]
 assert m.chores(cq, ct) == [], "behind their locks: nothing begun twice, the list's while it runs"
-wait(5)
-assert asked() == ["analysis", "growth refresh", "nets refresh", "power sample", "recordings list"], asked()
+wait(6)
+assert asked() == ["analysis", "growth pack-logs", "growth refresh", "nets refresh", "power sample", "recordings list"], asked()
 for doc in ("analysis.json", "nets.json", "growth.json", "recordings.json", "power-samples.jsonl"):
     open(os.path.join(cq, "plan", doc), "w").write("{}")
 time.sleep(0.3)
 assert not os.path.exists(os.path.join(cq, "plan", "recordings.json.lock.run")), "the list's mark goes when it ends"
 assert m.chores(cq, ct) == ["recordings sweep"], "fresh documents; the sweep's turn"
-wait(6)
+wait(7)
 assert "recordings sweep --do" in asked() and os.path.exists(os.path.join(cq, "plan", "recordings.json.sweep"))
 time.sleep(0.3)
 assert m.chores(cq, ct) == [], "the sweep, once in six hours"
