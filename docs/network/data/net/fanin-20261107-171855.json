@@ -1,0 +1,16 @@
+{
+ "hub": "whitewolf",
+ "senders": [
+  "nasser",
+  "xinanjiang"
+ ],
+ "secs": 8.0,
+ "Mbps": {
+  "nasser": 472.9,
+  "xinanjiang": 468.6
+ },
+ "window_s": 6.11,
+ "kind": "fanin",
+ "stamp": "20261107-171855",
+ "at": 1794100735.356205
+}

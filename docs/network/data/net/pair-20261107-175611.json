@@ -1,0 +1,11 @@
+{
+ "from": "saskatchewan",
+ "to": "whitewolf",
+ "secs": 5.0,
+ "streams": 1,
+ "Mbps": 472.8,
+ "window_s": 3.1,
+ "kind": "pair",
+ "stamp": "20261107-175611",
+ "at": 1794102971.701667
+}

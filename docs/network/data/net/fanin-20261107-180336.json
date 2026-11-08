@@ -1,0 +1,16 @@
+{
+ "hub": "whitewolf",
+ "senders": [
+  "saskatchewan",
+  "nasser"
+ ],
+ "secs": 8.0,
+ "Mbps": {
+  "saskatchewan": 470.8,
+  "nasser": 470.7
+ },
+ "window_s": 6.11,
+ "kind": "fanin",
+ "stamp": "20261107-180336",
+ "at": 1794103416.373024
+}

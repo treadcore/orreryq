@@ -1,0 +1,57 @@
+{
+ "kind": "ops",
+ "label": "xinanjiang-sync",
+ "client": "user@192.168.8.217",
+ "files": 200,
+ "stamp": "20261107-174114",
+ "steps": {
+  "make": {
+   "secs": 1.455,
+   "per_s": 137.5,
+   "ops_per_file": {
+    "v3 fsstat": 0.01,
+    "v4 access": 1.01,
+    "v4 create": 0.01,
+    "v4 getattr": 1.04,
+    "v4 getfh": 1.01,
+    "v4 lookup": 0.01,
+    "v4 open": 1.0,
+    "v4 putfh": 2.04,
+    "v4 write": 1.0,
+    "v4 sequence": 2.04
+   },
+   "changing_per_file": 2.01,
+   "disk_flushes_per_file": 16.42
+  },
+  "move": {
+   "secs": 0.652,
+   "per_s": 306.7,
+   "ops_per_file": {
+    "v4 access": 0.02,
+    "v4 getattr": 0.02,
+    "v4 putfh": 2.02,
+    "v4 rename": 1.0,
+    "v4 savefh": 1.0,
+    "v4 sequence": 1.02
+   },
+   "changing_per_file": 1.0,
+   "disk_flushes_per_file": 8.24
+  },
+  "remove": {
+   "secs": 0.855,
+   "per_s": 233.9,
+   "ops_per_file": {
+    "v4 access": 0.02,
+    "v4 op8": 1.0,
+    "v4 getattr": 1.03,
+    "v4 putfh": 2.06,
+    "v4 readdir": 0.01,
+    "v4 remove": 1.01,
+    "v4 setattr": 1.0,
+    "v4 sequence": 2.06
+   },
+   "changing_per_file": 2.01,
+   "disk_flushes_per_file": 8.39
+  }
+ }
+}

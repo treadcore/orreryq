@@ -1,0 +1,23 @@
+{
+ "kind": "net",
+ "label": "nasser-wire",
+ "host": "nasser",
+ "os": "Linux-6.18.60-0-lts-x86_64-with-musl1",
+ "where": "192.168.8.179",
+ "stamp": "20261107-173041",
+ "tests": {
+  "ping": {
+   "min_ms": 0.399,
+   "avg_ms": 0.523,
+   "max_ms": 0.58
+  },
+  "up": {
+   "MBps": 91.4,
+   "retransmits": 0
+  },
+  "down": {
+   "MBps": 117.1,
+   "retransmits": 0
+  }
+ }
+}

@@ -1,0 +1,87 @@
+{
+ "kind": "run",
+ "label": "nasser-nfs-sync",
+ "host": "nasser",
+ "os": "Linux-6.18.60-0-lts-x86_64-with-musl1",
+ "where": "/mnt/calber",
+ "stamp": "20261107-173502",
+ "tests": {
+  "seqW": {
+   "MBps": 92.1,
+   "IOPS": 88,
+   "p50_ms": 90.702,
+   "p99_ms": 127.402
+  },
+  "seqR": {
+   "MBps": 117.0,
+   "IOPS": 112,
+   "p50_ms": 71.827,
+   "p99_ms": 89.653
+  },
+  "seqR4": {
+   "MBps": 117.0,
+   "IOPS": 112,
+   "p50_ms": 143.655,
+   "p99_ms": 152.044
+  },
+  "randR": {
+   "MBps": 82.2,
+   "IOPS": 20070,
+   "p50_ms": 0.791,
+   "p99_ms": 0.93
+  },
+  "randW": {
+   "MBps": 13.3,
+   "IOPS": 3247,
+   "p50_ms": 4.751,
+   "p99_ms": 6.783
+  },
+  "syncW": {
+   "MBps": 1.8,
+   "IOPS": 431,
+   "p50_ms": 2.408,
+   "p99_ms": 2.572,
+   "fsync_ms": 0.011
+  },
+  "tree": {
+   "make": {
+    "s": 60.19,
+    "per_s": 142
+   },
+   "files": 8520,
+   "list": {
+    "s": 0.34,
+    "per_s": 24903
+   },
+   "companions": 0,
+   "list2": {
+    "s": 0.19,
+    "per_s": 45261
+   },
+   "sort": {
+    "s": 0.03,
+    "per_s": 262989
+   },
+   "move": {
+    "s": 24.87,
+    "per_s": 343
+   },
+   "read": {
+    "s": 7.46,
+    "per_s": 1142
+   },
+   "remove": {
+    "s": 39.4,
+    "per_s": 216
+   }
+  }
+ },
+ "mount": {
+  "source": "192.168.8.179:/mnt/bench",
+  "at": "/mnt/calber",
+  "type": "nfs4",
+  "options": "rw,relatime,vers=4.2,rsize=1048576,wsize=1048576,namlen=255,hard,fatal_neterrors=none,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=192.168.8.121,local_lock=none,addr=192.168.8.179"
+ },
+ "engine": "libaio",
+ "quick": false
+}

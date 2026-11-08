@@ -1,0 +1,88 @@
+{
+ "kind": "run",
+ "label": "mac-nfs-sync-default",
+ "host": "users-iMac.lan",
+ "os": "macOS-26.7.2-arm64-arm-64bit",
+ "where": "/Users/user/calber-bench",
+ "stamp": "20261107-172355",
+ "tests": {
+  "seqW": {
+   "MBps": 115.1,
+   "IOPS": 110,
+   "p50_ms": 71.827,
+   "p99_ms": 143.655
+  },
+  "seqR": {
+   "MBps": 115.9,
+   "IOPS": 111,
+   "p50_ms": 67.633,
+   "p99_ms": 104.333
+  },
+  "seqR4": {
+   "MBps": 116.4,
+   "IOPS": 111,
+   "p50_ms": 135.266,
+   "p99_ms": 219.152
+  },
+  "randR": {
+   "MBps": 14.6,
+   "IOPS": 3554,
+   "p50_ms": 4.489,
+   "p99_ms": 7.045
+  },
+  "randW": {
+   "MBps": 8.2,
+   "IOPS": 2006,
+   "p50_ms": 6.193,
+   "p99_ms": 31.85
+  },
+  "syncW": {
+   "MBps": 1.5,
+   "IOPS": 365,
+   "p50_ms": 0.075,
+   "p99_ms": 0.208,
+   "fsync_ms": 2.641
+  },
+  "tree": {
+   "make": {
+    "s": 25.32,
+    "per_s": 39
+   },
+   "files": 1000,
+   "list": {
+    "s": 0.04,
+    "per_s": 25560
+   },
+   "companions": 1010,
+   "list2": {
+    "s": 0.01,
+    "per_s": 138646
+   },
+   "sort": {
+    "s": 0.0,
+    "per_s": 1494763
+   },
+   "move": {
+    "s": 10.22,
+    "per_s": 98
+   },
+   "read": {
+    "s": 0.63,
+    "per_s": 1599
+   },
+   "remove": {
+    "s": 8.05,
+    "per_s": 124
+   }
+  }
+ },
+ "mount": {
+  "source": "192.168.8.179:/mnt/bench",
+  "at": "/Users/user/calber-bench",
+  "type": "nfs",
+  "options": "nfs, nodev, nosuid, mounted by user",
+  "granted": "nt options: General mount flags: 0x0 NFS parameters: File system locations: /mnt/bench @ 192.168.8.179 (192.168.8.179) -- Current mount parameters: General mount flags: 0x4000018 nodev,nosuid,multilabel NFS parameters: vers=3,tcp,port=2049,nomntudp,hard,nointr,noresvport,negnamecache,callumnt,locks,quota,rsize=32768,wsize=32768,readahead=16,dsize=32768,rdirplus,nodumbtimer,timeo=10,maxgroups=16,acregmin=5,acregmax=60,acdirmin=5,acdirmax=60,acrootdirmin=5,acrootdirmax=60,nomutejukebox,nonfc,sec=sys,accesscache=3 File system locations: /mnt/bench @ 192.168.8.179 (192.168.8.179) Status flags: 0x0"
+ },
+ "engine": "posixaio",
+ "quick": true
+}

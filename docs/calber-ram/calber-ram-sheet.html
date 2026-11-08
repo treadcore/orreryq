@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>calber RAM Sheet</title>
+<style>
+  @page { size: Letter; margin: 0.4in 0.45in; }
+  * { box-sizing: border-box; }
+  html, body { background: #fff; color: #000; }
+  body { font: 8.9pt/1.24 "Helvetica Neue", Helvetica, Arial, sans-serif; margin: 0; }
+  h1 { font-size: 15pt; margin: 0; letter-spacing: -0.2px; }
+  .sub { font-size: 8.6pt; margin: 1px 0 5px; border-bottom: 2px solid #000; padding-bottom: 5px; }
+  h2 { font-size: 9.8pt; margin: 7px 0 3px; text-transform: uppercase; letter-spacing: 0.6px; border-bottom: 1px solid #000; padding-bottom: 1px; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { border: 1px solid #000; padding: 1.6px 5px; vertical-align: top; text-align: left; }
+  th { font-weight: 700; background: #fff; }
+  .spec td:first-child { width: 17%; font-weight: 700; }
+  .cols { display: grid; grid-template-columns: 1.08fr 1fr; gap: 14px; }
+  ol { margin: 2px 0 0; padding-left: 18px; }
+  li { margin: 0.5px 0; }
+  .box::before { content: "\2610\00a0"; }
+  code { font: 8.2pt Menlo, Consolas, monospace; }
+  .blank { display: inline-block; min-width: 0.8in; border-bottom: 1px solid #000; }
+  .note { font-size: 7.8pt; margin-top: 4px; }
+  .now { font-weight: 700; }
+  .warn { border: 1.5px solid #000; padding: 3px 6px; margin-top: 5px; }
+</style>
+</head>
+<body>
+<h1>calber &mdash; Memory (RAM) Settings Sheet</h1>
+<div class="sub">7 November 2026 &middot; read from the machine (<code>dmidecode</code>, kernel log) &middot; goal: the sticks&rsquo; rated 3200 MT/s, stable 24/7</div>
+
+<h2>This system</h2>
+<table class="spec">
+  <tr><td>Board</td><td>Gigabyte Z370 AORUS Gaming WIFI (DMI: &ldquo;WIFI-CF&rdquo;) &middot; BIOS <b>F15a</b> (11/28/2019) &middot; PCB rev <span class="blank"></span></td></tr>
+  <tr><td>CPU</td><td>Intel Core i7-9700F, 8 cores, no integrated graphics &middot; Intel&rsquo;s rated memory speed: <b>DDR4-2666</b></td></tr>
+  <tr><td>RAM</td><td>4 &times; 16 GB Team Group DDR4-3200 (<code>TEAMGROUP-UD4-3200</code>), <b>single rank</b>, all four slots (A-DIMM0/1, B-DIMM0/1)</td></tr>
+  <tr><td>Running now</td><td class="now">3200 MT/s since 7 Nov, 11:00 (was 2400 at 1.2 V, XMP off) &middot; <b>XMP Profile 1, DRAM 1.35 V</b></td></tr>
+  <tr><td>Cooling</td><td>CPU on liquid: no air across the DIMMs or the VRM. Allow time for heat soak before judging temperatures.</td></tr>
+  <tr><td>XMP profile</td><td>Profile 1: speed <b>3200</b> &middot; voltage <b>1.35 V</b> &middot; timings as the profile sets them <span class="blank"></span></td></tr>
+</table>
+
+<h2>Settings &mdash; BIOS, Tweaker tab</h2>
+<table>
+  <tr><th style="width:30%">Setting</th><th style="width:38%">Set to</th><th>24/7 limit</th></tr>
+  <tr><td>Extreme Memory Profile (X.M.P.)</td><td><b>Profile1</b></td><td>&mdash;</td></tr>
+  <tr><td>DRAM Voltage</td><td><b>The profile&rsquo;s, usually 1.35 V</b></td><td>&le; 1.40 V (stay at 1.35 V if stable)</td></tr>
+  <tr><td>Memory Enhancement Settings</td><td>Normal</td><td>&mdash;</td></tr>
+  <tr><td>Command Rate (tCMD)</td><td>Auto; <b>2T</b> if unstable</td><td>&mdash;</td></tr>
+  <tr><td>VCCSA (System Agent)</td><td>Auto; <b>1.15 V</b> if unstable, +0.05 V steps</td><td>&le; 1.25 V</td></tr>
+  <tr><td>VCCIO</td><td>Auto; <b>1.10 V</b> if unstable, +0.05 V steps</td><td>&le; 1.20 V</td></tr>
+  <tr><td>System Memory Multiplier</td><td>From the profile (32.00 = 3200)</td><td>Step down: 30.00, then 29.33</td></tr>
+</table>
+
+<div class="cols">
+<div>
+<h2>Steps</h2>
+<ol>
+  <li class="box">Orrery &rarr; Projects &rarr; <b>Finish, then out</b>; wait for &ldquo;Removed&rdquo;.</li>
+  <li class="box">Reboot, <b>DEL</b>. Make the other changes first (CSM off, AC BACK, logo off, PXE off).</li>
+  <li class="box"><b>F11 &rarr; Save Profile &ldquo;stock&rdquo;</b> (the way back).</li>
+  <li class="box">X.M.P. &rarr; Profile1. Fill in the profile line above.</li>
+  <li class="box">DRAM Voltage = profile (1.35 V). Enhancement: Normal.</li>
+  <li class="box"><b>F10</b>. First boot is slow; the board may cycle a few times.</li>
+  <li class="box">Cycles 3&times; and comes back at defaults? <b>F11 &rarr; Load &ldquo;stock&rdquo;</b>, go to <i>If unstable</i>.</li>
+  <li class="box">Ubuntu: <code>sudo dmidecode -t 17 | grep Configured</code><br>should read <b>3200 MT/s, 1.35 V</b> on all four.</li>
+  <li class="box">Stress test (calber still out of the queue), below.</li>
+  <li class="box">Tell Claude &rarr; speed bench <code>ram-bench.sh calber 3200</code>.</li>
+  <li class="box"><b>F11 &rarr; Save Profile</b> + USB stick. Then Orrery <b>Add</b>.</li>
+</ol>
+</div>
+<div>
+<h2>If unstable &mdash; one change at a time</h2>
+<ol>
+  <li class="box">Command Rate <b>2T</b>.</li>
+  <li class="box">VCCSA <b>1.15 V</b>, VCCIO <b>1.10 V</b>; then +0.05 V (limits above).</li>
+  <li class="box">Speed <b>3000</b>, profile timings and voltage kept.</li>
+  <li class="box">Speed <b>2933</b>.</li>
+  <li class="box">Give up safely: <b>XMP off, 2666 at 1.2 V</b> (multiplier 26.66): the CPU&rsquo;s own rating, no test needed.</li>
+</ol>
+<h2>Stress test (1 hour)</h2>
+<code>sudo apt install stress-ng</code><br>
+<code>stress-ng --vm 4 --vm-bytes 75% --vm-method all \</code><br><code>&nbsp;&nbsp;--verify -t 1h</code><br>
+Any &ldquo;fail&rdquo; or a crash = unstable. Stricter: MemTest86 from USB overnight.
+<div class="warn"><b>Bad memory fails silently:</b> wrong census results or a damaged island checkpoint, not a crash. Do not skip the test at 3000+.</div>
+</div>
+</div>
+
+<h2>Speed &mdash; before and after (same frozen work, calber idle)</h2>
+<table>
+  <tr><th style="width:42%">Measure</th><th style="width:20%">2400, 1.2 V (before)</th><th style="width:19%">After: 3200</th><th>Change</th></tr>
+  <tr><td>Bandwidth, all 8 cores (triad)</td><td>22,284 MB/s</td><td>27,686 MB/s</td><td>+24%</td></tr>
+  <tr><td>Bandwidth, one core (triad)</td><td>20,291 MB/s</td><td>24,436 MB/s</td><td>+20%</td></tr>
+  <tr><td>Latency (one load, 512 MiB)</td><td>69.6 ns</td><td>61.5 ns</td><td>12% quicker</td></tr>
+  <tr><td>Census, 16 seeds on 8 cores</td><td>72.0 s (3 runs)</td><td>71.2 s (3 runs)</td><td>1.1% faster, same games</td></tr>
+  <tr><td>Census, 2 seeds on 1 core</td><td>16.1 s (2 runs)</td><td>16.0 s (2 runs)</td><td>0.9% faster</td></tr>
+  <tr><td>Fleet jobs, s/seed vs fleet (a day)</td><td>0.82 (17 jobs)</td><td>after a day</td><td></td></tr>
+</table>
+<div class="note">Expect a small gain: calber&rsquo;s census showed no slowdown at 2400. VCCSA/VCCIO limits are common Coffee Lake practice, not checked against Gigabyte&rsquo;s or Intel&rsquo;s documents. Full reasoning: <code>docs/calber-bios-recovery-lab-report.md</code> &sect;V; checklist: <code>docs/calber-todo.md</code>.</div>
+</body>
+</html>

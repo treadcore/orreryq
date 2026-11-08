@@ -1,0 +1,13 @@
+# ram-bench 3200 on calber, 2026-11-07 19:14:31 UTC
+kernel 7.0.0-42-generic; Intel(R) Core(TM) i7-9700F CPU @ 3.00GHz; governor powersave balance_performance
+power limit 4090 W long term; load before 0.00; package 32 C, board sensor 5 35 C
+memory: the label says it (3200); confirm with sudo dmidecode -t 17 | grep Configured
+stream, all cores: copy 24321 scale 24526 add 27639 triad 27686 MB/s (threads 8, check 576650390625.0)
+stream, one core:  copy 22173 scale 22133 add 24648 triad 24436 MB/s (threads 1, check 576650390625.0)
+latency: 61.5 ns a load over 512 MiB (end 35008706)
+census, 16 seeds on 8 cores, run 1: 71.2 s  (cores at 4500 max, 4500 mean MHz, package 42 C, board sensor 5 47 C, pooled e087db31)
+census, 16 seeds on 8 cores, run 2: 71.4 s  (cores at 4500 max, 4500 mean MHz, package 44 C, board sensor 5 52 C, pooled e087db31)
+census, 16 seeds on 8 cores, run 3: 71.1 s  (cores at 4500 max, 4500 mean MHz, package 43 C, board sensor 5 55 C, pooled e087db31)
+census, 2 seeds on one core, run 1: 16.0 s  (cores at 4675 max, 2718 mean MHz, package 43 C, board sensor 5 54 C, pooled 11b83ba9)
+census, 2 seeds on one core, run 2: 16.0 s  (cores at 4694 max, 2252 mean MHz, package 43 C, board sensor 5 53 C, pooled 11b83ba9)
+# done 19:18:54

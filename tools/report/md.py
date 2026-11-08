@@ -31,7 +31,8 @@ def inline(t):
     codes = []
 
     def keep(m):
-        codes.append("<code>%s</code>" % html.escape(m.group(1)))
+        # A pipe escaped so a table cell does not split there is still a pipe in the command shown.
+        codes.append("<code>%s</code>" % html.escape(m.group(1).replace("\\|", "|")))
         return "\x00%d\x00" % (len(codes) - 1)
 
     t = re.sub(r"`([^`]+)`", keep, t)

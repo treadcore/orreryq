@@ -948,6 +948,15 @@
    "helps": "Indirectly: nothing learned is worth much if the record of it is lost."
   },
   {
+   "key": "Bench",
+   "does": "Which layout of a machine's spare disks is fastest: a run as it happens, the verdict for each use, every layout on one chart, the conclusion matrix, and the machine's spare disks.",
+   "ties": "tools/disk-bench.py measures on the machine, as root, typed by a person; tools/disk-report.py brings the results back and draws the lab report's charts from the same table, so the screen and the report agree.",
+   "drawn": "Each measure as a multiple of one disk, on a log scale, so thirteen layouts share one chart; colour is the technology (mdadm blue, ZFS orange, btrfs aqua), never the rank; the best is green with a dot.",
+   "look": "A layout green across a row, a run gone quiet, or a spare disk that HOLDS something: that one is not free.",
+   "sim": "Nothing: these are measurements of real disks, each layout built, measured and taken apart.",
+   "helps": "Indirectly: a fast working disk speeds the jobs that read and write files, and the record of what was measured outlives the disks."
+  },
+  {
    "key": "Projects",
    "does": "Says which machine works on what: treadcore or crucible.",
    "ties": "Sets which lanes feed the dial track and which feed the GPU track.",

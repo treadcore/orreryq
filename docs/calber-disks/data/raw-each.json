@@ -1,0 +1,169 @@
+{
+ "layout": "raw-each",
+ "raw": {
+  "disk1": {
+   "dev": "/dev/sda",
+   "seq-write": {
+    "write": {
+     "MBps": 499.2,
+     "iops": 473,
+     "p99_us": 128450.6
+    },
+    "secs": 10.1
+   },
+   "seq-read": {
+    "read": {
+     "MBps": 294.0,
+     "iops": 277,
+     "p99_us": 117964.8
+    },
+    "secs": 10.1
+   },
+   "rand-read": {
+    "read": {
+     "MBps": 412.0,
+     "iops": 100562,
+     "p99_us": 2056.2
+    },
+    "secs": 40.0
+   }
+  },
+  "disk2": {
+   "dev": "/dev/sdb",
+   "seq-write": {
+    "write": {
+     "MBps": 499.6,
+     "iops": 473,
+     "p99_us": 128450.6
+    },
+    "secs": 10.1
+   },
+   "seq-read": {
+    "read": {
+     "MBps": 294.2,
+     "iops": 277,
+     "p99_us": 117964.8
+    },
+    "secs": 10.1
+   },
+   "rand-read": {
+    "read": {
+     "MBps": 410.5,
+     "iops": 100201,
+     "p99_us": 2072.6
+    },
+    "secs": 40.0
+   }
+  },
+  "disk3": {
+   "dev": "/dev/sdc",
+   "seq-write": {
+    "write": {
+     "MBps": 499.2,
+     "iops": 473,
+     "p99_us": 128450.6
+    },
+    "secs": 10.1
+   },
+   "seq-read": {
+    "read": {
+     "MBps": 289.7,
+     "iops": 273,
+     "p99_us": 123207.7
+    },
+    "secs": 10.1
+   },
+   "rand-read": {
+    "read": {
+     "MBps": 409.1,
+     "iops": 99876,
+     "p99_us": 2072.6
+    },
+    "secs": 40.0
+   }
+  },
+  "disk4": {
+   "dev": "/dev/sdd",
+   "seq-write": {
+    "write": {
+     "MBps": 499.8,
+     "iops": 474,
+     "p99_us": 126353.4
+    },
+    "secs": 10.1
+   },
+   "seq-read": {
+    "read": {
+     "MBps": 294.8,
+     "iops": 278,
+     "p99_us": 119013.4
+    },
+    "secs": 10.1
+   },
+   "rand-read": {
+    "read": {
+     "MBps": 412.0,
+     "iops": 100571,
+     "p99_us": 2056.2
+    },
+    "secs": 40.0
+   }
+  },
+  "disk5": {
+   "dev": "/dev/sde",
+   "seq-write": {
+    "write": {
+     "MBps": 499.9,
+     "iops": 474,
+     "p99_us": 123207.7
+    },
+    "secs": 10.1
+   },
+   "seq-read": {
+    "read": {
+     "MBps": 283.1,
+     "iops": 267,
+     "p99_us": 127402.0
+    },
+    "secs": 10.1
+   },
+   "rand-read": {
+    "read": {
+     "MBps": 410.8,
+     "iops": 100274,
+     "p99_us": 2072.6
+    },
+    "secs": 40.0
+   }
+  },
+  "disk6": {
+   "dev": "/dev/sdf",
+   "seq-write": {
+    "write": {
+     "MBps": 500.1,
+     "iops": 474,
+     "p99_us": 127402.0
+    },
+    "secs": 10.1
+   },
+   "seq-read": {
+    "read": {
+     "MBps": 292.1,
+     "iops": 276,
+     "p99_us": 121110.5
+    },
+    "secs": 10.1
+   },
+   "rand-read": {
+    "read": {
+     "MBps": 409.8,
+     "iops": 100026,
+     "p99_us": 2072.6
+    },
+    "secs": 40.0
+   }
+  }
+ },
+ "minutes": 4.0,
+ "at": "2026-11-07T20:39:42"
+}

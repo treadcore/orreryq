@@ -1,0 +1,53 @@
+{
+ "kind": "ops",
+ "label": "mac-async",
+ "client": "mac",
+ "files": 200,
+ "stamp": "20261107-180142",
+ "steps": {
+  "make": {
+   "secs": 2.04,
+   "per_s": 98.0,
+   "ops_per_file": {
+    "v3 getattr": 7.12,
+    "v3 setattr": 1.01,
+    "v3 lookup": 2.04,
+    "v3 access": 0.03,
+    "v3 read": 1.0,
+    "v3 write": 2.02,
+    "v3 create": 2.02,
+    "v3 mkdir": 0.01,
+    "v3 fsstat": 0.01,
+    "v3 commit": 2.02
+   },
+   "changing_per_file": 7.08,
+   "disk_flushes_per_file": 0.31
+  },
+  "move": {
+   "secs": 1.089,
+   "per_s": 183.7,
+   "ops_per_file": {
+    "v3 getattr": 4.02,
+    "v3 lookup": 4.53,
+    "v3 access": 1.01,
+    "v3 rename": 2.0
+   },
+   "changing_per_file": 2.0,
+   "disk_flushes_per_file": 0.0
+  },
+  "remove": {
+   "secs": 0.746,
+   "per_s": 268.1,
+   "ops_per_file": {
+    "v3 getattr": 2.02,
+    "v3 lookup": 6.04,
+    "v3 remove": 2.02,
+    "v3 rmdir": 0.01,
+    "v3 readdirplus": 0.01,
+    "v3 fsstat": 0.01
+   },
+   "changing_per_file": 2.03,
+   "disk_flushes_per_file": 0.19
+  }
+ }
+}

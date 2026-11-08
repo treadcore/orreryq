@@ -1,0 +1,28 @@
+{
+ "hub": "whitewolf",
+ "senders": [
+  "mac",
+  "calber",
+  "jaguaribe",
+  "bosporus",
+  "columbia",
+  "nasser",
+  "xinanjiang",
+  "saskatchewan"
+ ],
+ "secs": 8.0,
+ "Mbps": {
+  "saskatchewan": 94.1,
+  "calber": 932.1,
+  "jaguaribe": 937.0,
+  "columbia": 938.5,
+  "nasser": 390.6,
+  "bosporus": 941.2,
+  "xinanjiang": 550.6,
+  "mac": 917.5
+ },
+ "window_s": 6.05,
+ "kind": "fanin",
+ "stamp": "20261107-171826",
+ "at": 1794100706.7477288
+}

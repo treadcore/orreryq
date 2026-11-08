@@ -1,0 +1,16 @@
+{
+ "hub": "whitewolf",
+ "senders": [
+  "saskatchewan",
+  "xinanjiang"
+ ],
+ "secs": 8.0,
+ "Mbps": {
+  "saskatchewan": 469.9,
+  "xinanjiang": 471.6
+ },
+ "window_s": 6.11,
+ "kind": "fanin",
+ "stamp": "20261107-180419",
+ "at": 1794103459.372023
+}

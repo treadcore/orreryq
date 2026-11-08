@@ -1,0 +1,13 @@
+# ram-bench 2400-jedec on calber, 2026-11-07 18:40:51 UTC
+kernel 7.0.0-42-generic; Intel(R) Core(TM) i7-9700F CPU @ 3.00GHz; governor powersave balance_performance
+power limit 4090 W long term; load before 0.05; package 28 C, board sensor 5 30 C
+memory: the label says it (2400-jedec); confirm with sudo dmidecode -t 17 | grep Configured
+stream, all cores: copy 19497 scale 19630 add 22198 triad 22284 MB/s (threads 8, check 576650390625.0)
+stream, one core:  copy 17992 scale 17900 add 20427 triad 20291 MB/s (threads 1, check 576650390625.0)
+latency: 69.6 ns a load over 512 MiB (end 35008706)
+census, 16 seeds on 8 cores, run 1: 72.2 s  (cores at 4037 MHz, package 34 C, board sensor 5 41 C, pooled e087db31)
+census, 16 seeds on 8 cores, run 2: 71.8 s  (cores at 4500 MHz, package 38 C, board sensor 5 45 C, pooled e087db31)
+census, 16 seeds on 8 cores, run 3: 72.1 s  (cores at 4500 MHz, package 34 C, board sensor 5 49 C, pooled e087db31)
+census, 2 seeds on one core, run 1: 16.1 s  (cores at 800 MHz, package 30 C, board sensor 5 47 C, pooled 11b83ba9)
+census, 2 seeds on one core, run 2: 16.2 s  (cores at 800 MHz, package 30 C, board sensor 5 46 C, pooled 11b83ba9)
+# done 18:45:27

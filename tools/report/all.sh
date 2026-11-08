@@ -43,5 +43,11 @@ outgrowing|Outgrowing Yourself|Orreryq · the fleet · the GPU, the line, and wh
 one-rule|One Rule, Two Machines|Orreryq · crucible · the trees, the mazes, the CUDA gauntlet and the GPU's generations
 round-corner|Round the Corner|Orreryq · crucible · maze navigation: the senses, the errand, the proving ground and the breach
 full-card|Every Generation on Film|Orreryq · crucible · treadcore · the maze home, one wall, the camp, a full card, the footage and a page that reads itself
+calber-power-cut|The Orange Bar|Orreryq · the fleet · calber's power cut, read from its own records
+calber-bios-recovery|calber's Recovery|Orreryq · the fleet · a Gigabyte Z370's CMOS clear, its BIOS, and the checks after a power cut
+ram-speed|Memory at Its Rated Speed|Orreryq · the fleet · XMP on calber, the procedure for any machine, and the quick guide
+calber-update-f15|F15 on calber|Orreryq · the fleet · a BIOS list read correctly, the flash, the firmware it brought, CSM off
+calber-ssd|Six Cheap SSDs, Thirteen Ways|Orreryq · the fleet · the fastest layout for calber's six SATA SSDs, measured
+network|The Share and the Wire|Orreryq · the fleet · calber's array over NFS from every machine, and the home network mapped from inside
 LIST
 python3 ../tools/report/collect.py

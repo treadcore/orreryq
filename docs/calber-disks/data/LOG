@@ -1,0 +1,342 @@
+20:35:40 the six: /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+20:35:41 health before disk1 /dev/sda: bad blocks late/early 0/252; unsafe shutdowns 278; CRC errors 0; life left % 99; GiB written 4783
+20:35:41 health before disk2 /dev/sdb: bad blocks late/early 0/486; unsafe shutdowns 278; CRC errors 0; life left % 99; GiB written 4790
+20:35:41 health before disk3 /dev/sdc: bad blocks late/early 0/421; unsafe shutdowns 277; CRC errors 495; life left % 99; GiB written 4740
+20:35:41 health before disk4 /dev/sdd: bad blocks late/early 1/487; unsafe shutdowns 280; CRC errors 0; life left % 99; GiB written 4782
+20:35:41 health before disk5 /dev/sde: bad blocks late/early 0/391; unsafe shutdowns 746; CRC errors 22347; life left % 99; GiB written 4876
+20:35:41 health before disk6 /dev/sdf: bad blocks late/early 0/465; unsafe shutdowns 280; CRC errors 0; life left % 99; GiB written 9519
+20:35:41 === raw-each
+20:36:21 raw disk1 /dev/sda: write 499.2 MB/s, read 294.0 MB/s, 4K read 100562 IOPS
+20:37:01 raw disk2 /dev/sdb: write 499.6 MB/s, read 294.2 MB/s, 4K read 100201 IOPS
+20:37:42 raw disk3 /dev/sdc: write 499.2 MB/s, read 289.7 MB/s, 4K read 99876 IOPS
+20:38:22 raw disk4 /dev/sdd: write 499.8 MB/s, read 294.8 MB/s, 4K read 100571 IOPS
+20:39:02 raw disk5 /dev/sde: write 499.9 MB/s, read 283.1 MB/s, 4K read 100274 IOPS
+20:39:42 raw disk6 /dev/sdf: write 500.1 MB/s, read 292.1 MB/s, 4K read 100026 IOPS
+20:39:42 raw-each done in 4.0 min
+20:39:44 === single-ext4
+20:40:02 built on /dev/sda
+20:43:10 single-ext4 done in 3.4 min
+20:43:11 === pair-zfs
+20:43:12 built on /dev/sda /dev/sdb
+20:47:37 pair-zfs done in 4.4 min
+20:47:38 === pair-btrfs
+20:47:38 built on /dev/sdc /dev/sdd
+20:51:03 pair-btrfs done in 3.4 min
+20:51:04 === pair-md-ext4
+20:51:24 built on /dev/sde /dev/sdf
+20:54:47 pair-md-ext4 done in 3.7 min
+20:54:47 === six-md10-xfs
+20:54:51 built on /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+20:57:52 six-md10-xfs done in 3.1 min
+20:57:52 === six-md10-ext4
+20:58:30 built on /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+21:01:24 six-md10-ext4 done in 3.5 min
+21:01:25 === four-md10-2spare
+21:01:29 built on /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+21:04:27 four-md10-2spare done in 3.0 min
+21:04:28 === six-md0-xfs
+21:04:32 built on /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+21:07:25 six-md0-xfs done in 3.0 min
+21:07:26 === six-zfs-3x2
+21:07:32 built on /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+21:10:52 six-zfs-3x2 done in 3.4 min
+21:10:55 === six-zfs-2x3
+21:11:03 built on /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+21:14:59 six-zfs-2x3 done in 4.1 min
+21:15:02 === six-btrfs10
+21:15:05 built on /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+21:18:11 six-btrfs10 done in 3.2 min
+21:18:12 === zfs-2x2-spare-l2arc
+21:18:16 built on /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+21:21:41 zfs-2x2-spare-l2arc done in 3.5 min
+21:21:43 === zfs-2x2-slog-l2arc
+21:21:51 built on /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+21:25:09 zfs-2x2-slog-l2arc done in 3.4 min
+21:25:12 health after disk1 /dev/sda: bad blocks late/early 0/252; unsafe shutdowns 278; CRC errors 0; life left % 99; GiB written 4928
+21:25:12 health after disk2 /dev/sdb: bad blocks late/early 0/486; unsafe shutdowns 278; CRC errors 0; life left % 99; GiB written 4909
+21:25:12 health after disk3 /dev/sdc: bad blocks late/early 0/421; unsafe shutdowns 277; CRC errors 495; life left % 99; GiB written 4857
+21:25:13 health after disk4 /dev/sdd: bad blocks late/early 1/487; unsafe shutdowns 280; CRC errors 0; life left % 99; GiB written 4899
+21:25:13 health after disk5 /dev/sde: bad blocks late/early 0/391; unsafe shutdowns 746; CRC errors 22347; life left % 99; GiB written 4964
+21:25:13 health after disk6 /dev/sdf: bad blocks late/early 0/465; unsafe shutdowns 280; CRC errors 0; life left % 99; GiB written 9606
+21:25:13 all done; the disks are blank
+21:56:16 === run 20261107-215616 on calber: 6 disks /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+21:56:16 health before disk1 /dev/sda: bad blocks late/early 0/252; unsafe shutdowns 278; CRC errors 0; life left % 99; GiB written 4928
+21:56:16 health before disk2 /dev/sdb: bad blocks late/early 0/486; unsafe shutdowns 278; CRC errors 0; life left % 99; GiB written 4909
+21:56:16 health before disk3 /dev/sdc: bad blocks late/early 0/421; unsafe shutdowns 277; CRC errors 495; life left % 99; GiB written 4857
+21:56:16 health before disk4 /dev/sdd: bad blocks late/early 1/487; unsafe shutdowns 280; CRC errors 0; life left % 99; GiB written 4899
+21:56:16 health before disk5 /dev/sde: bad blocks late/early 0/391; unsafe shutdowns 746; CRC errors 22347; life left % 99; GiB written 4964
+21:56:16 health before disk6 /dev/sdf: bad blocks late/early 0/465; unsafe shutdowns 280; CRC errors 0; life left % 99; GiB written 9606
+21:56:16 === md10-ext4#1
+21:57:22 built on /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+22:00:15   seq-write   ████████████████████████████      822 MB/s  a 25 GB Blu-ray image in 30 s
+22:00:15   seq-read    ████████████████████████████     1935 MB/s  feeds 36 burners at 12x, 54 MB/s each
+22:00:15   butterfly   ████████████████████████████      884 MB/s  two streams, 442 MB/s each
+22:00:15   write-read  ████████████████████████████     1817 MB/s  the read-back, checked
+22:00:15   rand-read   ████████████████████████████   255998 IOPS  1707 spinning disks' worth, at 150 each
+22:00:15   rand-write  ████████████████████████████   123053 IOPS  small writes a second
+22:00:15   mixed       ████████████████████████████    53732 IOPS  reads, while 30% writes go on
+22:00:15   sync-write  ████████████████████████████      437 IOPS  2.3 ms an fsync
+22:00:15   create 100k ████████████████████████████     4.61 s     21692 files a second
+22:00:15   find        ████████████████████████████     0.04 s     a blink is 0.1 s
+22:00:15   ls -lR      ████████████████████████████     1.43 s     69930 files listed a second
+22:00:15   stat+sort   ████████████████████████████     1.07 s     every size read, then sorted
+22:00:15   delete      ████████████████████████████     2.68 s     37313 files a second
+22:00:15 md10-ext4#1 done in 4.0 min
+22:00:15 === md10-ext4@nobitmap#1
+22:01:19 built on /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+22:04:09   seq-write   ████████████████████████████      881 MB/s  a 25 GB Blu-ray image in 28 s
+22:04:09   seq-read    ████████████████████████████     1929 MB/s  feeds 36 burners at 12x, 54 MB/s each
+22:04:09   butterfly   ████████████████████████████      975 MB/s  two streams, 488 MB/s each
+22:04:09   write-read  ████████████████████████████     1892 MB/s  the read-back, checked
+22:04:09   rand-read   ████████████████████████████   255848 IOPS  1706 spinning disks' worth, at 150 each
+22:04:09   rand-write  ██████████████████████████··   115733 IOPS  small writes a second
+22:04:09   mixed       ████████████████████████████    55322 IOPS  reads, while 30% writes go on
+22:04:09   sync-write  ████████████████████████████      450 IOPS  2.2 ms an fsync
+22:04:09   create 100k ████████████████████████████     3.32 s     30120 files a second
+22:04:09   find        ████████████████████████████     0.04 s     a blink is 0.1 s
+22:04:09   ls -lR      ████████████████████████████     0.96 s     104167 files listed a second
+22:04:09   stat+sort   ████████████████████████████     0.83 s     every size read, then sorted
+22:04:09   delete      ████████████████████████████     1.65 s     60606 files a second
+22:04:09 md10-ext4@nobitmap#1 done in 3.9 min
+22:04:09   leading so far: seq-write md10-ext4@nobitmap; seq-read md10-ext4; butterfly md10-ext4@nobitmap; write-read md10-ext4@nobitmap; rand-read md10-ext4; rand-write md10-ext4; mixed md10-ext4@nobitmap; sync-write md10-ext4@nobitmap
+22:04:09 === md0#1
+22:04:42 built on /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+22:07:39   seq-write   ████████████████████████████     1771 MB/s  a 25 GB Blu-ray image in 14 s
+22:07:39   seq-read    ████████████████████████████     1948 MB/s  feeds 36 burners at 12x, 54 MB/s each
+22:07:39   butterfly   ████████████████████████████     1958 MB/s  two streams, 979 MB/s each
+22:07:39   write-read  ████████████████████████████     1930 MB/s  the read-back, checked
+22:07:39   rand-read   ████████████████████████████   260991 IOPS  1740 spinning disks' worth, at 150 each
+22:07:39   rand-write  ████████████████████████████   242145 IOPS  small writes a second
+22:07:39   mixed       ████████████████████████████   116500 IOPS  reads, while 30% writes go on
+22:07:39   sync-write  ████████████████████████████      550 IOPS  1.8 ms an fsync
+22:07:39   create 100k ███████████·················     8.26 s     12107 files a second
+22:07:39   find        █···························     0.86 s     a blink is 0.1 s
+22:07:39   ls -lR      █████████████···············     2.05 s     48780 files listed a second
+22:07:39   stat+sort   ████████████················     1.93 s     every size read, then sorted
+22:07:39   delete      █████████████████████·······     2.22 s     45045 files a second
+22:07:39 md0#1 done in 3.5 min
+22:07:39   leading so far: seq-write md0; seq-read md0; butterfly md0; write-read md0; rand-read md0; rand-write md0; mixed md0; sync-write md0
+22:07:39 === md10@nobitmap#1
+22:08:15 built on /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+22:11:11   seq-write   ███████████████·············      964 MB/s  a 25 GB Blu-ray image in 26 s
+22:11:11   seq-read    ████████████████████████████     1923 MB/s  feeds 36 burners at 12x, 54 MB/s each
+22:11:11   butterfly   █████████████···············      890 MB/s  two streams, 445 MB/s each
+22:11:11   write-read  ████████████████████████████     1904 MB/s  the read-back, checked
+22:11:11   rand-read   ███████████████████████████·   255680 IOPS  1705 spinning disks' worth, at 150 each
+22:11:11   rand-write  █████████···················    79723 IOPS  small writes a second
+22:11:11   mixed       █████████████···············    53197 IOPS  reads, while 30% writes go on
+22:11:11   sync-write  ████████████████████████····      469 IOPS  2.1 ms an fsync
+22:11:11   create 100k █████████████···············     6.95 s     14388 files a second
+22:11:11   find        ████························     0.26 s     a blink is 0.1 s
+22:11:11   ls -lR      ███████████████████████████·     1.01 s     99010 files listed a second
+22:11:11   stat+sort   ████████████················     1.99 s     every size read, then sorted
+22:11:11   delete      ███████████████·············     3.10 s     32258 files a second
+22:11:11 md10@nobitmap#1 done in 3.5 min
+22:11:11   leading so far: seq-write md0; seq-read md0; butterfly md0; write-read md0; rand-read md0; rand-write md0; mixed md0; sync-write md0
+22:11:12 === md10-ext4#2
+22:12:18 built on /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+22:15:07   seq-write   ██████████████··············      869 MB/s  a 25 GB Blu-ray image in 29 s
+22:15:07   seq-read    ████████████████████████████     1934 MB/s  feeds 36 burners at 12x, 54 MB/s each
+22:15:07   butterfly   ███████████·················      765 MB/s  two streams, 383 MB/s each
+22:15:07   write-read  ███████████████████████████·     1837 MB/s  the read-back, checked
+22:15:07   rand-read   ████████████████████████████   257135 IOPS  1714 spinning disks' worth, at 150 each
+22:15:07   rand-write  █████████···················    80801 IOPS  small writes a second
+22:15:07   mixed       ███████████████·············    60499 IOPS  reads, while 30% writes go on
+22:15:07   sync-write  █████████████████████·······      409 IOPS  2.4 ms an fsync
+22:15:07   create 100k ███████████████████████████·     3.48 s     28736 files a second
+22:15:07   find        ████████████████████████████     0.04 s     a blink is 0.1 s
+22:15:07   ls -lR      ████████████████████████████     0.97 s     103093 files listed a second
+22:15:07   stat+sort   ██████████████████████████··     0.91 s     every size read, then sorted
+22:15:07   delete      ████████████████████████████     1.67 s     59880 files a second
+22:15:07 md10-ext4#2 done in 3.9 min
+22:15:07   leading so far: seq-write md0; seq-read md0; butterfly md0; write-read md0; rand-read md0; rand-write md0; mixed md0; sync-write md0
+22:15:08 === md10-ext4@nobitmap#2
+22:16:13 built on /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+22:19:05   seq-write   █████████████···············      793 MB/s  a 25 GB Blu-ray image in 32 s
+22:19:05   seq-read    ████████████████████████████     1933 MB/s  feeds 36 burners at 12x, 54 MB/s each
+22:19:05   butterfly   ████████████················      809 MB/s  two streams, 404 MB/s each
+22:19:05   write-read  ████████████████████████████     1900 MB/s  the read-back, checked
+22:19:05   rand-read   ████████████████████████████   257326 IOPS  1716 spinning disks' worth, at 150 each
+22:19:05   rand-write  █████████···················    81908 IOPS  small writes a second
+22:19:05   mixed       █████████████···············    52873 IOPS  reads, while 30% writes go on
+22:19:05   sync-write  ███████████████████████·····      459 IOPS  2.2 ms an fsync
+22:19:05   create 100k ███████████████████████·····     4.09 s     24450 files a second
+22:19:05   find        ████████████████████████████     0.04 s     a blink is 0.1 s
+22:19:05   ls -lR      ██████████████████··········     1.47 s     68027 files listed a second
+22:19:05   stat+sort   ██████████████████████······     1.04 s     every size read, then sorted
+22:19:05   delete      █████████████████████·······     2.17 s     46083 files a second
+22:19:05 md10-ext4@nobitmap#2 done in 4.0 min
+22:19:05   leading so far: seq-write md0; seq-read md0; butterfly md0; write-read md0; rand-read md0; rand-write md0; mixed md0; sync-write md0
+22:19:06 === md0#2
+22:19:39 built on /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+22:22:35   seq-write   ████████████████████████████     1759 MB/s  a 25 GB Blu-ray image in 14 s
+22:22:35   seq-read    ████████████████████████████     1962 MB/s  feeds 36 burners at 12x, 54 MB/s each
+22:22:35   butterfly   ████████████████████████████     1961 MB/s  two streams, 980 MB/s each
+22:22:35   write-read  ████████████████████████████     1930 MB/s  the read-back, checked
+22:22:35   rand-read   ████████████████████████████   259986 IOPS  1733 spinning disks' worth, at 150 each
+22:22:35   rand-write  ██████████████████████████··   228231 IOPS  small writes a second
+22:22:35   mixed       ███████████████████·········    80185 IOPS  reads, while 30% writes go on
+22:22:35   sync-write  ████████████████████████████      545 IOPS  1.8 ms an fsync
+22:22:35   create 100k ███████████·················     8.19 s     12210 files a second
+22:22:35   find        █···························     0.87 s     a blink is 0.1 s
+22:22:35   ls -lR      █████████████···············     2.11 s     47393 files listed a second
+22:22:35   stat+sort   ███████████████·············     1.59 s     every size read, then sorted
+22:22:35   delete      █████████████████████·······     2.23 s     44843 files a second
+22:22:35 md0#2 done in 3.5 min
+22:22:35   leading so far: seq-write md0; seq-read md0; butterfly md0; write-read md0; rand-read md0; rand-write md0; mixed md0; sync-write md0
+22:22:35 === md10@nobitmap#2
+22:23:14 built on /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+22:26:10   seq-write   ██████████████··············      879 MB/s  a 25 GB Blu-ray image in 28 s
+22:26:10   seq-read    ████████████████████████████     1941 MB/s  feeds 36 burners at 12x, 54 MB/s each
+22:26:10   butterfly   ███████████·················      804 MB/s  two streams, 402 MB/s each
+22:26:10   write-read  ████████████████████████████     1909 MB/s  the read-back, checked
+22:26:10   rand-read   ███████████████████████████·   255990 IOPS  1707 spinning disks' worth, at 150 each
+22:26:10   rand-write  ███████·····················    62757 IOPS  small writes a second
+22:26:10   mixed       █████████████···············    52759 IOPS  reads, while 30% writes go on
+22:26:10   sync-write  ████████████████████████····      468 IOPS  2.1 ms an fsync
+22:26:10   create 100k ██████████████··············     6.86 s     14577 files a second
+22:26:10   find        ████························     0.28 s     a blink is 0.1 s
+22:26:10   ls -lR      ██████████████████··········     1.48 s     67568 files listed a second
+22:26:10   stat+sort   █████████████···············     1.84 s     every size read, then sorted
+22:26:10   delete      ██████████████··············     3.35 s     29851 files a second
+22:26:10 md10@nobitmap#2 done in 3.6 min
+22:26:10   leading so far: seq-write md0; seq-read md0; butterfly md0; write-read md0; rand-read md0; rand-write md0; mixed md0; sync-write md0
+22:26:11 health after disk1 /dev/sda: bad blocks late/early 0/252; unsafe shutdowns 278; CRC errors 0; life left % 99; GiB written 5094
+22:26:11 health after disk2 /dev/sdb: bad blocks late/early 0/486; unsafe shutdowns 278; CRC errors 0; life left % 99; GiB written 5076
+22:26:11 health after disk3 /dev/sdc: bad blocks late/early 0/421; unsafe shutdowns 277; CRC errors 495; life left % 99; GiB written 5023
+22:26:11 health after disk4 /dev/sdd: bad blocks late/early 1/487; unsafe shutdowns 280; CRC errors 0; life left % 99; GiB written 5066
+22:26:11 health after disk5 /dev/sde: bad blocks late/early 0/391; unsafe shutdowns 746; CRC errors 22347; life left % 99; GiB written 5131
+22:26:11 health after disk6 /dev/sdf: bad blocks late/early 0/465; unsafe shutdowns 280; CRC errors 0; life left % 99; GiB written 9772
+22:26:11 all done; the disks are blank. Then: python3 /home/user/fleet/disk-bench/disk-bench.py report
+22:26:11 === barrage 20261107-222611 on calber: 6 disks /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+22:26:11 health before disk1 /dev/sda: bad blocks late/early 0/252; unsafe shutdowns 278; CRC errors 0; life left % 99; GiB written 5094
+22:26:11 health before disk2 /dev/sdb: bad blocks late/early 0/486; unsafe shutdowns 278; CRC errors 0; life left % 99; GiB written 5076
+22:26:11 health before disk3 /dev/sdc: bad blocks late/early 0/421; unsafe shutdowns 277; CRC errors 495; life left % 99; GiB written 5023
+22:26:11 health before disk4 /dev/sdd: bad blocks late/early 1/487; unsafe shutdowns 280; CRC errors 0; life left % 99; GiB written 5066
+22:26:11 health before disk5 /dev/sde: bad blocks late/early 0/391; unsafe shutdowns 746; CRC errors 22347; life left % 99; GiB written 5131
+22:26:11 health before disk6 /dev/sdf: bad blocks late/early 0/465; unsafe shutdowns 280; CRC errors 0; life left % 99; GiB written 9772
+22:26:12 === raw
+22:26:42   one bare disk, /dev/sda, no filesystem
+22:27:58   cache cliff ▄▇▇▇▇▇▇▇▇▇▇▇▇▂▂▁▁▂▁▂▁▂▁▁▂▁▂▁▂▁▁▂▁▂▁▁▂▁▂▁▂▁▁▁▁▂▁▂▁▁▂▁▂▁▂▁▁▂▁▂▁▁▂▁▂▁▂▁▁▁▁▂▁▁▁
+22:27:58   starts at 254.8 MB/s, under 60% of that after 0.3 GB, then 84.6 MB/s
+22:28:58   block 4k   seqW   343  seqR   373  randW    83  randR   197 MB/s
+22:29:28   block 16k  seqW   313  seqR   501  randW    46  randR   496 MB/s
+22:29:57   block 64k  seqW   468  seqR   551  randW    99  randR   437 MB/s
+22:30:28   block 256k seqW    87  seqR   521  randW    95  randR   394 MB/s
+22:30:59   block 1M   seqW    88  seqR   516  randW    89  randR   345 MB/s
+22:31:50   queue 1..64, 4K reads ▁▂▅▇▇▇▇  10464 16696 32750 44289 45590 46562 46570 IOPS
+22:31:50 raw done in 5.6 min
+22:31:50 === md10-ext4
+22:34:16   cache cliff ▇▇▇▇▇▇▇▇▇▆▆▇▇▇▇▇▇▇▇▆▇▅▁▂▅▂▃▂▁▃▁▃▂▂▂▁▃▂▁▂▁▁▂▁▂▁▂▁▁▁▂▁▁▁▂▁▁▂▁▁▁▂▁▂▁▂▁▁▁▂▁▂▁▂▁
+22:34:16   starts at 834.7 MB/s, under 60% of that after 18.8 GB, then 153.9 MB/s
+22:34:45   block 4k   seqW   126  seqR  1454  randW    82  randR  2095 MB/s
+22:35:15   block 16k  seqW   133  seqR  4176  randW   102  randR  4621 MB/s
+22:35:44   block 64k  seqW   141  seqR  5137  randW   108  randR  4928 MB/s
+22:36:14   block 256k seqW   139  seqR  5212  randW   144  randR  4104 MB/s
+22:36:44   block 1M   seqW   170  seqR  4552  randW    54  randR  4144 MB/s
+22:37:35   queue 1..64, 4K reads ▁▁▂▃▅▇▇  23898 46352 88416 148315 249264 356112 368417 IOPS
+22:38:05   tree 100k x 4K  create   9.39  find  0.05  -name  0.28  ls -lR  1.14  du  0.68  sort  0.92  grep -r 14.16 s
+22:38:28   tree 300k empty create   6.26  find  0.12  -name  0.84  ls -lR  3.69  du  1.93  sort  2.90 s
+22:40:16   tree 256 x 16M  create  53.22  find  0.02  -name  0.02  ls -lR  0.02  du  0.01  sort  0.01  grep -r 3.62  copy 50.27 s
+22:40:16 md10-ext4 done in 8.4 min
+22:40:17 === md0
+22:42:08   cache cliff ▇▇▇▇▇▇▇▇▇▂▃▁▂▂▁▃▁▂▂▁▃▁▃▂▂▂▁▃▁▂▂▁▂▁▂▂▁▃▁▃▂▂▂▁▃▁▂▂▁▁▁▁▂▂▂▁▂▁▂▁▁▁▂▁▁▁▁▂▁▁▁▂▁▁▂
+22:42:08   starts at 1903.2 MB/s, under 60% of that after 17.7 GB, then 324.6 MB/s
+22:42:38   block 4k   seqW    13  seqR  1140  randW    84  randR  2599 MB/s
+22:43:07   block 16k  seqW    30  seqR   618  randW   196  randR  3456 MB/s
+22:43:36   block 64k  seqW   197  seqR  4136  randW   250  randR  3782 MB/s
+22:44:06   block 256k seqW   225  seqR  3578  randW   229  randR  2724 MB/s
+22:44:36   block 1M   seqW   284  seqR  2805  randW   261  randR  2448 MB/s
+22:45:27   queue 1..64, 4K reads ▁▁▁▂▄▅▇  13469 24563 45990 82038 143893 183929 290549 IOPS
+22:46:05   tree 100k x 4K  create   8.13  find  0.87  -name  0.92  ls -lR  1.82  du  2.24  sort  2.27  grep -r 14.78 s
+22:46:50   tree 300k empty create   5.08  find  3.09  -name  2.42  ls -lR  6.32  du  5.82  sort  7.27 s
+22:47:20   tree 256 x 16M  create  25.08  find  0.12  -name  0.05  ls -lR  0.04  du  0.02  sort  0.02  grep -r 4.38  copy 0.06 s
+22:47:20 md0 done in 7.0 min
+22:47:20 === zfs-3x2@16k
+22:49:12   cache cliff ▁▂▂▂▃▃▁▁▁▂▆▇▆▇▇▇▇▇▆▇▇▇▇▇▆▁▁▁▁▂▆▁▁▁▅▃▁▁▁▁▅▂▁▁▁▅▁▁▁▁▁▁▁▁▁▄▁▁▁▁▁▁▁▁▁▄▁▁▁▁▁▁▁▁▂
+22:49:12   starts at 79.7 MB/s, under 60% of that after 0.8 GB, then 55.6 MB/s
+22:49:42   block 4k   seqW   539  seqR     3  randW     4  randR    21 MB/s
+22:50:11   block 16k  seqW    12  seqR    26  randW    52  randR   154 MB/s
+22:50:40   block 64k  seqW    24  seqR    81  randW    58  randR   204 MB/s
+22:51:10   block 256k seqW    25  seqR   224  randW    54  randR   559 MB/s
+22:51:39   block 1M   seqW    35  seqR   461  randW    56  randR   724 MB/s
+22:52:30   queue 1..64, 4K reads ▇▂▁▃▁▁▁  8690 5305 4074 5955 4426 3970 4028 IOPS
+22:53:47   tree 100k x 4K  create   7.49  find  0.35  -name  0.35  ls -lR  1.87  du  0.80  sort  1.08  grep -r 59.10 s
+22:54:21   tree 300k empty create   6.97  find  0.97  -name  1.03  ls -lR  4.37  du  3.03  sort  4.50 s
+22:55:29   tree 256 x 16M  create  41.77  find  0.02  -name  0.02  ls -lR  0.04  du  0.03  sort  0.02  grep -r 4.36  copy 2.68 s
+22:55:29 zfs-3x2@16k done in 8.2 min
+22:55:34 === zfs-3x2@1m
+22:57:28   cache cliff ▁▃▃▃▃▂▁▁▁▁▇▁▁▁▁▂▁▁▁▁▂▁▁▁▁▅▁▁▁▁▂▁▁▁▁▂▆▁▁▁▁▁▁▁▁▁▁▁▁▁▁▅▁▁▁▁▂▁▁▁▁▇▁▁▁▁▁▁▁▁▁▄▇▅▂
+22:57:28   starts at 72.4 MB/s, under 60% of that after None GB, then 90.8 MB/s
+22:57:57   block 4k   seqW   688  seqR     0  randW     1  randR     1 MB/s
+22:58:27   block 16k  seqW    72  seqR     4  randW     3  randR     5 MB/s
+22:58:56   block 64k  seqW    96  seqR    16  randW    15  randR     6 MB/s
+22:59:26   block 256k seqW    93  seqR    32  randW    51  randR    20 MB/s
+22:59:56   block 1M   seqW    49  seqR   162  randW    40  randR   244 MB/s
+23:00:47   queue 1..64, 4K reads ▃▇▁▃▇▁▁  223 244 213 222 240 214 215 IOPS
+23:01:59   tree 100k x 4K  create   6.72  find  0.34  -name  0.34  ls -lR  1.44  du  0.94  sort  1.27  grep -r 54.73 s
+23:02:35   tree 300k empty create   7.65  find  0.96  -name  1.03  ls -lR  4.44  du  2.98  sort  4.42 s
+23:03:47   tree 256 x 16M  create  29.22  find  0.01  -name  0.02  ls -lR  0.03  du  0.03  sort  0.02  grep -r 25.32  copy 0.15 s
+23:03:47 zfs-3x2@1m done in 8.2 min
+23:03:50 health after disk1 /dev/sda: bad blocks late/early 0/252; unsafe shutdowns 278; CRC errors 0; life left % 99; GiB written 5165
+23:03:50 health after disk2 /dev/sdb: bad blocks late/early 0/486; unsafe shutdowns 278; CRC errors 0; life left % 99; GiB written 5124
+23:03:51 health after disk3 /dev/sdc: bad blocks late/early 0/421; unsafe shutdowns 277; CRC errors 495; life left % 99; GiB written 5072
+23:03:51 health after disk4 /dev/sdd: bad blocks late/early 1/487; unsafe shutdowns 280; CRC errors 0; life left % 99; GiB written 5115
+23:03:52 health after disk5 /dev/sde: bad blocks late/early 0/391; unsafe shutdowns 746; CRC errors 22347; life left % 99; GiB written 5179
+23:03:52 health after disk6 /dev/sdf: bad blocks late/early 0/465; unsafe shutdowns 280; CRC errors 0; life left % 99; GiB written 9821
+23:03:52 all done; the disks are blank. Then: python3 /home/user/fleet/disk-bench/disk-bench.py report
+23:44:02 === barrage 20261107-234402 on calber: 6 disks /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf
+23:44:02 health before disk1 /dev/sda: bad blocks late/early 0/252; unsafe shutdowns 278; CRC errors 0; life left % 99; GiB written 5165
+23:44:02 health before disk2 /dev/sdb: bad blocks late/early 0/486; unsafe shutdowns 278; CRC errors 0; life left % 99; GiB written 5124
+23:44:02 health before disk3 /dev/sdc: bad blocks late/early 0/421; unsafe shutdowns 277; CRC errors 495; life left % 99; GiB written 5072
+23:44:02 health before disk4 /dev/sdd: bad blocks late/early 1/487; unsafe shutdowns 280; CRC errors 0; life left % 99; GiB written 5115
+23:44:02 health before disk5 /dev/sde: bad blocks late/early 0/391; unsafe shutdowns 746; CRC errors 22347; life left % 99; GiB written 5179
+23:44:02 health before disk6 /dev/sdf: bad blocks late/early 0/465; unsafe shutdowns 280; CRC errors 0; life left % 99; GiB written 9821
+23:44:02 === raw
+23:44:32   one bare disk, /dev/sda, no filesystem
+23:45:20   block 4k   seqW   346  seqR   379  randW   341  randR   318 MB/s
+23:45:49   block 16k  seqW   308  seqR   464  randW   174  randR   393 MB/s
+23:46:18   block 64k  seqW   269  seqR   480  randW   159  randR   315 MB/s
+23:46:48   block 256k seqW   295  seqR   492  randW   100  randR   299 MB/s
+23:47:19   block 1M   seqW   276  seqR   492  randW   111  randR   422 MB/s
+23:48:10   queue 1..64, 4K reads ▁▁▂▅▆▇▇  9899 11183 26268 53412 66471 68561 77288 IOPS
+23:48:10 raw done in 4.1 min
+23:48:10 === md10-ext4
+23:49:56   block 4k   seqW   155  seqR   253  randW   443  randR   770 MB/s
+23:50:25   block 16k  seqW   735  seqR  1060  randW   743  randR  1760 MB/s
+23:50:55   block 64k  seqW   792  seqR  1816  randW   719  randR  1970 MB/s
+23:51:24   block 256k seqW   300  seqR  1890  randW   336  randR  1779 MB/s
+23:51:54   block 1M   seqW   254  seqR  1914  randW   241  randR  1922 MB/s
+23:52:45   queue 1..64, 4K reads ▁▁▁▂▄▅▇  10325 20183 37410 63374 110892 142663 229827 IOPS
+23:52:45 md10-ext4 done in 4.6 min
+23:52:45 === md0
+23:53:55   block 4k   seqW    22  seqR   226  randW   697  randR   618 MB/s
+23:54:24   block 16k  seqW  1141  seqR  1329  randW  1335  randR  1729 MB/s
+23:54:53   block 64k  seqW  1774  seqR  1980  randW  1748  randR  1957 MB/s
+23:55:22   block 256k seqW  1925  seqR  1958  randW  1899  randR  1752 MB/s
+23:55:52   block 1M   seqW  1934  seqR  1962  randW  1932  randR  1890 MB/s
+23:56:43   queue 1..64, 4K reads ▁▁▁▂▄▅▇  10961 19624 35822 64803 112496 157995 233753 IOPS
+23:56:43 md0 done in 4.0 min
+23:56:43 === zfs-3x2@16k
+23:58:15   block 4k   seqW    78  seqR     8  randW    13  randR    18 MB/s
+23:58:44   block 16k  seqW    90  seqR    91  randW    81  randR    75 MB/s
+23:59:13   block 64k  seqW    73  seqR   108  randW    62  randR   210 MB/s
+23:59:42   block 256k seqW   146  seqR   362  randW    75  randR   357 MB/s
+00:00:12   block 1M   seqW   213  seqR   417  randW   317  randR   448 MB/s
+00:01:03   queue 1..64, 4K reads ▁▇▁▄▂▂▁  2525 5264 2821 4038 2927 3042 2595 IOPS
+00:01:03 zfs-3x2@16k done in 4.3 min
+00:01:06 === zfs-3x2@1m
+00:03:43   block 4k   seqW    88  seqR     1  randW     1  randR     1 MB/s
+00:04:13   block 16k  seqW   121  seqR     3  randW     3  randR     4 MB/s
+00:04:42   block 64k  seqW    96  seqR    18  randW    12  randR    11 MB/s
+00:05:11   block 256k seqW   139  seqR    56  randW    46  randR    47 MB/s
+00:05:41   block 1M   seqW   122  seqR   229  randW   247  randR   172 MB/s
+00:06:32   queue 1..64, 4K reads ▆▆▄▆▁▇▃  210 208 202 211 182 218 196 IOPS
+00:06:32 zfs-3x2@1m done in 5.4 min
+00:06:34 health after disk1 /dev/sda: bad blocks late/early 0/252; unsafe shutdowns 278; CRC errors 0; life left % 99; GiB written 5238
+00:06:35 health after disk2 /dev/sdb: bad blocks late/early 0/486; unsafe shutdowns 278; CRC errors 0; life left % 99; GiB written 5173
+00:06:35 health after disk3 /dev/sdc: bad blocks late/early 0/421; unsafe shutdowns 277; CRC errors 495; life left % 99; GiB written 5121
+00:06:35 health after disk4 /dev/sdd: bad blocks late/early 1/487; unsafe shutdowns 280; CRC errors 0; life left % 99; GiB written 5163
+00:06:36 health after disk5 /dev/sde: bad blocks late/early 0/391; unsafe shutdowns 746; CRC errors 22347; life left % 99; GiB written 5228
+00:06:36 health after disk6 /dev/sdf: bad blocks late/early 0/465; unsafe shutdowns 280; CRC errors 0; life left % 99; GiB written 9870
+00:06:36 all done; the disks are blank. Then: python3 /home/user/fleet/disk-bench/disk-bench.py report

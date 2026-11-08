@@ -1,0 +1,271 @@
+{
+ "hosts": {
+  "mac": {
+   "host": "users-iMac.lan",
+   "links": [
+    {
+     "if": "en0",
+     "speed": 1000,
+     "state": "up",
+     "mac": "3c:a6:f6:94:d6:fd",
+     "driver": "Ethernet",
+     "ip": "192.168.8.143",
+     "wireless": false,
+     "media": "autoselect (1000baseT <full-duplex,flow-control,energy-efficient-ethernet>)"
+    },
+    {
+     "if": "en1",
+     "speed": null,
+     "state": "up",
+     "mac": "1a:c5:9e:3b:16:fa",
+     "driver": "Wi-Fi",
+     "ip": "192.168.1.9",
+     "wireless": true,
+     "media": "autoselect"
+    }
+   ]
+  },
+  "calber": {
+   "host": "calber",
+   "links": [
+    {
+     "if": "eno1",
+     "speed": 1000,
+     "state": "up",
+     "mac": "e0:d5:5e:2e:1d:f9",
+     "driver": "e1000e",
+     "ip": "192.168.8.179",
+     "wireless": false
+    },
+    {
+     "if": "wlp8s0",
+     "speed": null,
+     "state": "down",
+     "mac": "bc:a8:a6:f8:ec:5b",
+     "driver": "iwlwifi",
+     "ip": "",
+     "wireless": true
+    }
+   ]
+  },
+  "whitewolf": {
+   "host": "whitewolf",
+   "links": [
+    {
+     "if": "enp0s31f6",
+     "speed": null,
+     "state": "down",
+     "mac": "40:8d:5c:72:ed:d5",
+     "driver": "e1000e",
+     "ip": "",
+     "wireless": false
+    },
+    {
+     "if": "enp8s0",
+     "speed": 10000,
+     "state": "up",
+     "mac": "00:02:c9:51:4b:ee",
+     "driver": "mlx4_core",
+     "ip": "192.168.8.193",
+     "wireless": false
+    }
+   ]
+  },
+  "boburner": {
+   "host": "boburner",
+   "links": [
+    {
+     "if": "eno1",
+     "speed": null,
+     "state": "down",
+     "mac": "e0:d5:5e:23:1f:26",
+     "driver": "r8169",
+     "ip": "",
+     "wireless": false
+    },
+    {
+     "if": "enp6s0",
+     "speed": 10000,
+     "state": "up",
+     "mac": "00:02:c9:4e:5c:5a",
+     "driver": "mlx4_core",
+     "ip": "192.168.8.113",
+     "wireless": false
+    }
+   ]
+  },
+  "saskatchewan": {
+   "host": "saskatchewan",
+   "links": [
+    {
+     "if": "eth0",
+     "speed": 1000,
+     "state": "up",
+     "mac": "04:7c:16:cd:86:3a",
+     "driver": "r8169",
+     "ip": "192.168.8.235",
+     "wireless": false
+    },
+    {
+     "if": "wlan0",
+     "speed": null,
+     "state": "down",
+     "mac": "ac:19:8e:9e:fd:04",
+     "driver": "iwlwifi",
+     "ip": "",
+     "wireless": true
+    }
+   ]
+  },
+  "jaguaribe": {
+   "host": "jaguaribe",
+   "links": [
+    {
+     "if": "eth0",
+     "speed": 1000,
+     "state": "up",
+     "mac": "00:25:90:ca:c4:8a",
+     "driver": "e1000e",
+     "ip": "192.168.8.245",
+     "wireless": false
+    },
+    {
+     "if": "eth1",
+     "speed": null,
+     "state": "down",
+     "mac": "00:25:90:ca:c4:8b",
+     "driver": "e1000e",
+     "ip": "",
+     "wireless": false
+    },
+    {
+     "if": "eth2",
+     "speed": null,
+     "state": "down",
+     "mac": "00:02:c9:55:95:46",
+     "driver": "mlx4_core",
+     "ip": "",
+     "wireless": false
+    }
+   ]
+  },
+  "bosporus": {
+   "host": "bosporus",
+   "links": [
+    {
+     "if": "eth0",
+     "speed": 1000,
+     "state": "up",
+     "mac": "00:25:90:84:e3:da",
+     "driver": "igb",
+     "ip": "192.168.8.194",
+     "wireless": false
+    },
+    {
+     "if": "eth1",
+     "speed": null,
+     "state": "down",
+     "mac": "00:25:90:84:e3:db",
+     "driver": "igb",
+     "ip": "",
+     "wireless": false
+    },
+    {
+     "if": "eth2",
+     "speed": null,
+     "state": "down",
+     "mac": "00:25:90:84:e3:d8",
+     "driver": "igb",
+     "ip": "",
+     "wireless": false
+    },
+    {
+     "if": "eth3",
+     "speed": null,
+     "state": "down",
+     "mac": "00:25:90:84:e3:d9",
+     "driver": "igb",
+     "ip": "",
+     "wireless": false
+    }
+   ]
+  },
+  "columbia": {
+   "host": "columbia",
+   "links": [
+    {
+     "if": "eth0",
+     "speed": 1000,
+     "state": "up",
+     "mac": "a0:1e:0b:14:cb:41",
+     "driver": "r8169",
+     "ip": "192.168.8.223",
+     "wireless": false
+    },
+    {
+     "if": "wlan0",
+     "speed": null,
+     "state": "down",
+     "mac": "c8:6e:08:15:a2:4d",
+     "driver": "iwlwifi",
+     "ip": "",
+     "wireless": true
+    }
+   ]
+  },
+  "nasser": {
+   "host": "nasser",
+   "links": [
+    {
+     "if": "eth0",
+     "speed": 1000,
+     "state": "up",
+     "mac": "b8:70:f4:84:c6:dd",
+     "driver": "tg3",
+     "ip": "192.168.8.121",
+     "wireless": false
+    }
+   ]
+  },
+  "xinanjiang": {
+   "host": "xinanjiang",
+   "links": [
+    {
+     "if": "eth0",
+     "speed": 1000,
+     "state": "up",
+     "mac": "a8:1e:84:0a:5c:1d",
+     "driver": "r8169",
+     "ip": "192.168.8.217",
+     "wireless": false
+    },
+    {
+     "if": "wlan0",
+     "speed": null,
+     "state": "down",
+     "mac": "94:e9:79:cc:04:6b",
+     "driver": "ath10k_pci",
+     "ip": "",
+     "wireless": true
+    }
+   ]
+  },
+  "vm": {
+   "host": "treadcore-vm",
+   "links": [
+    {
+     "if": "eth0",
+     "speed": null,
+     "state": "up",
+     "mac": "16:96:61:96:dd:28",
+     "driver": "virtio_net",
+     "ip": "192.168.64.39",
+     "wireless": false
+    }
+   ]
+  }
+ },
+ "kind": "inventory",
+ "stamp": "20261107-180209",
+ "at": 1794103329.801823
+}

@@ -1,0 +1,12 @@
+seconds a seed, 900 s games, medians; before 11-06 07:27 to 11-07 07:27, after 11-07 08:36 to 11-07 09:31
+machine          jobs   before   jobs    after after/before
+boburner          562     2.90     18     3.03    1.043
+bosporus          282     6.05     10     6.43    1.064
+calber            422     4.24     17     3.65    0.862   <-
+columbia          265     6.47     10     6.74    1.041
+jaguaribe         357     4.95     14     5.44    1.099
+macmini          1058     1.46     38     1.48    1.013
+saskatchewan      719     1.99     32     2.08    1.047
+whitewolf         313     5.48     15     6.17    1.127
+calber against the fleet's median change (1.047): 0.823
+calber on the same build fd7b36d: 4.52 (135 jobs) then 3.65 (17 jobs): 0.809

@@ -1,0 +1,124 @@
+{
+ "hosts": {
+  "mac": {
+   "host": "users-iMac.lan",
+   "links": [
+    {
+     "if": "en0",
+     "speed": 1000,
+     "state": "up",
+     "mac": "3c:a6:f6:94:d6:fd",
+     "driver": "Ethernet",
+     "ip": "192.168.8.143",
+     "wireless": false,
+     "media": "autoselect (1000baseT <full-duplex,flow-control,energy-efficient-ethernet>)"
+    },
+    {
+     "if": "en1",
+     "speed": null,
+     "state": "up",
+     "mac": "1a:c5:9e:3b:16:fa",
+     "driver": "Wi-Fi",
+     "ip": "192.168.1.9",
+     "wireless": true,
+     "media": "autoselect"
+    }
+   ]
+  },
+  "calber": {
+   "error": "calber: Traceback (most recent call last):\n  File \"<stdin>\", line 10, in <module>\n  File \"<stdin>\", line 8, in <lambda>\nOSError: [Errno 22] Invalid argument"
+  },
+  "whitewolf": {
+   "host": "whitewolf",
+   "links": [
+    {
+     "if": "enp0s31f6",
+     "speed": null,
+     "state": "down",
+     "mac": "40:8d:5c:72:ed:d5",
+     "driver": "e1000e",
+     "ip": "",
+     "wireless": false
+    },
+    {
+     "if": "enp8s0",
+     "speed": 10000,
+     "state": "up",
+     "mac": "00:02:c9:51:4b:ee",
+     "driver": "mlx4_core",
+     "ip": "192.168.8.193",
+     "wireless": false
+    }
+   ]
+  },
+  "boburner": {
+   "host": "boburner",
+   "links": [
+    {
+     "if": "eno1",
+     "speed": null,
+     "state": "down",
+     "mac": "e0:d5:5e:23:1f:26",
+     "driver": "r8169",
+     "ip": "",
+     "wireless": false
+    },
+    {
+     "if": "enp6s0",
+     "speed": 10000,
+     "state": "up",
+     "mac": "00:02:c9:4e:5c:5a",
+     "driver": "mlx4_core",
+     "ip": "192.168.8.113",
+     "wireless": false
+    }
+   ]
+  },
+  "saskatchewan": {
+   "error": "saskatchewan: Traceback (most recent call last):\n  File \"<stdin>\", line 10, in <module>\n  File \"<stdin>\", line 8, in <lambda>\nOSError: [Errno 22] Invalid argument"
+  },
+  "jaguaribe": {
+   "error": "jaguaribe: Traceback (most recent call last):\n  File \"<stdin>\", line 10, in <module>\n  File \"<stdin>\", line 8, in <lambda>\nOSError: [Errno 22] Invalid argument"
+  },
+  "bosporus": {
+   "error": "bosporus: Traceback (most recent call last):\n  File \"<stdin>\", line 10, in <module>\n  File \"<stdin>\", line 8, in <lambda>\nOSError: [Errno 22] Invalid argument"
+  },
+  "columbia": {
+   "error": "columbia: Traceback (most recent call last):\n  File \"<stdin>\", line 10, in <module>\n  File \"<stdin>\", line 8, in <lambda>\nOSError: [Errno 22] Invalid argument"
+  },
+  "nasser": {
+   "host": "nasser",
+   "links": [
+    {
+     "if": "eth0",
+     "speed": 1000,
+     "state": "up",
+     "mac": "b8:70:f4:84:c6:dd",
+     "driver": "tg3",
+     "ip": "192.168.8.121",
+     "wireless": false
+    }
+   ]
+  },
+  "xinanjiang": {
+   "error": "xinanjiang: Traceback (most recent call last):\n  File \"<stdin>\", line 10, in <module>\n  File \"<stdin>\", line 8, in <lambda>\nOSError: [Errno 22] Invalid argument"
+  },
+  "vm": {
+   "host": "treadcore-vm",
+   "links": [
+    {
+     "if": "eth0",
+     "speed": null,
+     "state": "up",
+     "mac": "16:96:61:96:dd:28",
+     "driver": "virtio_net",
+     "ip": "192.168.64.39",
+     "wireless": false
+    }
+   ]
+  }
+ },
+ "kind": "inventory",
+ "stamp": "20261107-171012",
+ "at": 1794100212.369657
+}

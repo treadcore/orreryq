@@ -1,0 +1,88 @@
+{
+ "kind": "run",
+ "label": "mac-nfs-sync",
+ "host": "users-iMac.lan",
+ "os": "macOS-26.7.2-arm64-arm-64bit",
+ "where": "/Users/user/calber-bench",
+ "stamp": "20261107-171533",
+ "tests": {
+  "seqW": {
+   "MBps": 117.4,
+   "IOPS": 112,
+   "p50_ms": 70.779,
+   "p99_ms": 125.305
+  },
+  "seqR": {
+   "MBps": 116.7,
+   "IOPS": 111,
+   "p50_ms": 71.827,
+   "p99_ms": 143.655
+  },
+  "seqR4": {
+   "MBps": 116.9,
+   "IOPS": 112,
+   "p50_ms": 143.655,
+   "p99_ms": 383.779
+  },
+  "randR": {
+   "MBps": 0.5,
+   "IOPS": 111,
+   "p50_ms": 143.655,
+   "p99_ms": 312.476
+  },
+  "randW": {
+   "MBps": 7.9,
+   "IOPS": 1936,
+   "p50_ms": 5.997,
+   "p99_ms": 59.507
+  },
+  "syncW": {
+   "MBps": 1.4,
+   "IOPS": 338,
+   "p50_ms": 0.224,
+   "p99_ms": 0.399,
+   "fsync_ms": 2.725
+  },
+  "tree": {
+   "make": {
+    "s": 60.03,
+    "per_s": 40
+   },
+   "files": 2400,
+   "list": {
+    "s": 0.12,
+    "per_s": 20678
+   },
+   "companions": 2440,
+   "list2": {
+    "s": 0.02,
+    "per_s": 121372
+   },
+   "sort": {
+    "s": 0.0,
+    "per_s": 1507387
+   },
+   "move": {
+    "s": 28.0,
+    "per_s": 86
+   },
+   "read": {
+    "s": 3.23,
+    "per_s": 743
+   },
+   "remove": {
+    "s": 25.46,
+    "per_s": 94
+   }
+  }
+ },
+ "mount": {
+  "source": "192.168.8.179:/mnt/bench",
+  "at": "/Users/user/calber-bench",
+  "type": "nfs",
+  "options": "nfs, nodev, nosuid, mounted by user",
+  "granted": "rameters: vers=3,tcp,rsize=1048576,wsize=1048576 File system locations: /mnt/bench @ 192.168.8.179 (192.168.8.179) -- Current mount parameters: General mount flags: 0x4000018 nodev,nosuid,multilabel NFS parameters: vers=3,tcp,port=2049,nomntudp,hard,nointr,noresvport,negnamecache,callumnt,locks,quota,rsize=1048576,wsize=1048576,readahead=16,dsize=32768,rdirplus,nodumbtimer,timeo=10,maxgroups=16,acregmin=5,acregmax=60,acdirmin=5,acdirmax=60,acrootdirmin=5,acrootdirmax=60,nomutejukebox,nonfc,sec=sys,accesscache=3 File system locations: /mnt/bench @ 192.168.8.179 (192.168.8.179) Status flags: 0x0"
+ },
+ "engine": "posixaio",
+ "quick": false
+}

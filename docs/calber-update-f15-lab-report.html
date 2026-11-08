@@ -1,0 +1,247 @@
+<meta charset="utf-8">
+<title>F15 on calber</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* READ ALONG (tools/report/page.html's teleprompt): the button in the bar, and the reading line while it plays. */
+.tele { font: inherit; color: var(--dim); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 1px 8px; cursor: pointer; }
+.tele:hover, .tele[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); }
+.tele-line { position: fixed; left: 0; right: 0; height: 0; border-top: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); pointer-events: none; z-index: 15; }
+.tele-line[hidden] { display: none; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="index.html">Orreryq</a> · lab report</strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a><a href="#svi">VI</a><a href="#svii">VII</a><a href="#sviii">VIII</a><a href="#six">IX</a><a href="#references">References</a><button class="tele" id="tele" type="button" aria-pressed="false" title="Scroll at reading speed; each film plays when it reaches you. Esc, the wheel or a touch stops it.">Read along</button></div></div>
+<div class="tele-line" id="tele-line" hidden></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">Orreryq · the fleet · a BIOS list read correctly, the flash, the firmware it brought, CSM off</p>
+    <h1>F15 on calber: Reading a BIOS List Correctly, the Firmware It Brought, CSM Off, and Nothing Left to Update</h1>
+    <div class="front"><p class="note">Paul Richeson · Lab Report — IEEE Format · 7 November 2026</p><p>Copyright (c) 2026 Paul Richeson. MIT licensed, as orrery.</p><p>Companions: <code>docs/calber-power-cut-lab-report.md</code> (the outage); <code>docs/calber-bios-recovery-lab-report.md</code> (the CMOS clear and the settings); <code>docs/ram-speed-lab-report.md</code> (the memory at 3200, and §VI, the firmware survey this report finishes); <code>docs/calber-todo.md</code> (what is left).</p></div>
+  </header>
+  <nav class="toc" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. Introduction</a></li><li><a href="#sii">II. Gigabyte's List, Read Correctly</a></li><li><a href="#siii">III. Method</a></li><li><a href="#siv">IV. Results</a></li><li><a href="#sv">V. Nothing Left to Update</a></li><li><a href="#svi">VI. CSM, and Why It Is Off</a></li><li><a href="#svii">VII. Discussion</a></li><li><a href="#sviii">VIII. What Is Left</a></li><li><a href="#six">IX. Limitations</a></li><li><a href="#references">References</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>calber ran BIOS F15a, a beta from November 2019. Gigabyte lists two releases after it:</p><ul><li><strong>F15b</strong> (March 2021) adds only Resizable BAR, which the GTX 1080 Ti cannot use;</li><li><strong>F15</strong> (November 2021) carries "major vulnerabilities updates" and cannot be rolled back.</li></ul><p>F15 looks older than F15a, but it is two years newer: on Gigabyte's lists a letter marks a beta or interim build, and the plain number is the finished release.</p><p>F15 was downloaded from Gigabyte's own server, its image checked by hash, and flashed with Q-Flash from a USB stick on 7 November. The flash changed three things:</p><div class="table"><table><thead><tr><th></th><th>Before</th><th>After</th></tr></thead><tbody><tr><td>BIOS</td><td>F15a, 11/28/2019</td><td><strong>F15, 11/13/2021</strong></td></tr><tr><td>Microcode built into the BIOS</td><td>0xCA</td><td>0xEA</td></tr><tr><td>Intel ME firmware</td><td>11.8.70.3626</td><td><strong>11.8.81.3807</strong></td></tr></tbody></table></div><p>The ME update came inside the BIOS image, so no separate ME update is needed. XMP Profile 1, set again after the flash, still runs the memory at 3200 MT/s (27,714 MB/s triad, 58.7 ns).</p><p>With CSM then turned off, the boot list fell from ten entries to two, and the legacy table left the kernel log. No errors were logged at boot. Every drive, the network and the GPU came up.</p><p>Afterwards nothing is left to update:</p><ul><li>fwupd, as user and as root, offers nothing for the drives or the TPM;</li><li>the CPU microcode (0x104), the kernel and every package are current.</li></ul><p>The UEFI revocation list that fwupd offered before the flash is moot now: the flash left Secure Boot in Setup Mode with no keys at all, and Secure Boot is off. One measurement is still owed: how long an unattended boot spends in firmware.</p></section><section id="si"><h2>I. Introduction</h2><p>The memory report's firmware survey (§VI) left the BIOS as the one open item. A third-party index had shown F15a as the board's last release; another copy showed an F15 from 2021. Gigabyte's own page refused automated reads (HTTP 403), so Paul read it himself and pasted it: "i present this". He had downloaded the F15b zip. Then he asked: "What do you want F15, is that a downgrade." And: "wow. confusing."</p><p>The work this report records:</p><ol><li>read the list correctly, and choose a version;</li><li>get the file and prove it is the file;</li><li>flash it, set calber up again, and check every claim from Linux;</li><li>answer "is there any more firmware to update".</li></ol></section><section id="sii"><h2>II. Gigabyte's List, Read Correctly</h2><p>Two things on Gigabyte's BIOS list mislead.</p><p><strong>On the page, each release's notes stand above its version line, not below it.</strong> A reader who expects a version's notes to follow it pins each paragraph on the wrong release. They belong to the version below them: F12's notes, for example, match the F12 entry in an independent copy.</p><p><strong>The names do not sort by date.</strong> A letter after the number marks a beta or interim build. The plain number is the release.</p><div class="table"><table><thead><tr><th>Version</th><th>Date</th><th>Gigabyte's notes</th><th>For calber</th></tr></thead><tbody><tr><td>F15a</td><td>Nov 28, 2019</td><td>"Workaround beta BIOS to improve Kingston DDR4-2666 stability … Add NTFS format support for Q-Flash"</td><td>what it ran</td></tr><tr><td>F15b</td><td>Mar 23, 2021</td><td>"Enable Resizable Base-Address Register (Resizable-BAR) option to enhance GPU performance"</td><td>nothing: Pascal cards cannot use Resizable BAR</td></tr><tr><td><strong>F15</strong></td><td><strong>Nov 29, 2021</strong></td><td>"Major vulnerabilities updates … Credits to Assaf Carlsbad and Itai Liba from SentinelOne. Introduce capsule BIOS support starting this version. Customers will NOT be able to reverse to previous BIOS version." Checksum 1683</td><td><strong>the one to flash</strong></td></tr></tbody></table></div><p>Three things agree that F15 is the newest:</p><ul><li><strong>its date</strong>;</li><li><strong>its place at the top of a list that runs newest first</strong>;</li><li><strong>its note that there is no way back.</strong></li></ul><p>That note only makes sense for the latest release. <strong>Go by the dates, not the letters.</strong></p><p>The third-party index cited in the recovery report had shown F15a as the last. It was wrong, and that report now says so.</p></section><section id="siii"><h2>III. Method</h2><h3 id="a-the-file">A. The file</h3><div class="table"><table><tbody><tr><td>Source</td><td><code>download.gigabyte.com/FileList/BIOS/mb_bios_z370-aorus-gaming-wifi_f15.zip</code>, Gigabyte's own file server, which answered where its web page refused</td></tr><tr><td>Zip</td><td>6,740,356 bytes (the page says 6.43 MB), Last-Modified 6 December 2021; sha256 <code>1038a5ac…ba85e6</code></td></tr><tr><td>Inside</td><td><code>Z370AOGW.F15</code> (16,777,216 bytes, 6 Dec 2021), <code>Efiflash.exe</code> and <code>autoexec.bat</code> (a DOS flasher, for a legacy boot stick), <code>readme.txt</code> (the flasher's switches, among them <code>/DB</code>, "update both main &amp; backup BIOS")</td></tr><tr><td>Image</td><td>sha256 <code>ca83dfd1fab52d33720ad496ad2a1c89a6400b986aa377e459a78db1bdd8c5aa</code></td></tr></tbody></table></div><p>Only the image and the readme were taken out of the zip, into their own folder (<code>~/Downloads/z370-bios-f15/</code>). Q-Flash, in the BIOS, needs only the image. Paul's earlier F15b download is the same server's file: its size matched the server's to the byte.</p><h3 id="b-onto-something-q-flash-can-read">B. Onto something Q-Flash can read</h3><p>The Mac has only USB-C and calber's ports are USB-A, so the stick went into calber, and everything after was done there. A careful check found it first. calber's six SATA SSDs, <code>sda</code> to <code>sdf</code>, hold an unmounted btrfs raid10 array, and nothing may write to them. The stick was the 7.5 GB "UDisk" at <code>/dev/sdh</code>, removable, on USB. It was already FAT32 on an MBR table, so nothing was erased:</p><ul><li>the image was copied to its top level and its hash checked there;</li><li>at Paul's asking, the music already on the stick (MIDI style folders and macOS's hidden <code>._*</code>, <code>.fseventsd</code> and <code>.Spotlight-V100</code>) was moved into <code>MUSIC/</code>, leaving the image alone at the top.</li></ul><p><strong>The first time, Q-Flash did not list the stick.</strong> It listed two other disks: the FAT32 EFI partitions of the two NVMe drives. So the image was copied to the top of both, hash checked, with <code>sudo cp</code>:</p><ul><li><code>nvme1n1p1</code>, the EX950 boot drive's, mounted at <code>/boot/efi</code>;</li><li><code>nvme0n1p1</code>, the EX900's, which also holds another system's Limine boot loader.</li></ul><p><strong>The second time, the stick was listed,</strong> and Paul flashed from it. Why it was missing the first time is not known. <strong>Q-Flash reads a FAT32 EFI partition as readily as a stick</strong>: a fallback worth remembering when a stick does not show. The copies stay where they are (Paul: "no cleanup needed"). A file at the top of an EFI partition does not affect booting.</p><h3 id="c-after-the-flash">C. After the flash</h3><p>Paul set XMP Profile 1 and the boot order (ubuntu on the 2 TB drive first). After a check from Linux showed CSM was still on, he went back and set:</p><ul><li>CSM Support <strong>Disabled</strong>;</li><li>Full Screen LOGO Show off;</li><li>AC BACK;</li><li>Network Stack (PXE) off;</li><li>a settings profile saved as "F15".</li></ul><p>Each claim in Section IV was then read from calber over SSH, without root, or from Paul's <code>sudo dmidecode</code>.</p></section><section id="siv"><h2>IV. Results</h2><div class="table"><table><thead><tr><th></th><th>F15a, before</th><th>F15, after</th><th>Read from</th></tr></thead><tbody><tr><td>BIOS</td><td>F15a 11/28/2019</td><td><strong>F15 11/13/2021</strong> (built two weeks before Gigabyte posted it)</td><td>kernel <code>DMI:</code> line, <code>/sys/class/dmi/id</code></td></tr><tr><td>Microcode inside the BIOS</td><td>0xCA</td><td>0xEA</td><td>dmidecode type 221; kernel "Updated early from"</td></tr><tr><td>Microcode running</td><td>0x104</td><td>0x104 (Ubuntu's <code>intel-microcode</code>, loaded over the BIOS's)</td><td><code>/proc/cpuinfo</code></td></tr><tr><td><strong>Intel ME firmware</strong></td><td>11.8.70.3626</td><td><strong>11.8.81.3807</strong></td><td><code>/sys/class/mei/mei0/fw_ver</code>; dmidecode type 221</td></tr><tr><td>Memory</td><td>3200 MT/s, triad 27,686 MB/s, 61.5 ns</td><td>3200 MT/s, <strong>triad 27,714 MB/s, 58.7 ns</strong></td><td>dmidecode; <code>ram-bench</code>'s programs</td></tr><tr><td>Boot entries</td><td>10, among them old named entries (Windows, Qubes, debian, endeavouros, XCP-ng, Commodore) and, with CSM on, legacy entries for every disk</td><td><strong>2</strong>: <code>ubuntu</code> (current, first) and the EX900's <code>UEFI OS</code></td><td><code>efibootmgr</code></td></tr><tr><td>CSM</td><td>on (the legacy MP table in the kernel log)</td><td><strong>off</strong> (no MP table)</td><td>kernel log</td></tr><tr><td>Firmware TPM</td><td>on</td><td>on (F15's default; fwupd lists it, 303.12.0.0)</td><td>ACPI TPM2 table; fwupd</td></tr><tr><td>Secure Boot</td><td>off</td><td>off, and in <strong>Setup Mode with no keys</strong>: no PK, KEK, db or dbx</td><td><code>mokutil --sb-state</code>; efivars</td></tr><tr><td>Errors this boot</td><td>none of note</td><td>none (only the usual "SGX disabled" notice)</td><td><code>journalctl -p err</code></td></tr><tr><td>Hardware</td><td></td><td>six SATA SSDs, both NVMe, network up, GPU at PCIe gen 3 ×16, no GPU errors</td><td><code>lsblk</code>, <code>ip</code>, <code>nvidia-smi</code>, kernel log</td></tr></tbody></table></div><p>The flash wiped the boot list of its old entries, and turning CSM off removed the legacy ones: the two changes are separate. In dmidecode, the board's version string changed from <code>x.x</code> to <code>Default string</code>, so the PCB revision still has to be read off the board.</p><p><strong>Not measured yet:</strong> how long a normal boot spends in firmware. The first boot after the flash read 2 min 40 s, and the one after the CSM change 8 min 4 s, each including Paul's time in setup. Before the power cut, with CSM off, it was 11.8 s. After the clear, with CSM on, 31.6 s.</p></section><section id="sv"><h2>V. Nothing Left to Update</h2><div class="table"><table><thead><tr><th>What</th><th>Now</th><th>Updates</th></tr></thead><tbody><tr><td>BIOS</td><td>F15, Gigabyte's newest</td><td>none. Gigabyte does not publish to fwupd: future BIOSes come through Q-Flash</td></tr><tr><td>Intel ME</td><td>11.8.81.3807</td><td>none needed; it came with F15</td></tr><tr><td>CPU microcode</td><td>0x104</td><td><code>intel-microcode</code> is current</td></tr><tr><td>Kernel</td><td>7.0.0-42</td><td>current</td></tr><tr><td>Ubuntu packages</td><td></td><td>none. Paul applied the one waiting (<code>libsqlite3-0</code> 2.8 → 2.9) at 11:36</td></tr><tr><td>NVMe drives (EX900 R0802E0, EX950 42A0S63C), six SATA SSDs (SBFM61.2), TPM</td><td></td><td>none: <code>fwupdmgr get-updates</code> and <code>sudo fwupdtool get-updates</code> both say so</td></tr><tr><td>UEFI dbx</td><td>none: Secure Boot has no keys</td><td>moot while Secure Boot is off</td></tr><tr><td>NVIDIA driver</td><td>580.178.04</td><td>held on purpose for the Pascal card</td></tr></tbody></table></div><p><code>sudo fwupdtool get-updates</code> printed three warnings, all harmless:</p><ul><li><strong>The capsule plugin "failed to get screen size"</strong> because the NVIDIA driver provides no <code>/dev/dri/card0</code>. It wants the size only to draw a picture during a capsule update.</li><li><strong><code>/dev/sdg</code>, "No medium found",</strong> twice: the empty USB card reader.</li></ul><p><strong>If Secure Boot is ever wanted:</strong> install the factory default keys in the BIOS first. Then <code>sudo fwupdmgr refresh --force &amp;&amp; sudo fwupdmgr update</code> brings the revocation list up to date.</p><p><strong>Routine checks, as admin:</strong></p><p>sudo fwupdmgr refresh --force fwupdmgr get-updates sudo apt update &amp;&amp; sudo apt upgrade</p><p><code>sudo fwupdmgr update</code> only when <code>get-updates</code> lists something.</p></section><section id="svi"><h2>VI. CSM, and Why It Is Off</h2><p>The Compatibility Support Module makes UEFI firmware act as an old PC BIOS. It is there for things made before UEFI:</p><ul><li><strong>video cards with only a legacy video BIOS</strong> (roughly those from before 2012). With CSM off, such a card shows nothing until the operating system's driver loads;</li><li><strong>disk and network controllers whose boot code is legacy only</strong>;</li><li><strong>old operating systems and DOS tools</strong>, such as the <code>Efiflash.exe</code> in Gigabyte's own zip.</li></ul><p>calber needs none of it. Ubuntu boots the UEFI way (<code>\EFI\UBUNTU\SHIMX64.EFI</code>). The 1080 Ti carries a UEFI graphics driver (GOP), as every GeForce 10-series card does. And CSM was off before the power cut, with nothing missing.</p><p>Leaving it on cost four things:</p><ul><li><strong>time</strong>: 11.8 s of firmware before the cut against 31.6 s after the clear turned it on;</li><li><strong>a boot list</strong> padded with a legacy entry for every disk;</li><li><strong>more startup code to stall in</strong>, which is how the power cut's hang happened;</li><li><strong>Secure Boot and Resizable BAR are blocked</strong>, though calber uses neither.</li></ul><p>Paul: "alright you convinced me."</p></section><section id="svii"><h2>VII. Discussion</h2><ol><li><strong>Read a vendor's list by its dates, and check which line a note belongs to.</strong> Both of Gigabyte's habits, notes above versions and lettered betas that sort after their release, point the eye the wrong way. The safe readings are the date and the vendor's own remark that there is no way back.</li><li><strong>Take the file from the vendor's server and record its hash.</strong> The page refused a script while the file server answered. The size and the date on the page confirm the file. The hash proves that the stick, the two EFI partitions and the download all held the same bytes.</li><li><strong>A BIOS flash is a reset of everything kept in NVRAM:</strong> the settings (XMP included), the boot list, and here the Secure Boot keys too. The settings were set again by hand and saved as a profile, "F15". The boot list rebuilt itself from the drives. Nothing used the keys.</li><li><strong>The ME came inside the BIOS.</strong> The third-party list's separate ME 12 file was, as far as I know, for Z390-class chips. Following it would have meant flashing the wrong ME for this chipset. Reading the version before and after (<code>/sys/class/mei</code>) settled that no separate update was needed.</li><li><strong>Q-Flash can read a FAT32 EFI partition</strong> when it does not see a stick.</li></ol></section><section id="sviii"><h2>VIII. What Is Left</h2><ul><li>[ ] An unattended reboot (<code>sudo reboot</code>, calber is out of the queue), then <code>systemd-analyze</code>: the firmware time with CSM off on F15, expected near 12 s.</li><li>[ ] Add calber back to the queue in Orrery. Its island resumes at generation 282,500. Then <code>tools/job-speed.py</code> after a day, for the memory report.</li><li>[ ] Optional: the thermal log (<code>sh tools/thermal-log.sh calber install</code>), for the liquid loop's heat soak.</li></ul></section><section id="six"><h2>IX. Limitations</h2><ul><li>Why Q-Flash missed the stick the first time is unknown. It may have been the port or the timing.</li><li>AC BACK, the logo and PXE cannot be read from Linux. That they are set is Paul's report.</li><li>Gigabyte publishes one paragraph of notes for F15. What else changed inside it beyond the microcode and the ME is not known.</li><li>The ME reading is a version number. Which advisories 11.8.81 closes is not checked here.</li></ul></section><section id="references"><h2>References</h2><p>[1] Gigabyte, "Z370 AORUS GAMING WIFI (Rev. 1.0), Support, BIOS" (F1 to F15). [Online]. Available: https://www.gigabyte.com/Motherboard/Z370-AORUS-GAMING-WIFI-rev-10/support#Support-Bios</p><p>[2] Gigabyte, F15 BIOS archive. [Online]. Available: https://download.gigabyte.com/FileList/BIOS/mb_bios_z370-aorus-gaming-wifi_f15.zip</p><p>[3] Station-Drivers, "Z370 AORUS GAMING WIFI" (a third-party copy of Gigabyte's list). [Online]. Available: https://www.station-drivers.com/index.php/en/bios-news/13-gigabyte-bios-drivers/234-intel-z370-serie-300/1975-z370-aorus-gaming-wifi</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>
+
+<script>
+/* READ ALONG (Paul, 6 November: "scrolls the webpage with enough reading time, which then it starts the animation
+   when its in view, stops scrolling to view it, then continues scrolling ... like a teleprompt"). One timeline,
+   made from the page itself: each block read at WPM past a reading line a third of the way down, each figure
+   held for a look its caption and size set, each film held and played to its end. The button plays it here;
+   tools/report/teleprompt.py asks the same function in headless Chrome and films it, so the page and its video
+   keep the same pace. window.teleprompt = {timeline, play, stop}. */
+(function () {
+  var WPM = 180, LINE = 0.33, SPEED = 700;
+  function words(el) { return ((el.innerText || el.textContent || "").trim().split(/\s+/).filter(Boolean)).length; }
+  function blocks() {
+    var sel = ".mast h1, .mast .front p, main h2, main h3, main p, main li, main table, main pre, main blockquote, main figure, main video, main svg, main img";
+    var all = Array.prototype.slice.call(document.querySelectorAll(sel)), out = [];
+    all.forEach(function (el) {
+      for (var a = el.parentElement; a; a = a.parentElement) if (all.indexOf(a) >= 0 && a.tagName !== "LI") return;
+      if (el.tagName === "LI" && el.querySelector("li")) { /* a list item with its own list: read its first line only */ }
+      if (el.closest("figure") && el.tagName !== "FIGURE" && el.closest("figure") !== el) return;
+      out.push(el);
+    });
+    return out;
+  }
+  function timeline(opt) {
+    opt = opt || {};
+    var wpm = opt.wpm || WPM, vh = opt.height || window.innerHeight, line = vh * LINE, top0 = opt.top || 0;
+    var segs = [], t = 0, y = 0, films = [];
+    function go(to, dur, kind, extra) {
+      to = Math.max(0, Math.round(to));
+      var dy = Math.abs(to - y);
+      if (dy > 2) { var d = Math.max(0.4, dy / SPEED); segs.push({t0: t, t1: t + d, y0: y, y1: to, kind: "move"}); t += d; y = to; }
+      if (dur > 0) { var s = {t0: t, t1: t + dur, y0: y, y1: y, kind: kind}; for (var k in (extra || {})) s[k] = extra[k]; segs.push(s); t += dur; }
+    }
+    blocks().forEach(function (el) {
+      var r = el.getBoundingClientRect(), top = r.top + window.scrollY - top0, h = r.height;
+      if (h < 2) return;
+      var video = el.tagName === "VIDEO" ? el : (el.querySelector ? el.querySelector("video") : null);
+      var cap = el.tagName === "FIGURE" && el.querySelector("figcaption") ? words(el.querySelector("figcaption")) : 0;
+      var next = el.nextElementSibling;
+      if (!cap && next && next.tagName === "P" && /^<em>Fig\./.test(next.innerHTML.trim())) cap = 0;
+      var visual = video || el.tagName === "FIGURE" || el.tagName === "SVG" || el.tagName === "svg" || el.tagName === "IMG" || (el.querySelector && el.querySelector("svg, img"));
+      if (video) {
+        var dur = isFinite(video.duration) && video.duration > 0 ? video.duration : parseFloat(video.getAttribute("data-duration") || "10");
+        var vr = video.getBoundingClientRect();
+        films.push({src: video.getAttribute("src"), x: vr.left, y: vr.top + window.scrollY - top0, w: vr.width, h: vr.height, dur: dur});
+        go(top + h / 2 - vh / 2, 0.6 + dur + cap * 60 / wpm, "film", {film: films.length - 1});
+      } else if (visual) {
+        var look = Math.min(14, 3 + cap * 60 / wpm + h / 250);
+        if (h > vh * 0.85) { go(top - 40, 0.5, "look"); var d2 = Math.max(look, (h - vh + 80) / 60); segs.push({t0: t, t1: t + d2, y0: y, y1: Math.round(top + h - vh + 40), kind: "look"}); t += d2; y = Math.round(top + h - vh + 40); }
+        else go(top + h / 2 - vh / 2, look, "look");
+      } else {
+        var n = words(el), read = Math.max(el.tagName.charAt(0) === "H" ? 1.2 : 1.0, n * 60 / wpm * (el.tagName === "TABLE" ? 1.25 : el.tagName === "PRE" ? 1.5 : 1));
+        go(top - line, 0, "read");
+        segs.push({t0: t, t1: t + read, y0: y, y1: Math.max(0, Math.round(top + h - line)), kind: "read"});
+        t += read; y = Math.max(0, Math.round(top + h - line));
+      }
+    });
+    return {wpm: wpm, height: vh, width: opt.width || window.innerWidth, line: Math.round(line), duration: t, segments: segs, films: films,
+            page: Math.round(document.documentElement.scrollHeight - top0)};
+  }
+  function yAt(tl, t) {
+    for (var i = 0; i < tl.segments.length; i++) { var s = tl.segments[i]; if (t < s.t1) return s.y0 + (s.y1 - s.y0) * Math.max(0, (t - s.t0) / (s.t1 - s.t0)); }
+    return tl.segments.length ? tl.segments[tl.segments.length - 1].y1 : 0;
+  }
+  var raf = 0, playing = null;
+  function stop() {
+    if (!playing) return;
+    cancelAnimationFrame(raf); playing = null;
+    var b = document.getElementById("tele"); if (b) { b.setAttribute("aria-pressed", "false"); b.textContent = "Read along"; }
+    var l = document.getElementById("tele-line"); if (l) l.hidden = true;
+    removeEventListener("wheel", stop); removeEventListener("touchstart", stop); removeEventListener("keydown", key);
+  }
+  function key(e) { if (e.key === "Escape") stop(); }
+  function play(opt) {
+    stop();
+    var tl = timeline(opt), vids = Array.prototype.slice.call(document.querySelectorAll("main video")), started = performance.now(), held = 0, cur = -1;
+    playing = tl;
+    var b = document.getElementById("tele"); if (b) { b.setAttribute("aria-pressed", "true"); b.textContent = "Stop"; }
+    var l = document.getElementById("tele-line"); if (l) { l.style.top = tl.line + "px"; l.hidden = false; }
+    addEventListener("wheel", stop, {passive: true}); addEventListener("touchstart", stop, {passive: true}); addEventListener("keydown", key);
+    function step(now) {
+      if (!playing) return;
+      var t = (now - started) / 1000 - held, i = 0;
+      while (i < tl.segments.length && t >= tl.segments[i].t1) i++;
+      if (i >= tl.segments.length) { stop(); return; }
+      var s = tl.segments[i];
+      if (i !== cur) {
+        cur = i;
+        if (s.kind === "film") { var f = tl.films[s.film], v = vids.filter(function (x) { return x.getAttribute("src") === f.src; })[0];
+          if (v) { v.muted = true; v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function () {}); s.v = v; } }
+      }
+      /* A film that has not reached its end holds the clock: the page waits for it. */
+      if (s.kind === "film" && s.v && !s.v.ended && t > s.t1 - 0.2) { held += 1 / 60; }
+      window.scrollTo(0, yAt(tl, Math.min(t, s.t1)));
+      raf = requestAnimationFrame(step);
+    }
+    raf = requestAnimationFrame(step);
+    return tl;
+  }
+  window.teleprompt = {timeline: timeline, play: play, stop: stop, yAt: yAt};
+  var b = document.getElementById("tele");
+  if (b) b.addEventListener("click", function () { if (playing) stop(); else play(); });
+})();
+</script>

@@ -518,3 +518,7 @@ Mac. Next, in order:
    running, so long jobs no longer hold it on old code.
 7. **A flaky test:** `sftp::tests::a_directory_lists_with_sizes_and_kinds_and_no_dot_entries`
    uses a fixed temp directory.
+8. **calber, after the power cut of 7 November:** the BIOS visit, the
+   SMART checks, the memory speed, a UPS, and four decisions on code (an
+   atomic island checkpoint first). Kept as a checklist in
+   [`calber-todo.md`](calber-todo.md).

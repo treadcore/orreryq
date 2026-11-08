@@ -1,0 +1,114 @@
+{
+ "host": "calber",
+ "kernel": "7.0.0-42-generic",
+ "cpu": "Intel(R) Core(TM) i7-9700F CPU @ 3.00GHz",
+ "cores": 8,
+ "mem_GiB": 62,
+ "os": "ubuntu/debian",
+ "disks": [
+  "/dev/sda",
+  "/dev/sdb",
+  "/dev/sdc",
+  "/dev/sdd",
+  "/dev/sde",
+  "/dev/sdf"
+ ],
+ "serials": [
+  "18080648001999",
+  "18080648003305",
+  "18080648001987",
+  "18080648001997",
+  "18060148001268",
+  "18080648003316"
+ ],
+ "stamp": "20261107-215616",
+ "zfs": "zfs-2.2.2-0ubuntu9.5 zfs-kmod-2.4.1-1ubuntu5.1",
+ "health_before": {
+  "/dev/sda": {
+   "bad blocks late/early": "0/252",
+   "unsafe shutdowns": "278",
+   "CRC errors": "0",
+   "life left %": "99",
+   "GiB written": "4928"
+  },
+  "/dev/sdb": {
+   "bad blocks late/early": "0/486",
+   "unsafe shutdowns": "278",
+   "CRC errors": "0",
+   "life left %": "99",
+   "GiB written": "4909"
+  },
+  "/dev/sdc": {
+   "bad blocks late/early": "0/421",
+   "unsafe shutdowns": "277",
+   "CRC errors": "495",
+   "life left %": "99",
+   "GiB written": "4857"
+  },
+  "/dev/sdd": {
+   "bad blocks late/early": "1/487",
+   "unsafe shutdowns": "280",
+   "CRC errors": "0",
+   "life left %": "99",
+   "GiB written": "4899"
+  },
+  "/dev/sde": {
+   "bad blocks late/early": "0/391",
+   "unsafe shutdowns": "746",
+   "CRC errors": "22347",
+   "life left %": "99",
+   "GiB written": "4964"
+  },
+  "/dev/sdf": {
+   "bad blocks late/early": "0/465",
+   "unsafe shutdowns": "280",
+   "CRC errors": "0",
+   "life left %": "99",
+   "GiB written": "9606"
+  }
+ },
+ "health_after": {
+  "/dev/sda": {
+   "bad blocks late/early": "0/252",
+   "unsafe shutdowns": "278",
+   "CRC errors": "0",
+   "life left %": "99",
+   "GiB written": "5094"
+  },
+  "/dev/sdb": {
+   "bad blocks late/early": "0/486",
+   "unsafe shutdowns": "278",
+   "CRC errors": "0",
+   "life left %": "99",
+   "GiB written": "5076"
+  },
+  "/dev/sdc": {
+   "bad blocks late/early": "0/421",
+   "unsafe shutdowns": "277",
+   "CRC errors": "495",
+   "life left %": "99",
+   "GiB written": "5023"
+  },
+  "/dev/sdd": {
+   "bad blocks late/early": "1/487",
+   "unsafe shutdowns": "280",
+   "CRC errors": "0",
+   "life left %": "99",
+   "GiB written": "5066"
+  },
+  "/dev/sde": {
+   "bad blocks late/early": "0/391",
+   "unsafe shutdowns": "746",
+   "CRC errors": "22347",
+   "life left %": "99",
+   "GiB written": "5131"
+  },
+  "/dev/sdf": {
+   "bad blocks late/early": "0/465",
+   "unsafe shutdowns": "280",
+   "CRC errors": "0",
+   "life left %": "99",
+   "GiB written": "9772"
+  }
+ }
+}

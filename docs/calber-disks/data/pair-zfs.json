@@ -1,0 +1,91 @@
+{
+ "layout": "pair-zfs",
+ "disks": [
+  "/dev/sda",
+  "/dev/sdb"
+ ],
+ "suite": {
+  "seq-write": {
+   "write": {
+    "MBps": 201.1,
+    "iops": 190,
+    "p99_us": 994050.0
+   },
+   "secs": 20.0
+  },
+  "seq-read": {
+   "read": {
+    "MBps": 912.6,
+    "iops": 869,
+    "p99_us": 72876.0
+   },
+   "secs": 20.0
+  },
+  "butterfly": {
+   "write": {
+    "MBps": 227.5,
+    "iops": 215
+   }
+  },
+  "write-read": {
+   "read": {
+    "MBps": 539.7,
+    "iops": 515,
+    "p99_us": 51642.4
+   },
+   "write": {
+    "MBps": 66.5,
+    "iops": 63,
+    "p99_us": 1400897.5
+   },
+   "secs": 36.3
+  },
+  "rand-read": {
+   "read": {
+    "MBps": 26.9,
+    "iops": 6551,
+    "p99_us": 23724.0
+   },
+   "secs": 160.0
+  },
+  "rand-write": {
+   "write": {
+    "MBps": 7.5,
+    "iops": 1818,
+    "p99_us": 549453.8
+   },
+   "secs": 80.0
+  },
+  "mixed": {
+   "read": {
+    "MBps": 4.2,
+    "iops": 1032,
+    "p99_us": 530579.5
+   },
+   "write": {
+    "MBps": 1.8,
+    "iops": 431,
+    "p99_us": 574619.6
+   },
+   "secs": 80.0
+  },
+  "sync-write": {
+   "write": {
+    "MBps": 1.8,
+    "iops": 442,
+    "p99_us": 6.9
+   },
+   "secs": 15.0
+  },
+  "metadata": {
+   "create_s": 8.44,
+   "find_s": 0.37,
+   "files": 100000,
+   "ls_lR_s": 1.44,
+   "stat_sort_s": 1.1,
+   "delete_s": 2.1
+  }
+ },
+ "minutes": 4.4,
+ "at": "2026-11-07T20:47:37"
+}

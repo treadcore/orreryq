@@ -37,6 +37,9 @@ pub enum View {
     /// The fleet's disks and shares, a patch bay: survey, share, mount
     /// (storage.rs).
     Storage,
+    /// Which layout of a machine's spare disks is fastest, and a run as it
+    /// happens (bench.rs).
+    Bench,
     /// What the fleet works on -- treadcore, crucible -- and which machine
     /// runs which (projects.rs).
     Projects,
@@ -77,6 +80,7 @@ impl View {
             View::Machines => "Machines",
             View::Media => "Media",
             View::Storage => "Storage",
+            View::Bench => "Bench",
             View::Projects => "Projects",
             View::Queue => "Queue",
             View::Pipeline => "Pipeline",
@@ -91,11 +95,11 @@ impl View {
 
     /// Every view, chapter by chapter.
     pub const ALL: &'static [View] =
-        &[View::Machines, View::Media, View::Storage, View::Projects, View::Queue, View::Pipeline, View::Results, View::Lab, View::Sessions, View::Fleet, View::Chat, View::Settings];
+        &[View::Machines, View::Media, View::Storage, View::Bench, View::Projects, View::Queue, View::Pipeline, View::Results, View::Lab, View::Sessions, View::Fleet, View::Chat, View::Settings];
 
     pub fn chapter(&self) -> Chapter {
         match self {
-            View::Machines | View::Media | View::Storage => Chapter::Machines,
+            View::Machines | View::Media | View::Storage | View::Bench => Chapter::Machines,
             View::Projects => Chapter::Projects,
             View::Queue | View::Pipeline => Chapter::Queue,
             View::Results => Chapter::Results,
@@ -137,7 +141,7 @@ impl Chapter {
     /// Its views, the first where the strip goes.
     pub fn views(&self) -> &'static [View] {
         match self {
-            Chapter::Machines => &[View::Machines, View::Media, View::Storage],
+            Chapter::Machines => &[View::Machines, View::Media, View::Storage, View::Bench],
             Chapter::Projects => &[View::Projects],
             Chapter::Queue => &[View::Queue, View::Pipeline],
             Chapter::Results => &[View::Results],

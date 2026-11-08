@@ -77,6 +77,7 @@ mod recordings;
 mod orchestrate;
 mod pipeline;
 mod storage;
+mod bench;
 #[allow(dead_code)]
 mod ssh;
 mod surface;
@@ -310,6 +311,13 @@ fn main() {
             Frame::Media { copal: copal.clone(), demo }
         } else if frame_view == "sessions" {
             Frame::Sessions { fleet: fleet_name.clone() }
+        } else if frame_view == "bench" {
+            let doc = if !frame_state.is_empty() {
+                std::fs::read_to_string(&frame_state).unwrap_or_default()
+            } else {
+                jobs_answer(&format!("{} status", bench_cmd(&queue_ctl)))
+            };
+            Frame::Bench { doc }
         } else if frame_view == "storage" {
             let doc = if !frame_state.is_empty() {
                 std::fs::read_to_string(&frame_state).unwrap_or_default()
@@ -550,6 +558,14 @@ fn keeper_lamp_of(text: &str, source: &str) -> Option<ui::KeeperLamp> {
 /// What `--frame` should render.
 /// The machines tool beside the queue's: `--queue DIR` gives
 /// `python3 TOOLS/fleet-queue.py 'DIR'`, and machines.py takes the same DIR.
+/// disk-report.py beside fleet-queue.py. It takes no queue: it reads every machine that has bench results.
+fn bench_cmd(queue_ctl: &str) -> String {
+    match queue_ctl.find("/fleet-queue.py ") {
+        Some(i) => format!("{}/disk-report.py", &queue_ctl[..i]),
+        None => String::new(),
+    }
+}
+
 /// storage.py beside fleet-queue.py, as machines.py is.
 fn storage_cmd(queue_ctl: &str) -> String {
     if queue_ctl.contains("/fleet-queue.py ") {
@@ -619,6 +635,7 @@ enum Frame {
     /// The machines, from a fresh install to a node (machines.rs).
     Machines { doc: String, select: Vec<String> },
     Storage { doc: String, select: Vec<String> },
+    Bench { doc: String },
     Fleet { doc: String, select: Vec<String> },
     Chat { doc: String },
     /// The Pipeline's board, from a saved plan/pipeline.json.
@@ -865,6 +882,15 @@ fn write_frame(
                 storage::draw(&mut u, &m, &mut st);
                 u.finish();
             }
+            Frame::Bench { ref doc } => {
+                let m = bench::Model::parse(doc);
+                let mut st = bench::State::new(std::env::var("ORRERY_FRAME_OPERATOR").is_ok());
+                let mut ui_state = ui::UiState::default();
+                ui_state.pointer = frame_pointer();
+                let mut u = ui::Ui::begin(&mut c, *theme, &[], &mut ui_state);
+                bench::draw(&mut u, &m, &mut st);
+                u.finish();
+            }
             Frame::Fleet { ref doc, ref select } => {
                 let m = orchestrate::Model::parse(doc);
                 let mut st = orchestrate::State::new(std::env::var("ORRERY_FRAME_OPERATOR").is_ok());
@@ -1106,6 +1132,22 @@ fn gui_loop<S: surface::Surface>(
         });
     } else {
         *storage_doc.lock().unwrap_or_else(|e| e.into_inner()) = "no storage tool: start orrery with --queue DIR".into();
+    }
+    // THE BENCH, the same way: disk-report.py's document every ten seconds. It reads each machine's run
+    // (one small file over ssh) and fetches its results only when they changed, so ten seconds is cheap.
+    let bcmd = bench_cmd(queue_ctl);
+    let bench_doc: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
+    let bench_said: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
+    let mut bench_state = bench::State::new(posture == lab::Posture::Operator && !bcmd.is_empty());
+    if !bcmd.is_empty() {
+        let doc = Arc::clone(&bench_doc);
+        let cmd = format!("{} status", bcmd);
+        thread::spawn(move || loop {
+            *doc.lock().unwrap_or_else(|e| e.into_inner()) = jobs_answer(&cmd);
+            thread::sleep(Duration::from_secs(10));
+        });
+    } else {
+        *bench_doc.lock().unwrap_or_else(|e| e.into_inner()) = "no bench tool: start orrery with --queue DIR".into();
     }
     // THE FLEET SCREEN, the same way: the document every five seconds, read from
     // the last survey, and the machines asked again each minute, on a thread of its
@@ -1570,6 +1612,43 @@ fn gui_loop<S: surface::Surface>(
                                 }
                                 (_, true) => format!("{}: done", doing),
                                 (_, false) => format!("{}: {}", doing, line),
+                            };
+                            *said.lock().unwrap_or_else(|e| e.into_inner()) = msg;
+                        });
+                    }
+                    if let Some(v) = go {
+                        action = Some(lab::Action::Go(v));
+                    }
+                }
+                (None, nav::View::Bench) => {
+                    let text = bench_doc.lock().unwrap_or_else(|e| e.into_inner()).clone();
+                    bench_state.said = bench_said.lock().unwrap_or_else(|e| e.into_inner()).clone();
+                    let go = bench::draw(&mut u, &bench::Model::parse(&text), &mut bench_state);
+                    // Inspect and Run: the bench copied to the machine, its command typed into the machine's
+                    // Sessions tile for the person's password. Orrery holds no root and runs nothing as root.
+                    if let Some(bench::Ask::Stage { host, what }) = bench_state.ask.take() {
+                        let q = |x: &str| format!("'{}'", x.replace('\'', "'\\''"));
+                        let cmd = format!("{} stage {} {}", bcmd, q(&host), q(&what));
+                        let said = Arc::clone(&bench_said);
+                        let hand = Arc::clone(&handoff);
+                        *said.lock().unwrap_or_else(|e| e.into_inner()) = format!("copying the bench to {}...", host);
+                        thread::spawn(move || {
+                            let out = std::process::Command::new("sh").arg("-c").arg(&cmd).output();
+                            let msg = match out {
+                                Ok(o) if o.status.success() => {
+                                    let text = String::from_utf8_lossy(&o.stdout).into_owned();
+                                    match json::parse(text.trim()) {
+                                        Ok(v) if v.get("command").is_some() => {
+                                            let g = |k: &str| v.get(k).and_then(|x| x.as_str()).unwrap_or("").to_string();
+                                            *hand.lock().unwrap_or_else(|e| e.into_inner()) = Some((g("machine"), g("target"), g("command")));
+                                            format!("{}: copied; its command is typed in {}'s Sessions tile, for the password", g("what"), g("machine"))
+                                        }
+                                        Ok(v) => v.get("error").and_then(|x| x.as_str()).unwrap_or("done").to_string(),
+                                        _ => text.lines().last().unwrap_or("done").to_string(),
+                                    }
+                                }
+                                Ok(o) => format!("staging the bench: {}", String::from_utf8_lossy(&o.stderr).lines().last().unwrap_or("failed")),
+                                Err(e) => format!("staging the bench: {}", e),
                             };
                             *said.lock().unwrap_or_else(|e| e.into_inner()) = msg;
                         });

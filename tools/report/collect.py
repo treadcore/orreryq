@@ -58,6 +58,30 @@ CARDS = {
                   "Three generations of the game's brain, each from its first read to its commit, an arrow from every job to the "
                   "one it followed: committed, not yet on main, and why. The film's crowd made 128 different duels, not a dozen "
                   "stacked; the kill shot again at half speed; every wire in its node's colour. The film plays in the page."),
+    "network": ("Fleet · the share and the wire",
+                "calber's RAID10 shared over NFS and measured from the machines that use it: every 1 GbE client gets the wire's "
+                "117 MB/s, and small files crawl on a sync share, 40 made a second from the Mac. The network mapped from inside: "
+                "a core with 10 GbE and 1 GbE ports, two machines behind one shared link, one cable at 100 Mb/s. A growing report."),
+    "calber-ssd": ("Fleet · six SSDs, thirteen layouts",
+                   "calber's six 480 GB SATA SSDs built thirteen ways and measured: mdadm RAID10 on ext4 lists 100,000 files in "
+                   "0.04 s and reads 1.9 GB/s, best for the Blu-ray working disk; RAID0 writes fastest; ZFS's 128K record costs it "
+                   "ten to forty times on 4K I/O. Every layout on one chart, a conclusion matrix in green, and the route back to Orrery."),
+    "calber-update-f15": ("Fleet · a BIOS update",
+                          "F15 looked older than calber's F15a and is two years newer: on Gigabyte's lists a letter marks a beta. "
+                          "Taken from Gigabyte's server and checked by hash, flashed with Q-Flash; it brought the Intel ME to 11.8.81 "
+                          "too. CSM off took the boot list from ten entries to two, and nothing is left to update."),
+    "ram-speed": ("Fleet · memory at its rated speed",
+                  "calber's DDR4-3200 had run at 2400 since the BIOS reset; XMP Profile 1 set 3200 at 1.35 V by itself. Bandwidth "
+                  "+24%, latency 12% quicker, the census 1.1% faster: it lives in the cache. A bench on frozen work, the procedure "
+                  "for any machine, the one-page guide, and what firmware calber can still take."),
+    "calber-power-cut": ("Fleet · a power cut, read back",
+                         "calber lost power 14 minutes into a 32-minute CUDA segment. The orange bar is that segment, drawn in the "
+                         "alarm colour a sent-back job gets; calber caused nothing and the job had not finished. Its own disk dates "
+                         "the cut to half a minute, the island resumed at generation 282,400, its checkpoint, and that checkpoint is written in place."),
+    "calber-bios-recovery": ("Fleet · a BIOS put back",
+                             "The CMOS clear that brought calber back, Gigabyte's keys, the settings to restore, hardware one piece at a "
+                             "time, and the checks after a cut, each checked against calber: the card pulled is a SATA card with a DVD "
+                             "writer, not a SAS HBA; the clock and boot list survived; the TPM and SGX went off; F15a is the BIOS."),
     "full-card": ("Crucible · every generation on film",
                   "The maze home on the fleet; one wall rule in two games (game 9); 256 duels a net to fill the card; every new "
                   "generation's tests filmed and reeled; a camp of stages whose rewards fall with time; which census maps tell a "

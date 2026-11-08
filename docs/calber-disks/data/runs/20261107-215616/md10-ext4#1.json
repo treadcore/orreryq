@@ -1,0 +1,117 @@
+{
+ "layout": "md10-ext4",
+ "trial": "md10-ext4#1",
+ "disks": [
+  "/dev/sda",
+  "/dev/sdb",
+  "/dev/sdc",
+  "/dev/sdd",
+  "/dev/sde",
+  "/dev/sdf"
+ ],
+ "suite": {
+  "seq-write": {
+   "write": {
+    "MBps": 822.2,
+    "iops": 783,
+    "mean_us": 39815.0,
+    "p99_us": 120062.0,
+    "max_us": 231032.7
+   },
+   "secs": 20.0
+  },
+  "seq-read": {
+   "read": {
+    "MBps": 1935.2,
+    "iops": 1844,
+    "mean_us": 17120.0,
+    "p99_us": 21626.9,
+    "max_us": 45850.5
+   },
+   "secs": 20.0
+  },
+  "butterfly": {
+   "write": {
+    "MBps": 884.1,
+    "iops": 842,
+    "mean_us": 36597.9,
+    "p99_us": 94896.1,
+    "max_us": 146294.3
+   },
+   "secs": 40.1
+  },
+  "write-read": {
+   "read": {
+    "MBps": 1816.8,
+    "iops": 1733,
+    "mean_us": 8901.1,
+    "p99_us": 24772.6,
+    "max_us": 33697.3
+   },
+   "write": {
+    "MBps": 817.5,
+    "iops": 780,
+    "mean_us": 19545.3,
+    "p99_us": 65273.9,
+    "max_us": 79709.0
+   },
+   "secs": 3.8
+  },
+  "rand-read": {
+   "read": {
+    "MBps": 1048.6,
+    "iops": 255998,
+    "mean_us": 493.1,
+    "p99_us": 1204.2,
+    "max_us": 7931.7
+   },
+   "secs": 160.0
+  },
+  "rand-write": {
+   "write": {
+    "MBps": 504.0,
+    "iops": 123053,
+    "mean_us": 1021.0,
+    "p99_us": 2998.3,
+    "max_us": 672895.8
+   },
+   "secs": 80.1
+  },
+  "mixed": {
+   "read": {
+    "MBps": 220.1,
+    "iops": 53732,
+    "mean_us": 481.9,
+    "p99_us": 1003.5,
+    "max_us": 483658.0
+   },
+   "write": {
+    "MBps": 94.3,
+    "iops": 23026,
+    "mean_us": 1618.8,
+    "p99_us": 15532.0,
+    "max_us": 492802.6
+   },
+   "secs": 80.0
+  },
+  "sync-write": {
+   "write": {
+    "MBps": 1.8,
+    "iops": 437,
+    "mean_us": 161.0,
+    "p99_us": 214.0,
+    "max_us": 9268.9
+   },
+   "secs": 15.0
+  },
+  "metadata": {
+   "create_s": 4.61,
+   "find_s": 0.04,
+   "ls_lR_s": 1.43,
+   "stat_sort_s": 1.07,
+   "delete_s": 2.68
+  }
+ },
+ "settle_s": 30,
+ "minutes": 4.0
+}

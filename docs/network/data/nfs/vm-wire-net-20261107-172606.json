@@ -1,0 +1,23 @@
+{
+ "kind": "net",
+ "label": "vm-wire",
+ "host": "treadcore-vm",
+ "os": "Linux-6.18.58-0-lts-aarch64-with-musl1",
+ "where": "192.168.8.179",
+ "stamp": "20261107-172606",
+ "tests": {
+  "ping": {
+   "min_ms": 0.656,
+   "avg_ms": 1.038,
+   "max_ms": 1.358
+  },
+  "up": {
+   "MBps": 117.4,
+   "retransmits": 6
+  },
+  "down": {
+   "MBps": 116.9,
+   "retransmits": 0
+  }
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "kind": "net",
+ "label": "xinanjiang-wire",
+ "host": "xinanjiang",
+ "os": "Linux-6.18.60-0-lts-x86_64-with-musl1",
+ "where": "192.168.8.179",
+ "stamp": "20261107-173526",
+ "tests": {
+  "ping": {
+   "min_ms": 0.293,
+   "avg_ms": 1.144,
+   "max_ms": 1.55
+  },
+  "up": {
+   "MBps": 117.7,
+   "retransmits": 0
+  },
+  "down": {
+   "MBps": 117.1,
+   "retransmits": 0
+  }
+ }
+}

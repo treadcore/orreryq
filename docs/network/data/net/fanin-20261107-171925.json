@@ -1,0 +1,16 @@
+{
+ "hub": "whitewolf",
+ "senders": [
+  "xinanjiang",
+  "bosporus"
+ ],
+ "secs": 8.0,
+ "Mbps": {
+  "bosporus": 941.1,
+  "xinanjiang": 941.5
+ },
+ "window_s": 6.12,
+ "kind": "fanin",
+ "stamp": "20261107-171925",
+ "at": 1794100765.478252
+}
