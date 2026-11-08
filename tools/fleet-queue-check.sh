@@ -64,9 +64,38 @@ q project one resume >/dev/null
 wait_for running where j1
 q stop-job j1 >/dev/null; wait_for stopped where j1
 
-q machine a remove >/dev/null; wait_for removed lane a
+# REMOVE IS AT ONCE (Paul, 7 November): the job in hand goes back on the queue and the machine leaves now.
+job r1 k1 "sleep 60"
+wait_for running where r1
+q machine a remove >/dev/null
+wait_for queue where r1
+wait_for removed lane a
+[ "$(grep -c 'goes back on the queue' "$Q/logs/r1.log")" = 1 ] && echo "ok  a machine removed with a job in hand sent it back and left at once"
 python3 -c "import json;c=json.load(open('$Q/config.json'));assert [h['name'] for h in c['bench']]==['a']" && echo "ok  a removed machine waits on the bench"
-q machine a add >/dev/null; wait_for idle lane a
+q machine a add >/dev/null; wait_for running where r1
+q stop-job r1 >/dev/null; wait_for stopped where r1
+# FINISH, THEN REMOVE: nothing new starts, the job in hand ends as it would, then the machine leaves by itself.
+job f1 k1 "sleep 4"
+wait_for running where f1
+q machine a finish >/dev/null
+job f2 k1 "true"
+q status --json | python3 -c "
+import json,sys
+r={x['name']:x for x in json.load(sys.stdin)['roster']}
+assert r['a']['state']=='leaving' and r['a']['leaving'] and r['a']['paused'], r['a']" && echo "ok  a finishing machine says it is leaving"
+sleep 1; [ "$(where f2)" = queue ] && echo "ok  a finishing machine takes nothing new"
+wait_for done where f1
+wait_for removed lane a
+python3 -c "import json;c=json.load(open('$Q/config.json'));b=[h for h in c['bench'] if h['name']=='a'];assert b and 'leaving' not in b[0], c" && echo "ok  its job finished, not sent back, and then it left for the bench"
+[ "$(grep -c 'goes back on the queue' "$Q/logs/f1.log")" = 0 ] && echo "ok  nothing of a finishing machine's job was cut"
+q machine a add >/dev/null; wait_for done where f2
+# A pause takes a Finish back: the machine stays in the queue.
+job f3 k1 "sleep 4"
+wait_for running where f3
+q machine a finish >/dev/null; q machine a pause >/dev/null
+wait_for done where f3
+sleep 2; [ "$(lane a)" = paused ] && echo "ok  Pause after Finish keeps the machine in the queue"
+q machine a resume >/dev/null; wait_for idle lane a
 q machine spare add >/dev/null; wait_for idle lane spare
 # THE CPU LIMITER: a machine told 2 CPUs runs its jobs believing it has 2, a shell under it too;
 # a number not a power of two is refused; "all" lifts it.

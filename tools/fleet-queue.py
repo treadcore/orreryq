@@ -8,16 +8,21 @@ a keeper that keeps it all running, and two ways to stop.
     tools/fleet-queue.py DIR stop-adding     the queue drains; what runs finishes;
                                              then the results are collected and
                                              the keeper ends
+    tools/fleet-queue.py DIR autostart       the console opening: the keeper starts unless a person
+                                             stopped it (a stop, a shutdown, a finished drain)
     tools/fleet-queue.py DIR resume-adding
     tools/fleet-queue.py DIR resume          THE QUEUE GOES AGAIN, whatever stopped it: adding is
                                              on, a shutdown's and a stop's switches are off, and
                                              the keeper starts unless it is running
-    tools/fleet-queue.py DIR machine NAME pause|stop|resume|remove|add
+    tools/fleet-queue.py DIR machine NAME pause|finish|stop|resume|remove|add
                                              one machine, all its lanes. pause: the job in hand
-                                             finishes, nothing new starts. stop: the job in hand
-                                             goes back on the queue now, nothing new starts.
-                                             resume: it takes work again. remove: it leaves the
-                                             queue after the job in hand, kept on the bench.
+                                             finishes, nothing new starts. finish: the same, and
+                                             when its jobs in hand end it leaves the queue for the
+                                             bench by itself (a GPU island keeps its segment).
+                                             stop: the job in hand goes back on the queue now,
+                                             nothing new starts. resume: it takes work again.
+                                             remove: the job in hand goes back on the queue now
+                                             and it leaves the queue at once, kept on the bench.
                                              add: from the bench, or from machines.json
     tools/fleet-queue.py DIR assign NAME PROJECT on|off
                                              one machine takes that project's jobs, or does not
@@ -79,7 +84,9 @@ The planner is asked when the jobs a CPU lane could take fall under
 low_water (the GPU islands' own queue does not count), each plan_s, for
 a lane idle with nothing it can start, and replan_after_s (15) after a
 job marked "replan" comes back: a chain's step, whose next only the
-planner can ask for.
+planner can ask for. A pass holds the keeper's beat; health calls the loop
+stuck after heartbeat_s (60, or 6 poll_s) with no beat, unless a planner pass
+began since the last beat.
 
 CPU lanes idle idle_flag_s (900) with nothing they can start raise a flag
 saying why, as far as the keeper can see: a build failed (its first error
@@ -138,7 +145,10 @@ class Queue:
         for sub in ("queue", "running", "done", "failed", "stopped", "logs", "results", "lanes", "stop-job", "send-back"):
             os.makedirs(os.path.join(self.d, sub), exist_ok=True)
         self.lock = threading.Lock()
+        self.flag_lock = threading.Lock()
         self.restarting = False
+        # When the checks after a cut are asked for next (tools/boots.py): soon after a host comes back.
+        self.boots_at = None
         # When a chain's step came back (a job with `replan`): the planner is asked then, not at its
         # next pass. The earliest asked, so a burst of returns is one pass (change B).
         self.replan_at = None
@@ -230,18 +240,32 @@ class Queue:
         d = self.p("flags")
         os.makedirs(d, exist_ok=True)
         key = key or "%s:%s" % (kind, text)
-        for f in os.listdir(d):
-            try:
-                if json.load(open(os.path.join(d, f))).get("key") == key:
-                    return False
-            except (OSError, ValueError):
-                pass
-        seq = int(now() * 1000)
-        fid = "%d-%s" % (seq, kind)
-        with open(os.path.join(d, ".%s.tmp" % fid), "w") as f:
-            json.dump({"id": fid, "t": time.strftime("%Y-%m-%dT%H:%M:%S"), "kind": kind, "text": text, "key": key, "ack": None,
-                       "progress": bool(progress)}, f)
-        os.rename(os.path.join(d, ".%s.tmp" % fid), os.path.join(d, fid + ".json"))
+        # LANES THAT LOSE THEIR HOSTS TOGETHER RAISE THEIR FLAGS IN ONE MILLISECOND. A power cut takes
+        # calber and calber-cuda (one box, two lanes) and the small switch's machines at the same
+        # instant; their lanes time out on the same beat and arrive here at once. Named by the clock
+        # alone, two flags were one name: both wrote the same .tmp, the first rename took it, the
+        # second raised FileNotFoundError, and that lane's thread died -- calber's CPU lane on 7
+        # November and again on 8 November. The beat starts a dead lane again (07:49:28, a minute
+        # on), so what was lost was the flag and the minute; a lane that died holding a job would
+        # lose more. So the look for the key and the write are one step under a lock (apart, two
+        # lanes with one key could both find none), the number steps past any name already taken,
+        # and the .tmp is the thread's own.
+        with self.flag_lock:
+            for f in os.listdir(d):
+                try:
+                    if json.load(open(os.path.join(d, f))).get("key") == key:
+                        return False
+                except (OSError, ValueError):
+                    pass
+            seq = int(now() * 1000)
+            while os.path.exists(os.path.join(d, "%d-%s.json" % (seq, kind))):
+                seq += 1
+            fid = "%d-%s" % (seq, kind)
+            tmp = os.path.join(d, ".%s.%d-%d.tmp" % (fid, os.getpid(), threading.get_ident()))
+            with open(tmp, "w") as f:
+                json.dump({"id": fid, "t": time.strftime("%Y-%m-%dT%H:%M:%S"), "kind": kind, "text": text, "key": key, "ack": None,
+                           "progress": bool(progress)}, f)
+            os.rename(tmp, os.path.join(d, fid + ".json"))
         self.event("flag", kind=kind, text=text)
         return True
 
@@ -811,6 +835,8 @@ def lane(q, host, alive):
                     time.sleep(3)
             if waiting():
                 q.event("host back", host=name)
+                # A machine back from dark may be back from a boot: read it soon.
+                q.boots_at = q.boots_at or now() + 20
             continue
         done, failed = q.ids_in("done"), q.ids_in("failed") | q.ids_in("stopped")
         picked = None
@@ -990,8 +1016,52 @@ def work(q, host, j, say, adopted=None):
 
 # ---- the keeper -----------------------------------------------------------------
 
+def last_event_t(q):
+    """The time of the last event written, read from the file's end -- passing over the asks that
+    start this keeper (autostart, resume), which come after the cut and are not where it began."""
+    try:
+        with open(q.p("events.jsonl"), "rb") as f:
+            f.seek(0, 2)
+            f.seek(max(0, f.tell() - 8192))
+            lines = f.read().decode("utf-8", "replace").splitlines()
+    except OSError:
+        return None
+    for line in reversed(lines):
+        try:
+            e = json.loads(line)
+        except ValueError:
+            continue
+        if e.get("event") not in ("autostart", "resume", "resume adding"):
+            return e.get("t")
+    return None
+
+
+def booted_at():
+    """When this machine booted, as a keeper.json stamp."""
+    try:
+        if sys.platform == "darwin":
+            m = re.search(r"sec = (\d+)", subprocess.run(["sysctl", "-n", "kern.boottime"], capture_output=True, text=True, timeout=10).stdout)
+            t = int(m.group(1)) if m else None
+        else:
+            t = next(int(l.split()[1]) for l in open("/proc/stat") if l.startswith("btime"))
+    except (OSError, subprocess.SubprocessError, StopIteration, ValueError):
+        return None
+    return time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(t)) if t else None
+
+
 def keeper(q):
     cfg = q.config()
+    # A KEEPER THAT NEVER ENDED LEFT ITS PID BEHIND. Every end the keeper makes (a stop, a drain, a
+    # shutdown, an exception) removes keeper.pid in its finally; a power cut, a crash of the Mac or a
+    # kill does not. So a keeper.pid naming another process, found by the keeper starting now, is the
+    # mark of a cut: where it began (the last event written), when this Mac came back, and when the
+    # keeper did, go to cut.json for the After a cut page (tools/boots.py). Its own pid is an exec.
+    try:
+        before = int(open(q.p("keeper.pid")).read())
+    except (OSError, ValueError):
+        before = None
+    cut = before is not None and before != os.getpid()
+    quiet = last_event_t(q) if cut else None
     with open(q.p("keeper.pid"), "w") as f:
         f.write(str(os.getpid()))
     q.procs = {}
@@ -1008,11 +1078,20 @@ def keeper(q):
     taken = {e["file"] for e in q.adopt.values()}
     # Jobs a keeper that died left running go back on the queue: their lanes
     # died with it.
+    requeued = 0
     for j in q.jobs_in("running"):
         if j["_file"] in taken:
             continue
         os.rename(j["_file"], q.p("queue", os.path.basename(j["_file"])))
         q.event("requeued", job=j["id"], why="the keeper before this one died while it ran")
+        requeued += 1
+    if cut:
+        rec = {"quiet_since": quiet, "keeper_back": time.strftime("%Y-%m-%dT%H:%M:%S"), "requeued": requeued,
+               "mac_booted": booted_at(), "source": "keeper"}
+        with open(q.p(".cut.json.tmp"), "w") as f:
+            json.dump(rec, f, indent=1)
+        os.replace(q.p(".cut.json.tmp"), q.p("cut.json"))
+        q.event("came back after a cut", quiet_since=quiet, requeued=requeued)
     # Nothing is running now, so nothing is left to send back.
     for jid in os.listdir(q.p("send-back")):
         os.remove(q.p("send-back", jid))
@@ -1037,7 +1116,7 @@ def keeper(q):
             awake = None
     life = {"pid": os.getpid(), "started": time.strftime("%Y-%m-%dT%H:%M:%S"), "awake": awake,
             "last_plan": None, "last_plan_added": None, "last_sync": None, "sync_s": cfg.get("sync_s", 1800),
-            "last_chores": None, "chores_said": None, "idle": None,
+            "last_chores": None, "chores_said": None, "idle": None, "last_boots": None, "boots_said": None,
             # The code it runs: health() sets it against the file on disk.
             "code": code_id(), "file": os.path.abspath(__file__),
             "restart_lose_s": cfg.get("restart_lose_s", 600)}
@@ -1060,7 +1139,14 @@ def keeper(q):
 
     def plan(n):
         took_from = now()
-        r = subprocess.run(["bash", "-c", "%s plan %d" % (planner, n)], capture_output=True, text=True, timeout=600)
+        # A PASS HOLDS THE BEAT: the planner runs in this loop, so the beat waits on it, and a pass
+        # had come to 53-65 s against health's 60 (8 November: heartbeat BAD at every pass, a stuck
+        # loop to anyone reading it, the keeper well). The pass says when it began, for health, and
+        # the stamp stays until the next beat (the loop's top), because the beat waits on what follows
+        # the pass too: 11:20 that day, a 64 s pass, 10 s adding its five jobs, then the poll's sleep.
+        life["planning_since"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+        tell()
+        r = subprocess.run(["bash", "-c", "%s plan %d" % (planner, n)], capture_output=True, text=True, timeout=PLAN_TIMEOUT_S)
         life["last_plan_s"] = round(now() - took_from, 1)
         if r.returncode != 0:
             q.event("planner failed", detail=(r.stderr or r.stdout)[-400:])
@@ -1120,6 +1206,30 @@ def keeper(q):
         finally:
             chore_lock.release()
 
+    boots_lock = threading.Lock()
+    boots_py = os.path.join(os.path.dirname(os.path.abspath(__file__)), "boots.py")
+
+    def boots():
+        # AFTER A CUT THE CHECKS ARE THE KEEPER'S (Paul, 8 November: "The actions we are doing after a
+        # power loss, should be done auto, with GUI buttons"). tools/boots.py reads a machine once a
+        # boot -- the firmware against the boot before, the islands' saves, the queue's own files --
+        # so asking often costs a boot id a machine. Asked at the start, soon after a machine that
+        # could not be reached answers, and each boots_s.
+        if not os.path.exists(boots_py) or not boots_lock.acquire(blocking=False):
+            return
+        try:
+            r = subprocess.run([sys.executable, "-I", boots_py, q.d, "check"], capture_output=True, text=True, timeout=900)
+            life["last_boots"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+            life["boots_said"] = (r.stdout or r.stderr or "").strip()[-300:] or None
+            if r.returncode != 0:
+                q.event("boots failed", detail=(r.stderr or r.stdout)[-400:])
+        except subprocess.TimeoutExpired:
+            q.event("boots failed", detail="timed out")
+        finally:
+            boots_lock.release()
+
+    boots_s = cfg.get("boots_s", 600)
+    last_boots = 0.0
     chores_s = cfg.get("chores_s", 60)
     last_chores = 0.0
     sync_s = cfg.get("sync_s", 1800)
@@ -1184,6 +1294,7 @@ def keeper(q):
             with open(q.p("keeper.beat"), "w") as f:
                 f.write(str(now()))
             life["beat"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+            life.pop("planning_since", None)
             life["next_sync"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(last_sync + sync_s)) if last_sync and sync_s else None
             tell()
             if q.flag("SHUTDOWN"):
@@ -1203,7 +1314,13 @@ def keeper(q):
             if planner and chores_s and now() - last_chores > chores_s:
                 last_chores = now()
                 threading.Thread(target=chores, daemon=True).start()
-            # A job pinned to a machine that left or paused moves where it may, or is flagged.
+            if boots_s and (now() - last_boots > boots_s or (q.boots_at is not None and now() >= q.boots_at)):
+                last_boots = now()
+                q.boots_at = None
+                threading.Thread(target=boots, daemon=True).start()
+            # A machine finishing leaves once its lanes are empty; then a job pinned to a machine
+            # that left or paused moves where it may, or is flagged.
+            leave_when_done(q)
             rehome(q, q.config())
             # Keep a lane alive for every host; one that died is started again.
             for h in q.config()["hosts"]:
@@ -1395,12 +1512,25 @@ def shutdown_report(q):
 
 
 def keeper_alive(q):
+    """The running keeper's pid, or None. A LIVE PID IS NOT A KEEPER: keeper.pid outlives a keeper
+    the power took (its finally never ran), and after the reboot that number may be any process's,
+    which read as "the keeper is running" would start none -- the one thing a console opened after
+    a cut must not get wrong. So the pid's command must be this file's."""
     try:
         pid = int(open(q.p("keeper.pid")).read())
         os.kill(pid, 0)
-        return pid
     except (OSError, ValueError):
         return None
+    try:
+        cmd = subprocess.run(["ps", "-p", str(pid), "-o", "command="], capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.SubprocessError):
+        return pid
+    return pid if os.path.basename(__file__) in cmd else None
+
+
+# The planner's timeout: a pass longer than this is ended, and health counts a beat held up to this
+# long (and heartbeat_s more) by a pass as the keeper working.
+PLAN_TIMEOUT_S = 600
 
 
 def took(s):
@@ -1442,10 +1572,17 @@ def health(q):
     check("ok", "keeper", "pid %d since %s" % (pid, (info.get("started") or "?")[11:16]))
     beat = stamp_age(info.get("beat"))
     poll = cfg.get("poll_s", 10)
-    if beat is None or beat > max(60, 6 * poll):
-        check("bad", "heartbeat", "no beat for %s: the keeper is alive but its loop is stuck" % took(beat or 0))
-    else:
+    beat_s = cfg.get("heartbeat_s", max(60, 6 * poll))
+    pass_s = stamp_age(info.get("planning_since"))
+    if beat is not None and beat <= beat_s:
         check("ok", "heartbeat", "last beat %s ago" % took(beat))
+    elif beat is not None and pass_s is not None and pass_s <= PLAN_TIMEOUT_S + beat_s:
+        # A planner pass began since the last beat (plan()), and the planner's own timeout ends it:
+        # no beat until the pass, its jobs added and the poll's sleep are over is the keeper working.
+        # Past that timeout it is stuck after all.
+        check("ok", "heartbeat", "last beat %s ago: a planner pass, begun %s ago, holds it" % (took(beat), took(pass_s)))
+    else:
+        check("bad", "heartbeat", "no beat for %s: the keeper is alive but its loop is stuck" % took(beat or 0))
     # The operator's certificate (the plan of 2 November, chapter 14: a warning before it expires). An
     # expired one once dialled every machine and had this Mac penalised for a day before anyone knew.
     for cert in sorted(glob.glob(os.path.expanduser("~/.copal/fleets/*/operator-cert.pub"))):
@@ -1520,6 +1657,16 @@ def health(q):
                 "%s ago" % took(chored) if chored is not None else "never: a keeper older than the chores"))
         else:
             check("ok", "chores", "the housekeeping asked %s ago%s" % (took(chored), ": " + info["chores_said"] if info.get("chores_said") else ""))
+    # After a cut (tools/boots.py): a machine back different, an island's save that did not reach its
+    # disk, a queue file that does not read back. The record says its own level.
+    rec = load_json(q.p("plan", "boots.json")) or {}
+    if rec.get("health"):
+        lv, text = rec["health"][0], rec["health"][1]
+        age = stamp_age(rec.get("checked"))
+        stale = age is not None and age > max(1800, 3 * cfg.get("boots_s", 600))
+        check(lv if lv in ("ok", "warn", "bad") else "warn", "boots", text + (" (read %s ago)" % took(age) if stale else ""))
+    elif os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "boots.py")):
+        check("warn", "boots", "no machine read since its boot yet: the keeper asks tools/boots.py at its start")
     if info.get("awake") is not None or sys.platform == "darwin":
         try:
             os.kill(int(info.get("awake")), 0)
@@ -1548,16 +1695,25 @@ def health(q):
         check("ok", "lanes", "%d of %d running; every idle lane has work it can start" % (len(running), len(lanes)))
     # The jobs no lane can take: needs no machine has, or one machine only
     # (a build for it, say) and that machine an hour into something else.
+    # A job pinned to a machine a person removed is not lost but kept: a GPU island's segments wait
+    # on the island's own disk, and run in order when Add brings the machine back. Said, not BAD.
     done = q.ids_in("done")
-    nobody, behind = [], {}
+    benched = {b["name"] for b in cfg.get("bench", [])}
+    nobody, behind, kept = [], {}, {}
     for j in q.jobs_in("queue"):
         can = [h for h in cfg["hosts"] if fits(h, j)]
-        if not can:
+        need = j.get("needs", "cpu")
+        if not can and need.startswith("host:") and need[5:] in benched:
+            kept.setdefault(need[5:], []).append(j["id"])
+        elif not can:
             nobody.append(j["id"])
         elif len(can) == 1 and ready(can[0], j, done):
             behind.setdefault(can[0]["name"], []).append(j["id"])
     if nobody:
         check("bad", "jobs", "%d queued that no machine can take (%s): their needs match no lane" % (len(nobody), ", ".join(nobody[:4])))
+    if kept:
+        check("ok", "aside", "; ".join("%d kept for %s, which a person removed: they run when Add brings it back" % (len(v), n)
+                                       for n, v in sorted(kept.items())))
     waits = ["%d behind %s's %s (%s in)" % (len(v), n, lanes[n].get("title") or lanes[n]["job"], took(now() - lanes[n]["since"]))
              for n, v in sorted(behind.items()) if lanes[n].get("job") and now() - lanes[n].get("since", now()) > 3600]
     if waits:
@@ -1662,7 +1818,9 @@ def roster(q, cfg, pid):
                              "state": l.get("state"), "age_s": int(now() - l.get("since", now()))})
         states = [lane_file(q, x["name"]).get("state") for x in ls]
         paused = bool(ls) and all(x.get("paused") for x in ls)
+        leaving = any(x.get("leaving") for x in ls)
         word = ("not in the queue" if not ls else
+                "leaving" if leaving else
                 "stopping" if paused and jobs else
                 "paused" if paused else
                 "no keeper" if not pid else
@@ -1676,7 +1834,7 @@ def roster(q, cfg, pid):
         benched = any(name in (b["name"], b.get("lane_of")) for b in cfg.get("bench", []))
         cpu_lanes = [x for x in ls if "cuda" not in x.get("caps", [])]
         rows.append({"name": name, "target": h.get("target", ""), "state": word, "joined": bool(ls), "bench": benched,
-                     "paused": paused, "jobs": jobs, "on": on,
+                     "paused": paused, "leaving": leaving, "jobs": jobs, "on": on,
                      "cpus": next((x["cpus"] for x in cpu_lanes if x.get("cpus")), None),
                      "cores": int(((reg.get(name) or {}).get("facts") or {}).get("cpus") or 0) or None})
     return rows
@@ -1801,6 +1959,27 @@ def save_config(q, cfg):
     os.replace(tmp, q.p("config.json"))
 
 
+def leave_when_done(q):
+    """Finish, then remove: a machine marked leaving takes nothing new (it is paused), and once none
+    of its lanes has a job in hand it goes to the bench as Remove sends it. Nothing is sent back,
+    because nothing was cut. Run at each keeper beat."""
+    cfg = q.config()
+    leaving = sorted({h.get("lane_of", h["name"]) for h in cfg["hosts"] if h.get("leaving")})
+    if not leaving:
+        return
+    busy = {os.path.basename(os.path.dirname(j["_file"])) for j in q.jobs_in("running")}
+    for name in leaving:
+        ls = [h for h in cfg["hosts"] if name in (h["name"], h.get("lane_of"))]
+        if any(h["name"] in busy for h in ls):
+            continue
+        cfg["hosts"] = [h for h in cfg["hosts"] if h not in ls]
+        for h in ls:
+            h.pop("leaving", None)
+        cfg["bench"] = [b for b in cfg.get("bench", []) if name not in (b["name"], b.get("lane_of"))] + ls
+        save_config(q, cfg)
+        q.event("machine removed", host=name, why="finished the jobs in hand")
+
+
 def send_back(q, cfg, which):
     """The running jobs `which` picks go back on the queue at the keeper's next beat."""
     if not keeper_alive(q):
@@ -1811,6 +1990,27 @@ def send_back(q, cfg, which):
             open(q.p("send-back", j["id"]), "w").close()
             n += 1
     return n
+
+
+def autostart(q):
+    """The console opening (Paul, 8 November: "when you launch orrery it would implicitly resume or
+    start"). THE KEEPER STARTS UNLESS A PERSON STOPPED IT. A cut leaves no switch behind -- the
+    power took the keeper mid-beat -- while every stop a person makes does: STOP_NOW, SHUTDOWN, or a
+    drain (STOP_ADDING) that has run out of work. Those wait for Start, because a console that undid
+    a stop each time it opened would make Stop a suggestion (30 October: the queue stopped for days
+    while the brain was redesigned)."""
+    pid = keeper_alive(q)
+    if pid:
+        print("the keeper is running (pid %d)" % pid)
+        return
+    if q.flag("STOP_NOW") or q.flag("SHUTDOWN"):
+        print("stopped by a person: the keeper waits for Start")
+        return
+    if q.flag("STOP_ADDING") and not q.jobs_in("queue") and not q.jobs_in("running"):
+        print("drained by a person and finished: the keeper waits for Start")
+        return
+    q.event("autostart", why="the console opened and no keeper ran")
+    ensure(q)
 
 
 def resume(q):
@@ -1877,20 +2077,50 @@ def machine(q, name, how):
         print("%s's jobs are told %s CPUs from its next job" % (name, n or "all its"))
         return
     if how == "remove":
+        # REMOVE IS AT ONCE (Paul, 7 November: "when I remove a computer, it stops computation, and
+        # places its job back in the queue"). It used to leave after the job in hand, and a GPU
+        # island, whose jobs are half-hour segments one after another, went on computing on a machine
+        # the console showed as gone. What its lanes run goes back on the queue, as Stop now sends it
+        # (an island's segment loses the generations since its last save), and it is on the bench
+        # before the jobs are cut. The gentle way out is Finish, then remove: `finish`, below.
+        names = {h["name"] for h in ls}
         cfg["hosts"] = [h for h in cfg["hosts"] if not mine(h)]
+        for h in ls:
+            h.pop("leaving", None)
         cfg["bench"] = [h for h in cfg.get("bench", []) if not mine(h)] + ls
         save_config(q, cfg)
         q.event("machine removed", host=name)
+        back = send_back(q, cfg, lambda j, lane: lane in names)
         n = rehome(q, cfg)
-        print("%s leaves the queue after the job in hand; Add brings it back%s" % (name, "; %d queued job(s) pinned to it moved" % n if n else ""))
+        print("%s leaves the queue now%s; Add brings it back%s" % (
+            name, ", %d running job(s) back on the queue" % back if back else "", "; %d queued job(s) pinned to it moved" % n if n else ""))
+        return
+    if how == "finish":
+        # FINISH, THEN REMOVE (Paul, 7 November: "a pause then stop button ... stop taking new jobs,
+        # and stop accepting new endless jobs"). A pause now, nothing new, island segments
+        # included, and a mark: the keeper's beat (leave_when_done) moves it to the bench once none
+        # of its lanes has a job in hand. Nothing is cut, so an island ends on a saved segment.
+        names = {h["name"] for h in ls}
+        for h in ls:
+            h["paused"] = True
+            h["leaving"] = True
+        save_config(q, cfg)
+        q.event("machine finishing", host=name)
+        n = rehome(q, cfg)
+        busy = [j for j in q.jobs_in("running") if os.path.basename(os.path.dirname(j["_file"])) in names]
+        print("%s takes nothing new and leaves the queue %s%s" % (
+            name, "when its %d job(s) in hand end" % len(busy) if busy else "at the keeper's next beat: nothing is in hand",
+            "; %d queued job(s) pinned to it moved" % n if n else ""))
         return
     for h in ls:
+        # Each of these keeps the machine in the queue, so each takes back a Finish's leaving.
+        h.pop("leaving", None)
         if how == "resume":
             h.pop("paused", None)
         elif how in ("pause", "stop"):
             h["paused"] = True
         else:
-            sys.exit("machine NAME pause|stop|resume|remove|add")
+            sys.exit("machine NAME pause|finish|stop|resume|remove|add")
     save_config(q, cfg)
     q.event("machine " + how, host=name)
     n = rehome(q, cfg) if how != "resume" else 0
@@ -1956,11 +2186,13 @@ def main(argv):
         keeper(q)
     elif cmd == "ensure":
         ensure(q)
+    elif cmd == "autostart":
+        autostart(q)
     elif cmd == "resume":
         resume(q)
     elif cmd == "machine":
         if len(argv) < 4:
-            sys.exit("machine NAME pause|stop|resume|remove|add|cpus N")
+            sys.exit("machine NAME pause|finish|stop|resume|remove|add|cpus N")
         machine(q, argv[2], " ".join(argv[3:5]) if argv[3] == "cpus" else argv[3])
     elif cmd == "assign":
         if len(argv) < 5:

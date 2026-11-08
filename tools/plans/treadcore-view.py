@@ -348,6 +348,17 @@ def growth():
         return None
 
 
+def boots():
+    """boots.py's record: the last cut, each machine's boot against the one before it, the islands'
+    saves and the jobs the cut interrupted (the keeper asks for it; Settings, After a cut, draws it)."""
+    if not QDIR:
+        return None
+    try:
+        return json.loads(read(os.path.join(QDIR, "plan", "boots.json")))
+    except ValueError:
+        return None
+
+
 def load_json(p):
     try:
         with open(p) as f:
@@ -659,6 +670,6 @@ if __name__ == "__main__":
     qd = queue()
     doc = {"fleet": FLEET, "queue": qd, "project": "treadcore", "at": time.strftime("%H:%M:%S"),
            "machines": machines(run, qd), "run": run, "loop": loop(), "net": net(), "algorhythm": algorhythm(), "analysis": analysis(), "long_run": long_run(), "quality": quality(),
-           "ranges": ranges(), "personas": personas(), "gauntlet": gauntlet(), "nets": nets(), "growth": growth(), "recordings": recordings(), "montage": montage(), "videos": videos(), "generations": generations(), "bridge": bridge(),
+           "ranges": ranges(), "personas": personas(), "gauntlet": gauntlet(), "nets": nets(), "growth": growth(), "recordings": recordings(), "montage": montage(), "videos": videos(), "generations": generations(), "bridge": bridge(), "boots": boots(),
            "held": (lambda p: (lambda t: json.loads(t) if t.strip() else {})(read(p)))(os.path.join(QDIR, "hold.json")) if QDIR else {}}
     print(json.dumps(doc))

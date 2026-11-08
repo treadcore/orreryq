@@ -395,6 +395,8 @@ fn draw_roster_matrix(ui: &mut Ui, at: Rect, m: &Model, q: &crate::training::Que
     let x_name = at.x + 22;
     let x_hw = at.x + 136;
     // The machine's buttons, its CPU limiter with them (1 2 4 8 16 all, up to 210 pixels more).
+    // The columns are laid out for a typical row; each row's crucible text then stops where its
+    // own buttons begin, since Finish, then out (7 November) made the widest row 160 pixels wider.
     let side = if st.operator { 530 } else { 0 };
     let x_tc = at.x + 300;
     let x_cr = x_tc + (at.w - 300 - side) / 2;
@@ -431,7 +433,17 @@ fn draw_roster_matrix(ui: &mut Ui, at: Rect, m: &Model, q: &crate::training::Que
         let mc = m.machines.iter().find(|x| x.name == r.name || (x.name == "this Mac" && r.name == "mac"));
         let hw = mc.map(|x| format!("{} cores{}", x.cores, x.gpu.as_ref().map(|g| format!(", {}", short_gpu(&g.name))).unwrap_or_default())).unwrap_or_default();
         ui.label_in(x_hw, ty, x_tc - x_hw - 6, &hw, &F8X13, t.dim);
-        let lane_w = [x_cr - x_tc - 8, at.right() - side - x_cr - 8];
+        // The buttons first, so the text beside them knows where they begin.
+        let buttons_x = if st.operator {
+            let (bx, ask) = machine_buttons(ui, row.right() - 6, row.y + (row_h - 22) / 2, r, &mut st.armed_machine);
+            if ask.is_some() {
+                st.ctl = ask;
+            }
+            bx
+        } else {
+            at.right()
+        };
+        let lane_w = [x_cr - x_tc - 8, (at.right() - side).min(buttons_x) - x_cr - 8];
         for (i, (project, x)) in [("treadcore", x_tc), ("crucible", x_cr)].iter().enumerate() {
             let on = r.on.iter().find(|(p, _)| p == project).and_then(|(_, v)| *v);
             match on {
@@ -452,12 +464,6 @@ fn draw_roster_matrix(ui: &mut Ui, at: Rect, m: &Model, q: &crate::training::Que
                 _ => {
                     ui.label(*x, ty, "-", &F8X13, t.line);
                 }
-            }
-        }
-        if st.operator {
-            let (_, ask) = machine_buttons(ui, row.right() - 6, row.y + (row_h - 22) / 2, r, &mut st.armed_machine);
-            if ask.is_some() {
-                st.ctl = ask;
             }
         }
         y += row_h + 4;

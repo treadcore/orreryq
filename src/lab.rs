@@ -620,12 +620,14 @@ fn draw_header(ui: &mut Ui, l: &Layout, m: &Model) -> Option<nav::View> {
     }
     x += nav::width_for(t.metal) + 14;
     let sy = l.header.y + (HEADER_H - F8X13.height as i32) / 2;
+    // The keeper's switch at the right end, as every view's header has it (nav::keeper_switch).
+    let room = nav::keeper_switch(ui, l.header, PAD);
     if t.metal {
         ui.label(x, ty, &m.fleet, &F10X20, t.engrave);
         let word = if m.live { "live".to_string() } else if m.why.is_empty() { "polled, not live".to_string() } else { m.why.clone() };
         let right = format!("{}   {} declared  {} up  {} bus", word, m.declared, m.announced, m.on_bus);
         let pad_left = x + F10X20.measure(&m.fleet) as i32 + 16 - (PAD + F10X20.measure("orrery") as i32 + 14 + nav::width_for(t.metal) + 16);
-        let header = rect(l.header.x + pad_left.max(0), l.header.y, l.header.w - pad_left.max(0), l.header.h);
+        let header = rect(room.x + pad_left.max(0), room.y, room.w - pad_left.max(0), room.h);
         nav::header_right(ui, header, PAD, sy, &right);
         return go;
     }
@@ -642,7 +644,7 @@ fn draw_header(ui: &mut Ui, l: &Layout, m: &Model) -> Option<nav::View> {
     // the next thing along is placed from that, and the badge cannot walk
     // backwards over the fleet name the way it did when this was read as a
     // width.
-    let counts_x = ui.label_right(l.header.right() - PAD, sy, &counts, &F8X13, t.dim);
+    let counts_x = ui.label_right(room.right() - PAD, sy, &counts, &F8X13, t.dim);
 
     let (word, light, colour) = if m.live {
         ("live".to_string(), Light::Full, t.up)

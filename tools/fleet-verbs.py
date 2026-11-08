@@ -170,4 +170,10 @@ def forget(q, argv):
     sys.exit(0)
 
 
-VERBS = {"nets": nets, "growth": growth, "recordings": recordings, "bridge": bridge, "montage": montage, "videos": videos, "crucible": crucible, "forget": forget}
+def boots(q, argv):
+    # After a power cut (tools/boots.py): check [--force] [--host NAME], accept NAME, show. The keeper
+    # asks for a check by itself; Check now and Accept on Settings, After a cut, are these.
+    delegate(q, "boots.py", argv[2:])
+
+
+VERBS = {"boots": boots, "nets": nets, "growth": growth, "recordings": recordings, "bridge": bridge, "montage": montage, "videos": videos, "crucible": crucible, "forget": forget}

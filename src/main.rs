@@ -68,6 +68,7 @@ mod sessions;
 mod sftp;
 mod analysis;
 mod nets;
+mod boots;
 mod growth;
 mod montage;
 mod videos;
@@ -518,6 +519,34 @@ fn main() {
     }
 }
 
+/// Run a queue command on a thread, its last line of output into `said` (the window never waits on a
+/// process: it would stop drawing).
+fn run_said(cmd: String, said: Arc<Mutex<String>>) {
+    thread::spawn(move || {
+        let out = std::process::Command::new("sh").arg("-c").arg(&cmd).output();
+        let line = match out {
+            Ok(o) => String::from_utf8_lossy(if o.stdout.is_empty() { &o.stderr } else { &o.stdout }).lines().last().unwrap_or("").to_string(),
+            Err(e) => e.to_string(),
+        };
+        *said.lock().unwrap_or_else(|e| e.into_inner()) = line;
+    });
+}
+
+/// The keeper switch's lamp from the Training view's document: None when the document has no queue.
+fn keeper_lamp_of(text: &str, source: &str) -> Option<ui::KeeperLamp> {
+    let m = training::Model::parse(text, source);
+    let q = m.queue.as_ref()?;
+    let word = match q.state.as_str() {
+        "running, adding" => "keeper running",
+        s if s.starts_with("draining") => "keeper draining",
+        "stopping now" => "keeper stopping",
+        s if s.starts_with("shutting down") => "shutting down",
+        "shut down" => "fleet shut down",
+        _ => "keeper stopped",
+    };
+    Some(ui::KeeperLamp { up: q.keeper_up(), word: word.into() })
+}
+
 /// What `--frame` should render.
 /// The machines tool beside the queue's: `--queue DIR` gives
 /// `python3 TOOLS/fleet-queue.py 'DIR'`, and machines.py takes the same DIR.
@@ -802,6 +831,16 @@ fn write_frame(
                 };
                 let mut ui_state = ui::UiState::default();
                 ui_state.pointer = frame_pointer();
+                // The header's keeper switch, for an operator's frame; ORRERY_FRAME_KEEPER=down|armed
+                // draws its other two faces, for review.
+                if st.operator {
+                    ui_state.keeper = keeper_lamp_of(doc, "");
+                    match std::env::var("ORRERY_FRAME_KEEPER").as_deref() {
+                        Ok("down") => ui_state.keeper = Some(ui::KeeperLamp { up: false, word: "keeper stopped".into() }),
+                        Ok("armed") => ui_state.keeper_armed = true,
+                        _ => {}
+                    }
+                }
                 let mut u = ui::Ui::begin(&mut c, *theme, &[], &mut ui_state);
                 if view == nav::View::Projects {
                     let mut ps = projects::State { operator: st.operator, ..Default::default() };
@@ -1013,11 +1052,16 @@ fn gui_loop<S: surface::Surface>(
     // fixture, because a picture of training that is not happening is worse
     // than none.
     let jobs_doc = Arc::new(Mutex::new(String::new()));
+    // The header's keeper switch reads the same document, on the same thread: up or down, in a word
+    // (nav::keeper_switch).
+    let keeper_lamp: Arc<Mutex<Option<ui::KeeperLamp>>> = Arc::new(Mutex::new(None));
     if !jobs_cmd.is_empty() {
         let jobs_doc = Arc::clone(&jobs_doc);
+        let lamp = Arc::clone(&keeper_lamp);
         let cmd = jobs_cmd.to_string();
         thread::spawn(move || loop {
             let text = jobs_answer(&cmd);
+            *lamp.lock().unwrap_or_else(|e| e.into_inner()) = keeper_lamp_of(&text, &cmd);
             *jobs_doc.lock().unwrap_or_else(|e| e.into_inner()) = text;
             thread::sleep(Duration::from_secs(5));
         });
@@ -1029,6 +1073,13 @@ fn gui_loop<S: surface::Surface>(
         ..training::State::default()
     };
     let queue_said: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
+    // THE CONSOLE OPENING STARTS THE KEEPER, UNLESS A PERSON STOPPED IT (fleet-queue.py autostart;
+    // Paul, 8 November: "when you launch orrery it would implicitly resume or start"). After the cut
+    // of the night of 7 November the Mac was back at 05:49 and the keeper at 07:47, because nothing
+    // started it.
+    if training_state.operator {
+        run_said(format!("{} autostart", queue_ctl), Arc::clone(&queue_said));
+    }
     let mut sessions_view: Option<sessions::Sessions> = None;
 
     // THE MACHINES VIEW reads machines.py's document on its own thread, as
@@ -1348,6 +1399,7 @@ fn gui_loop<S: surface::Surface>(
         let mut close_shell = false;
         let mut close_browser = false;
         let mut close_desktop = false;
+        ui_state.keeper = if training_state.operator { keeper_lamp.lock().unwrap_or_else(|e| e.into_inner()).clone() } else { None };
         {
             let mut c = draw::Canvas::new(s.pixels(), w, h);
             let mut u = ui::Ui::begin(&mut c, theme, &inputs, &mut ui_state);
@@ -1691,6 +1743,14 @@ fn gui_loop<S: surface::Surface>(
                 }
             }
             u.finish();
+        }
+        // The header's switch: the queue's verb, its answer where the Queue's buttons put theirs, and
+        // the lamp's word until the next status says what came of it.
+        if let Some(verb) = ui_state.keeper_press.take() {
+            if let Some(k) = keeper_lamp.lock().unwrap_or_else(|e| e.into_inner()).as_mut() {
+                k.word = if verb == "resume" { "starting...".into() } else { "stopping...".into() };
+            }
+            run_said(format!("{} {}", queue_ctl, verb), Arc::clone(&queue_said));
         }
         // A recipe staged: its command typed into the machine's tile, in front.
         if let Some((name, target, command)) = handoff.lock().unwrap_or_else(|e| e.into_inner()).take() {

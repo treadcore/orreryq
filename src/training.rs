@@ -197,11 +197,13 @@ pub struct QLane {
 pub struct Roster {
     pub name: String,
     pub target: String,
-    /// running, idle, paused, stopping, cannot be reached, no keeper, not in the queue.
+    /// running, idle, paused, stopping, leaving, cannot be reached, no keeper, not in the queue.
     pub state: String,
     pub joined: bool,
     pub bench: bool,
     pub paused: bool,
+    /// Finish, then remove was pressed: it takes nothing new and leaves when its jobs end.
+    pub leaving: bool,
     /// What it has in hand: (kind, title, seconds), a line a lane.
     pub jobs: Vec<(String, String, i64)>,
     /// A project, and whether it takes that project's jobs; None when it has
@@ -363,6 +365,8 @@ pub struct Model {
     pub nets: Option<json::Value>,
     /// tools/growth.py's document: crucible's samples a segment, the sizes, the purge's list (growth.rs).
     pub growth: Option<json::Value>,
+    /// boots.py's record (QUEUE/plan/boots.json): the last cut and each machine's boot (boots.rs).
+    pub boots: Option<json::Value>,
     /// tools/recordings.py's list, with the last seed read (recordings.rs).
     pub recordings: Option<json::Value>,
     /// tools/montage.py's state and the films in the archive (montage.rs).
@@ -646,6 +650,7 @@ impl Model {
         m.gauntlet = v.get("gauntlet").cloned();
         m.nets = v.get("nets").cloned();
         m.growth = v.get("growth").cloned();
+        m.boots = v.get("boots").cloned().filter(|b| !matches!(b, json::Value::Null));
         m.recordings = v.get("recordings").cloned();
         m.montage = v.get("montage").cloned();
         m.videos = v.get("videos").cloned();
@@ -754,12 +759,13 @@ fn bar(ui: &mut Ui, r: Rect, frac: f64, c: Rgb) {
 /// Commits), by page number.
 const QUEUE_PAGES: [usize; 2] = [0, 1];
 const RESULTS_PAGES: [usize; 13] = [5, 2, 3, 13, 14, 18, 15, 16, 17, 8, 10, 12, 4];
-const SETTINGS_PAGES: [usize; 4] = [6, 9, 11, 7];
+const SETTINGS_PAGES: [usize; 5] = [6, 19, 9, 11, 7];
 
 /// (page number, name, what it shows). Candidates came after the rest and
 /// keeps the number 5, so ORRERY_FRAME_PAGE and a saved page mean what they
 /// meant. Personas (10), Ranges (11) and Gauntlet (12) came on 2 November.
-const PAGES: [(usize, &str, &str); 19] = [
+const PAGES: [(usize, &str, &str); 20] = [
+    (19, "After a cut", "after a power cut: when the fleet went quiet and came back, each machine's boot against the one before, the islands' saves, the jobs it cut"),
     (18, "Generations", "the lab report Outgrowing Yourself, live, a tab a figure: the roads to main, the days, every generation's turnaround, what a generation claims and keeps, the GPU's ladder and its elections on the CUDA gauntlet, the hours and what they bought"),
     (15, "Recordings", "the behaviour-cloning recordings: each run's size on its store, its recipe, who reads it; keep, drop, re-record, and a seed read a tank at a time"),
     (16, "Montage", "the generations since the last film, as a film: crucible's world duels, the camera on the best winning tank; make, watch it made, play"),
@@ -820,6 +826,7 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State, view: nav::View) -> Option<n
             let (label, lamp) = match name {
                 "Flags" if flags > 0 => (format!("Flags {}", flags), Some(t.alarm)),
                 "Candidates" if found > 0 => (format!("Candidates {}", found), Some(t.up)),
+                "After a cut" => (name.to_string(), match m.boots.as_ref().map(crate::boots::level).unwrap_or(0) { 2 => Some(t.alarm), 1 => Some(t.warn), _ => None }),
                 "Keeper" if worst == 2 => (name.to_string(), Some(t.alarm)),
                 "Keeper" if worst == 1 => (name.to_string(), Some(t.warn)),
                 // A place over the size limit: the Growth key's lamp, red, wherever the column shows.
@@ -940,6 +947,10 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State, view: nav::View) -> Option<n
             }
             17 => crate::videos::draw(ui, page, m.videos.as_ref(), &mut st.videos, &mut st.ctl),
             18 => crate::generations::draw(ui, page, m.generations.as_ref(), &mut st.generations),
+            19 => {
+                let (operator, said) = (st.operator, st.said.clone());
+                crate::boots::draw(ui, page, m.boots.as_ref(), operator, &said, &mut st.ctl)
+            }
             7 => draw_commits_page(ui, page, q, st),
             3 => {
                 if let Some(i) = draw_net(ui, page, m) {
@@ -1092,7 +1103,11 @@ fn draw_fleet_rows(ui: &mut Ui, at: Rect, m: &Model, st: &mut State) {
 
 /// One machine's buttons, right to left from `right`; returns the x they
 /// start at. ABSENT RATHER THAN GREYED: a paused machine offers Resume and no
-/// Pause. Stop now asks twice, and only when there is a job for it to cost.
+/// Pause, a leaving one no Finish. Stop now asks twice, and only when there is a
+/// job for it to cost; so does Remove, which since 7 November sends the job in
+/// hand back as Stop now does (Paul: "when I remove a computer, it stops
+/// computation, and places its job back in the queue"). Finish, then out is the
+/// way that costs nothing: nothing new, the job in hand ends, then it leaves.
 pub fn machine_buttons(ui: &mut Ui, right: i32, y: i32, r: &Roster, armed: &mut Option<String>) -> (i32, Option<String>) {
     let (h, gap) = (22, 6);
     let mut x = right;
@@ -1108,8 +1123,17 @@ pub fn machine_buttons(ui: &mut Ui, right: i32, y: i32, r: &Roster, armed: &mut 
             ask = Some(format!("machine {} add", r.name));
         }
     } else {
-        if button(ui, 70, "Remove") {
-            ask = Some(format!("machine {} remove", r.name));
+        // Its own key in `armed`, so a Remove pressed once is not a Stop now pressed once.
+        let remove_key = format!("remove {}", r.name);
+        let remove_armed = armed.as_deref() == Some(remove_key.as_str());
+        let remove = if remove_armed { "Press: jobs go back, then out" } else { "Remove" };
+        if button(ui, (F8X13.measure(remove) as i32 + 20).max(70), remove) {
+            if r.jobs.is_empty() || remove_armed {
+                ask = Some(format!("machine {} remove", r.name));
+                *armed = None;
+            } else {
+                *armed = Some(remove_key);
+            }
         }
         if !r.jobs.is_empty() {
             let is_armed = armed.as_deref() == Some(r.name.as_str());
@@ -1122,12 +1146,16 @@ pub fn machine_buttons(ui: &mut Ui, right: i32, y: i32, r: &Roster, armed: &mut 
                 }
             }
         }
-        if r.paused {
+        if r.paused || r.leaving {
             if button(ui, 70, "Resume") {
                 ask = Some(format!("machine {} resume", r.name));
             }
         } else if button(ui, 70, "Pause") {
             ask = Some(format!("machine {} pause", r.name));
+        }
+        let finish = "Finish, then out";
+        if !r.leaving && button(ui, F8X13.measure(finish) as i32 + 20, finish) {
+            ask = Some(format!("machine {} finish", r.name));
         }
         // THE CPU LIMITER (Paul, 5 November: "a CPU limiter where we use 2^n CPUs, so 1, 2, 4, 8"):
         // the CPUs its jobs are told it has, a power of two up to its cores, or all; the one in
@@ -1171,7 +1199,7 @@ pub fn roster_lamp(ui: &Ui, r: &Roster) -> (Rgb, Light) {
     let t = ui.t;
     match r.state.as_str() {
         "running" => (t.up, Light::Full),
-        "stopping" => (t.warn, Light::Half),
+        "stopping" | "leaving" => (t.warn, Light::Half),
         "paused" => (t.warn, Light::Hollow),
         "cannot be reached" => (t.alarm, Light::Hollow),
         _ => (t.dim, Light::Hollow),
@@ -1184,6 +1212,8 @@ pub fn roster_line(r: &Roster) -> String {
     match r.state.as_str() {
         "running" => doing,
         "stopping" => format!("Paused, finishing: {}", doing),
+        "leaving" if r.jobs.is_empty() => "Leaving: out of the queue at the keeper's next beat".to_string(),
+        "leaving" => format!("Finishing, then out of the queue: {}", doing),
         "paused" => "Paused: takes nothing until Resume".to_string(),
         "idle" => "Idle: nothing queued it can start".to_string(),
         "cannot be reached" => "Cannot be reached: its lane waits, and takes work when it answers".to_string(),
@@ -1256,8 +1286,9 @@ fn draw_roster(ui: &mut Ui, at: Rect, q: &Queue, m: &Model, st: &mut State) {
         });
         y += row_h + 4;
     }
-    if y + lh < at.bottom() {
-        ui.label_in(at.x, y + 4, at.w, "Pause: the job in hand finishes, nothing new starts. Stop now: the job goes back on the queue and its progress is thrown away. Remove: out after the job in hand; a job pinned to it moves or is flagged. Projects: chapter 2.", &F8X13, t.dim);
+    if y + 2 * lh < at.bottom() {
+        ui.label_in(at.x, y + 4, at.w, "Pause: the job in hand finishes, nothing new starts. Finish, then out: the same, then it leaves the queue (an island keeps its segment).", &F8X13, t.dim);
+        ui.label_in(at.x, y + 6 + lh, at.w, "Stop now: the job goes back on the queue, its progress thrown away. Remove: the same, and out at once. Projects: chapter 2.", &F8X13, t.dim);
     }
 }
 
@@ -2229,6 +2260,7 @@ fn parse_roster(r: &json::Value) -> Roster {
         joined: flag("joined"),
         bench: flag("bench"),
         paused: flag("paused"),
+        leaving: flag("leaving"),
         jobs: arr(r, "jobs").iter().map(|j| (s(j, "kind"), s(j, "title"), j.get("age_s").and_then(|a| a.as_num()).unwrap_or(0.0) as i64)).collect(),
         on: match r.get("on") {
             Some(json::Value::Obj(m)) => m.iter().map(|(k, v)| (k.clone(), v.as_bool())).collect(),
@@ -2988,6 +3020,9 @@ mod tests {
     fn a_machine_says_what_can_be_done_about_it() {
         let r = |state: &str, bench: bool| Roster { state: state.to_string(), bench, ..Roster::default() };
         assert!(roster_line(&r("paused", false)).contains("Resume"));
+        assert!(roster_line(&r("leaving", false)).contains("Leaving"));
+        let busy = Roster { state: "leaving".to_string(), leaving: true, jobs: vec![("crucible".to_string(), "segment 3342".to_string(), 60)], ..Roster::default() };
+        assert!(roster_line(&busy).starts_with("Finishing, then out"));
         assert!(roster_line(&r("no keeper", false)).contains("Resume the queue"));
         assert!(roster_line(&r("not in the queue", true)).contains("Add"));
         assert!(roster_line(&r("not in the queue", false)).contains("Add"));

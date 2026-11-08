@@ -245,6 +245,55 @@ pub fn header_right(ui: &mut Ui, header: Rect, pad: i32, y: i32, text: &str) {
     }
 }
 
+/// The keeper's switch at the header's right end, and the header left for the rest of its text.
+///
+/// ONE SWITCH, IN EVERY HEADER, BECAUSE A CUT IS NOT A PAGE (Paul, 8 November: "have it have a start
+/// and stop button"). Start and Stop were on the Queue's band and the Keeper page, which is where a
+/// person who already knew the keeper was down would look. The lamp says up or down from any view;
+/// Start is one press, whatever stopped it (the queue's `resume`); Stop ends every running job, so
+/// it asks twice, and Escape takes the first press back. Absent, not greyed, when `ui.s.keeper` is
+/// None: a viewer's console steers nothing.
+pub fn keeper_switch(ui: &mut Ui, header: Rect, pad: i32) -> Rect {
+    let t = ui.t;
+    let Some(k) = ui.s.keeper.clone() else { return header };
+    if ui.f.pressed(crate::surface::Sym::Escape) {
+        ui.s.keeper_armed = false;
+    }
+    let armed = k.up && ui.s.keeper_armed;
+    let label = if !k.up { "Start" } else if armed { "Stop now" } else { "Stop" };
+    let word = if armed { "every job ends: press again".to_string() } else { k.word.clone() };
+    let bw = F8X13.measure(label) as i32 + 24;
+    let ww = F8X13.measure(&word) as i32;
+    let right = header.right() - pad;
+    let b = rect(right - bw, header.y + 7, bw, header.h - 14);
+    let ty = header.y + (header.h - F8X13.height as i32) / 2;
+    let colour = if armed { t.alarm } else if k.up { t.up } else { t.warn };
+    let wx = b.x - 8 - ww;
+    ui.label(wx, ty, &word, &F8X13, if t.metal { t.engrave } else if k.up && !armed { t.dim } else { colour });
+    ui.light(wx - 10, header.y + header.h / 2, 4, if k.up { crate::ui::Light::Full } else { crate::ui::Light::Hollow }, colour);
+    let tip_at = rect(wx - 18, header.y, right - wx + 18, header.h);
+    let up = k.up;
+    ui.tip(tip_at, || vec![
+        format!("The keeper: {}", if up { "running" } else { "not running, so nothing is planned or started" }),
+        "Start: the queue goes again, whatever stopped it. Stop: every running job ends now, its results collected (two presses).".to_string(),
+        "When the console opens after a power cut it starts the keeper by itself; a stop a person made it leaves alone.".to_string(),
+        "Source: fleet-queue.py status; the buttons run resume and stop-now.".to_string(),
+    ]);
+    if ui.button(b, label, true) {
+        if !k.up {
+            ui.s.keeper_press = Some("resume");
+            ui.s.keeper_armed = false;
+        } else if armed {
+            ui.s.keeper_press = Some("stop-now");
+            ui.s.keeper_armed = false;
+        } else {
+            ui.s.keeper_armed = true;
+        }
+    }
+    let used = right - (wx - 18) + 12;
+    rect(header.x, header.y, (header.w - used).max(0), header.h)
+}
+
 /// Draw the strip and report a click on a view that is not the current one.
 ///
 /// Returns `None` when nothing was chosen, INCLUDING when the current view was
@@ -339,6 +388,7 @@ pub fn header(ui: &mut Ui, current: View, chords: bool, right: &str, keys: Optio
             go = Some(v);
         }
     }
+    let header = keeper_switch(ui, header, pad);
     if !right.is_empty() {
         let sy = header.y + (head_h - F8X13.height as i32) / 2;
         header_right(ui, header, pad, sy, right);

@@ -1191,6 +1191,15 @@
    "helps": "A keeper down means every lane stops within a job."
   },
   {
+   "key": "Settings/After",
+   "does": "After a power cut: when the fleet went quiet and came back, each machine's boot against the boot before it, the GPU islands' saves, and the jobs the cut interrupted.",
+   "ties": "Under the whole line: what a cut breaks, every lane and island stands on. The keeper asks tools/boots.py at its start, when a machine comes back, and every ten minutes.",
+   "drawn": "The cut in a sentence, then a row a machine: its boot and start-up, the firmware as read, and under it what changed since the boot before. Damaged first, then dark, then changed.",
+   "look": "Red: an island's save with zeroed blocks, which the next segment would load. Amber: a machine back different (CSM, boot list, Secure Boot, the GPU) or a job's result with zeros in it.",
+   "sim": "Nothing runs here. Check now reads every machine again; Accept says a change was meant, and the next boot is compared with this one.",
+   "helps": "On 8 November the keeper waited three hours after the power came back, and a zeroed row stopped the planner for forty minutes; both are read here now, not by hand."
+  },
+  {
    "key": "Settings/Long run",
    "does": "The work that repeats over many generations: its options, and what it last found.",
    "ties": "Search: looking far, remembering, the temperament matrix, the width test.",

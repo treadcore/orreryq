@@ -87,6 +87,14 @@ pub struct UiState {
     /// information"). ON UNLESS TURNED OFF: a thing you have to know to switch on is a thing
     /// nobody finds. Off is a key and a button, for a person who has read it all.
     pub inspect_off: bool,
+    /// The keeper's switch, in every header (Paul, 8 November: "have it have a start and stop
+    /// button"). The loop sets it each frame from the queue's status; None where nothing may drive
+    /// the queue (a viewer's console, or no --queue), and then no switch is drawn, not a grey one.
+    pub keeper: Option<KeeperLamp>,
+    /// The switch pressed this frame: the queue verb the loop runs, "resume" or "stop-now".
+    pub keeper_press: Option<&'static str>,
+    /// Stop was pressed once: the next press stops. Start never asks twice.
+    pub keeper_armed: bool,
     /// What is under the pointer this frame: the thing, and its lines. The last asked wins,
     /// because what is drawn last is on top.
     tip: Option<(Rect, Vec<String>)>,
@@ -94,6 +102,13 @@ pub struct UiState {
     row: Vec<(i32, String)>,
     row_hit: bool,
     row_clipped: bool,
+}
+
+/// What the header's keeper switch shows: whether a keeper runs, and its state in a few words.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct KeeperLamp {
+    pub up: bool,
+    pub word: String,
 }
 
 /// One thing typed: a key press, or text.

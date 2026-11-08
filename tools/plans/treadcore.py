@@ -5369,7 +5369,18 @@ class Plan:
                 f = os.path.join(d, self.home, "out", jid, "gens.tsv")
                 try:
                     for line in open(f).read().splitlines()[1:]:
-                        rows.append(line.split("\t"))
+                        r = line.split("\t")
+                        # A ROW A CUT LEFT AS ZEROS IS ONE ROW, NOT THE PLANNER (8 November). calber's
+                        # x-calber-cuda-3345 ran again after the cut and wrote on after the 116 bytes
+                        # the cut kept from its disk; every pass from 08:46 to 09:23 died on that row, and
+                        # for forty minutes nothing was planned. A row whose numbers do not read is
+                        # passed over.
+                        try:
+                            int(r[0])
+                            [float(r[i]) for i in (4, 7, 10, 11) if i < len(r)]
+                        except ValueError:
+                            continue
+                        rows.append(r)
                 except OSError:
                     pass
             yard = [(int(r[0]) + 1, float(r[7])) for r in rows if len(r) > 9 and float(r[7]) >= 0]
