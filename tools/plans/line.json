@@ -957,6 +957,15 @@
    "helps": "Indirectly: a fast working disk speeds the jobs that read and write files, and the record of what was measured outlives the disks."
   },
   {
+   "key": "Firmware",
+   "does": "Every part's firmware on every machine against what its maker publishes: the BIOS, the CPU's microcode, each disk, each network card, the GPU and fwupd's updates, the faults and what is behind first, with why and what to type.",
+   "ties": "tools/fleet-firmware.sh reads the parts, for the Machines probe as the user and for the daily update as root (SMART too); tools/machines.py puts each against its table of what is out; Storage shows each disk's firmware and SMART from the same reading; Copal ships the scanner as copal firmware.",
+   "drawn": "A table, a row a part, because the question is a list: what runs, what is newest, which to do first. Colour is the state only: red a known fault, amber behind, green current, grey not checked.",
+   "look": "A red row (SMART failed, or a firmware with a known fault), amber rows to plan a machine's update around, and grey rows nobody has looked up.",
+   "sim": "Nothing: these are the versions the machines report, and the newest their makers publish as read on 8 November.",
+   "helps": "Indirectly: a CPU on old microcode or a disk on a faulty firmware stops the fleet's work in ways no log explains."
+  },
+  {
    "key": "Projects",
    "does": "Says which machine works on what: treadcore or crucible.",
    "ties": "Sets which lanes feed the dial track and which feed the GPU track.",

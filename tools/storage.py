@@ -88,6 +88,7 @@ class Storage:
         self.path = os.path.join(q, "storage.json")
         self.reg = load(self.path, {})
         machines = load(os.path.join(q, "machines.json"), {})
+        self.machines = machines
         cfg = load(os.path.join(q, "config.json"), {})
         # Every machine with an address, the Mac and a CUDA lane's twin aside.
         self.targets = {}
@@ -179,6 +180,31 @@ class Storage:
         self.keep()
 
     # ---- what the view draws -------------------------------------------------------
+    def firmware_of(self, name, d):
+        """A disk's firmware and SMART, from the Machines probe (machines.json): its fleet-firmware.sh
+        rows, and the SMART the daily update saved as root. Storage's nvme0n1 is the probe's nvme0,
+        the controller that carries the firmware.
+
+        BY NAME AND MODEL BOTH. A boot renames disks (after the cut of 7 November bosporus's sdf was
+        a Seagate in Storage's survey of the 4th and a WD in the probe), so a row whose name matches
+        and whose model does not is another disk: its firmware is taken from a disk of the same model
+        on the machine, and its SMART, which is one disk's, from none."""
+        m = self.machines.get(name) or {}
+        dev = re.sub(r"n\d+$", "", d.get("name", "")) if d.get("name", "").startswith("nvme") else d.get("name", "")
+        rows = [r for r in m.get("fw_rows") or [] if len(r) >= 4 and r[0] == "disk"]
+
+        def same(a, b):
+            a, b = (a or "").strip(), (b or "").strip()
+            return bool(a and b) and (a.startswith(b[:16]) or b.startswith(a[:16]))
+        row = next((r for r in rows if r[1] == dev and same(r[2], d.get("model"))), None)
+        smart = ""
+        if row:
+            smart = next((h for n, mo, h in (x.split("|", 2) for x in (m.get("facts") or {}).get("smart", "").split("#") if x.count("|") >= 2)
+                          if n == dev and same(mo, row[2])), "")
+        else:
+            row = next((r for r in rows if same(r[2], d.get("model"))), None)
+        return {"firmware": row[3] if row else "", "fw_model": row[2] if row else "", "smart": smart}
+
     def status(self):
         machines, exports, candidates = [], [], []
         for name in sorted(self.targets):
@@ -192,7 +218,7 @@ class Storage:
             # use the 10 Gb (29 October).
             up = sorted((n for n in nics if n.get("state") == "up" and n.get("addr")), key=lambda n: -n["mbps"])
             addr = up[0]["addr"].split("/")[0] if up else self.targets[name].split("@")[-1]
-            disks = m.get("disks", [])
+            disks = [dict(d, **self.firmware_of(name, d)) for d in m.get("disks", [])]
             for e in [x for x in f.get("exports", "").split(";") if x.strip()]:
                 exports.append({"server": name, "addr": addr, "path": e.split()[0], "line": e.strip(), "kind": "nfs"})
             mounts = []

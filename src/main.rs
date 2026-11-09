@@ -78,6 +78,7 @@ mod orchestrate;
 mod pipeline;
 mod storage;
 mod bench;
+mod firmware;
 #[allow(dead_code)]
 mod ssh;
 mod surface;
@@ -318,6 +319,13 @@ fn main() {
                 jobs_answer(&format!("{} status", bench_cmd(&queue_ctl)))
             };
             Frame::Bench { doc }
+        } else if frame_view == "firmware" {
+            let doc = if !frame_state.is_empty() {
+                std::fs::read_to_string(&frame_state).unwrap_or_default()
+            } else {
+                jobs_answer(&format!("{} status", machines_cmd(&queue_ctl)))
+            };
+            Frame::Firmware { doc }
         } else if frame_view == "storage" {
             let doc = if !frame_state.is_empty() {
                 std::fs::read_to_string(&frame_state).unwrap_or_default()
@@ -636,6 +644,7 @@ enum Frame {
     Machines { doc: String, select: Vec<String> },
     Storage { doc: String, select: Vec<String> },
     Bench { doc: String },
+    Firmware { doc: String },
     Fleet { doc: String, select: Vec<String> },
     Chat { doc: String },
     /// The Pipeline's board, from a saved plan/pipeline.json.
@@ -880,6 +889,16 @@ fn write_frame(
                 ui_state.pointer = frame_pointer();
                 let mut u = ui::Ui::begin(&mut c, *theme, &[], &mut ui_state);
                 storage::draw(&mut u, &m, &mut st);
+                u.finish();
+            }
+            Frame::Firmware { ref doc } => {
+                let m = machines::Model::parse(doc);
+                let mut st = firmware::State::new(std::env::var("ORRERY_FRAME_OPERATOR").is_ok());
+                st.all = std::env::var("ORRERY_FRAME_ALL").is_ok();
+                let mut ui_state = ui::UiState::default();
+                ui_state.pointer = frame_pointer();
+                let mut u = ui::Ui::begin(&mut c, *theme, &[], &mut ui_state);
+                firmware::draw(&mut u, &m, &mut st);
                 u.finish();
             }
             Frame::Bench { ref doc } => {
@@ -1139,6 +1158,9 @@ fn gui_loop<S: surface::Surface>(
     let bench_doc: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
     let bench_said: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
     let mut bench_state = bench::State::new(posture == lab::Posture::Operator && !bcmd.is_empty());
+    // The Firmware page reads the Machines document; Probe all asks machines.py again, as the user.
+    let firmware_said: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
+    let mut firmware_state = firmware::State::new(posture == lab::Posture::Operator && !mcmd.is_empty());
     if !bcmd.is_empty() {
         let doc = Arc::clone(&bench_doc);
         let cmd = format!("{} status", bcmd);
@@ -1612,6 +1634,29 @@ fn gui_loop<S: surface::Surface>(
                                 }
                                 (_, true) => format!("{}: done", doing),
                                 (_, false) => format!("{}: {}", doing, line),
+                            };
+                            *said.lock().unwrap_or_else(|e| e.into_inner()) = msg;
+                        });
+                    }
+                    if let Some(v) = go {
+                        action = Some(lab::Action::Go(v));
+                    }
+                }
+                (None, nav::View::Firmware) => {
+                    let text = machines_doc.lock().unwrap_or_else(|e| e.into_inner()).clone();
+                    firmware_state.said = firmware_said.lock().unwrap_or_else(|e| e.into_inner()).clone();
+                    let go = firmware::draw(&mut u, &machines::Model::parse(&text), &mut firmware_state);
+                    if firmware_state.probe {
+                        firmware_state.probe = false;
+                        let cmd = format!("{} probe all", mcmd);
+                        let said = Arc::clone(&firmware_said);
+                        *said.lock().unwrap_or_else(|e| e.into_inner()) = "reading every machine again, as the user...".to_string();
+                        thread::spawn(move || {
+                            let out = std::process::Command::new("sh").arg("-c").arg(&cmd).output();
+                            let msg = match out {
+                                Ok(o) if o.status.success() => format!("read again: {} machines", String::from_utf8_lossy(&o.stdout).lines().count()),
+                                Ok(o) => format!("Probe all: {}", String::from_utf8_lossy(&o.stderr).lines().last().unwrap_or("failed")),
+                                Err(e) => format!("Probe all: {}", e),
                             };
                             *said.lock().unwrap_or_else(|e| e.into_inner()) = msg;
                         });

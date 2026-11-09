@@ -31,6 +31,10 @@ pub struct Disk {
     pub model: String,
     pub role: String,
     pub why: String,
+    /// Its firmware as the Machines probe read it (fleet-firmware.sh), and the SMART line the daily
+    /// update saved as root: empty until each is there.
+    pub firmware: String,
+    pub smart: String,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -80,6 +84,10 @@ fn n(v: &json::Value, k: &str) -> i64 {
     v.get(k).and_then(|x| x.as_num()).unwrap_or(0.0) as i64
 }
 
+fn or_dash(v: &str) -> &str {
+    if v.is_empty() { "-" } else { v }
+}
+
 fn disk(d: &json::Value) -> Disk {
     Disk {
         name: s(d, "name"),
@@ -88,6 +96,8 @@ fn disk(d: &json::Value) -> Disk {
         model: s(d, "model"),
         role: s(d, "role"),
         why: s(d, "why"),
+        firmware: s(d, "firmware"),
+        smart: s(d, "smart"),
     }
 }
 
@@ -302,12 +312,22 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State) -> Option<nav::View> {
                 "system" | "zfs" | "in use" | "locked" => t.ink,
                 _ => t.dim,
             };
-            ui.tip(rect(rx, y, rw, lh - 3), || vec![format!("Disk {}: {}", d.name, d.role), "Candidate: empty, and could be used. Idle pool: holds an old pool, so look first. System, in use or locked: leave it.".to_string()]);
+            ui.tip(rect(rx, y, rw, lh - 3), || vec![
+                format!("Disk {}: {}", d.name, d.role),
+                "Candidate: empty, and could be used. Idle pool: holds an old pool, so look first. System, in use or locked: leave it.".to_string(),
+                format!("Firmware {}: whether it is current is on Machines, Firmware.", or_dash(&d.firmware)),
+                if d.smart.is_empty() { "SMART: not read yet (the daily update saves it as root, once Update daily and at boot is applied again)".to_string() } else { format!("SMART: {}", d.smart) },
+            ]);
             ui.label_in(rx, y, 70, &d.name, &F8X13, t.ink);
             ui.label_in(rx + 72, y, 46, &d.kind, &F8X13, t.dim);
             ui.label_in(rx + 120, y, 70, &size(d.size_gib), &F8X13, t.ink);
             ui.label_in(rx + 192, y, 80, &d.role, &F8X13, c);
-            ui.label_in(rx + 274, y, rw - 274, &format!("{}{}", if d.model.is_empty() { String::new() } else { format!("{} · ", d.model) }, d.why), &F8X13, t.dim);
+            // The firmware the probe read, and SMART's verdict when the daily update has saved one: a
+            // disk that failed it is drawn in the alarm colour whatever its role.
+            let failed = d.smart.contains("FAILED") || d.smart.contains("critical warning");
+            let fw = if d.firmware.is_empty() { String::new() } else { format!("fw {} · ", d.firmware) };
+            let health = if d.smart.is_empty() { String::new() } else { format!("{} · ", d.smart.split(';').next().unwrap_or("")) };
+            ui.label_in(rx + 274, y, rw - 274, &format!("{}{}{}{}", fw, health, if d.model.is_empty() { String::new() } else { format!("{} · ", d.model) }, d.why), &F8X13, if failed { t.alarm } else { t.dim });
             y += lh - 3;
         }
         for mt in &x.mounts {

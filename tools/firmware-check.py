@@ -126,6 +126,21 @@ claim("applied on Copal when grub.cfg loads the image, on Ubuntu when the packag
 claim("the daily update counts as applied only with its firmware scan",
       not m.Machines.applied("auto-update", {"auto_update": "yes"}) and m.Machines.applied("auto-update", {"auto_update": "yes", "fw_auto": "yes"}))
 
+# Storage's disks joined with the probe's firmware: by name and model both, because a boot renames
+# disks (bosporus's sdf was a Seagate in the survey of 4 November and a WD in the probe after the cut)
+spec2 = importlib.util.spec_from_file_location("storage", os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage.py"))
+st = importlib.util.module_from_spec(spec2)
+spec2.loader.exec_module(st)
+S = st.Storage.__new__(st.Storage)
+S.machines = {"bosporus": {"fw_rows": [["disk", "sdf", "WDC WD80EDAZ-11T", "0A81", "x"], ["disk", "sdl", "ST8000DM004-2CX1", "0001", "x"],
+                                       ["disk", "nvme0", "Samsung SSD 980 PRO 1TB", "2B2QGXA7", "x"]],
+                           "facts": {"smart": "sdf|WDC WD80EDAZ-11T|smart PASSED, 9 h#sdl|ST8000DM004-2CX1|smart PASSED, 7 h#nvme0|Samsung SSD 980 PRO 1TB|smart PASSED, 4% used#"}}}
+moved = S.firmware_of("bosporus", {"name": "sdf", "model": "ST8000DM004-2CX1"})
+claim("a disk the boot renamed takes its model's firmware, and no other disk's SMART", (moved["firmware"], moved["smart"]) == ("0001", ""))
+claim("a disk whose name and model match takes both", S.firmware_of("bosporus", {"name": "sdf", "model": "WDC WD80EDAZ-11T"}) ==
+      {"firmware": "0A81", "fw_model": "WDC WD80EDAZ-11T", "smart": "smart PASSED, 9 h"})
+claim("Storage's nvme0n1 is the probe's nvme0", S.firmware_of("bosporus", {"name": "nvme0n1", "model": "Samsung SSD 980 PRO 1TB"})["smart"] == "smart PASSED, 4% used")
+
 claim("a Mac has no firmware list", m.firmware({"os_id": "macos", "fw_bios": ""}) == [])
 claim("a machine probed before the firmware was read has none", m.firmware({"os_id": "ubuntu", "pretty": "Ubuntu"}) == [])
 

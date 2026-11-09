@@ -40,6 +40,9 @@ pub enum View {
     /// Which layout of a machine's spare disks is fastest, and a run as it
     /// happens (bench.rs).
     Bench,
+    /// Every part's firmware on every machine, against what its maker
+    /// publishes (firmware.rs).
+    Firmware,
     /// What the fleet works on -- treadcore, crucible -- and which machine
     /// runs which (projects.rs).
     Projects,
@@ -81,6 +84,7 @@ impl View {
             View::Media => "Media",
             View::Storage => "Storage",
             View::Bench => "Bench",
+            View::Firmware => "Firmware",
             View::Projects => "Projects",
             View::Queue => "Queue",
             View::Pipeline => "Pipeline",
@@ -95,11 +99,11 @@ impl View {
 
     /// Every view, chapter by chapter.
     pub const ALL: &'static [View] =
-        &[View::Machines, View::Media, View::Storage, View::Bench, View::Projects, View::Queue, View::Pipeline, View::Results, View::Lab, View::Sessions, View::Fleet, View::Chat, View::Settings];
+        &[View::Machines, View::Media, View::Storage, View::Bench, View::Firmware, View::Projects, View::Queue, View::Pipeline, View::Results, View::Lab, View::Sessions, View::Fleet, View::Chat, View::Settings];
 
     pub fn chapter(&self) -> Chapter {
         match self {
-            View::Machines | View::Media | View::Storage | View::Bench => Chapter::Machines,
+            View::Machines | View::Media | View::Storage | View::Bench | View::Firmware => Chapter::Machines,
             View::Projects => Chapter::Projects,
             View::Queue | View::Pipeline => Chapter::Queue,
             View::Results => Chapter::Results,
@@ -141,7 +145,7 @@ impl Chapter {
     /// Its views, the first where the strip goes.
     pub fn views(&self) -> &'static [View] {
         match self {
-            Chapter::Machines => &[View::Machines, View::Media, View::Storage, View::Bench],
+            Chapter::Machines => &[View::Machines, View::Media, View::Storage, View::Bench, View::Firmware],
             Chapter::Projects => &[View::Projects],
             Chapter::Queue => &[View::Queue, View::Pipeline],
             Chapter::Results => &[View::Results],
