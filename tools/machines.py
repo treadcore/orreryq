@@ -59,7 +59,7 @@ RECIPES = [
               "with an NVIDIA card: cuda-node.sh (the driver kept or installed, CUDA 12.9, the check)",
               "tmux and copal-tm",
               "the login banner (topnotch)",
-              "the power-off rule (sudoers: poweroff, nothing else)"]},
+              "the power-off and restart rules (sudoers: poweroff and reboot, nothing else)"]},
     {"id": "cuda-node", "title": "CUDA: the driver, CUDA 12.9, tmux, copal-tm",
      "os": ["ubuntu 24.04"], "needs": "nvidia",
      "files": ["cuda-node.sh"], "run": "bash cuda-node.sh",
@@ -78,7 +78,7 @@ RECIPES = [
      "files": ["copal-node.sh", "fleet-poweroff-setup.sh"], "run": "sh copal-node.sh",
      "does": ["the build tools from Alpine's repositories, those missing (build-base, git, curl, tmux, rust, cargo)",
               "~/code/treadcore over HTTPS, and ~/fleet, as the user",
-              "the power-off rule (doas: poweroff, nothing else)",
+              "the power-off and restart rules (doas: poweroff and reboot, nothing else)",
               "nothing else: Copal's lockdown, services and SSH are left as they are"]},
     # Not a state but an errand: never "applied", always there to run.
     {"id": "update", "title": "Update the system's packages",
@@ -101,10 +101,11 @@ RECIPES = [
      "does": ["Alpine and Copal: apk add intel-ucode (or amd-ucode), and each grub.cfg initrd line of the installed system loads its image first (the old grub.cfg kept as grub.cfg.pre-ucode)",
               "Ubuntu: apt installs intel-microcode (or amd64-microcode), into the initramfs",
               "loaded at the next boot, which this does not do: a running machine is not restarted"]},
-    {"id": "poweroff", "title": "Let the fleet power it off",
+    {"id": "poweroff", "title": "Let the fleet power it off and restart it",
      "os": ["ubuntu", "alpine"],
      "files": ["fleet-poweroff-setup.sh"], "run": "sh fleet-poweroff-setup.sh",
-     "does": ["one rule: the user may run poweroff as root without a password, and nothing else"]},
+     "does": ["two rules: the user may run poweroff and reboot as root without a password, and nothing else",
+              "so the fleet's Shut down powers it off, and its Restart reboots it after the job in hand and takes it back"]},
     {"id": "listener", "title": "Answer the Lab's buttons",
      "os": ["ubuntu", "alpine"], "signed": True,
      "files": ["fleet-listener.sh", "fleet-exec.sh"], "run": "sh fleet-listener.sh",
@@ -150,6 +151,11 @@ p=$(sudo -n -l 2>/dev/null | sed -n 's/.*NOPASSWD: *\(.*poweroff.*\)$/\1/p' | he
 if [ -n "$p" ]; then k poweroff "sudo -n $p"
 elif [ -e /etc/doas.d/fleet-poweroff.conf ]; then k poweroff "doas -n $(command -v poweroff || echo /sbin/poweroff)"
 else k poweroff ""; fi
+# And the reboot, the same way (Restart, since 8 November): its own rule file.
+r=$(sudo -n -l 2>/dev/null | sed -n 's/.*NOPASSWD: *\(.*reboot.*\)$/\1/p' | head -n1)
+if [ -n "$r" ]; then k reboot "sudo -n $r"
+elif [ -e /etc/doas.d/fleet-reboot.conf ]; then k reboot "doas -n $(command -v reboot || echo /sbin/reboot)"
+else k reboot ""; fi
 # Kept up to date by itself (fleet-auto-update.sh), and its last run's line.
 k auto_update "$( ( [ -e /etc/periodic/daily/fleet-update ] || [ -e /etc/systemd/system/fleet-update.timer ] ) && echo yes)"
 k updated "$(tail -n1 /var/log/fleet-update.log 2>/dev/null)"
@@ -522,23 +528,32 @@ class Machines:
         m["fw_rows"] = rows
         m["probed"] = time.strftime("%Y-%m-%dT%H:%M:%S")
         m.pop("probe_error", None)
-        self.sync_poweroff(name, facts.get("poweroff", ""))
+        self.sync_poweroff(name, facts.get("poweroff", ""), facts.get("reboot", ""))
 
-    def sync_poweroff(self, name, cmd):
+    def sync_poweroff(self, name, cmd, reboot=""):
         """A machine in the queue powers off by the command its rule now
         allows: join copied it once, so a rule applied after joining (or
         taken away) left shutdown-now with the wrong one, and the machine
         was left running (29 October: saskatchewan, xinanjiang, jaguaribe)."""
         path = os.path.join(self.q, "config.json")
         cfg = load(path, {})
-        for h in cfg.get("hosts", []):
-            if h["name"] == name and not h.get("lane_of") and h.get("poweroff", "") != cmd:
-                if cmd:
-                    h["poweroff"] = cmd
-                else:
-                    h.pop("poweroff", None)
-                save(path, cfg)
-                self.cfg = cfg
+        changed = False
+        # The machine's own entry (its CUDA lane is a lane of the same box, which the machine's
+        # command powers off or restarts), in the queue or on the bench, so a machine Added back
+        # has the rules it had.
+        for h in cfg.get("hosts", []) + cfg.get("bench", []):
+            if h["name"] != name or h.get("lane_of"):
+                continue
+            for key, v in (("poweroff", cmd), ("reboot", reboot)):
+                if h.get(key, "") != v:
+                    if v:
+                        h[key] = v
+                    else:
+                        h.pop(key, None)
+                    changed = True
+        if changed:
+            save(path, cfg)
+            self.cfg = cfg
 
     # ---- recipes ------------------------------------------------------------------
     @staticmethod
@@ -571,7 +586,7 @@ class Machines:
         nv = bool(f.get("nvidia_pci"))
         have = {
             "fleet-login": bool(f.get("topnotch")),
-            "poweroff": bool(f.get("poweroff")),
+            "poweroff": bool(f.get("poweroff")) and bool(f.get("reboot")),
             "listener": bool(f.get("listener")),
             # The daily update and, since 8 November, its firmware and SMART scan: a machine set up
             # before has the first and not the second, and Apply puts the second there.
@@ -693,6 +708,8 @@ class Machines:
         # The command exactly as the machine's rule allows it.
         if f.get("poweroff"):
             host["poweroff"] = f["poweroff"]
+        if f.get("reboot"):
+            host["reboot"] = f["reboot"]
         cfg = load(os.path.join(self.q, "config.json"), {})
         cfg["hosts"].append(host)
         save(os.path.join(self.q, "config.json"), cfg)

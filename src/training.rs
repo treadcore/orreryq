@@ -204,6 +204,10 @@ pub struct Roster {
     pub paused: bool,
     /// Finish, then remove was pressed: it takes nothing new and leaves when its jobs end.
     pub leaving: bool,
+    /// Restart was pressed: nothing new, then a reboot, then it takes work again when it is back.
+    pub restarting: bool,
+    /// It has a restart rule (fleet-poweroff-setup.sh), so Restart can reboot it.
+    pub can_restart: bool,
     /// What it has in hand: (kind, title, seconds), a line a lane.
     pub jobs: Vec<(String, String, i64)>,
     /// A project, and whether it takes that project's jobs; None when it has
@@ -1154,8 +1158,24 @@ pub fn machine_buttons(ui: &mut Ui, right: i32, y: i32, r: &Roster, armed: &mut 
             ask = Some(format!("machine {} pause", r.name));
         }
         let finish = "Finish, then out";
-        if !r.leaving && button(ui, F8X13.measure(finish) as i32 + 20, finish) {
+        if !r.leaving && !r.restarting && button(ui, F8X13.measure(finish) as i32 + 20, finish) {
             ask = Some(format!("machine {} finish", r.name));
+        }
+        // RESTART (Paul, 8 November: "i would like to be able to reboot on command"): asked twice,
+        // as Stop now is; nothing new, the job in hand ends, then the machine reboots and takes work
+        // again when it answers. Only on a machine whose restart rule is there.
+        if r.can_restart && !r.restarting && !r.leaving {
+            let key = format!("restart {}", r.name);
+            let is_armed = armed.as_deref() == Some(key.as_str());
+            let label = if is_armed { if r.jobs.is_empty() { "Press: reboot now" } else { "Press: reboot after its job" } } else { "Restart" };
+            if button(ui, (F8X13.measure(label) as i32 + 20).max(70), label) {
+                if is_armed {
+                    ask = Some(format!("machine {} restart", r.name));
+                    *armed = None;
+                } else {
+                    *armed = Some(key);
+                }
+            }
         }
         // THE CPU LIMITER (Paul, 5 November: "a CPU limiter where we use 2^n CPUs, so 1, 2, 4, 8"):
         // the CPUs its jobs are told it has, a power of two up to its cores, or all; the one in
@@ -1199,7 +1219,7 @@ pub fn roster_lamp(ui: &Ui, r: &Roster) -> (Rgb, Light) {
     let t = ui.t;
     match r.state.as_str() {
         "running" => (t.up, Light::Full),
-        "stopping" | "leaving" => (t.warn, Light::Half),
+        "stopping" | "leaving" | "restarting" | "restarting after its job" => (t.warn, Light::Half),
         "paused" => (t.warn, Light::Hollow),
         "cannot be reached" => (t.alarm, Light::Hollow),
         _ => (t.dim, Light::Hollow),
@@ -1214,6 +1234,9 @@ pub fn roster_line(r: &Roster) -> String {
         "stopping" => format!("Paused, finishing: {}", doing),
         "leaving" if r.jobs.is_empty() => "Leaving: out of the queue at the keeper's next beat".to_string(),
         "leaving" => format!("Finishing, then out of the queue: {}", doing),
+        "restarting after its job" if r.jobs.is_empty() => "Restarting: the reboot goes at the keeper's next beat".to_string(),
+        "restarting after its job" => format!("Restarting after its job in hand: {}", doing),
+        "restarting" => "Restarting: rebooted; takes work again when it answers".to_string(),
         "paused" => "Paused: takes nothing until Resume".to_string(),
         "idle" => "Idle: nothing queued it can start".to_string(),
         "cannot be reached" => "Cannot be reached: its lane waits, and takes work when it answers".to_string(),
@@ -1286,9 +1309,10 @@ fn draw_roster(ui: &mut Ui, at: Rect, q: &Queue, m: &Model, st: &mut State) {
         });
         y += row_h + 4;
     }
-    if y + 2 * lh < at.bottom() {
+    if y + 3 * lh < at.bottom() {
         ui.label_in(at.x, y + 4, at.w, "Pause: the job in hand finishes, nothing new starts. Finish, then out: the same, then it leaves the queue (an island keeps its segment).", &F8X13, t.dim);
-        ui.label_in(at.x, y + 6 + lh, at.w, "Stop now: the job goes back on the queue, its progress thrown away. Remove: the same, and out at once. Projects: chapter 2.", &F8X13, t.dim);
+        ui.label_in(at.x, y + 6 + lh, at.w, "Restart: the same, then it reboots and takes work again when it answers; on a machine with the restart rule (Machines: Let the fleet power it off and restart it).", &F8X13, t.dim);
+        ui.label_in(at.x, y + 8 + 2 * lh, at.w, "Stop now: the job goes back on the queue, its progress thrown away. Remove: the same, and out at once. Projects: chapter 2.", &F8X13, t.dim);
     }
 }
 
@@ -2261,6 +2285,8 @@ fn parse_roster(r: &json::Value) -> Roster {
         bench: flag("bench"),
         paused: flag("paused"),
         leaving: flag("leaving"),
+        restarting: flag("restarting"),
+        can_restart: flag("can_restart"),
         jobs: arr(r, "jobs").iter().map(|j| (s(j, "kind"), s(j, "title"), j.get("age_s").and_then(|a| a.as_num()).unwrap_or(0.0) as i64)).collect(),
         on: match r.get("on") {
             Some(json::Value::Obj(m)) => m.iter().map(|(k, v)| (k.clone(), v.as_bool())).collect(),
@@ -3023,6 +3049,10 @@ mod tests {
         assert!(roster_line(&r("leaving", false)).contains("Leaving"));
         let busy = Roster { state: "leaving".to_string(), leaving: true, jobs: vec![("crucible".to_string(), "segment 3342".to_string(), 60)], ..Roster::default() };
         assert!(roster_line(&busy).starts_with("Finishing, then out"));
+        let rebooting = Roster { state: "restarting".to_string(), restarting: true, can_restart: true, ..Roster::default() };
+        assert_eq!(roster_line(&rebooting), "Restarting: rebooted; takes work again when it answers");
+        let after = Roster { state: "restarting after its job".to_string(), restarting: true, jobs: vec![("weights".to_string(), "read on".to_string(), 30)], ..Roster::default() };
+        assert!(roster_line(&after).starts_with("Restarting after its job in hand: weights: read on"));
         assert!(roster_line(&r("no keeper", false)).contains("Resume the queue"));
         assert!(roster_line(&r("not in the queue", true)).contains("Add"));
         assert!(roster_line(&r("not in the queue", false)).contains("Add"));

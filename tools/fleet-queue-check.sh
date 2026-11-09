@@ -112,4 +112,42 @@ r={x['name']:x for x in json.load(sys.stdin)['roster']}
 assert r['spare']['joined'] and r['a']['joined'] and r['b']['paused'], r
 assert r['a']['on']=={'one':True,'two':True}, r['a']
 assert r['spare']['cpus']==2 and r['a']['cpus'] is None, (r['spare'], r['a'])" && echo "ok  the status says all of it, each machine's CPUs with it"
+# RESTART: nothing new, the job in hand ends, the reboot is sent, and the machine takes work again
+# when it answers with another boot id. Here "a" reboots by writing its boot id file.
+q machine b restart >/dev/null 2>&1 && { echo "FAILED: b restarted with no restart rule"; exit 1; } || echo "ok  a machine with no restart rule is refused, and told what to apply"
+printf one > "$Q/bootid"
+python3 - "$Q" <<'PY'
+import json, sys
+p = sys.argv[1] + "/config.json"
+c = json.load(open(p))
+c["restart_poll_s"] = 1
+for h in c["hosts"]:
+    if h["name"] == "a":
+        h["reboot"] = "printf x >> %s/bootid" % sys.argv[1]
+        h["boot_id_cmd"] = "cat %s/bootid" % sys.argv[1]
+json.dump(c, open(p, "w"))
+PY
+q machine b pause >/dev/null; q machine spare pause >/dev/null
+job x1 k1 "sleep 4"
+wait_for running where x1
+q machine a restart >/dev/null
+q status --json | python3 -c "
+import json,sys
+r={x['name']:x for x in json.load(sys.stdin)['roster']}
+assert r['a']['restarting'] and r['a']['state']=='restarting after its job', r['a']
+assert r['a']['can_restart'] and not r['b']['can_restart'], (r['a'], r['b'])" && echo "ok  a restarting machine says so, while its job runs; the status says who can restart"
+job x2 k1 "true"
+sleep 1; [ "$(where x2)" = queue ] && echo "ok  a restarting machine takes nothing new"
+wait_for done where x1
+i=0; until grep -q '"machine back from restart"' "$Q/events.jsonl"; do i=$((i + 1)); [ $i -lt 40 ] || { echo "FAILED: a never came back"; exit 1; }; sleep 0.5; done
+grep -q '"machine rebooting"' "$Q/events.jsonl" && [ "$(cat "$Q/bootid")" = onex ] && echo "ok  after the job, the reboot was sent, and the new boot id read as its return"
+wait_for done where x2
+python3 -c "import json;c=json.load(open('$Q/config.json'));a=[h for h in c['hosts'] if h['name']=='a'][0];assert 'restarting' not in a and 'paused' not in a, a" && echo "ok  back, it is in the queue and takes work again"
+# RESTART NOW: the job in hand goes back on the queue first, and runs again once the machine is back.
+job x3 k1 "sleep 6"
+wait_for running where x3
+q machine a restart now >/dev/null
+i=0; until [ "$(grep -c '"machine back from restart"' "$Q/events.jsonl")" = 2 ]; do i=$((i + 1)); [ $i -lt 60 ] || { echo "FAILED: a never came back from restart now"; exit 1; }; sleep 0.5; done
+grep -q '"requeued", "job": "x3"' "$Q/events.jsonl" && [ "$(cat "$Q/bootid")" = onexx ] && echo "ok  restart now sent the job in hand back, then rebooted, and the machine came back"
+wait_for done where x3
 echo "PASS"

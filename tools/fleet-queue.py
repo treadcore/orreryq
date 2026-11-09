@@ -14,7 +14,7 @@ a keeper that keeps it all running, and two ways to stop.
     tools/fleet-queue.py DIR resume          THE QUEUE GOES AGAIN, whatever stopped it: adding is
                                              on, a shutdown's and a stop's switches are off, and
                                              the keeper starts unless it is running
-    tools/fleet-queue.py DIR machine NAME pause|finish|stop|resume|remove|add
+    tools/fleet-queue.py DIR machine NAME pause|finish|stop|resume|remove|add|restart [now]
                                              one machine, all its lanes. pause: the job in hand
                                              finishes, nothing new starts. finish: the same, and
                                              when its jobs in hand end it leaves the queue for the
@@ -1321,6 +1321,7 @@ def keeper(q):
             # A machine finishing leaves once its lanes are empty; then a job pinned to a machine
             # that left or paused moves where it may, or is flagged.
             leave_when_done(q)
+            restart_when_done(q)
             rehome(q, q.config())
             # Keep a lane alive for every host; one that died is started again.
             for h in q.config()["hosts"]:
@@ -1819,8 +1820,10 @@ def roster(q, cfg, pid):
         states = [lane_file(q, x["name"]).get("state") for x in ls]
         paused = bool(ls) and all(x.get("paused") for x in ls)
         leaving = any(x.get("leaving") for x in ls)
+        restarting = next((x["restarting"] for x in ls if x.get("restarting")), None)
         word = ("not in the queue" if not ls else
                 "leaving" if leaving else
+                ("restarting" if restarting.get("stage") == "sent" else "restarting after its job") if restarting else
                 "stopping" if paused and jobs else
                 "paused" if paused else
                 "no keeper" if not pid else
@@ -1834,7 +1837,10 @@ def roster(q, cfg, pid):
         benched = any(name in (b["name"], b.get("lane_of")) for b in cfg.get("bench", []))
         cpu_lanes = [x for x in ls if "cuda" not in x.get("caps", [])]
         rows.append({"name": name, "target": h.get("target", ""), "state": word, "joined": bool(ls), "bench": benched,
-                     "paused": paused, "leaving": leaving, "jobs": jobs, "on": on,
+                     "paused": paused, "leaving": leaving, "restarting": bool(restarting),
+                     # Whether Restart can reboot it: its restart rule, copied from the probe.
+                     "can_restart": any(x.get("reboot") for x in ls if not x.get("lane_of")),
+                     "jobs": jobs, "on": on,
                      "cpus": next((x["cpus"] for x in cpu_lanes if x.get("cpus")), None),
                      "cores": int(((reg.get(name) or {}).get("facts") or {}).get("cpus") or 0) or None})
     return rows
@@ -1959,6 +1965,82 @@ def save_config(q, cfg):
     os.replace(tmp, q.p("config.json"))
 
 
+# THE RESTART (Paul, 8 November: "i would like to be able to reboot on command. can we set that up on
+# every machine"). A machine told to restart takes nothing new, as a Finish; once none of its lanes
+# has a job in hand the keeper reads its boot id and sends its reboot command (the "reboot" its rule
+# allows, copied by the probe from fleet-poweroff-setup.sh's sudoers or doas file); and when it
+# answers with another boot id it is back, and takes work again. Paused all the while, so a machine
+# rebooting is not a machine down: no flag, no lane waiting on it. Not back in RESTART_WAIT_S, it is
+# flagged and left paused for a person. `restart now` sends its running jobs back first, as Stop.
+RESTART_WAIT_S = 1200
+BOOT_ID = "cat /proc/sys/kernel/random/boot_id 2>/dev/null || sysctl -n kern.boottime"
+_restart_read = {}
+
+
+def boot_id(host):
+    """The machine's boot id, or None when it does not answer. One short ssh, not remote()'s three
+    tries: a machine rebooting does not answer for minutes, and the beat must not wait on it."""
+    script = host.get("boot_id_cmd") or BOOT_ID
+    argv = ["bash", "-c", script] if host["target"] == "-" else SSH + ["-o", "ConnectTimeout=5", host["target"], script]
+    try:
+        r = subprocess.run(argv, capture_output=True, text=True, timeout=15)
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+    out = (r.stdout or "").strip()
+    return out if r.returncode == 0 and out else None
+
+
+def restart_when_done(q):
+    """Each restarting machine, a step at each beat (at most one ssh a machine a half minute)."""
+    cfg = q.config()
+    mains = [h for h in cfg["hosts"] if h.get("restarting") and not h.get("lane_of")]
+    if not mains:
+        return
+    busy = {os.path.basename(os.path.dirname(j["_file"])) for j in q.jobs_in("running")}
+    changed = False
+    for main in mains:
+        name, r = main["name"], main["restarting"]
+        ls = [h for h in cfg["hosts"] if name in (h["name"], h.get("lane_of"))]
+        if now() - _restart_read.get(name, 0) < cfg.get("restart_poll_s", 30):
+            continue
+        if r.get("stage") == "finishing":
+            if any(h["name"] in busy for h in ls):
+                continue
+            _restart_read[name] = now()
+            boot = boot_id(main)
+            if boot is None:
+                continue
+            cmd = main.get("reboot")
+            if main["target"] == "-":
+                argv = ["bash", "-c", "nohup sh -c 'sleep 2; %s' >/dev/null 2>&1 &" % cmd]
+            else:
+                argv = SSH + ["-o", "ConnectTimeout=5", main["target"], "nohup sh -c 'sleep 2; %s' >/dev/null 2>&1 &" % cmd]
+            try:
+                subprocess.run(argv, capture_output=True, text=True, timeout=30)
+            except (subprocess.TimeoutExpired, OSError):
+                pass  # the connection may hang as it goes down; the boot id says whether it went
+            r.update(stage="sent", boot=boot, sent=now())
+            changed = True
+            q.event("machine rebooting", host=name)
+        elif r.get("stage") == "sent":
+            _restart_read[name] = now()
+            boot = boot_id(main)
+            if boot and boot != r.get("boot"):
+                for h in ls:
+                    h.pop("paused", None)
+                main.pop("restarting", None)
+                changed = True
+                q.event("machine back from restart", host=name, seconds=int(now() - r.get("sent", now())))
+                q.boots_at = q.boots_at or now() + 20
+            elif now() - r.get("sent", now()) > RESTART_WAIT_S and not r.get("flagged"):
+                r["flagged"] = True
+                changed = True
+                q.notice("restart", "%s did not come back from its restart in %d minutes: it stays paused; Resume takes it back"
+                         % (name, RESTART_WAIT_S // 60), key="restart:%s:%s" % (name, r.get("sent")))
+    if changed:
+        save_config(q, cfg)
+
+
 def leave_when_done(q):
     """Finish, then remove: a machine marked leaving takes nothing new (it is paused), and once none
     of its lanes has a job in hand it goes to the bench as Remove sends it. Nothing is sent back,
@@ -2023,7 +2105,7 @@ def resume(q):
     ensure(q)
 
 
-def machine(q, name, how):
+def machine(q, name, how, at_once=False):
     cfg = q.config()
     mine = lambda h: name in (h["name"], h.get("lane_of"))
     ls = [h for h in cfg["hosts"] if mine(h)]
@@ -2087,6 +2169,7 @@ def machine(q, name, how):
         cfg["hosts"] = [h for h in cfg["hosts"] if not mine(h)]
         for h in ls:
             h.pop("leaving", None)
+            h.pop("restarting", None)
         cfg["bench"] = [h for h in cfg.get("bench", []) if not mine(h)] + ls
         save_config(q, cfg)
         q.event("machine removed", host=name)
@@ -2104,6 +2187,7 @@ def machine(q, name, how):
         for h in ls:
             h["paused"] = True
             h["leaving"] = True
+            h.pop("restarting", None)
         save_config(q, cfg)
         q.event("machine finishing", host=name)
         n = rehome(q, cfg)
@@ -2112,15 +2196,36 @@ def machine(q, name, how):
             name, "when its %d job(s) in hand end" % len(busy) if busy else "at the keeper's next beat: nothing is in hand",
             "; %d queued job(s) pinned to it moved" % n if n else ""))
         return
+    if how == "restart":
+        main = next((h for h in ls if h["name"] == name), None)
+        if not main or not main.get("reboot"):
+            sys.exit("%s has no restart rule: apply \"Let the fleet power it off and restart it\" on Machines, "
+                     "then Probe it" % name)
+        names = {h["name"] for h in ls}
+        for h in ls:
+            h["paused"] = True
+            h.pop("leaving", None)
+        main["restarting"] = {"stage": "finishing", "since": time.strftime("%Y-%m-%dT%H:%M:%S")}
+        save_config(q, cfg)
+        q.event("machine restarting", host=name, now=bool(at_once))
+        back = send_back(q, cfg, lambda j, lane: lane in names) if at_once else 0
+        busy = [j for j in q.jobs_in("running") if os.path.basename(os.path.dirname(j["_file"])) in names]
+        print("%s takes nothing new; %s it restarts, and takes work again when it is back%s" % (
+            name, "with its jobs sent back," if at_once else ("after its %d job(s) in hand" % len(busy) if busy else "at the keeper's next beat"),
+            " (%d back on the queue)" % back if back else ""))
+        return
     for h in ls:
-        # Each of these keeps the machine in the queue, so each takes back a Finish's leaving.
+        # Each of these keeps the machine in the queue, so each takes back a Finish's leaving, and a
+        # Restart not yet sent (one sent is the machine's own to finish).
         h.pop("leaving", None)
+        if how in ("resume", "pause", "stop"):
+            h.pop("restarting", None)
         if how == "resume":
             h.pop("paused", None)
         elif how in ("pause", "stop"):
             h["paused"] = True
         else:
-            sys.exit("machine NAME pause|finish|stop|resume|remove|add")
+            sys.exit("machine NAME pause|finish|stop|resume|remove|add|restart [now]")
     save_config(q, cfg)
     q.event("machine " + how, host=name)
     n = rehome(q, cfg) if how != "resume" else 0
@@ -2192,8 +2297,8 @@ def main(argv):
         resume(q)
     elif cmd == "machine":
         if len(argv) < 4:
-            sys.exit("machine NAME pause|finish|stop|resume|remove|add|cpus N")
-        machine(q, argv[2], " ".join(argv[3:5]) if argv[3] == "cpus" else argv[3])
+            sys.exit("machine NAME pause|finish|stop|resume|remove|add|restart [now]|cpus N")
+        machine(q, argv[2], " ".join(argv[3:5]) if argv[3] == "cpus" else argv[3], at_once=argv[4:5] == ["now"] and argv[3] == "restart")
     elif cmd == "assign":
         if len(argv) < 5:
             sys.exit("assign NAME PROJECT on|off")
