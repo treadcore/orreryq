@@ -83,16 +83,24 @@ RECIPES = [
     # Not a state but an errand: never "applied", always there to run.
     {"id": "update", "title": "Update the system's packages",
      "os": ["ubuntu", "alpine"], "errand": True,
-     "files": ["fleet-update.sh"], "run": "sh fleet-update.sh",
+     "files": ["fleet-update.sh", "fleet-firmware.sh"], "run": "sh fleet-update.sh",
      "does": ["apk update and apk upgrade (Alpine), or apt-get update and upgrade (Ubuntu)",
-              "a new kernel waits for the next boot: nothing is restarted"]},
+              "a new kernel waits for the next boot: nothing is restarted",
+              "then the firmware and SMART report, as root (fleet-firmware.sh --save), which the probe reads"]},
     {"id": "auto-update", "title": "Update daily and at boot",
      "os": ["ubuntu", "alpine"],
-     "files": ["fleet-auto-update.sh", "fleet-update.sh"], "run": "sh fleet-auto-update.sh",
+     "files": ["fleet-auto-update.sh", "fleet-update.sh", "fleet-firmware.sh"], "run": "sh fleet-auto-update.sh",
      "does": ["fleet-update.sh --auto every day (Alpine: crond at 2:00; Ubuntu: a systemd timer near 3:00, a missed day made up)",
+              "each run ends with the firmware and SMART report (fleet-firmware.sh, with smartmontools and nvme-cli), which the probe reads",
               "and a few minutes after every boot (Alpine: OpenRC's local service; Ubuntu: the timer's OnBootSec)",
               "on Ubuntu the NVIDIA driver and CUDA held back in those runs: a driver upgraded under a running machine stops CUDA until the boot",
               "nothing is restarted; each run's line in /var/log/fleet-update.log; fleet-auto-update.sh --undo takes it away"]},
+    {"id": "microcode", "title": "Load the CPU's microcode",
+     "os": ["ubuntu", "alpine"], "needs": "x86",
+     "files": ["fleet-microcode.sh"], "run": "sh fleet-microcode.sh",
+     "does": ["Alpine and Copal: apk add intel-ucode (or amd-ucode), and each grub.cfg initrd line of the installed system loads its image first (the old grub.cfg kept as grub.cfg.pre-ucode)",
+              "Ubuntu: apt installs intel-microcode (or amd64-microcode), into the initramfs",
+              "loaded at the next boot, which this does not do: a running machine is not restarted"]},
     {"id": "poweroff", "title": "Let the fleet power it off",
      "os": ["ubuntu", "alpine"],
      "files": ["fleet-poweroff-setup.sh"], "run": "sh fleet-poweroff-setup.sh",
@@ -196,6 +204,17 @@ et=ethtool; for t in ethtool /usr/sbin/ethtool /sbin/ethtool; do command -v $t >
 e=""; for n in /sys/class/net/*; do [ -e "$n/device/driver" ] || continue
   e="$e$(basename $n) $(basename "$(readlink $n/device/driver)") $($et -i $(basename $n) 2>/dev/null | sed -n 's/^firmware-version: *//p');"; done
 k nics_fw "$e"
+# The firmware and SMART report the daily update saves as root (fleet-firmware.sh
+# --save), read here as the user: when it was made, and each disk's line,
+# NAME|MODEL|SMART, a '#' after each. And whether the boot loads a microcode
+# image (Copal's grub.cfg names it; Ubuntu's initramfs carries the package).
+k fw_auto "$( [ -x /usr/local/sbin/fleet-firmware.sh ] && echo yes)"
+r=/var/lib/fleet-firmware/report.tsv
+if [ -r "$r" ]; then
+  k fw_saved "$(sed -n 's/.*; scanned \([^;]*\);.*/\1/p' "$r" | head -n1)"
+  k smart "$(awk -F'\t' '$1 == "disk" { d = $5; sub(/^[^;]*; [^;]*; /, "", d); printf "%s|%s|%s#", $2, $3, d }' "$r")"
+fi
+k ucode_boot "$(grep -l 'ucode\.img' /boot/boot/grub/grub.cfg /boot/grub/grub.cfg 2>/dev/null | head -n1)"
 # fwupd, where it is installed (Ubuntu's own): the updates LVFS has for this
 # machine, from the metadata its timer fetched, as the user, no root. A daemon
 # that failed to start would hold the probe 25 s a call, so it is not asked.
@@ -279,18 +298,35 @@ def firmware(f):
             add("microcode", run, newest, "behind", "; ".join(x for x in (why, means) if x), how)
     elif run:
         add("microcode", run, why="%s: not checked" % (f.get("cpu_vendor") or "the CPU"))
+    # Each disk's SMART, from the report the daily update saved as root: by its name and model, or
+    # by its model alone when one disk has it (a boot can rename nvme0 nvme2).
+    smart = [r.split("|", 2) for r in f.get("smart", "").split("#") if r.count("|") >= 2]
+
+    def health(name, model):
+        hit = [h for n, m, h in smart if n == name and m.endswith(model)] or \
+              [h for n, m, h in smart if m.endswith(model) and sum(1 for _, m2, _ in smart if m2 == m) == 1]
+        return hit[0] if hit else ""
     for d in [x for x in f.get("disks_fw", "").split(";") if x.strip()]:
         name, _, rest = d.partition(" ")
         model, _, fw = rest.rpartition(" ")
+        h = health(name, model)
         p = next((p for p in PARTS if model.startswith(p["model"])), None)
-        if not p:
-            add("%s %s" % (name, model), fw)
+        if h and ("FAILED" in h or "critical warning" in h):
+            add("%s %s" % (name, model), fw, (p or {}).get("newest", ""), "bad", "SMART: " + h,
+                "back it up now; then smartctl -a as root")
+        elif not p:
+            add("%s %s" % (name, model), fw, why=h)
         elif fw in p.get("bad", {}):
-            add("%s %s" % (name, model), fw, p["newest"], "bad", p["bad"][fw], p["how"])
+            add("%s %s" % (name, model), fw, p["newest"], "bad", "; ".join(x for x in (p["bad"][fw], h) if x), p["how"])
         elif fw != p["newest"]:
-            add("%s %s" % (name, model), fw, p["newest"], "behind", "read: " + p["read"], p["how"])
+            add("%s %s" % (name, model), fw, p["newest"], "behind", "; ".join(x for x in ("read: " + p["read"], h) if x), p["how"])
         else:
-            add("%s %s" % (name, model), fw, fw, "current")
+            add("%s %s" % (name, model), fw, fw, "current", h)
+    if f.get("fw_saved"):
+        add("SMART report", f["fw_saved"], state="current", why="saved by the daily update's firmware scan, as root")
+    else:
+        add("SMART report", "none", why="no report: Apply \"Update daily and at boot\" to install the scan",
+            how="it installs fleet-firmware.sh with smartmontools and nvme-cli, and runs it")
     # A network card's firmware: a file the driver loads from linux-firmware (kept by the system's
     # updates), or the card's own (e1000e, igb, mlx4).
     for n in [x for x in f.get("nics_fw", "").split(";") if x.strip()]:
@@ -423,6 +459,8 @@ class Machines:
             return False, "for %s; this is %s" % (" or ".join(r["os"]), f.get("pretty") or sysname)
         if r.get("needs") == "nvidia" and not f.get("nvidia_pci"):
             return False, "needs an NVIDIA card; none on the PCI bus"
+        if r.get("needs") == "x86" and f.get("arch") not in ("x86_64", "i686", "i386"):
+            return False, "for an x86 CPU; this is %s" % (f.get("arch") or "not known")
         return True, ""
 
     @staticmethod
@@ -433,7 +471,10 @@ class Machines:
             "fleet-login": bool(f.get("topnotch")),
             "poweroff": bool(f.get("poweroff")),
             "listener": bool(f.get("listener")),
-            "auto-update": bool(f.get("auto_update")),
+            # The daily update and, since 8 November, its firmware and SMART scan: a machine set up
+            # before has the first and not the second, and Apply puts the second there.
+            "auto-update": bool(f.get("auto_update")) and bool(f.get("fw_auto")),
+            "microcode": bool(f.get("ucode_boot")) or ("microcode" in f.get("ucode_pkg", "") and f.get("os_id") != "alpine"),
             "copal-node": bool(f.get("cargo") and f.get("treadcore") and f.get("tmux") and f.get("poweroff")),
             "cuda-node": bool(f.get("nvidia_smi") and f.get("cuda") and f.get("tmux") and f.get("copal_tm")),
         }

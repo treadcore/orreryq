@@ -21,6 +21,8 @@
 #            system: daily at a random time within the hour after 3:00,
 #            five minutes after boot, and a day missed while off made up at
 #            the next start (Persistent).
+# And fleet-firmware.sh at /usr/local/sbin, with smartmontools and nvme-cli,
+# so each of those runs saves the firmware and SMART report the probe reads.
 # Run again, it writes the same files. Each run's line is in
 # /var/log/fleet-update.log.
 set -eu
@@ -36,7 +38,7 @@ if [ "${1:-}" = "--undo" ]; then
         rm -f /etc/systemd/system/fleet-update.timer /etc/systemd/system/fleet-update.service
         systemctl daemon-reload
     fi
-    rm -f "$BIN"
+    rm -f "$BIN" /usr/local/sbin/fleet-firmware.sh
     echo "taken away: no daily or boot update (the log stays at /var/log/fleet-update.log)"
     exit 0
 fi
@@ -45,6 +47,19 @@ fi
 mkdir -p "$(dirname "$BIN")" /var/log
 install -m 0755 "$HERE/fleet-update.sh" "$BIN"
 touch /var/log/fleet-update.log && chmod 0644 /var/log/fleet-update.log
+# The firmware scan each run makes, and the two programs its SMART and NVMe
+# slot readings need (smartmontools without its mail recommendations).
+if [ -f "$HERE/fleet-firmware.sh" ]; then
+    install -m 0755 "$HERE/fleet-firmware.sh" /usr/local/sbin/fleet-firmware.sh
+    if command -v apk >/dev/null; then
+        apk add smartmontools nvme-cli
+    elif command -v apt-get >/dev/null; then
+        DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=900 install -y --no-install-recommends smartmontools nvme-cli
+    fi
+    sh /usr/local/sbin/fleet-firmware.sh --save >/dev/null 2>&1 \
+        && echo "the firmware and SMART report: /var/lib/fleet-firmware/report.tsv" \
+        || echo "the first firmware report failed: sh /usr/local/sbin/fleet-firmware.sh --save shows why"
+fi
 
 if command -v apk >/dev/null && command -v rc-update >/dev/null; then
     mkdir -p /etc/periodic/daily /etc/local.d

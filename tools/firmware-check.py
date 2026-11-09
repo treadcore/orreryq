@@ -66,6 +66,31 @@ fw = m.firmware(BOBURNER)
 claim("boburner's AMD microcode is not checked", part(fw, "microcode").get("state") == "not checked")
 claim("a failed fwupd is named, not taken for no updates", part(fw, "fwupd (LVFS)").get("why") == "its service failed to start" and part(fw, "fwupd (LVFS)").get("state") == "not checked")
 
+# SMART, from the report the daily update saves as root (fleet-firmware.sh --save)
+SMART = dict(SASKATCHEWAN, fw_saved="2026-11-08T18:30:00-0800",
+             smart="nvme2|Samsung SSD 980 PRO 1TB|smart PASSED, 4% used, spare 100%, 0 media errors, 21000 h, 38 C#"
+                   "sdc|TEAM TM8PS7002T|smart FAILED!, 8 reallocated, 3 pending, 30000 h#")
+fw = m.firmware(SMART)
+n0, sc = part(fw, "nvme0 Samsung SSD 980 PRO 1TB"), part(fw, "sdc TEAM TM8PS7002T")
+claim("a disk the boot renamed (nvme2 then, nvme0 now) is still matched by its model", "4% used" in n0["why"] and n0["state"] == "behind")
+claim("a disk whose SMART says FAILED is bad, whatever its firmware", sc["state"] == "bad" and sc["why"].startswith("SMART: smart FAILED!"))
+claim("the report's time is a part of its own", part(fw, "SMART report").get("now") == "2026-11-08T18:30:00-0800" and part(fw, "SMART report")["state"] == "current")
+claim("no report is said, with what installs it", part(m.firmware(SASKATCHEWAN), "SMART report").get("state") == "not checked"
+      and "Update daily and at boot" in part(m.firmware(SASKATCHEWAN), "SMART report")["why"])
+
+# the recipes: microcode for an x86 machine, applied when the boot loads it; the daily update
+# applied only with its firmware scan
+ms = m.Machines.__new__(m.Machines)
+r = m.Machines.recipe("microcode")
+claim("the microcode recipe is for x86 machines", ms.applies(r, {"os_id": "alpine", "os_version": "3.24", "arch": "x86_64"})[0]
+      and not ms.applies(r, {"os_id": "alpine", "os_version": "3.24", "arch": "aarch64"})[0])
+claim("applied on Copal when grub.cfg loads the image, on Ubuntu when the package is in",
+      m.Machines.applied("microcode", {"os_id": "alpine", "ucode_boot": "/boot/boot/grub/grub.cfg"})
+      and not m.Machines.applied("microcode", {"os_id": "alpine", "ucode_pkg": "intel-ucode-20260812-r0 "})
+      and m.Machines.applied("microcode", {"os_id": "ubuntu", "ucode_pkg": "intel-microcode-3.20260210 "}))
+claim("the daily update counts as applied only with its firmware scan",
+      not m.Machines.applied("auto-update", {"auto_update": "yes"}) and m.Machines.applied("auto-update", {"auto_update": "yes", "fw_auto": "yes"}))
+
 claim("a Mac has no firmware list", m.firmware({"os_id": "macos", "fw_bios": ""}) == [])
 claim("a machine probed before the firmware was read has none", m.firmware({"os_id": "ubuntu", "pretty": "Ubuntu"}) == [])
 

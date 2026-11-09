@@ -22,6 +22,13 @@
 # rebooting: a machine running a census is not restarted by a button or a
 # timer. Each run ends with one line in /var/log/fleet-update.log, which
 # orrery's probe reads.
+#
+# AND THE FIRMWARE, after the packages: fleet-firmware.sh, beside this
+# script or installed with it, saves its report (every part's firmware, and
+# each disk's SMART health, which needs root, which this run has) at
+# /var/lib/fleet-firmware/report.tsv, where the probe reads it as the user
+# (Paul, 8 November: "A copal updater which also probes upgrades smart").
+# A failed scan is said and does not fail the update.
 set -eu
 
 [ "$(id -u)" = 0 ] || { echo "run as root (doas or sudo)" >&2; exit 1; }
@@ -76,4 +83,14 @@ if [ -n "${new:-}" ] && [ "$new" != "$before" ]; then
     say "$kind upgraded; a newer kernel ($new) waits for the next boot, $before runs now$also"
 else
     say "$kind up to date; the kernel is $before$also"
+fi
+
+FW=$(dirname "$0")/fleet-firmware.sh
+[ -f "$FW" ] || FW=/usr/local/sbin/fleet-firmware.sh
+if [ -f "$FW" ]; then
+    if sh "$FW" --save >/dev/null 2>&1; then
+        echo "the firmware and SMART report: /var/lib/fleet-firmware/report.tsv"
+    else
+        echo "the firmware report failed: sh $FW --save shows why"
+    fi
 fi
