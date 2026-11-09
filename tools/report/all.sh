@@ -49,5 +49,6 @@ ram-speed|Memory at Its Rated Speed|Orreryq · the fleet · XMP on calber, the p
 calber-update-f15|F15 on calber|Orreryq · the fleet · a BIOS list read correctly, the flash, the firmware it brought, CSM off
 calber-ssd|Six Cheap SSDs, Thirteen Ways|Orreryq · the fleet · the fastest layout for calber's six SATA SSDs, measured
 network|The Share and the Wire|Orreryq · the fleet · calber's array over NFS from every machine, and the home network mapped from inside
+firmware|Every Part's Firmware|Orreryq · the fleet · every part's firmware, what is current, and how each is updated
 LIST
 python3 ../tools/report/collect.py

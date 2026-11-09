@@ -376,45 +376,15 @@ footer p { max-width: 68ch; line-height: 1.6; }
   <div class="reports">
     <!-- collect.py: begin -->
     <article class="report new">
-      <div class="when"><span>7 Nov 2026</span><span class="topic">Fleet · memory at its rated speed</span></div>
-      <h3><a href="ram-speed-lab-report.html">Memory at Its Rated Speed: calber from 2400 to 3200 MT/s, the Procedure for Any Fleet Machine, and the Quick Guide</a></h3>
-      <p>calber&#x27;s DDR4-3200 had run at 2400 since the BIOS reset; XMP Profile 1 set 3200 at 1.35 V by itself. Bandwidth +24%, latency 12% quicker, the census 1.1% faster: it lives in the cache. A bench on frozen work, the procedure for any machine, the one-page guide, and what firmware calber can still take.</p>
-      <div class="links"><a href="ram-speed-lab-report.html">the full report</a><a href="ram-speed-lab-report.md">the Markdown</a></div>
+      <div class="when"><span>8 Nov 2026</span><span class="topic">The fleet</span></div>
+      <h3><a href="firmware-lab-report.html">Every Part's Firmware: a Scan of the Fleet, What Is Current, and How Each Part Is Updated</a></h3>
+      <p>On 8 November orrery&#x27;s Machines probe found that saskatchewan&#x27;s i7-13700F was running microcode 0x10f. That revision came with its BIOS of March 2023, which predates Intel&#x27;s fix for the 13th Gen Vmin shift, the fault that slowly wears these chips out. Alpine&#x27;s intel-ucode package carried 0x137, but nothing on a Copal install...</p>
+      <div class="links"><a href="firmware-lab-report.html">the full report</a><a href="firmware-lab-report.md">the Markdown</a></div>
     </article>
     <article class="report new">
-      <div class="when"><span>7 Nov 2026</span><span class="topic">Fleet · the share and the wire</span></div>
-      <h3><a href="network-lab-report.html">The Share and the Wire: calber's Array over NFS, and the Home Network Mapped</a></h3>
-      <p>calber&#x27;s RAID10 shared over NFS and measured from the machines that use it: every 1 GbE client gets the wire&#x27;s 117 MB/s, and small files crawl on a sync share, 40 made a second from the Mac. The network mapped from inside: a core with 10 GbE and 1 GbE ports, two machines behind one shared link, one cable at 100 Mb/s. A growing report.</p>
-      <div class="links"><a href="network-lab-report.html">the full report</a><a href="network-lab-report.md">the Markdown</a></div>
-    </article>
-    <article class="report new">
-      <div class="when"><span>7 Nov 2026</span><span class="topic">Fleet · a BIOS update</span></div>
-      <h3><a href="calber-update-f15-lab-report.html">F15 on calber: Reading a BIOS List Correctly, the Firmware It Brought, CSM Off, and Nothing Left to Update</a></h3>
-      <p>F15 looked older than calber&#x27;s F15a and is two years newer: on Gigabyte&#x27;s lists a letter marks a beta. Taken from Gigabyte&#x27;s server and checked by hash, flashed with Q-Flash; it brought the Intel ME to 11.8.81 too. CSM off took the boot list from ten entries to two, and nothing is left to update.</p>
-      <div class="links"><a href="calber-update-f15-lab-report.html">the full report</a><a href="calber-update-f15-lab-report.md">the Markdown</a></div>
-    </article>
-    <article class="report new">
-      <div class="when"><span>7 Nov 2026</span><span class="topic">Fleet · six SSDs, thirteen layouts</span></div>
-      <h3><a href="calber-ssd-lab-report.html">Six Cheap SSDs, Thirteen Ways: the Fastest Layout for calber's Blu-ray Working Disk</a></h3>
-      <p>calber&#x27;s six 480 GB SATA SSDs built thirteen ways and measured: mdadm RAID10 on ext4 lists 100,000 files in 0.04 s and reads 1.9 GB/s, best for the Blu-ray working disk; RAID0 writes fastest; ZFS&#x27;s 128K record costs it ten to forty times on 4K I/O. Every layout on one chart, a conclusion matrix in green, and the route back to Orrery.</p>
-      <div class="links"><a href="calber-ssd-lab-report.html">the full report</a><a href="calber-ssd-lab-report.md">the Markdown</a></div>
-    </article>
-    <article class="report new">
-      <div class="when"><span>7 Nov 2026</span><span class="topic">Fleet · a power cut, read back</span></div>
-      <h3><a href="calber-power-cut-lab-report.html">The Orange Bar Was the Power Cut: What calber Was Doing When It Lost Power, and Where It Picked Up Again</a></h3>
-      <p>calber lost power 14 minutes into a 32-minute CUDA segment. The orange bar is that segment, drawn in the alarm colour a sent-back job gets; calber caused nothing and the job had not finished. Its own disk dates the cut to half a minute, the island resumed at generation 282,400, its checkpoint, and that checkpoint is written in place.</p>
-      <div class="links"><a href="calber-power-cut-lab-report.html">the full report</a><a href="calber-power-cut-lab-report.md">the Markdown</a></div>
-    </article>
-    <article class="report new">
-      <div class="when"><span>7 Nov 2026</span><span class="topic">Fleet · a BIOS put back</span></div>
-      <h3><a href="calber-bios-recovery-lab-report.html">calber's Recovery: Clearing CMOS on a Gigabyte Z370 AORUS, Putting the BIOS Back, and the Checks After a Power Cut</a></h3>
-      <p>The CMOS clear that brought calber back, Gigabyte&#x27;s keys, the settings to restore, hardware one piece at a time, and the checks after a cut, each checked against calber: the card pulled is a SATA card with a DVD writer, not a SAS HBA; the clock and boot list survived; the TPM and SGX went off; F15a is the BIOS.</p>
-      <div class="links"><a href="calber-bios-recovery-lab-report.html">the full report</a><a href="calber-bios-recovery-lab-report.md">the Markdown</a></div>
-    </article>
-    <article class="report new">
-      <div class="when"><span>7 Nov 2026</span><span class="topic">Collected</span></div>
+      <div class="when"><span>8 Nov 2026</span><span class="topic">Collected</span></div>
       <h3><a href="reports.html">Every Lab Report, Orreryq's and treadcore's</a></h3>
-      <p>40 of Orreryq's, 7 of treadcore's, 103 check-in reports and 32 posted on treadcore.org, as pages here, newest first. Rebuilt with orrery's own each time <code>tools/report/all.sh</code> runs.</p>
+      <p>41 of Orreryq's, 7 of treadcore's, 103 check-in reports and 32 posted on treadcore.org, as pages here, newest first. Rebuilt with orrery's own each time <code>tools/report/all.sh</code> runs.</p>
       <div class="links"><a href="reports.html">the list</a><a href="reports.html#checkins">the check-ins</a></div>
     </article>
     <article class="report">

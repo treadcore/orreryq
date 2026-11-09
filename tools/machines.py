@@ -154,56 +154,12 @@ else k poweroff ""; fi
 k auto_update "$( ( [ -e /etc/periodic/daily/fleet-update ] || [ -e /etc/systemd/system/fleet-update.timer ] ) && echo yes)"
 k updated "$(tail -n1 /var/log/fleet-update.log 2>/dev/null)"
 k uptime "$(uptime | sed 's/.*up *//; s/, *[0-9]* user.*//')"
-# The firmware, as the user: what the board, the CPU, the disks and the network
-# cards run. firmware() below says which of it is behind.
-dmi() { tr -s ' ' < /sys/class/dmi/id/$1 2>/dev/null | sed 's/ *$//'; }
-k fw_system "$(dmi sys_vendor) $(dmi product_name)"
-k fw_board "$(dmi board_vendor) $(dmi board_name)"
-k fw_bios "$(dmi bios_version) $(dmi bios_date)"
+# THE FIRMWARE is read by tools/fleet-firmware.sh, which probe() sends after this
+# script: one file for orrery's probe, the daily update's root scan and 'copal
+# firmware'. Here only what it does not say: the CPU's maker, and the version
+# of intel-ucode Alpine's index offers.
 k cpu_vendor "$(sed -n 's/^vendor_id[[:space:]]*: //p' /proc/cpuinfo | head -n1)"
-fms=$(printf '%02x-%02x-%02x' "$(sed -n 's/^cpu family[[:space:]]*: //p' /proc/cpuinfo | head -n1)" \
-  "$(sed -n 's/^model[[:space:]]*: //p' /proc/cpuinfo | head -n1)" "$(sed -n 's/^stepping[[:space:]]*: //p' /proc/cpuinfo | head -n1)" 2>/dev/null)
-k cpu_fms "$fms"
-k microcode "$(sed -n 's/^microcode[[:space:]]*: //p' /proc/cpuinfo | head -n1)"
-# The microcode package and the revision it carries for this CPU: Ubuntu's
-# files (06-5e-03.initramfs for a CPU Ubuntu loads only at boot), or Alpine's
-# /boot/intel-ucode.img, one cpio of them all.
-if command -v apk >/dev/null 2>&1; then
-  k ucode_pkg "$(apk info -v 2>/dev/null | grep -E '^(intel|amd)-ucode-[0-9]' | tr '\n' ' ')"
-  k ucode_repo "$(apk policy intel-ucode 2>/dev/null | sed -n '2s/^ *\([^:]*\):.*/\1/p')"
-elif command -v dpkg-query >/dev/null 2>&1; then
-  k ucode_pkg "$(dpkg-query -W -f '${Package}-${Version} ${Status}\n' intel-microcode amd64-microcode 2>/dev/null | grep 'install ok installed' | cut -d' ' -f1 | tr '\n' ' ')"
-fi
-u=/lib/firmware/intel-ucode/$fms; [ -f "$u" ] || u=$u.initramfs
-if [ -f "$u" ]; then k ucode_file "0x$(od -An -tx4 -j4 -N4 "$u" | tr -d ' ' | sed 's/^0*//')"
-elif [ -f /boot/intel-ucode.img ] && command -v python3 >/dev/null 2>&1; then
-  k ucode_file "$(python3 -c '
-import struct, sys
-f, m, s = (int(x, 16) for x in sys.argv[1].split("-"))
-want = (m >> 4) << 16 | f << 8 | (m & 15) << 4 | s
-b = open("/boot/intel-ucode.img", "rb").read()
-o, best = b.find(b"GenuineIntel.bin"), 0
-o = (o + 17 + 3) & ~3 if o > 0 else len(b)
-while o + 48 <= len(b):
-    v, rev, d, sig = struct.unpack_from("<4I", b, o)
-    ds, ts = struct.unpack_from("<2I", b, o + 28)
-    if v != 1: break
-    ts, ds = ts or 2048, ds or 2000
-    sigs = [sig] + ([struct.unpack_from("<I", b, o + 48 + ds + 20 + 12 * i)[0] for i in range(struct.unpack_from("<I", b, o + 48 + ds)[0])] if ts > ds + 48 else [])
-    best = max(best, rev) if want in sigs else best
-    o += ts
-print(hex(best) if best else "")' "$fms" 2>/dev/null)"
-fi
-# Each disk: its name, model and firmware revision, as the kernel reads them.
-d=""; for n in /sys/class/nvme/nvme*; do [ -e "$n/model" ] || continue
-  d="$d$(basename $n) $(tr -s ' ' < $n/model | sed 's/ *$//') $(tr -d ' ' < $n/firmware_rev);"; done
-for b in /sys/block/sd*; do [ -e "$b/device/model" ] || continue
-  d="$d$(basename $b) $(tr -s ' ' < $b/device/model | sed 's/ *$//') $(tr -d ' ' < $b/device/rev 2>/dev/null);"; done
-k disks_fw "$d"
-et=ethtool; for t in ethtool /usr/sbin/ethtool /sbin/ethtool; do command -v $t >/dev/null 2>&1 && et=$t && break; done
-e=""; for n in /sys/class/net/*; do [ -e "$n/device/driver" ] || continue
-  e="$e$(basename $n) $(basename "$(readlink $n/device/driver)") $($et -i $(basename $n) 2>/dev/null | sed -n 's/^firmware-version: *//p');"; done
-k nics_fw "$e"
+command -v apk >/dev/null 2>&1 && k ucode_repo "$(apk policy intel-ucode 2>/dev/null | sed -n '2s/^ *\([^:]*\):.*/\1/p')"
 # The firmware and SMART report the daily update saves as root (fleet-firmware.sh
 # --save), read here as the user: when it was made, and each disk's line,
 # NAME|MODEL|SMART, a '#' after each. And whether the boot loads a microcode
@@ -215,21 +171,15 @@ if [ -r "$r" ]; then
   k smart "$(awk -F'\t' '$1 == "disk" { d = $5; sub(/^[^;]*; [^;]*; /, "", d); printf "%s|%s|%s#", $2, $3, d }' "$r")"
 fi
 k ucode_boot "$(grep -l 'ucode\.img' /boot/boot/grub/grub.cfg /boot/grub/grub.cfg 2>/dev/null | head -n1)"
-# fwupd, where it is installed (Ubuntu's own): the updates LVFS has for this
-# machine, from the metadata its timer fetched, as the user, no root. A daemon
-# that failed to start would hold the probe 25 s a call, so it is not asked.
+# fwupd, where it is installed (Ubuntu's own): its version, and the date of the
+# metadata its timer fetched; the scanner asks it for devices and updates. A
+# daemon that failed to start would hold the probe 25 s a call, so it is not
+# asked, and that is said.
 if command -v fwupdmgr >/dev/null 2>&1; then
   k fwupd "$(dpkg-query -W -f '${Version}' fwupd 2>/dev/null || apk info -v 2>/dev/null | grep '^fwupd-[0-9]')"
   if command -v systemctl >/dev/null 2>&1 && systemctl -q is-failed fwupd 2>/dev/null; then k fwupd_error "its service failed to start"
   else
     k fwupd_meta "$(ls -l --time-style=+%Y-%m-%d /var/lib/fwupd/metadata/lvfs/ 2>/dev/null | awk '!/jcat/ && $6 ~ /^20/ {print $6; exit}')"
-    k fwupd_updates "$(timeout 20 fwupdmgr get-updates --json --no-unreported-check --no-metadata-check 2>/dev/null | python3 -c '
-import json, sys
-try:
-    d = json.load(sys.stdin)
-except ValueError:
-    sys.exit()
-print(";".join("%s|%s|%s" % (x.get("Name"), x.get("Version"), (x.get("Releases") or [{}])[0].get("Version")) for x in d.get("Devices", [])))' 2>/dev/null)"
   fi
 fi
 '''
@@ -248,13 +198,87 @@ MICROCODE = {
     "06-2c-02": ("0x1f", "Westmere's last, of May 2018: the Spectre and L1TF fixes"),
     "06-9e-0d": ("0x104", ""),
     "06-5e-03": ("0xf0", ""),
+    # AMD: what linux-firmware and Ubuntu's amd64-microcode carry (its README, 21 November 2024).
+    "17-71-00": ("0x8701034", "the newest the OS can load; the EntrySign fix (CVE-2024-36347) comes only in the "
+                              "BIOS's AGESA, ComboAM4v2PI 1.2.0.E or later (the AB350-Gaming 3's F54g and after)"),
 }
+# Each disk model in the fleet, looked up on 8 November 2026 (docs/firmware-lab-report.md): "match" a
+# regular expression on the model as the drive names itself, "newest" what its maker publishes,
+# "bad" a version with a known fault, or "none" when its maker publishes no firmware for it (the
+# disk is then as current as it can be made, and that is said). The SATA strings are the drive's
+# own, read whole from its IDENTIFY data (fleet-firmware.sh), not the kernel's four characters.
+SAMSUNG_ISO = "Samsung's ISO for it, booted from a USB stick (or its fumagician run as root), then a full power cycle"
+WD_NONE = "its maker publishes no firmware for it: WD's colour-line, desktop and white-label drives \"normally not needed or available\" (WD KB 50745)"
 PARTS = [
-    {"model": "Samsung SSD 980 PRO", "newest": "5B2QGXA7",
-     "read": "Samsung's SSD firmware page (the 980 PRO's ISO), 8 November 2026",
+    {"match": r"Samsung SSD 980 PRO", "newest": "5B2QGXA7",
+     "read": "Samsung's SSD tools page, 8 November 2026",
      "bad": {"3B2QGXA7": "the firmware that turns a 980 PRO read-only and kills it (Samsung, February 2023)"},
-     "how": "Samsung's 980 PRO ISO, booted from a USB stick (or its fumagician run as root)"},
+     "how": SAMSUNG_ISO},
+    {"match": r"Samsung SSD 950 PRO", "newest": "2B0QBXX7",
+     "read": "Samsung's SSD tools page and its support page for the drive (the file dated 30 October 2017)", "how": SAMSUNG_ISO},
+    {"match": r"Samsung SSD 850 EVO", "newest": "EMT02B6Q", "read": "Samsung's SSD tools page (13 November 2017)", "how": SAMSUNG_ISO},
+    {"match": r"Samsung SSD 850 PRO", "newest": "EXM04B6Q", "read": "Samsung's SSD tools page (2 November 2017)", "how": SAMSUNG_ISO,
+     "bad": {"EXM02B6Q": "the firmware Samsung withdrew in February 2015: drives that would not boot"}},
+    {"match": r"^CT\d+P3SSD8$", "newest": "P9CR30D",
+     "read": "Crucial's own update server, the one Storage Executive asks (its public P3 page says there is none)",
+     "how": "Storage Executive on Windows; or as root nvme fw-download and fw-commit with Crucial's image (untried on the P3, whose one firmware slot leaves no fallback)"},
+    {"match": r"HDN726040", "none": "WD publishes no firmware for the Deskstar NAS (WD KB 50745)"},
+    {"match": r"HUS72404", "none": "Ultrastar firmware only through a WD support case, for a drive in warranty (WD KB 50745)"},
+    {"match": r"HTS541010A9", "none": "none from WD or HGST; HP's A7L0 (SoftPaq SP76532) is for HP's notebooks, and an OEM image can brick a retail drive"},
+    {"match": r"MQ01ACF0", "none": "Toshiba publishes none; Dell's AV007D is for Dell's own machines"},
+    {"match": r"WD80EFAX|WD80EDAZ|WD80EMAZ|WD20EARX|WD20EZBX|WD80E|WD20E", "none": WD_NONE},
+    {"match": r"ST8000DM004", "none": "not on Seagate's public list; its serial-number lookup was not run"},
+    {"match": r"HUA72302|HDS5C302", "none": "Hitachi's Ultrastar 7K3000 and Deskstar 5K3000: WD publishes nothing for them (WD KB 50745)"},
+    {"match": r"HP SSD EX9[05]0", "none": "HP publishes no firmware for the EX900 or EX950"},
+    {"match": r"FORESEE", "none": "Longsys publishes none"},
+    {"match": r"^SATA SSD$", "none": "an unbranded Phison S11: no maker to publish one (forum images are cross-flashes)"},
+    {"match": r"TEAML5Lite|TEAM L5 LITE|TEAM TM8PS7", "none": "TEAMGROUP's download center has no firmware for the L5 LITE or the MS30"},
+    {"match": r"SanDisk Ultra II", "none": "none on SanDisk's pages; its forums name X41310RL and X41320RL, not confirmed"},
+    {"match": r"TS\d+GMSA230S", "none": "Transcend publishes it only through SSD Scope on Windows"},
 ]
+
+# Each board, looked up on 8 November 2026 on its vendor's own page (Gigabyte's and MSI's were read in
+# a browser: they refuse automated reads). "newest" as DMI would show it; "compare" False where the
+# vendor's name for a build is not the one DMI shows.
+BIOSES = [
+    {"match": r"AB350-Gaming 3", "newest": "F55d", "read": "Gigabyte's support page: F55d of 3 September 2026",
+     "means": "AGESA 1.2.0.12 and, since F52h, the fixes for LogoFAIL, Sinkclose, the microcode signature flaw (CVE-2024-36347) and AMD's TPM",
+     "how": "Q-Flash from a FAT32 USB stick"},
+    {"match": r"Z170M-D3H", "newest": "F22f", "read": "Gigabyte's support page: nothing since March 2018"},
+    {"match": r"Z370 AORUS Gaming WIFI", "newest": "F15", "read": "Gigabyte's support page: F15 of November 2021, the last"},
+    {"match": r"PRO B760-VC WIFI", "newest": "B.DA", "read": "MSI's desktop page (Aegis R 13th): BDA of 17 November 2025, no notes",
+     "means": "MSI lists this board under the Aegis R, not the Aegis RS: read the case's sticker before flashing",
+     "how": "MSI's bootable USB stick (Rufus), from the desktop's support page; load optimized defaults after"},
+    {"match": r"NEO Z300-0dB", "newest": "AD0J0.235", "compare": False,
+     "read": "MINIX's file server: AD0J0.235 of 24 March 2026, no notes; how 5.27 maps to MINIX's builds is not known (the setup screen shows the build)"},
+    {"match": r"X8DTL", "newest": "2.1b", "read": "Supermicro's page: 2.1b, the last",
+     "means": "Supermicro's separate microcode tool (SMCI_MCU_Pkg_v1.0.1_X8DP) carries the Spectre fixes"},
+    {"match": r"X8DT3", "newest": "2.2", "read": "Supermicro's page: 2.2, undated, no notes", "how": "Supermicro's DOS flash utility, in the zip"},
+]
+
+
+# Each network card's firmware, by its driver and the version ethtool reads (8 November 2026).
+NICS = [
+    {"drv": "r8169", "fw": r"^rtl8168g-2_0\.0\.1|^rtl8125b-2_0\.0\.2",
+     "none": "the newest file for the chip in upstream linux-firmware (its WHENCE)"},
+    {"drv": "iwlwifi", "fw": r"7265D-29", "none": "-29 is the 7265D's last, and current in linux-firmware"},
+    {"drv": "iwlwifi", "fw": r"^89\.735b75a4\.0 so-a0", "newest": "89.a67023b2.0",
+     "read": "upstream linux-firmware: four newer -89 builds since ours, the last committed 8 November 2026",
+     "how": "the linux-firmware package once it carries them (Alpine: linux-firmware-intel), then reload iwlwifi"},
+    {"drv": "mlx4_core", "fw": r"^2\.9\.1200$",
+     "none": "2.9.1200 is the ConnectX-2's last, hosted now only on secondary pages; the card is end of life"},
+    {"drv": "mlx4_core", "fw": r"^2\.9\.1000$",
+     "check": "2.9.1200 exists for some ConnectX-2 images: mstflint -d BDF query (mstflint 4.20 or older) names this card's PSID"},
+    {"drv": "igb", "fw": r".", "none": "Intel publishes no NVM update for the 82576"},
+    {"drv": "e1000e", "fw": r".", "none": "an onboard Intel NIC's NVM comes only with the board's BIOS"},
+]
+GPUS = [
+    {"match": r"GeForce GTX 10[678]0", "none": "NVIDIA's only update for Pascal cards is its DisplayPort 1.3/1.4 firmware tool, for Windows"},
+]
+
+
+def norm(v):
+    return re.sub(r"[^0-9a-z]", "", (v or "").lower())
 HOW_UCODE = {
     # Copal's grub.cfg is copal-init.sh's, written by hand, so nothing adds the image to it.
     "alpine": "doas apk add intel-ucode; in /boot/boot/grub/grub.cfg each initrd line becomes initrd /intel-ucode.img /initramfs-lts; a boot",
@@ -277,9 +301,18 @@ def firmware(f):
             return int(v, 16)
         except (TypeError, ValueError):
             return None
-    add("BIOS", f.get("fw_bios", ""), why="%s: its vendor's support page" % (f.get("fw_board") or "the board"))
+    board, bios = f.get("fw_board") or "", f.get("fw_bios", "")
+    b = next((b for b in BIOSES if re.search(b["match"], board)), None)
+    if not b:
+        add("BIOS", bios, why="%s: its vendor's support page" % (board or "the board"))
+    elif b.get("compare") is False:
+        add("BIOS", bios, b["newest"], why=b["read"])
+    elif norm(bios.split(" ")[0]) == norm(b["newest"]):
+        add("BIOS", bios, b["newest"], "current", "; ".join(x for x in (b["read"], b.get("means")) if x))
+    else:
+        add("BIOS", bios, b["newest"], "behind", "; ".join(x for x in (b["read"], b.get("means")) if x), b.get("how", ""))
     run, fms = f.get("microcode", ""), f.get("cpu_fms", "")
-    if f.get("cpu_vendor") == "GenuineIntel" and hexint(run) is not None:
+    if hexint(run) is not None and (f.get("cpu_vendor") == "GenuineIntel" or fms in MICROCODE):
         known, means = MICROCODE.get(fms, ("", ""))
         pkg = f.get("ucode_file", "")
         newest = max([v for v in (known, pkg) if hexint(v)], key=hexint, default="")
@@ -287,7 +320,7 @@ def firmware(f):
         if not newest:
             add("microcode", run, why="no revision on record for CPU %s" % fms)
         elif hexint(run) >= hexint(newest):
-            add("microcode", run, newest, "current")
+            add("microcode", run, newest, "current", means if f.get("cpu_vendor") != "GenuineIntel" else "")
         else:
             if hexint(pkg) and hexint(pkg) > hexint(run):
                 why = "the package carries %s and the boot does not load it" % pkg
@@ -310,12 +343,14 @@ def firmware(f):
         name, _, rest = d.partition(" ")
         model, _, fw = rest.rpartition(" ")
         h = health(name, model)
-        p = next((p for p in PARTS if model.startswith(p["model"])), None)
+        p = next((p for p in PARTS if re.search(p["match"], model)), None)
         if h and ("FAILED" in h or "critical warning" in h):
             add("%s %s" % (name, model), fw, (p or {}).get("newest", ""), "bad", "SMART: " + h,
                 "back it up now; then smartctl -a as root")
         elif not p:
             add("%s %s" % (name, model), fw, why=h)
+        elif p.get("none"):
+            add("%s %s" % (name, model), fw, fw, "current", "; ".join(x for x in (p["none"], h) if x))
         elif fw in p.get("bad", {}):
             add("%s %s" % (name, model), fw, p["newest"], "bad", "; ".join(x for x in (p["bad"][fw], h) if x), p["how"])
         elif fw != p["newest"]:
@@ -327,11 +362,28 @@ def firmware(f):
     else:
         add("SMART report", "none", why="no report: Apply \"Update daily and at boot\" to install the scan",
             how="it installs fleet-firmware.sh with smartmontools and nvme-cli, and runs it")
+    # The GPU's own BIOS, as nvidia-smi reads it.
+    for g in [x for x in f.get("gpus_fw", "").split(";") if x.count("|") == 2]:
+        name, model, ver = g.split("|")
+        k = next((k for k in GPUS if re.search(k["match"], model)), None)
+        if k:
+            add("%s %s" % (name, model), ver, ver, "current", k["none"])
+        else:
+            add("%s %s" % (name, model), ver)
     # A network card's firmware: a file the driver loads from linux-firmware (kept by the system's
     # updates), or the card's own (e1000e, igb, mlx4).
     for n in [x for x in f.get("nics_fw", "").split(";") if x.strip()]:
         name, drv, ver = (n.split(" ", 2) + ["", ""])[:3]
-        add("%s %s" % (name, drv), ver.strip())
+        ver = ver.strip()
+        k = next((k for k in NICS if k["drv"] == drv and re.search(k["fw"], ver)), None)
+        if not k:
+            add("%s %s" % (name, drv), ver)
+        elif k.get("none"):
+            add("%s %s" % (name, drv), ver, ver, "current", k["none"])
+        elif k.get("check"):
+            add("%s %s" % (name, drv), ver, why=k["check"])
+        else:
+            add("%s %s" % (name, drv), ver, k["newest"], "behind", k["read"], k["how"])
     if f.get("fwupd_error"):
         add("fwupd (LVFS)", f.get("fwupd", ""), why=f["fwupd_error"], how="sudo systemctl status fwupd; an upgraded fwupd may start")
     elif "fwupd" in f:
@@ -364,6 +416,49 @@ k orrery_app "$( [ -d ~/Applications/Orrery.app ] && echo yes)"
 k copal_tm_app "$( [ -d ~/Applications/'Copal TM.app' ] && echo yes)"
 k uptime "$(uptime | sed 's/.*up *//; s/, *[0-9]* user.*//')"
 '''
+
+
+FIRMWARE = os.path.join(TOOLS, "fleet-firmware.sh")
+MARK = "@@fleet-firmware"
+
+
+def fw_facts(rows):
+    """fleet-firmware.sh's rows (KIND NAME MODEL VERSION DETAIL) as the probe's firmware facts, the
+    ones firmware() reads: one file reads the firmware, and this is the only place its text is
+    taken apart."""
+    f = {}
+    disks, nics, ups, gpus = [], [], [], []
+    for r in rows:
+        k, name, model, ver, det = (list(r) + ["-"] * 5)[:5]
+        ver = "" if ver == "-" else ver
+        if k == "machine":
+            f["fw_system"] = model
+        elif k == "bios":
+            f["fw_board"] = model
+            f["fw_bios"] = ("%s %s" % (ver, det.split(";")[0].strip())).strip()
+        elif k == "cpu":
+            f["microcode"] = ver
+            m = re.search(r"family-model-stepping (\S+);", det)
+            f["cpu_fms"] = m.group(1) if m else ""
+            seg = (det.split("; ") + ["", ""])[1]
+            f["ucode_pkg"] = "" if seg.startswith("no package") else seg.split(",")[0]
+            m = re.search(r"it carries (0x[0-9a-f]+)", det)
+            if m:
+                f["ucode_file"] = m.group(1)
+        elif k == "disk":
+            disks.append("%s %s %s;" % (name, model, ver))
+        elif k == "nic":
+            nics.append("%s %s %s;" % (name, model.split(",")[0], ver))
+        elif k == "gpu":
+            gpus.append("%s|%s|%s;" % (name, model, ver))
+        elif k == "update":
+            m = re.match(r"newer: (\S+)", det)
+            ups.append("%s|%s|%s" % (name, ver, m.group(1) if m else ""))
+    f["disks_fw"] = "".join(disks)
+    f["nics_fw"] = "".join(nics)
+    f["fwupd_updates"] = ";".join(ups)
+    f["gpus_fw"] = "".join(gpus)
+    return f
 
 
 def load(p, d):
@@ -405,19 +500,26 @@ class Machines:
             if m["target"] == "-":
                 r = subprocess.run(["bash", "-c", LOCAL_PROBE], capture_output=True, text=True, timeout=60)
             else:
-                r = subprocess.run(SSH + [m["target"], PROBE], capture_output=True, text=True, timeout=60)
+                with open(FIRMWARE) as fw:
+                    scan = fw.read()
+                r = subprocess.run(SSH + [m["target"], PROBE + "\nprintf '%s\\n'\n" % MARK + scan],
+                                   capture_output=True, text=True, timeout=90)
         except subprocess.TimeoutExpired:
-            m["probe_error"] = "no answer in 60 s"
+            m["probe_error"] = "no answer in 90 s"
             return
         if r.returncode != 0 and not r.stdout:
             m["probe_error"] = (r.stderr.strip().splitlines() or ["ssh failed"])[-1]
             return
-        facts = {}
-        for l in r.stdout.splitlines():
+        facts, rows, out = {}, [], r.stdout.split(MARK + "\n", 1)
+        for l in out[0].splitlines():
             if "=" in l:
                 key, v = l.split("=", 1)
                 facts[key] = v.strip()
+        if len(out) > 1:
+            rows = [l.split("\t") for l in out[1].splitlines() if l.count("\t") == 4]
+            facts.update(fw_facts(rows))
         m["facts"] = facts
+        m["fw_rows"] = rows
         m["probed"] = time.strftime("%Y-%m-%dT%H:%M:%S")
         m.pop("probe_error", None)
         self.sync_poweroff(name, facts.get("poweroff", ""))

@@ -62,9 +62,11 @@ scan() {
         "$(sed -n 's/^stepping[[:space:]]*: //p' /proc/cpuinfo | head -n 1)" 2>/dev/null)
     if [ -n "$mc" ]; then
         pkg=
+        deb=0
         if have apk; then
             pkg=$(apk info -v 2>/dev/null | grep -E '^(intel|amd)-ucode-[0-9]' | head -n 1)
         elif have dpkg-query; then
+            deb=1
             case "$vendor" in
                 GenuineIntel) p=intel-microcode ;;
                 *) p=amd64-microcode ;;
@@ -72,18 +74,41 @@ scan() {
             pkg=$(dpkg-query -W -f '${Package}-${Version} ${Status}\n' "$p" 2>/dev/null | grep 'install ok installed' | cut -d' ' -f1)
         fi
         # Loaded at boot: Copal's grub.cfg names the image itself; Ubuntu's initramfs carries it.
+        # Which system it is comes from the package manager that answered: an Alpine machine can
+        # have dpkg-query too (saskatchewan has), and is not Ubuntu for having it.
         load="no package: the BIOS's own"
         if [ -n "$pkg" ]; then
             load="$pkg, not in grub.cfg"
             for c in /boot/boot/grub/grub.cfg /boot/grub/grub.cfg; do
                 [ -r "$c" ] && grep -q 'ucode\.img' "$c" && load="$pkg, loaded at boot" && break
             done
-            have dpkg-query && load="$pkg, in the initramfs"
+            [ "$deb" = 1 ] && load="$pkg, in the initramfs"
         fi
+        # What the package carries for this CPU: Ubuntu's file for it (06-5e-03.initramfs for a
+        # CPU Ubuntu loads only at boot), or the revision found in Alpine's /boot/intel-ucode.img,
+        # one cpio of them all.
         u=/lib/firmware/intel-ucode/$fms
         [ -f "$u" ] || u=$u.initramfs
         if [ -f "$u" ]; then
             load="$load; it carries 0x$(od -An -tx4 -j4 -N4 "$u" | tr -d ' ' | sed 's/^0*//')"
+        elif [ -f /boot/intel-ucode.img ] && have python3; then
+            c=$(python3 -c '
+import struct, sys
+f, m, s = (int(x, 16) for x in sys.argv[1].split("-"))
+want = (m >> 4) << 16 | f << 8 | (m & 15) << 4 | s
+b = open("/boot/intel-ucode.img", "rb").read()
+o, best = b.find(b"GenuineIntel.bin"), 0
+o = (o + 17 + 3) & ~3 if o > 0 else len(b)
+while o + 48 <= len(b):
+    v, rev, d, sig = struct.unpack_from("<4I", b, o)
+    ds, ts = struct.unpack_from("<2I", b, o + 28)
+    if v != 1: break
+    ts, ds = ts or 2048, ds or 2000
+    sigs = [sig] + ([struct.unpack_from("<I", b, o + 48 + ds + 20 + 12 * i)[0] for i in range(struct.unpack_from("<I", b, o + 48 + ds)[0])] if ts > ds + 48 else [])
+    best = max(best, rev) if want in sigs else best
+    o += ts
+print(hex(best) if best else "")' "$fms" 2>/dev/null)
+            [ -n "$c" ] && load="$load; it carries $c"
         fi
         row cpu cpu "$model" "$mc" "family-model-stepping $fms; $load"
     fi
@@ -104,7 +129,24 @@ scan() {
         rot=$( [ "$(cat "$b/queue/rotational" 2>/dev/null)" = 1 ] && echo HDD || echo SSD)
         v=$(rd "$b/device/vendor")
         [ "$v" = ATA ] && v=
-        row disk "$name" "${v:+$v }$(rd "$b/device/model")" "$(rd "$b/device/rev" | tr -d ' ')" \
+        # The kernel keeps four characters of a SATA disk's eight-character firmware (A7J0 of
+        # JA0OA7J0) and sixteen of its model; smartctl, as root, reads both whole.
+        fv=$(rd "$b/device/rev" | tr -d ' ')
+        md="${v:+$v }$(rd "$b/device/model")"
+        f=$(ata_id "$b")
+        if [ -n "$f" ]; then
+            f2=$(ata_str "$f" 23 4)
+            m2=$(ata_str "$f" 27 20)
+            [ -n "$f2" ] && fv=$f2
+            [ -n "$m2" ] && md=$m2
+        elif [ "$ROOT" = 1 ] && have smartctl; then
+            id=$(smartctl -i "/dev/$name" 2>/dev/null)
+            f2=$(printf '%s\n' "$id" | sed -n 's/^Firmware Version: *//p' | head -n 1)
+            m2=$(printf '%s\n' "$id" | sed -n 's/^Device Model: *//p' | head -n 1)
+            [ -n "$f2" ] && fv=$f2
+            [ -n "$m2" ] && md=$m2
+        fi
+        row disk "$name" "$md" "$fv" \
             "SATA $rot; ${size:-?}; $(health "/dev/$name")"
     done
 
@@ -169,6 +211,31 @@ for x in d.get("Devices", []):
         row esrt "$(basename "$e")" "$ty $(cat "$e/fw_class")" "$(printf '0x%x' "$(cat "$e/fw_version")")" \
             "lowest it takes $(printf '0x%x' "$(cat "$e/lowest_supported_fw_version")"); last attempt $(cat "$e/last_attempt_version") status $(cat "$e/last_attempt_status")"
     done
+}
+
+# An ATA IDENTIFY string, read without root: /sys/class/ata_device/devN.M/id is the drive's 256
+# words, world-readable, two characters to a word, the first in the high byte. Words 23-26 are the
+# firmware, 27-46 the model. The kernel's own model and rev (what /sys/block/sdX/device holds) keep
+# 16 and 4 characters of them: "Samsung SSD 850" and "2B6Q", where the drive says more.
+ata_str() {
+    tr -s ' \n' '\n\n' < "$1" | sed -n "$(( $2 + 1 )),$(( $2 + $3 ))p" | while read -r w; do
+        v=$(printf '%d' "0x$w")
+        printf "\\$(printf %o $(( v >> 8 )))\\$(printf %o $(( v & 255 )))"
+    done | tr -d '\000' | sed 's/^ *//; s/ *$//'
+}
+
+# The IDENTIFY file of a block device on libata, or nothing (a SAS HBA, USB): its ataN port, and
+# its SCSI channel and target, which are a port multiplier's link and an IDE pair's master or
+# slave (jaguaribe's two drives to a port: dev3.0 and dev3.1).
+ata_id() {
+    p=$(readlink -f "$1")
+    a=$(echo "$p" | sed -n 's|.*/ata\([0-9]*\)/.*|\1|p')
+    [ -n "$a" ] || return 0
+    hctl=$(echo "$p" | sed -n 's|.*/\([0-9]*:[0-9]*:[0-9]*:[0-9]*\)/block/.*|\1|p')
+    c=$(echo "$hctl" | cut -d: -f2)
+    t=$(echo "$hctl" | cut -d: -f3)
+    if [ "${c:-0}" != 0 ]; then f=/sys/class/ata_device/dev$a.$c.0/id; else f=/sys/class/ata_device/dev$a.${t:-0}/id; fi
+    [ -r "$f" ] && echo "$f"
 }
 
 # A disk's health in a few words: smartctl as root, or why not.

@@ -36,6 +36,21 @@ def part(fw, name):
     return next((f for f in fw if f["part"] == name), {})
 
 
+# fleet-firmware.sh's rows, read into the facts above: the probe's only reading of the firmware
+rows = [l.split("\t") for l in """machine\tsaskatchewan\tMicro-Star International Co., Ltd. US Desktop Aegis RS\t-\tAlpine Linux v3.24; kernel 6.18.60-0-lts; scanned 2026-11-08T18:40:00-0800; as the user: no SMART
+bios\tboard\tMicro-Star International Co., Ltd. PRO B760-VC WIFI (MS-7D98)\tB.D3\t03/24/2023; American Megatrends International, LLC.; UEFI
+cpu\tcpu\t13th Gen Intel(R) Core(TM) i7-13700F\t0x137\tfamily-model-stepping 06-b7-01; intel-ucode-20260812-r0, loaded at boot; it carries 0x137
+disk\tnvme2\tSamsung SSD 980 PRO 1TB\t2B2QGXA7\tNVMe; 1000 GB; smart: root only
+disk\tsdb\tTS128GMSA230S\tR0427GN1\tSATA SSD; 128 GB; smart: root only
+nic\teth0\tr8169, PCI 10ec:8125\trtl8125b-2_0.0.2 07/13/20\t-
+update\tUEFI dbx\tMicrosoft\t20230501\tnewer: 20260707 (UEFI Secure Boot Forbidden Signature Database)""".splitlines()]
+ff = m.fw_facts(rows)
+claim("the scanner's rows read into the probe's facts", (ff["fw_bios"], ff["fw_board"], ff["microcode"], ff["cpu_fms"], ff["ucode_pkg"], ff["ucode_file"])
+      == ("B.D3 03/24/2023", "Micro-Star International Co., Ltd. PRO B760-VC WIFI (MS-7D98)", "0x137", "06-b7-01", "intel-ucode-20260812-r0", "0x137"))
+claim("and its disks, cards and fwupd's updates", ff["disks_fw"] == "nvme2 Samsung SSD 980 PRO 1TB 2B2QGXA7;sdb TS128GMSA230S R0427GN1;"
+      and ff["nics_fw"] == "eth0 r8169 rtl8125b-2_0.0.2 07/13/20;" and ff["fwupd_updates"] == "UEFI dbx|20230501|20260707")
+claim("a CPU on its BIOS's own microcode has no package", m.fw_facts([["cpu", "cpu", "x", "0x15", "family-model-stepping 06-2c-02; no package: the BIOS's own"]])["ucode_pkg"] == "")
+
 fw = m.firmware(SASKATCHEWAN)
 u = part(fw, "microcode")
 claim("saskatchewan's microcode is behind, 0x10f against 0x137", (u.get("state"), u.get("now"), u.get("newest")) == ("behind", "0x10f", "0x137"))
@@ -44,11 +59,30 @@ claim("and says Copal's way to load it", u["how"].startswith("doas apk add intel
 n0, n1 = part(fw, "nvme0 Samsung SSD 980 PRO 1TB"), part(fw, "nvme1 Samsung SSD 980 PRO 2TB")
 claim("its 980 PRO 1TB on 2B2QGXA7 is behind 5B2QGXA7", (n0.get("state"), n0.get("newest")) == ("behind", "5B2QGXA7"))
 claim("its 980 PRO 2TB on 5B2QGXA7 is current", n1.get("state") == "current")
-claim("a part with no entry is not checked, never current", part(fw, "nvme2 CT4000P3SSD8").get("state") == "not checked" and part(fw, "sdc TEAM TM8PS7002T").get("now") == "0A0")
+unknown = part(m.firmware(dict(SASKATCHEWAN, disks_fw="sdx ACME SSD 1TB A1;")), "sdx ACME SSD 1TB")
+claim("a part with no entry is not checked, never current", unknown.get("state") == "not checked" and unknown.get("now") == "A1")
+claim("the Crucial P3 is behind its maker's update server", (part(fw, "nvme2 CT4000P3SSD8").get("state"), part(fw, "nvme2 CT4000P3SSD8").get("newest")) == ("behind", "P9CR30D"))
+claim("a disk whose maker publishes nothing is current, and says so", part(fw, "sdc TEAM TM8PS7002T").get("state") == "current" and "TEAMGROUP" in part(fw, "sdc TEAM TM8PS7002T")["why"])
+whole = m.firmware(dict(SASKATCHEWAN, disks_fw="sdc Samsung SSD 850 EVO 500GB EMT02B6Q;sdd Samsung SSD 850 PRO 256GB EXM02B6Q;sde Samsung SSD 950 PRO 256GB 1B0QBXX7;"))
+claim("an 850 EVO on EMT02B6Q is current (read whole, not as 2B6Q)", part(whole, "sdc Samsung SSD 850 EVO 500GB").get("state") == "current")
+claim("an 850 PRO on the withdrawn EXM02B6Q is bad", part(whole, "sdd Samsung SSD 850 PRO 256GB").get("state") == "bad")
+claim("a 950 PRO on 1B0QBXX7 is behind 2B0QBXX7", part(whole, "sde Samsung SSD 950 PRO 256GB").get("newest") == "2B0QBXX7")
 claim("each network card is shown, its firmware's file named", part(m.firmware(dict(SASKATCHEWAN, nics_fw="eth0 r8169 rtl8125b-2_0.0.2 07/13/20;wlan0 iwlwifi 89.735b75a4.0 so-a0-gf-a0-89.uc;")), "eth0 r8169")
-      == {"part": "eth0 r8169", "now": "rtl8125b-2_0.0.2 07/13/20", "newest": "", "state": "not checked", "why": "", "how": ""})
-claim("its BIOS is shown, not judged", part(fw, "BIOS") == {"part": "BIOS", "now": "B.D3 03/24/2023", "newest": "", "state": "not checked",
-                                                              "why": "Micro-Star International Co., Ltd. PRO B760-VC WIFI (MS-7D98): its vendor's support page", "how": ""})
+      == {"part": "eth0 r8169", "now": "rtl8125b-2_0.0.2 07/13/20", "newest": "rtl8125b-2_0.0.2 07/13/20", "state": "current",
+          "why": "the newest file for the chip in upstream linux-firmware (its WHENCE)", "how": ""})
+nics = m.firmware(dict(SASKATCHEWAN, nics_fw="wlan0 iwlwifi 89.735b75a4.0 so-a0-gf-a0-89.uc;enp8s0 mlx4_core 2.9.1000;enp9s0 mlx4_core 2.9.1200;eth9 acme 1.0;"))
+claim("the AX211's -89 build is behind upstream's", (part(nics, "wlan0 iwlwifi")["state"], part(nics, "wlan0 iwlwifi")["newest"]) == ("behind", "89.a67023b2.0"))
+claim("a ConnectX-2 on 2.9.1000 asks for its PSID, one on 2.9.1200 is the last there is",
+      part(nics, "enp8s0 mlx4_core")["state"] == "not checked" and "mstflint" in part(nics, "enp8s0 mlx4_core")["why"]
+      and part(nics, "enp9s0 mlx4_core")["state"] == "current")
+claim("a card with no entry is not checked", part(nics, "eth9 acme")["state"] == "not checked")
+claim("a Pascal card's VBIOS: nothing NVIDIA publishes for Linux", part(m.firmware(dict(WHITEWOLF, gpus_fw="gpu0|NVIDIA GeForce GTX 1080|86.04.60.01.80;")), "gpu0 NVIDIA GeForce GTX 1080")["state"] == "current")
+b = part(fw, "BIOS")
+claim("its BIOS B.D3 is behind MSI's BDA, with the sticker to read first", (b["state"], b["newest"]) == ("behind", "B.DA") and "sticker" in b["why"] and "Rufus" in b["how"])
+claim("a board with no entry is shown, not judged", part(m.firmware(dict(SASKATCHEWAN, fw_board="ACME X1")), "BIOS")["state"] == "not checked")
+claim("boburner's F52h is behind F55d", (lambda x: (x["state"], x["newest"]))(part(m.firmware(dict(BOBURNER, fw_board="Gigabyte Technology Co., Ltd. AB350-Gaming 3-CF")), "BIOS")) == ("behind", "F55d"))
+claim("whitewolf's F22f is current", part(m.firmware(dict(WHITEWOLF, fw_board="Gigabyte Technology Co., Ltd. Z170M-D3H-CF")), "BIOS")["state"] == "current")
+claim("MINIX's build names are not compared with DMI's", part(m.firmware(dict(SASKATCHEWAN, fw_board="MINIX Technology Limited NEO Z300-0dB", fw_bios="5.27 08/31/2024")), "BIOS")["state"] == "not checked")
 bad = m.firmware(dict(SASKATCHEWAN, disks_fw="nvme0 Samsung SSD 980 PRO 2TB 3B2QGXA7;"))
 claim("a 980 PRO on 3B2QGXA7 is bad, with the fault named", part(bad, "nvme0 Samsung SSD 980 PRO 2TB").get("state") == "bad" and "read-only" in part(bad, "nvme0 Samsung SSD 980 PRO 2TB")["why"])
 up = part(m.firmware(dict(SASKATCHEWAN, ucode_pkg="intel-ucode-20260812-r0 ", ucode_file="0x137")), "microcode")
@@ -63,7 +97,8 @@ claim("with updates, fwupd's own line is not drawn twice", not part(fw, "fwupd (
 claim("with none, fwupd says it looked", part(m.firmware(dict(WHITEWOLF, fwupd_updates="")), "fwupd (LVFS)").get("state") == "current")
 
 fw = m.firmware(BOBURNER)
-claim("boburner's AMD microcode is not checked", part(fw, "microcode").get("state") == "not checked")
+claim("boburner's AMD microcode is the newest the OS can load, and says where the rest comes from",
+      part(fw, "microcode").get("state") == "current" and "AGESA" in part(fw, "microcode")["why"])
 claim("a failed fwupd is named, not taken for no updates", part(fw, "fwupd (LVFS)").get("why") == "its service failed to start" and part(fw, "fwupd (LVFS)").get("state") == "not checked")
 
 # SMART, from the report the daily update saves as root (fleet-firmware.sh --save)
