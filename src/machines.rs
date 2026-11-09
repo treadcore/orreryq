@@ -34,6 +34,19 @@ pub struct Recipe {
     pub files: Vec<(String, String)>,
 }
 
+/// A part's firmware against what is known to be out (machines.py's
+/// firmware()): state "behind", "bad" (a known fault), "current" or "not
+/// checked", and for the first two the why and the how.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Firmware {
+    pub part: String,
+    pub now: String,
+    pub newest: String,
+    pub state: String,
+    pub why: String,
+    pub how: String,
+}
+
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Machine {
     pub name: String,
@@ -43,6 +56,7 @@ pub struct Machine {
     pub error: String,
     pub facts: Vec<(String, String)>,
     pub recipes: Vec<Recipe>,
+    pub firmware: Vec<Firmware>,
     pub log: Vec<String>,
 }
 
@@ -87,6 +101,10 @@ impl Model {
                     Some(json::Value::Obj(f)) => f.iter().map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string())).collect(),
                     _ => Vec::new(),
                 },
+                firmware: arr(m, "firmware")
+                    .iter()
+                    .map(|f| Firmware { part: s(f, "part"), now: s(f, "now"), newest: s(f, "newest"), state: s(f, "state"), why: s(f, "why"), how: s(f, "how") })
+                    .collect(),
                 recipes: arr(m, "recipes")
                     .iter()
                     .map(|r| Recipe {
@@ -289,6 +307,46 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State) -> Option<nav::View> {
         ui.label_in(rx + 110, y, rw - 110, v, &F8X13, t.ink);
         y += lh - 2;
     }
+    // The firmware: a line, and under it each part that is behind or known
+    // bad, with what to do about it. Every part is in the line's tip.
+    if x.fact("os_id") != "macos" && !x.probed.is_empty() {
+        let count = |st: &str| x.firmware.iter().filter(|f| f.state == st).count();
+        let (behind, bad) = (count("behind"), count("bad"));
+        let line = if x.firmware.is_empty() {
+            "not read yet: Probe".to_string()
+        } else {
+            let mut l = format!("BIOS {}", x.firmware.iter().find(|f| f.part == "BIOS").map(|f| f.now.as_str()).unwrap_or("?"));
+            for (n, what) in [(bad, "with a known fault"), (behind, "behind"), (count("current"), "current"), (count("not checked"), "not checked")] {
+                if n > 0 {
+                    l += &format!(" · {} {}", n, what);
+                }
+            }
+            l
+        };
+        let r = rect(rx, y - 2, rw, lh - 2);
+        ui.label(rx, y, "firmware", &F8X13, t.dim);
+        ui.label_in(rx + 110, y, rw - 110, &line, &F8X13, if bad > 0 { t.alarm } else if behind > 0 { t.warn } else { t.ink });
+        ui.tip(r, || {
+            let mut v = vec![format!("{}'s firmware, read by the probe as the user; \"not checked\" is not \"current\":", x.name)];
+            v.extend(x.firmware.iter().map(|f| {
+                let new = if f.newest.is_empty() || f.newest == f.now { String::new() } else { format!(" -> {}", f.newest) };
+                format!("{}  {}{}  {}{}", f.part, or(&f.now, "?"), new, f.state, if f.why.is_empty() { String::new() } else { format!(": {}", f.why) })
+            }));
+            v
+        });
+        y += lh - 2;
+        for f in x.firmware.iter().filter(|f| f.state == "behind" || f.state == "bad") {
+            let c = if f.state == "bad" { t.alarm } else { t.warn };
+            for l in crate::line::wrap(&format!("{} {} -> {}: {}", f.part, f.now, f.newest, f.why), &F8X13, rw - 110) {
+                ui.label_in(rx + 110, y, rw - 110, &l, &F8X13, c);
+                y += lh - 4;
+            }
+            for l in crate::line::wrap(&f.how, &F8X13, rw - 126) {
+                ui.label_in(rx + 126, y, rw - 126, &l, &F8X13, t.dim);
+                y += lh - 4;
+            }
+        }
+    }
     y += 10;
     ui.label_in(rx, y, rw, "Recipes (each needs root; each is safe to run again)", &F8X13, t.ink);
     y += lh;
@@ -440,6 +498,19 @@ mod tests {
         assert_eq!(x.recipes[0].command, "cd ~/orrery-recipes && sudo bash fleet-node.sh");
         assert_eq!(x.recipes[0].files, vec![("fleet-node.sh".to_string(), "ab".to_string())]);
         assert_eq!(x.log, vec!["2026-10-28 15:01:00 joined the fleet".to_string()]);
+    }
+
+    #[test]
+    fn a_machines_firmware_reads_part_by_part() {
+        let doc = r#"{"machines": [{"name": "saskatchewan", "facts": {"fw_bios": "B.D3 03/24/2023"}, "firmware": [
+            {"part": "BIOS", "now": "B.D3 03/24/2023", "newest": "", "state": "not checked", "why": "", "how": ""},
+            {"part": "microcode", "now": "0x10f", "newest": "0x137", "state": "behind", "why": "no microcode package: the BIOS's own", "how": "doas apk add intel-ucode"}]}]}"#;
+        let x = &Model::parse(doc).machines[0];
+        assert_eq!(x.firmware.len(), 2);
+        assert_eq!(x.firmware[1], Firmware { part: "microcode".into(), now: "0x10f".into(), newest: "0x137".into(), state: "behind".into(),
+                                             why: "no microcode package: the BIOS's own".into(), how: "doas apk add intel-ucode".into() });
+        // A document from before the firmware was read has none, not an error.
+        assert!(Model::parse(r#"{"machines": [{"name": "calber"}]}"#).machines[0].firmware.is_empty());
     }
 
     #[test]

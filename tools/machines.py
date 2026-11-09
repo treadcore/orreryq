@@ -6,8 +6,10 @@ that make it a node. orrery's Machines view reads and drives it.
     status                  every machine and its recipes, as JSON (no ssh)
     probe [NAME|all]        read each machine over ssh, as the user: its OS,
                             CPU, memory, GPU, driver, CUDA, Rust, checkout,
-                            tmux, copal-tm, login banner, power-off rule;
-                            from those, each recipe's state
+                            tmux, copal-tm, login banner, power-off rule,
+                            firmware (BIOS, microcode, each disk's, the
+                            network cards', fwupd's updates); from those,
+                            each recipe's state, and which firmware is behind
     add NAME USER@ADDRESS   a machine not in the fleet yet (a fresh install
                             with OpenSSH and your key: ssh-copy-id first)
     details RECIPE NAME     what applying it would do, as JSON: the files and
@@ -144,7 +146,166 @@ else k poweroff ""; fi
 k auto_update "$( ( [ -e /etc/periodic/daily/fleet-update ] || [ -e /etc/systemd/system/fleet-update.timer ] ) && echo yes)"
 k updated "$(tail -n1 /var/log/fleet-update.log 2>/dev/null)"
 k uptime "$(uptime | sed 's/.*up *//; s/, *[0-9]* user.*//')"
+# The firmware, as the user: what the board, the CPU, the disks and the network
+# cards run. firmware() below says which of it is behind.
+dmi() { tr -s ' ' < /sys/class/dmi/id/$1 2>/dev/null | sed 's/ *$//'; }
+k fw_system "$(dmi sys_vendor) $(dmi product_name)"
+k fw_board "$(dmi board_vendor) $(dmi board_name)"
+k fw_bios "$(dmi bios_version) $(dmi bios_date)"
+k cpu_vendor "$(sed -n 's/^vendor_id[[:space:]]*: //p' /proc/cpuinfo | head -n1)"
+fms=$(printf '%02x-%02x-%02x' "$(sed -n 's/^cpu family[[:space:]]*: //p' /proc/cpuinfo | head -n1)" \
+  "$(sed -n 's/^model[[:space:]]*: //p' /proc/cpuinfo | head -n1)" "$(sed -n 's/^stepping[[:space:]]*: //p' /proc/cpuinfo | head -n1)" 2>/dev/null)
+k cpu_fms "$fms"
+k microcode "$(sed -n 's/^microcode[[:space:]]*: //p' /proc/cpuinfo | head -n1)"
+# The microcode package and the revision it carries for this CPU: Ubuntu's
+# files (06-5e-03.initramfs for a CPU Ubuntu loads only at boot), or Alpine's
+# /boot/intel-ucode.img, one cpio of them all.
+if command -v apk >/dev/null 2>&1; then
+  k ucode_pkg "$(apk info -v 2>/dev/null | grep -E '^(intel|amd)-ucode-[0-9]' | tr '\n' ' ')"
+  k ucode_repo "$(apk policy intel-ucode 2>/dev/null | sed -n '2s/^ *\([^:]*\):.*/\1/p')"
+elif command -v dpkg-query >/dev/null 2>&1; then
+  k ucode_pkg "$(dpkg-query -W -f '${Package}-${Version} ${Status}\n' intel-microcode amd64-microcode 2>/dev/null | grep 'install ok installed' | cut -d' ' -f1 | tr '\n' ' ')"
+fi
+u=/lib/firmware/intel-ucode/$fms; [ -f "$u" ] || u=$u.initramfs
+if [ -f "$u" ]; then k ucode_file "0x$(od -An -tx4 -j4 -N4 "$u" | tr -d ' ' | sed 's/^0*//')"
+elif [ -f /boot/intel-ucode.img ] && command -v python3 >/dev/null 2>&1; then
+  k ucode_file "$(python3 -c '
+import struct, sys
+f, m, s = (int(x, 16) for x in sys.argv[1].split("-"))
+want = (m >> 4) << 16 | f << 8 | (m & 15) << 4 | s
+b = open("/boot/intel-ucode.img", "rb").read()
+o, best = b.find(b"GenuineIntel.bin"), 0
+o = (o + 17 + 3) & ~3 if o > 0 else len(b)
+while o + 48 <= len(b):
+    v, rev, d, sig = struct.unpack_from("<4I", b, o)
+    ds, ts = struct.unpack_from("<2I", b, o + 28)
+    if v != 1: break
+    ts, ds = ts or 2048, ds or 2000
+    sigs = [sig] + ([struct.unpack_from("<I", b, o + 48 + ds + 20 + 12 * i)[0] for i in range(struct.unpack_from("<I", b, o + 48 + ds)[0])] if ts > ds + 48 else [])
+    best = max(best, rev) if want in sigs else best
+    o += ts
+print(hex(best) if best else "")' "$fms" 2>/dev/null)"
+fi
+# Each disk: its name, model and firmware revision, as the kernel reads them.
+d=""; for n in /sys/class/nvme/nvme*; do [ -e "$n/model" ] || continue
+  d="$d$(basename $n) $(tr -s ' ' < $n/model | sed 's/ *$//') $(tr -d ' ' < $n/firmware_rev);"; done
+for b in /sys/block/sd*; do [ -e "$b/device/model" ] || continue
+  d="$d$(basename $b) $(tr -s ' ' < $b/device/model | sed 's/ *$//') $(tr -d ' ' < $b/device/rev 2>/dev/null);"; done
+k disks_fw "$d"
+et=ethtool; for t in ethtool /usr/sbin/ethtool /sbin/ethtool; do command -v $t >/dev/null 2>&1 && et=$t && break; done
+e=""; for n in /sys/class/net/*; do [ -e "$n/device/driver" ] || continue
+  e="$e$(basename $n) $(basename "$(readlink $n/device/driver)") $($et -i $(basename $n) 2>/dev/null | sed -n 's/^firmware-version: *//p');"; done
+k nics_fw "$e"
+# fwupd, where it is installed (Ubuntu's own): the updates LVFS has for this
+# machine, from the metadata its timer fetched, as the user, no root. A daemon
+# that failed to start would hold the probe 25 s a call, so it is not asked.
+if command -v fwupdmgr >/dev/null 2>&1; then
+  k fwupd "$(dpkg-query -W -f '${Version}' fwupd 2>/dev/null || apk info -v 2>/dev/null | grep '^fwupd-[0-9]')"
+  if command -v systemctl >/dev/null 2>&1 && systemctl -q is-failed fwupd 2>/dev/null; then k fwupd_error "its service failed to start"
+  else
+    k fwupd_meta "$(ls -l --time-style=+%Y-%m-%d /var/lib/fwupd/metadata/lvfs/ 2>/dev/null | awk '!/jcat/ && $6 ~ /^20/ {print $6; exit}')"
+    k fwupd_updates "$(timeout 20 fwupdmgr get-updates --json --no-unreported-check --no-metadata-check 2>/dev/null | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except ValueError:
+    sys.exit()
+print(";".join("%s|%s|%s" % (x.get("Name"), x.get("Version"), (x.get("Releases") or [{}])[0].get("Version")) for x in d.get("Devices", [])))' 2>/dev/null)"
+  fi
+fi
 '''
+
+# WHAT IS OUT, kept by hand, with where it was read and when: the probe reads
+# what a machine runs, and nothing on it says what its vendor has since
+# published (fwupd does, for the parts whose vendors give LVFS their files,
+# and it reads them itself). An entry here is a part found in the fleet and
+# looked up; a part not here is "not checked", never "current".
+MICROCODE = {
+    "read": "intel-ucode 20260812 (Alpine's package of Intel's microcode), read 8 November 2026",
+    # family-model-stepping: the newest revision, and what being below it means
+    "06-b7-01": ("0x137", "a 13th Gen desktop Core: below 0x12b it is open to the Vmin shift, "
+                          "the instability that wears the chip out (Intel's fix, September 2024)"),
+    "06-be-00": ("0x21", ""),
+    "06-2c-02": ("0x1f", "Westmere's last, of May 2018: the Spectre and L1TF fixes"),
+    "06-9e-0d": ("0x104", ""),
+    "06-5e-03": ("0xf0", ""),
+}
+PARTS = [
+    {"model": "Samsung SSD 980 PRO", "newest": "5B2QGXA7",
+     "read": "Samsung's SSD firmware page (the 980 PRO's ISO), 8 November 2026",
+     "bad": {"3B2QGXA7": "the firmware that turns a 980 PRO read-only and kills it (Samsung, February 2023)"},
+     "how": "Samsung's 980 PRO ISO, booted from a USB stick (or its fumagician run as root)"},
+]
+HOW_UCODE = {
+    # Copal's grub.cfg is copal-init.sh's, written by hand, so nothing adds the image to it.
+    "alpine": "doas apk add intel-ucode; in /boot/boot/grub/grub.cfg each initrd line becomes initrd /intel-ucode.img /initramfs-lts; a boot",
+    "ubuntu": "sudo apt install intel-microcode, and a boot",
+}
+
+
+def firmware(f):
+    """Each part's firmware against what is known to be out: [{part, now, newest, state, why, how}],
+    state "behind", "bad" (a known fault), "current" or "not checked"."""
+    if not f or f.get("os_id") == "macos" or "fw_bios" not in f:
+        return []
+    out = []
+
+    def add(part, now, newest="", state="not checked", why="", how=""):
+        out.append({"part": part, "now": now, "newest": newest, "state": state, "why": why, "how": how})
+
+    def hexint(v):
+        try:
+            return int(v, 16)
+        except (TypeError, ValueError):
+            return None
+    add("BIOS", f.get("fw_bios", ""), why="%s: its vendor's support page" % (f.get("fw_board") or "the board"))
+    run, fms = f.get("microcode", ""), f.get("cpu_fms", "")
+    if f.get("cpu_vendor") == "GenuineIntel" and hexint(run) is not None:
+        known, means = MICROCODE.get(fms, ("", ""))
+        pkg = f.get("ucode_file", "")
+        newest = max([v for v in (known, pkg) if hexint(v)], key=hexint, default="")
+        how = HOW_UCODE.get(f.get("os_id"), "")
+        if not newest:
+            add("microcode", run, why="no revision on record for CPU %s" % fms)
+        elif hexint(run) >= hexint(newest):
+            add("microcode", run, newest, "current")
+        else:
+            if hexint(pkg) and hexint(pkg) > hexint(run):
+                why = "the package carries %s and the boot does not load it" % pkg
+            elif "intel" not in f.get("ucode_pkg", ""):
+                why = "no microcode package: the BIOS's own"
+            else:
+                why = "the package carries no newer one"
+            add("microcode", run, newest, "behind", "; ".join(x for x in (why, means) if x), how)
+    elif run:
+        add("microcode", run, why="%s: not checked" % (f.get("cpu_vendor") or "the CPU"))
+    for d in [x for x in f.get("disks_fw", "").split(";") if x.strip()]:
+        name, _, rest = d.partition(" ")
+        model, _, fw = rest.rpartition(" ")
+        p = next((p for p in PARTS if model.startswith(p["model"])), None)
+        if not p:
+            add("%s %s" % (name, model), fw)
+        elif fw in p.get("bad", {}):
+            add("%s %s" % (name, model), fw, p["newest"], "bad", p["bad"][fw], p["how"])
+        elif fw != p["newest"]:
+            add("%s %s" % (name, model), fw, p["newest"], "behind", "read: " + p["read"], p["how"])
+        else:
+            add("%s %s" % (name, model), fw, fw, "current")
+    # A network card's firmware: a file the driver loads from linux-firmware (kept by the system's
+    # updates), or the card's own (e1000e, igb, mlx4).
+    for n in [x for x in f.get("nics_fw", "").split(";") if x.strip()]:
+        name, drv, ver = (n.split(" ", 2) + ["", ""])[:3]
+        add("%s %s" % (name, drv), ver.strip())
+    if f.get("fwupd_error"):
+        add("fwupd (LVFS)", f.get("fwupd", ""), why=f["fwupd_error"], how="sudo systemctl status fwupd; an upgraded fwupd may start")
+    elif "fwupd" in f:
+        ups = [u.split("|") for u in f.get("fwupd_updates", "").split(";") if u.count("|") == 2]
+        for name, now, new in ups:
+            add(name, now, new, "behind", "fwupd (LVFS)", "sudo fwupdmgr update")
+        if not ups:
+            add("fwupd (LVFS)", "metadata of %s" % (f.get("fwupd_meta") or "?"), state="current",
+                why="no update for the parts whose vendors publish there")
+    return out
 
 
 # This Mac, the coordinator (a host whose target is "-"): read here, with
@@ -476,6 +637,7 @@ class Machines:
             f = m.get("facts") or {}
             out.append({"name": name, "target": m.get("target", ""), "joined": self.joined(name),
                          "probed": m.get("probed", ""), "error": m.get("probe_error", ""), "facts": f,
+                         "firmware": firmware(f),
                          "recipes": self.recipe_states(name), "log": m.get("log", [])[-5:],
                          "cuda_lane": any(h.get("lane_of") == name for h in self.cfg.get("hosts", []))})
         ready = [n for n, why in self.cuda_ready() if not why]
