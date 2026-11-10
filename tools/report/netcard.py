@@ -34,7 +34,8 @@ import re
 import subprocess
 import sys
 
-CRUCIBLE = os.path.expanduser("~/code/crucible")
+CRUCIBLE = os.path.expanduser("~/code/treadcore/crucible")
+TREADCORE = os.path.dirname(CRUCIBLE)
 
 SHAPES = {2340: (35, 32, 4), 5236: (55, 48, 4), 5766: (64, 48, 6)}
 GROUPS = [("rays", 0, 24), ("body", 24, 32), ("rules", 32, 35), ("world", 35, 55), ("route", 55, 59), ("arcs", 59, 62), ("memory", 62, 64)]
@@ -77,16 +78,26 @@ _REFLOG = None
 
 
 def main_at(when):
-    """crucible's main at a time (YYYY-MM-DDTHH:MM:SS, local), from its reflog: the newest move at or before it."""
+    """crucible's main at a time (YYYY-MM-DDTHH:MM:SS, local): the newest move at or before it. Until crucible
+    joined treadcore (10 November 2026), from the reflog it kept as a repository of its own, saved as
+    docs/main-reflog.tsv; after, from treadcore's commits that touched crucible/."""
     global _REFLOG
     if _REFLOG is None:
-        r = subprocess.run(["git", "-C", CRUCIBLE, "reflog", "--date=format-local:%Y-%m-%dT%H:%M:%S", "--format=%gd %h", "main"],
-                           capture_output=True, text=True)
         _REFLOG = []
+        kept = os.path.join(CRUCIBLE, "docs", "main-reflog.tsv")
+        if os.path.exists(kept):
+            for line in open(kept):
+                if line.strip() and not line.startswith("#"):
+                    t, h = line.rstrip("\n").split("\t")[:2]
+                    _REFLOG.append((t, h))
+        joined = max((t for t, _ in _REFLOG), default="")
+        r = subprocess.run(["git", "-C", TREADCORE, "log", "--date=format-local:%Y-%m-%dT%H:%M:%S", "--format=%cd %h", "--", "crucible"],
+                           capture_output=True, text=True)
         for line in r.stdout.splitlines():
-            m = re.match(r"main@\{(\S+)\} (\w+)", line)
-            if m:
-                _REFLOG.append((m.group(1), m.group(2)))
+            t, _, h = line.partition(" ")
+            if t > joined:
+                _REFLOG.append((t, h))
+        _REFLOG.sort(reverse=True)
     before = [h for t, h in _REFLOG if t <= when]
     return before[0] if before else None
 

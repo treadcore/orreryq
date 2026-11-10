@@ -69,7 +69,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-CRUCIBLE = os.path.expanduser("~/code/crucible")
+CRUCIBLE = os.path.expanduser("~/code/treadcore/crucible")
 
 
 def _growth():

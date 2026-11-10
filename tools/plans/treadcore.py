@@ -4734,7 +4734,7 @@ class Plan:
                                         fm(r.get("margin_se")), mean(sh.get("champion") or {}), mean(sh.get(r.get("against")) or {}), r["result"]]) + "\n")
         self.ladder_write(home)
     def crucible_src(self):
-        return os.path.expanduser(self.cfg.get("crucible", {}).get("source", "~/code/crucible"))
+        return os.path.expanduser(self.cfg.get("crucible", {}).get("source", "~/code/treadcore/crucible"))
 
     # ---- the gauntlet's floors guard a promotion (treadcore LR 143) --------------------------------
     # Paul, 4 November: "adjust the floors to be what we have now as sucess, so we can create

@@ -6,7 +6,8 @@
 //! - **treadcore**, the tank game's brain, measured by census on the CPUs:
 //!   its queue, its candidates, auto mode;
 //! - **crucible**, a self-learning loop that runs entirely on a GPU
-//!   (`~/code/crucible`): its runs, read from its `runs/` folder.
+//!   (`~/code/treadcore/crucible`, a subtree of treadcore since 10 November):
+//!   its runs, read from its `runs/` folder.
 //!
 //! Then a row per machine: its cores and card, and what each project has on
 //! it. NOTHING HERE IS INVENTED: treadcore's lines are the queue's status, and
@@ -41,7 +42,7 @@ pub struct Crucible {
 
 impl Crucible {
     pub fn new() -> Crucible {
-        let dir = std::env::var("ORRERY_CRUCIBLE").unwrap_or_else(|_| format!("{}/code/crucible", std::env::var("HOME").unwrap_or_default()));
+        let dir = std::env::var("ORRERY_CRUCIBLE").unwrap_or_else(|_| format!("{}/code/treadcore/crucible", std::env::var("HOME").unwrap_or_default()));
         Crucible { dir, ..Default::default() }
     }
 
