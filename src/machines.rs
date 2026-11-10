@@ -68,6 +68,8 @@ impl Machine {
 
 #[derive(Debug, Clone, Default)]
 pub struct Model {
+    /// Read by the parse test only; the screen does not name the fleet.
+    #[cfg(test)]
     pub fleet: String,
     pub machines: Vec<Machine>,
     pub why: String,
@@ -136,7 +138,12 @@ impl Model {
                     .collect(),
             })
             .collect();
-        Model { fleet: s(&v, "fleet"), machines, why: String::new() }
+        Model {
+            #[cfg(test)]
+            fleet: s(&v, "fleet"),
+            machines,
+            why: String::new(),
+        }
     }
 }
 

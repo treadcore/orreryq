@@ -25,7 +25,7 @@
 use std::ffi::{c_char, c_int, c_void, OsStr};
 use std::fs::File;
 use std::io::{ErrorKind, Read, Write};
-use std::os::fd::{AsRawFd, FromRawFd, RawFd};
+use std::os::fd::{FromRawFd, RawFd};
 use std::process::{Child, Command, Stdio};
 
 extern "C" {
@@ -205,10 +205,6 @@ impl Pty {
         let _ = self.child.kill();
         let _ = self.child.wait();
         self.status = Some(-1);
-    }
-
-    pub fn fd(&self) -> RawFd {
-        self.master.as_raw_fd()
     }
 }
 

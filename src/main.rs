@@ -29,14 +29,14 @@
 //!                          answering 403 -- a route that says "forbidden"
 //!                          tells a scanner it is there.
 
-// The primitives, and the transport built on them. Parts of both are written
-// for phases that have not arrived -- AES-GCM and DER are TLS's and the
-// certificate writer's -- so they are dead code today and deliberately so.
-// `nothing_here_is_off_the_profile` is what keeps the set honest in the
-// meantime: nothing is in there that the whitelist does not name.
-#[allow(dead_code)]
 mod commands;
 mod line;
+// The primitives, and the transport built on them. Parts of both are written
+// for phases that have not arrived: AES-GCM waits for a peer that insists on
+// AES and carries its own allow(dead_code); DER is the test certificate
+// writer's and builds only for the tests.
+// `nothing_here_is_off_the_profile` is what keeps the set honest in the
+// meantime: nothing is in there that the whitelist does not name.
 mod crypto;
 mod draw;
 #[allow(dead_code)]
@@ -46,6 +46,8 @@ mod font;
 mod http;
 mod training;
 mod json;
+// The Wayland backend's keyboard table; a Mac composes its own keys.
+#[cfg(any(target_os = "linux", test))]
 mod keymap;
 mod lab;
 mod machines;

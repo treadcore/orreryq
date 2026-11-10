@@ -28,7 +28,6 @@ use crate::nav;
 use crate::surface::Sym;
 use crate::ui::{rect, Rect, Ui};
 
-const PAD: i32 = 10;
 const TITLE_H: i32 = 18;
 const SESSION: &str = "orrery";
 

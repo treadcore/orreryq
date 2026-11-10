@@ -27,7 +27,7 @@
 //! demanding a client certificate from the fleet CA is THE control that stops
 //! mstsc and FreeRDP, because neither can be given one.
 
-use crate::crypto::{self, Digest};
+use crate::crypto;
 use crate::x509;
 use std::io::{ErrorKind, Read, Write};
 use std::net::TcpStream;

@@ -14,7 +14,7 @@
 //! follows anybody round.
 
 use crate::draw::Rgb;
-use crate::font::{Font, F6X10, F8X13};
+use crate::font::{Font, F8X13};
 use crate::json;
 use crate::ui::{rect, Rect, Ui};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -44,7 +44,6 @@ fn list(k: &str) -> &'static [json::Value] {
 pub struct Stage {
     pub id: &'static str,
     pub title: &'static str,
-    pub track: &'static str,
     pub col: i32,
     pub row: i32,
     pub input: &'static str,
@@ -52,7 +51,6 @@ pub struct Stage {
     pub simulates: &'static str,
     pub why: &'static str,
     pub adds: &'static str,
-    pub queued: &'static str,
 }
 
 pub fn stages() -> Vec<Stage> {
@@ -61,7 +59,6 @@ pub fn stages() -> Vec<Stage> {
         .map(|s| Stage {
             id: word(s, "id"),
             title: word(s, "title"),
-            track: word(s, "track"),
             col: s.get("col").and_then(|x| x.as_num()).unwrap_or(0.0) as i32,
             row: s.get("row").and_then(|x| x.as_num()).unwrap_or(0.0) as i32,
             input: word(s, "input"),
@@ -69,7 +66,6 @@ pub fn stages() -> Vec<Stage> {
             simulates: word(s, "simulates"),
             why: word(s, "why"),
             adds: word(s, "adds"),
-            queued: word(s, "queued"),
         })
         .collect()
 }
@@ -259,11 +255,6 @@ pub fn about_bar(ui: &mut Ui, body: Rect, key: &str) -> Rect {
         }
     }
     rect(below.x, panel.bottom(), below.w, below.h - h)
-}
-
-/// The small face: for a box on the flow, where a line of the big face would not fit.
-pub fn small(ui: &mut Ui, x: i32, y: i32, w: i32, s: &str, c: Rgb) {
-    ui.label_in(x, y, w, s, &F6X10, c);
 }
 
 #[cfg(test)]

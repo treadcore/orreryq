@@ -1895,7 +1895,7 @@ fn draw_keeper_page(ui: &mut Ui, at: Rect, q: &Queue, st: &mut State) {
     let bw = side - 10;
     let running = q.keeper_up();
     let mut by = at.y;
-    let mut note = |ui: &mut Ui, by: &mut i32, text: &str| {
+    let note = |ui: &mut Ui, by: &mut i32, text: &str| {
         for l in wrap(text, bw) {
             ui.label_in(bx, *by, bw, &l, &F8X13, t.dim);
             *by += lh;

@@ -77,7 +77,6 @@ pub struct UiState {
     pub pointer: (i32, i32),
     pub down: bool,
     active: Option<u64>,
-    pub focus: Option<u64>,
     /// The "About this screen" panel (line.rs): which screen, and whether it is open.
     pub about_key: String,
     pub about_open: bool,

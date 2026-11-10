@@ -138,6 +138,8 @@ pub struct Stranger {
 #[derive(Debug, Clone, Default)]
 pub struct Model {
     pub fleet: String,
+    /// Read by the fixture test only; no screen names the warden.
+    #[cfg(test)]
     pub warden: String,
     pub live: bool,
     pub why: String,
@@ -175,6 +177,7 @@ impl Model {
 
         let mut m = Model {
             fleet: s_of(&v, "fleet"),
+            #[cfg(test)]
             warden: s_of(&v, "warden"),
             // `annotate` splices these in, and both halves always travel: a
             // fallback that is labelled but not explained is still a quiet
@@ -362,9 +365,6 @@ impl Results {
     pub fn ok(&self) -> usize {
         self.items.iter().filter(|o| o.code == 0).count()
     }
-    pub fn failed(&self) -> usize {
-        self.items.iter().filter(|o| o.code != 0).count()
-    }
 }
 
 /// What the operator pressed, handed back for the caller to run.
@@ -379,7 +379,6 @@ pub enum Action {
     Typed { name: &'static str, nodes: Vec<String>, arg: String },
     /// Go to another face of the console.
     Go(nav::View),
-    Quit,
 }
 
 // ------------------------------------------------------------------- the state ---

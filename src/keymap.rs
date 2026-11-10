@@ -81,6 +81,8 @@ pub fn set1(evdev: u16) -> u16 {
     }
 }
 
+// rdp.rs checks the prefix inline; only the tests here call this.
+#[cfg(test)]
 pub fn is_extended(scancode: u16) -> bool {
     scancode & 0xff00 == 0xe000
 }

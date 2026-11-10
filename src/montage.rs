@@ -125,10 +125,6 @@ pub fn node_hue(i: usize) -> Rgb {
     (c(r) << 16) | (c(g) << 8) | c(b)
 }
 
-fn seg(ui: &mut Ui, a: (i32, i32), b: (i32, i32), c: Rgb) {
-    dashed(ui, a, b, c, false)
-}
-
 /// A line, dotted when `dots`: a wire that inhibits, the sign a colour can no longer carry.
 fn dashed(ui: &mut Ui, (x0, y0): (i32, i32), (x1, y1): (i32, i32), c: Rgb, dots: bool) {
     let (dx, dy) = ((x1 - x0).abs(), -(y1 - y0).abs());

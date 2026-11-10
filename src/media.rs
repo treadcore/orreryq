@@ -85,6 +85,10 @@ impl Answers {
     /// THE PASSWORD HASH IS NEVER RETURNED AND NEVER DRAWN. It is in the file,
     /// it is a SHA-512 crypt hash rather than a password, and it is still not
     /// something to put on a gallery screen.
+    ///
+    /// No screen lists the answers wholesale yet (each is asked for by name),
+    /// so only the test holds this list to account for now.
+    #[cfg(test)]
     pub fn is_secret(key: &str) -> bool {
         matches!(
             key,
@@ -106,16 +110,6 @@ pub enum Token {
     Spent,
     /// No token on file: this card has never been prepared.
     None,
-}
-
-impl Token {
-    pub fn word(&self) -> &'static str {
-        match self {
-            Token::Unused => "issued",
-            Token::Spent => "enrolled",
-            Token::None => "-",
-        }
-    }
 }
 
 /// One card of the fleet, from three sources that have to agree.

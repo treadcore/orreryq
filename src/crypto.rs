@@ -104,8 +104,12 @@ pub fn random(n: usize) -> Result<Vec<u8>, String> {
 // base64 -- the format every key file on the fleet is written in
 // ---------------------------------------------------------------------------
 
+// The encoder is only the tests' (key and certificate fixtures); the console
+// itself only ever decodes.
+#[cfg(test)]
 const B64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
+#[cfg(test)]
 pub fn b64_encode(data: &[u8]) -> String {
     let mut out = String::with_capacity((data.len() + 2) / 3 * 4);
     for c in data.chunks(3) {
@@ -1339,7 +1343,8 @@ pub fn ed25519_verify(pubkey: &[u8; 32], msg: &[u8], sig: &[u8; 64]) -> bool {
     ct_eq(&lhs.encode(), &rbytes)
 }
 
-/// A fresh signing key: (seed, public).
+/// A fresh signing key: (seed, public). Only the tests make keys.
+#[cfg(test)]
 pub fn ed25519_keypair() -> Result<([u8; 32], [u8; 32]), String> {
     let r = random(32)?;
     let mut seed = [0u8; 32];
@@ -1840,6 +1845,8 @@ fn mix_columns(w: &mut Bs) {
 }
 
 /// An AES-256 key, expanded into fifteen round keys, each already bitsliced.
+// Kept as R4's compatibility path (docs/wire.md) for a peer that requires AES; nothing offers it yet.
+#[allow(dead_code)]
 pub struct Aes256 {
     rk: [Bs; 15],
 }
@@ -2030,6 +2037,8 @@ fn gcm_setup(aes: &Aes256, nonce: &[u8; 12]) -> ([u64; 2], [u8; 16]) {
 /// which is what TLS and every other modern user of GCM sends -- the other
 /// lengths go through a GHASH of the nonce and exist only for compatibility
 /// with things this console will never talk to.
+// Kept as R4's compatibility path (docs/wire.md) for a peer that requires AES; nothing offers it yet.
+#[allow(dead_code)]
 pub fn aes256_gcm_seal(key: &[u8; 32], nonce: &[u8; 12], aad: &[u8], buf: &mut [u8]) -> [u8; 16] {
     let aes = Aes256::new(key);
     let (h, j0) = gcm_setup(&aes, nonce);
@@ -2041,6 +2050,8 @@ pub fn aes256_gcm_seal(key: &[u8; 32], nonce: &[u8; 12], aad: &[u8], buf: &mut [
 /// Verify, then decrypt. In that order, for the reason the ChaCha version
 /// gives: a plaintext produced before the tag was checked is a plaintext an
 /// attacker chose.
+// Kept as R4's compatibility path (docs/wire.md) for a peer that requires AES; nothing offers it yet.
+#[allow(dead_code)]
 pub fn aes256_gcm_open(
     key: &[u8; 32],
     nonce: &[u8; 12],
@@ -2070,7 +2081,11 @@ pub fn aes256_gcm_open(
 // WHAT IS: the bugs in ASN.1 parsers are in the generality, and a console that
 // only ever reads certificates it issued itself does not need any of it.
 
+// The writer below is the tests' only (`x509::mint` makes their certificates);
+// the console itself only reads, with `der_read`.
+
 /// A tag byte and its contents, wrapped with a definite length.
+#[cfg(test)]
 pub fn der(tag: u8, contents: &[u8]) -> Vec<u8> {
     let mut out = vec![tag];
     let n = contents.len();
@@ -2086,6 +2101,7 @@ pub fn der(tag: u8, contents: &[u8]) -> Vec<u8> {
     out
 }
 
+#[cfg(test)]
 pub fn der_seq(parts: &[Vec<u8>]) -> Vec<u8> {
     let mut body = Vec::new();
     for p in parts {
@@ -2097,6 +2113,7 @@ pub fn der_seq(parts: &[Vec<u8>]) -> Vec<u8> {
 /// An INTEGER, which is signed -- so a value whose top bit is set needs a
 /// leading zero or it reads back as a negative number. Serial numbers are
 /// where that bites, because they are usually random.
+#[cfg(test)]
 pub fn der_int(value: &[u8]) -> Vec<u8> {
     let first = value.iter().position(|b| *b != 0).unwrap_or(value.len());
     let trimmed = &value[first..];
@@ -2114,6 +2131,7 @@ pub fn der_int(value: &[u8]) -> Vec<u8> {
 
 /// A BIT STRING with no unused bits, which is the only kind a key or a
 /// signature ever is.
+#[cfg(test)]
 pub fn der_bits(value: &[u8]) -> Vec<u8> {
     let mut body = vec![0u8];
     body.extend_from_slice(value);
@@ -2121,6 +2139,7 @@ pub fn der_bits(value: &[u8]) -> Vec<u8> {
 }
 
 /// An OBJECT IDENTIFIER from its arcs.
+#[cfg(test)]
 pub fn der_oid(arcs: &[u32]) -> Vec<u8> {
     let mut body = vec![(arcs[0] * 40 + arcs[1]) as u8];
     for arc in &arcs[2..] {

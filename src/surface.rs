@@ -20,6 +20,8 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Button {
     Left,
+    // Only the Wayland backend (wl.rs) reports a middle button; mac.rs does not.
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     Middle,
     Right,
 }
@@ -102,6 +104,8 @@ pub enum Input {
     /// A menu item was chosen: its row in commands::MENU (mac.rs).
     Menu(usize),
     /// The platform thinks now is a good time to draw.
+    // Part of the seam docs/surface.md §2 designs; no platform sends it yet.
+    #[allow(dead_code)]
     Frame,
 }
 
@@ -124,6 +128,8 @@ pub trait Surface {
 
     /// True while the platform is still reading the last buffer. Painting into
     /// it is the classic tear.
+    // wl.rs answers it; the shared loop does not ask yet (docs/surface.md §1).
+    #[allow(dead_code)]
     fn busy(&self) -> bool {
         false
     }
@@ -135,6 +141,9 @@ pub trait Surface {
 /// in `docs/console.md` can be regenerated into a file, diffed, and pasted
 /// into a review. A console whose screens can only be seen by standing in
 /// front of one is a console nobody reviews.
+// Only the tests use it today: `--frame` writes its PPM itself (main.rs's
+// `write_frame`).
+#[cfg(test)]
 pub struct Offscreen {
     px: Vec<u8>,
     w: usize,
@@ -142,6 +151,7 @@ pub struct Offscreen {
     queued: Vec<Input>,
 }
 
+#[cfg(test)]
 impl Offscreen {
     pub fn new(w: usize, h: usize) -> Offscreen {
         Offscreen { px: vec![0; w * h * 4], w, h, queued: Vec::new() }
@@ -168,6 +178,7 @@ impl Offscreen {
     }
 }
 
+#[cfg(test)]
 impl Surface for Offscreen {
     fn pixels(&mut self) -> &mut [u8] {
         &mut self.px

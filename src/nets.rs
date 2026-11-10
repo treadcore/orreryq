@@ -169,7 +169,6 @@ fn journey(net: &Value) -> Vec<(String, String, String)> {
 /// The page. `ctl` takes a verb for `fleet-queue.py QUEUE nets ...`.
 pub fn draw(ui: &mut Ui, at: Rect, doc: Option<&Value>, st: &mut State, operator: bool, ctl: &mut Option<String>) {
     let t = ui.t;
-    let lh = F8X13.height as i32 + 3;
     let Some(doc) = doc.filter(|d| d.get("nets").is_some()) else {
         ui.label_in(at.x, at.y, at.w, "No register yet: tools/nets.py QUEUE writes plan/nets.json (the keeper starts it each five minutes, or run it by hand).", &F8X13, t.dim);
         return;

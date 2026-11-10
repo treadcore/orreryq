@@ -97,7 +97,8 @@ impl View {
         }
     }
 
-    /// Every view, chapter by chapter.
+    /// Every view, chapter by chapter. Only the tests walk it.
+    #[cfg(test)]
     pub const ALL: &'static [View] =
         &[View::Machines, View::Media, View::Storage, View::Bench, View::Firmware, View::Projects, View::Queue, View::Pipeline, View::Results, View::Lab, View::Sessions, View::Fleet, View::Chat, View::Settings];
 

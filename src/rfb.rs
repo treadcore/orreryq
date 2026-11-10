@@ -817,8 +817,6 @@ pub mod fake {
 
     pub struct Fake {
         pub port: u16,
-        pub w: usize,
-        pub h: usize,
     }
 
     /// Serve exactly one client, then stop.
@@ -934,7 +932,7 @@ pub mod fake {
             }
         });
 
-        (Fake { port, w, h }, handle)
+        (Fake { port }, handle)
     }
 
     /// vnc_response("fleetpw1", 0..16), pinned after tools/vnc-check.sh proved

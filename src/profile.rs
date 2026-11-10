@@ -46,6 +46,10 @@ pub const CURRENT: u32 = 1;
 pub const MIN_ACCEPTED: u32 = 1;
 
 /// Everything one profile permits.
+///
+/// Declared whole even where the code does not read it yet: `tls.rs` and
+/// `rdp.rs` hard-code their one choice, and the tests hold them to these fields.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub struct Profile {
     pub version: u32,
@@ -109,16 +113,21 @@ pub const P1: Profile = Profile {
     rdp_client_cert: true,
 };
 
+// The version check below is for the beacon's profile reading (see the top of
+// this file); nothing calls it yet, and the tests hold it to its rules.
+#[allow(dead_code)]
 pub fn current() -> &'static Profile {
     &P1
 }
 
 /// Is a peer announcing profile `v` one this console will talk to?
+#[allow(dead_code)]
 pub fn accepts(v: u32) -> bool {
     v >= MIN_ACCEPTED && v <= CURRENT
 }
 
 /// Why a peer was refused, as the sentence the operator sees.
+#[allow(dead_code)]
 pub fn refusal(v: u32) -> Option<String> {
     if accepts(v) {
         return None;
