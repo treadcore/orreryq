@@ -427,7 +427,8 @@ class Plan:
     # running at the time. These paths go into no census binary: the fleet stays on the last commit that
     # touched anything else, the line stays where it is, and land() puts the difference right on the
     # way to main. The two scripts run on this machine alone, from its checkout.
-    NOT_BUILT = ("reports", "docs", "scripts/suggest.py", "scripts/ledger.py")
+    # crucible/ is the cards' program, sent to them as source with each segment: no census binary holds it.
+    NOT_BUILT = ("reports", "docs", "scripts/suggest.py", "scripts/ledger.py", "crucible")
 
     def build_tip(self, tip):
         """The newest commit at or under tip that something a machine builds has changed in."""
@@ -5880,7 +5881,11 @@ class Plan:
                     # The milestones by name, oldest first, from their slots.
                     "rm -rf $H/rungs; mkdir -p $H/rungs; R=''\n"
                     "while IFS=\"$(printf '\\t')\" read -r s m; do if [ -n \"$m\" ]; then cp $H/ladder/$s $H/rungs/$m.bin; R=\"$R${R:+,}$H/rungs/$m.bin\"; fi; done < $H/ladder/ladder.txt\n"
-                    "./crucible --pop %d --eps %d --gens %d --yard %d --seed %d --lad %s --draw %s $L ${I:+--import $I} ${R:+--ladder $R} "
+                    # THE CARDS GROW ONE NET (Paul, 13 November: "all the cuda need to work together ... they grow the net").
+                    # What an island is sent was an opponent only (the hall of fame); now it is a migrant too, in
+                    # the population, a parent if it ranks there. The list is the same: the net the game ships
+                    # and the champions of the islands the game has not refused.
+                    "./crucible --pop %d --eps %d --gens %d --yard %d --seed %d --lad %s --draw %s $L ${I:+--import $I --migrate $I} ${R:+--ladder $R} "
                     "--save $H/island.state --export $O/champ.bin --out $O/gens.tsv --exam $O/exam.tsv GAUNTLET_NOW2>&1 | tee $O/console.txt | grep '^#'\n"
                 ) % (home, self.home, jid, ",".join(imports), opt["pop"], opt["eps"], opt["gens"], opt["yard"], seed, opt["lad"], opt["draw"])
                 # The newest rung is the gauntlet's reference: the champion and it, on the same runs.
