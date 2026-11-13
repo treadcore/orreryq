@@ -150,7 +150,7 @@ Four candidates passed both held-out reads and scored 0 of 400 on the family "a 
 
 **Proved.** `each_part_of_smoothing_follows_w_smooth_until_its_own_choice_says`; treadcore-brain, 178 passed.
 
-**Not yet on treadcore's main.** A commit to the game's source replays the line and starts its proof's pool again, so the push waits for the line's check to end (section XI).
+**On treadcore's main since 09:27 on 13 November** (2945c7e), once the line's check had ended (section XI): a commit to the game's source would have started that proof's pool again.
 
 ## X. The fixed yardstick
 
@@ -168,7 +168,7 @@ Every read the line makes is of a child against its parent. A chain of those can
 
 **The line's check.** When the settle rule went live at 07:50 the line stood at f1ce347, ten generations, read 3,200 seeds at −0.01 ± 0.17. The planner raised "the line f1ce347 settles first: its proof has read 3200 of 9600 seeds" and asked six proofs at once (pv0347 to pv0352).
 
-When this was written the first round was four reads of six back, and the head stood at 3,200 seeds counted. **The outcome is not in this report.** At −0.01 the rule will orphan the ten generations when the head reaches 9,600 seeds, unless the next reads lift its upper bound past 0.25: the planner's flag will say which, and the generations' states will read `orphaned` or stay. The `w_smooth` split goes to treadcore's main after that.
+**The line came off at 09:26.** After three rounds of six reads the proof stood at **−0.02 ± 0.10 over main in 10,400 seeds**: with two errors added, +0.18, under the 0.25 a generation is worth. `orphan()` marked r0220, r0223, r0235, r0239, r0254, r0257, r0279, r0290, r0323 and r0326 orphaned, set the line's branch to main, and the fleet went back to building main. The planner's flag: "the line f1ce347 came off". The `w_smooth` split and the floor on `w_pos_defend` went to treadcore's main at 09:27 (2945c7e), with no line left for the push to disturb.
 
 **The yardstick.** Its first round, fifteen reads of 400 seeds, was asked that morning and was in the queue when this was written. Its first rows will be of the line as it stood, f1ce347, against the three mains.
 

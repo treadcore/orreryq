@@ -194,12 +194,14 @@ Found while doing this one, in the order they would pay:
 6. **The temperament matrix** has asked 72 trials in three rounds. What they found has not been read here.
 7. **The maps' weights** [1]: still Paul's.
 
-## XIV. What is not done
+Items 4 and 6 were done and item 5 looked at the same morning (section XIV); 2 needed nothing, a wide trial being one a generation already.
 
-- **treadcore's branch `smooth-parts`** (the split of `w_smooth`, LR 157; the floor of 0.75 on `w_pos_defend`) is two commits and not on main. A commit to the game's source starts the line's proof again, and the line's check had not ended.
-- **The line's ten generations** stood at −0.05 ± 0.11 over 8,000 seeds at 08:58. At 9,600 the rule takes them off unless their upper bound passes 0.25.
-- **The yardstick's first rows** were not back.
-- **The Yardstick tab** was drawn and looked at with constructed rows.
+## XIV. What happened next, and what is not done
+
+- **The line came off at 09:26.** Its proof read −0.02 ± 0.10 over main in 10,400 seeds, and the ten generations r0220 to r0326 were orphaned by the rule [2]. The fleet builds main.
+- **treadcore's main has the split and the floor** since 09:27 (2945c7e): `w_smooth`'s four parts as choices (LR 157) and `w_pos_defend` held at 0.75 or more. The A/B trials read each part from the next generation.
+- **The next round, done the same morning**: the half hour between generations is 0 (`generation_every_min`), and the temperament rounds are off (`temper_every` 0): three rounds, 24 settings and 9,869 seeds, none past z 2 upward and one, `temper_engage_3` at +0.5, at −1.37 ± 0.43. Whitewolf's island was looked at and is well: its 27 warnings were all of one bad build on 6 November, and its disk is at 5.3 GB. It is left running.
+- **Not done**: the yardstick's first rows were not back; the Yardstick tab was drawn and looked at with constructed rows; reads on, 41% of the hours, wait for three days at a first read of 150.
 
 ## XV. How to make it again
 
