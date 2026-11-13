@@ -1,0 +1,559 @@
+WEBVTT
+
+00:00:00.800 --> 00:00:05.200
+For one week in November, a game got better ten times.
+
+00:00:05.200 --> 00:00:07.200
+Ten changes to its brain.
+
+00:00:07.200 --> 00:00:10.000
+Each one tested on hundreds of games.
+
+00:00:10.000 --> 00:00:12.000
+Each one a measured gain.
+
+00:00:12.000 --> 00:00:12.800
+Added together:
+
+00:00:12.800 --> 00:00:14.800
+six and a half points.
+
+00:00:14.800 --> 00:00:21.600
+Then all ten were measured at once, against the game as it had been a week before.
+
+00:00:21.600 --> 00:00:23.200
+The gain was zero.
+
+00:00:25.800 --> 00:00:27.400
+How can that be?
+
+00:00:27.400 --> 00:00:31.400
+Here is every change the search tried in two weeks.
+
+00:00:31.400 --> 00:00:37.400
+Two thousand six hundred and sixty-seven of them, each placed by how well it scored.
+
+00:00:37.400 --> 00:00:44.200
+And here is the curve you would get if not one of them did anything at all.
+
+00:00:44.200 --> 00:00:46.200
+They are the same curve.
+
+00:00:46.200 --> 00:00:51.400
+So when we kept the best of them, we were keeping the luckiest.
+
+00:00:51.400 --> 00:00:53.800
+And luck, measured again, goes home.
+
+00:00:56.400 --> 00:01:01.600
+Every measurement is a little signal, wrapped in a great deal of noise.
+
+00:01:01.600 --> 00:01:08.800
+A machine that learns must tell the two apart, or it will teach itself its own good fortune.
+
+00:01:08.800 --> 00:01:18.000
+This is the story of one machine that learns to play a game, and of the borders it built against its own luck.
+
+00:01:20.600 --> 00:01:23.000
+This is how a game learns.
+
+00:01:23.000 --> 00:01:25.400
+Not by anyone's opinion of it.
+
+00:01:25.400 --> 00:01:30.200
+By playing itself, many thousands of times, and keeping only what survives.
+
+00:01:32.800 --> 00:01:34.400
+Begin from far away.
+
+00:01:34.400 --> 00:01:36.000
+There are three territories.
+
+00:01:36.000 --> 00:01:39.200
+Main is the game as people play it:
+
+00:01:39.200 --> 00:01:41.600
+its rules, its brain, its net.
+
+00:01:41.600 --> 00:01:44.400
+Nothing in main is changed by hand.
+
+00:01:44.400 --> 00:01:46.800
+To the right, eight ordinary machines.
+
+00:01:46.800 --> 00:01:55.600
+They take the game as it is now, and play whole games, to measure one change to its brain at a time.
+
+00:01:55.600 --> 00:01:58.400
+Only what is proved better goes back.
+
+00:01:58.400 --> 00:02:00.800
+To the left, three graphics cards.
+
+00:02:00.800 --> 00:02:08.400
+They take the rules of the world, and grow a small neural net inside a fast copy of it.
+
+00:02:08.400 --> 00:02:12.000
+Only a net the game itself credits goes back.
+
+00:02:12.000 --> 00:02:12.800
+Four arrows.
+
+00:02:12.800 --> 00:02:16.000
+Everything that follows is the inside of them.
+
+00:02:18.600 --> 00:02:22.600
+Between the territories are borders, and each has its price.
+
+00:02:22.600 --> 00:02:26.200
+From main to the fleet, the crossing is free:
+
+00:02:26.200 --> 00:02:28.600
+to read is to change nothing.
+
+00:02:28.600 --> 00:02:31.000
+From the fleet to the line:
+
+00:02:31.000 --> 00:02:36.200
+a gain that held on seeds the trial never saw, and every gate.
+
+00:02:36.200 --> 00:02:38.200
+From the line to main:
+
+00:02:38.200 --> 00:02:39.000
+a proof.
+
+00:02:39.000 --> 00:02:43.400
+The new game against the old, nine thousand six hundred games.
+
+00:02:43.400 --> 00:02:45.800
+And from the cards to main:
+
+00:02:45.800 --> 00:02:48.600
+the game's own reading of the net.
+
+00:02:48.600 --> 00:02:49.000
+Twice.
+
+00:02:51.600 --> 00:02:53.200
+First, the brain's loop.
+
+00:02:53.200 --> 00:02:54.000
+Thirteen arrows.
+
+00:02:54.000 --> 00:02:57.200
+We will take them one at a time.
+
+00:02:59.800 --> 00:03:01.800
+Start where the game is.
+
+00:03:01.800 --> 00:03:07.800
+Every dial and switch of its brain, exactly as shipped, is read out of main.
+
+00:03:07.800 --> 00:03:09.400
+Nothing changes by looking.
+
+00:03:09.400 --> 00:03:15.400
+But every question the fleet will ask is asked against this, and against nothing else.
+
+00:03:18.000 --> 00:03:20.000
+The search makes a guess.
+
+00:03:20.000 --> 00:03:21.200
+One dial moved.
+
+00:03:21.200 --> 00:03:22.400
+One switch flipped.
+
+00:03:22.400 --> 00:03:28.400
+Only one, when it can, so that if the game gets better, we know why.
+
+00:03:28.400 --> 00:03:31.200
+A trial is a question, put plainly:
+
+00:03:31.200 --> 00:03:34.400
+is the game better with this one change?
+
+00:03:37.000 --> 00:03:38.600
+The answer costs games.
+
+00:03:38.600 --> 00:03:46.200
+One hundred and fifty of them, on thirteen maps, each played twice on the same roll of the dice:
+
+00:03:46.200 --> 00:03:48.600
+once with the change, once without.
+
+00:03:48.600 --> 00:03:50.200
+Most guesses do nothing.
+
+00:03:50.200 --> 00:03:53.800
+The first read exists to let them go cheaply.
+
+00:03:56.400 --> 00:04:03.200
+A guess that looks good is read again, with more games and a higher bar each time.
+
+00:04:03.200 --> 00:04:04.800
+But notice the trap.
+
+00:04:04.800 --> 00:04:10.800
+We chose it because it scored high, and part of any high score is luck.
+
+00:04:10.800 --> 00:04:14.800
+So it is sent where its luck must start over.
+
+00:04:17.400 --> 00:04:18.200
+Fresh seeds.
+
+00:04:18.200 --> 00:04:21.400
+Games no trial has ever been measured on.
+
+00:04:21.400 --> 00:04:25.000
+If the gain is real, it is still there.
+
+00:04:25.000 --> 00:04:27.800
+If it was luck, it is gone.
+
+00:04:27.800 --> 00:04:30.600
+Up to six such reads are pooled.
+
+00:04:30.600 --> 00:04:32.600
+What survives is a candidate:
+
+00:04:32.600 --> 00:04:35.400
+something we now have reason to believe.
+
+00:04:38.000 --> 00:04:42.000
+Belief is not enough, because points do not show everything.
+
+00:04:42.000 --> 00:04:44.400
+So the gates ask three things.
+
+00:04:44.400 --> 00:04:46.800
+Is the gain worth a generation?
+
+00:04:46.800 --> 00:04:50.400
+Does every scenario the game must pass still pass?
+
+00:04:50.400 --> 00:04:56.000
+And if it gives something up, does it gain enough to pay for it?
+
+00:04:56.000 --> 00:04:59.200
+Then it becomes one commit, on the line.
+
+00:05:01.800 --> 00:05:05.000
+The line is a waiting room for one.
+
+00:05:05.000 --> 00:05:08.600
+The new game, complete, plays the old game, complete:
+
+00:05:08.600 --> 00:05:10.600
+nine thousand six hundred games.
+
+00:05:10.600 --> 00:05:13.400
+Ten times what any trial was given.
+
+00:05:13.400 --> 00:05:17.800
+And nothing else may join the line until this is decided.
+
+00:05:20.400 --> 00:05:24.800
+If it leads by three of its own errors, it crosses.
+
+00:05:24.800 --> 00:05:26.400
+The commit becomes main.
+
+00:05:26.400 --> 00:05:35.200
+This is the only door by which the game's brain ever changes, and what goes through it is exactly what was measured.
+
+00:05:37.800 --> 00:05:41.000
+If it does not lead, it comes off.
+
+00:05:41.000 --> 00:05:43.400
+This matters more than it seems.
+
+00:05:43.400 --> 00:05:50.200
+A block that is worth nothing, left in place, becomes the ground every later trial stands on.
+
+00:05:50.200 --> 00:05:54.200
+For one week in November, ten such blocks stood there.
+
+00:05:56.800 --> 00:05:58.800
+But refused is not forgotten.
+
+00:05:58.800 --> 00:06:04.800
+The trial goes back to the search, with everything that was ever read of it.
+
+00:06:04.800 --> 00:06:09.200
+On another day, on other values, it may be asked again.
+
+00:06:11.800 --> 00:06:13.800
+There is a third ending.
+
+00:06:13.800 --> 00:06:19.000
+A line can win on every map together, and still lose on one.
+
+00:06:19.000 --> 00:06:21.000
+Twelve maps for, one against:
+
+00:06:21.000 --> 00:06:22.600
+is that a gain?
+
+00:06:22.600 --> 00:06:25.400
+It is not a question of arithmetic.
+
+00:06:25.400 --> 00:06:29.400
+So the process stops, and says so, with the numbers.
+
+00:06:32.000 --> 00:06:33.600
+And a person answers.
+
+00:06:33.600 --> 00:06:41.600
+On the thirteenth of November the line stood nearly four points ahead, with one map of thirteen two points behind.
+
+00:06:41.600 --> 00:06:42.800
+Paul sent it.
+
+00:06:42.800 --> 00:06:46.800
+This is the one border held by a human hand.
+
+00:06:49.400 --> 00:06:52.200
+Last, a ruler that does not move.
+
+00:06:52.200 --> 00:06:59.000
+Today's game against the game of three fixed days, on the same two thousand seeds, every day.
+
+00:06:59.000 --> 00:07:03.000
+A line can pass every gate and still stand still.
+
+00:07:03.000 --> 00:07:05.800
+The yardstick is how we would know.
+
+00:07:08.400 --> 00:07:10.000
+Now the net's loop.
+
+00:07:10.000 --> 00:07:13.600
+Nine arrows, and the same care at every border.
+
+00:07:16.200 --> 00:07:17.800
+Now the other loop.
+
+00:07:17.800 --> 00:07:21.800
+Three graphics cards are given the rules of the world:
+
+00:07:21.800 --> 00:07:28.200
+the speed of a tank, the reach of its gun, the pillboxes, the trees, the maze.
+
+00:07:28.200 --> 00:07:32.200
+From them each builds a fast copy of that world.
+
+00:07:32.200 --> 00:07:37.400
+A net is worth growing only in the world it will fight in.
+
+00:07:40.000 --> 00:07:42.000
+On each card, an island:
+
+00:07:42.000 --> 00:07:49.600
+two thousand and forty-eight small nets, fighting the best of their own past, a hundred generations at a sitting.
+
+00:07:49.600 --> 00:07:54.400
+The best of them is examined against a ladder of earlier champions.
+
+00:07:54.400 --> 00:07:58.000
+Beat the top rung, and it is a milestone.
+
+00:08:00.600 --> 00:08:05.000
+But the arena is a copy, and a copy can flatter.
+
+00:08:05.000 --> 00:08:07.400
+So the milestone leaves its card.
+
+00:08:07.400 --> 00:08:14.200
+Five thousand seven hundred and sixty-six numbers, carried to an ordinary machine, to play the real game:
+
+00:08:14.200 --> 00:08:20.600
+one hundred and ninety-two games as itself, and the same games as the net already shipped.
+
+00:08:23.200 --> 00:08:25.600
+Sometimes the game says no, plainly.
+
+00:08:25.600 --> 00:08:27.200
+The arena admired it.
+
+00:08:27.200 --> 00:08:28.800
+The game did not.
+
+00:08:28.800 --> 00:08:33.200
+Then it must stop being the bar the cards climb toward.
+
+00:08:33.200 --> 00:08:40.400
+It is no rung of the ladder, and an island refused three times running sends its champions nowhere.
+
+00:08:43.000 --> 00:08:45.000
+Sometimes the game says yes.
+
+00:08:45.000 --> 00:08:47.000
+And here is the temptation:
+
+00:08:47.000 --> 00:08:48.200
+to believe it.
+
+00:08:48.200 --> 00:08:53.000
+But in forty-four such readings, one will say yes by chance alone.
+
+00:08:53.000 --> 00:09:00.600
+So a yes earns only a second reading, three times as long, on seeds it was not chosen on.
+
+00:09:03.200 --> 00:09:07.200
+If the second reading agrees, the net crosses into main.
+
+00:09:07.200 --> 00:09:12.000
+It is the only door by which the game's net ever changes.
+
+00:09:12.000 --> 00:09:19.600
+On the thirteenth of November a net called M 30 went through it, nearly two points better, and confirmed.
+
+00:09:22.200 --> 00:09:24.600
+And now the verdict comes home.
+
+00:09:24.600 --> 00:09:34.600
+The net the game credited, together with the champions of every island still in good standing, is sent back across the border, to every card.
+
+00:09:37.200 --> 00:09:38.800
+Not as a visitor.
+
+00:09:38.800 --> 00:09:46.400
+Until this day, a net from another card was only an opponent, and three cards grew three different nets.
+
+00:09:46.400 --> 00:09:50.000
+Now a migrant is written into the population itself.
+
+00:09:50.000 --> 00:09:52.800
+If it ranks, it becomes a parent.
+
+00:09:52.800 --> 00:09:54.800
+The cards grow one net.
+
+00:09:57.400 --> 00:10:00.200
+And the island the game keeps refusing?
+
+00:10:00.200 --> 00:10:02.200
+It is not switched off.
+
+00:10:02.200 --> 00:10:05.800
+It receives the better line, and breeds from it.
+
+00:10:05.800 --> 00:10:10.200
+It simply does not send, until the game stops saying no.
+
+00:10:12.800 --> 00:10:16.400
+And one arrow more, where the two loops meet.
+
+00:10:19.000 --> 00:10:21.400
+One arrow joins the two loops.
+
+00:10:21.400 --> 00:10:26.200
+The shipped net plays in the very games that measure the brain.
+
+00:10:26.200 --> 00:10:34.600
+So the brain is tuned in a world that contains the net, and the net is grown under the brain's rules.
+
+00:10:34.600 --> 00:10:37.400
+Each is part of the other's weather.
+
+00:10:40.000 --> 00:10:44.400
+The same arrows, now with one real thing travelling over them.
+
+00:10:44.400 --> 00:10:46.000
+found on 5 November:
+
+00:10:46.000 --> 00:10:51.200
++2.0 to +4.3 a seat, every time it was read its first read:
+
+00:10:51.200 --> 00:10:54.400
++4.29 a seat over every bar held out:
+
+00:10:54.400 --> 00:10:58.000
++3.46 +/- 0.54 09:09 the trade rule is changed:
+
+00:10:58.000 --> 00:11:04.800
+it gives up 0.44 kills, and gains enough to pay for it 10:40 on the line, alone.
+
+00:11:04.800 --> 00:11:10.800
+The proof begins 12:57 proved, +3.91 +/- 0.11, and one map of thirteen reads under:
+
+00:11:10.800 --> 00:11:14.000
+held, and silent 13:22 the flag is raised.
+
+00:11:14.000 --> 00:11:15.600
+13:45 Paul sends it.
+
+00:11:15.600 --> 00:11:16.800
+It is main
+
+00:11:19.400 --> 00:11:23.800
+The same arrows, now with one real thing travelling over them.
+
+00:11:23.800 --> 00:11:24.600
+10 November:
+
+00:11:24.600 --> 00:11:29.400
+calber's island elects its champion at generation 290,500 read in the game:
+
+00:11:29.400 --> 00:11:37.000
++2.28 +/- 0.98 over the shipped net, on 192 seeds its ship fails on a file size nobody updated.
+
+00:11:37.000 --> 00:11:40.200
+Three days at the border, unread 13 November:
+
+00:11:40.200 --> 00:11:43.800
+shipped at 11:39, then checked on 576 fresh seeds:
+
+00:11:43.800 --> 00:11:45.000
++1.85 +/- 0.70.
+
+00:11:45.000 --> 00:11:52.200
+Confirmed the game's net returns to the cards and at 13:51 the first two migrants join calber's population
+
+00:11:54.800 --> 00:12:00.000
+Step back, and the two loops are one shape, drawn at every border.
+
+00:12:00.000 --> 00:12:02.000
+Something cheap makes a guess.
+
+00:12:02.000 --> 00:12:06.000
+Something honest measures it, on seeds the guess never saw.
+
+00:12:06.000 --> 00:12:08.000
+A rule, written down, decides.
+
+00:12:08.000 --> 00:12:09.200
+One thing crosses.
+
+00:12:09.200 --> 00:12:12.400
+It is checked again on the other side.
+
+00:12:12.400 --> 00:12:16.400
+And the verdict returns to where the guess was made.
+
+00:12:16.400 --> 00:12:20.000
+It is there between the fleet and the line.
+
+00:12:20.000 --> 00:12:22.000
+Between the line and main.
+
+00:12:22.000 --> 00:12:24.400
+And between the cards and main.
+
+00:12:24.400 --> 00:12:26.000
+A guess is cheap.
+
+00:12:26.000 --> 00:12:27.600
+A crossing is earned.
+
+00:12:27.600 --> 00:12:30.800
+And nothing that was learned is thrown away.
+
+00:12:33.400 --> 00:12:37.400
+If it is good, it is promoted, tested, and accepted.
+
+00:12:37.400 --> 00:12:40.200
+And what was learned goes back in.

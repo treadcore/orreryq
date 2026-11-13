@@ -1,0 +1,845 @@
+{
+ "title": "How the game learns",
+ "subtitle": "one block diagram, walked arrow by arrow, from the outside in",
+ "byline": "treadcore and the Orrery fleet  ·  13 November 2026",
+ "closing": [
+  "If it is good, it is promoted, tested and accepted,",
+  "and what was learned goes back in."
+ ],
+ "wpm": 150,
+ "regions": {
+  "main": {
+   "x": 40,
+   "y": 110,
+   "w": 1840,
+   "h": 170,
+   "col": "#83c167",
+   "name": "MAIN",
+   "sub": "the game as it ships: its rules, its brain, its net"
+  },
+  "gpu": {
+   "x": 40,
+   "y": 320,
+   "w": 880,
+   "h": 440,
+   "col": "#58c4dd",
+   "name": "THE CARDS",
+   "sub": "three GPUs play the world and grow the net"
+  },
+  "cpu": {
+   "x": 1000,
+   "y": 320,
+   "w": 880,
+   "h": 440,
+   "col": "#ff8c5a",
+   "name": "THE CPU FLEET",
+   "sub": "eight machines play whole games and measure the brain"
+  }
+ },
+ "line_box": {
+  "x": 1014,
+  "y": 490,
+  "w": 282,
+  "h": 250
+ },
+ "nodes": {
+  "rules": {
+   "region": "main",
+   "x": 90,
+   "y": 150,
+   "w": 280,
+   "h": 90,
+   "title": "the world's rules",
+   "sub": "speed, guns, pillboxes, maps"
+  },
+  "glad": {
+   "region": "main",
+   "x": 470,
+   "y": 150,
+   "w": 300,
+   "h": 90,
+   "title": "the Gladiator",
+   "sub": "the net the game ships"
+  },
+  "brain": {
+   "region": "main",
+   "x": 1150,
+   "y": 150,
+   "w": 300,
+   "h": 90,
+   "title": "the brain's values",
+   "sub": "every dial and switch, as shipped"
+  },
+  "yard": {
+   "region": "main",
+   "x": 1540,
+   "y": 150,
+   "w": 280,
+   "h": 90,
+   "title": "the yardstick",
+   "sub": "today against three fixed days"
+  },
+  "isl": {
+   "region": "gpu",
+   "x": 80,
+   "y": 372,
+   "w": 330,
+   "h": 84,
+   "title": "three islands",
+   "sub": "2,048 nets each, in the arena"
+  },
+  "mig": {
+   "region": "gpu",
+   "x": 500,
+   "y": 372,
+   "w": 360,
+   "h": 84,
+   "title": "migrants",
+   "sub": "nets sent into every population"
+  },
+  "ms": {
+   "region": "gpu",
+   "x": 80,
+   "y": 506,
+   "w": 330,
+   "h": 84,
+   "title": "a milestone",
+   "sub": "a champion its card elected"
+  },
+  "bridge": {
+   "region": "gpu",
+   "x": 500,
+   "y": 506,
+   "w": 360,
+   "h": 84,
+   "title": "the bridge",
+   "sub": "the net read in the game itself"
+  },
+  "refused": {
+   "region": "gpu",
+   "x": 80,
+   "y": 640,
+   "w": 330,
+   "h": 84,
+   "title": "refused by the game",
+   "sub": "no rung, no migrants"
+  },
+  "confirm": {
+   "region": "gpu",
+   "x": 500,
+   "y": 640,
+   "w": 360,
+   "h": 84,
+   "title": "the second read",
+   "sub": "576 fresh seeds decide"
+  },
+  "search": {
+   "region": "cpu",
+   "x": 1030,
+   "y": 372,
+   "w": 250,
+   "h": 84,
+   "title": "the search",
+   "sub": "proposes one change"
+  },
+  "first": {
+   "region": "cpu",
+   "x": 1320,
+   "y": 372,
+   "w": 250,
+   "h": 84,
+   "title": "the first read",
+   "sub": "150 games, 13 maps"
+  },
+  "on": {
+   "region": "cpu",
+   "x": 1610,
+   "y": 372,
+   "w": 240,
+   "h": 84,
+   "title": "read on",
+   "sub": "more seeds, a rising bar"
+  },
+  "held": {
+   "region": "cpu",
+   "x": 1610,
+   "y": 506,
+   "w": 240,
+   "h": 84,
+   "title": "held-out reads",
+   "sub": "fresh seeds, pooled"
+  },
+  "gates": {
+   "region": "cpu",
+   "x": 1320,
+   "y": 506,
+   "w": 250,
+   "h": 84,
+   "title": "the gates",
+   "sub": "gain, floors, trade"
+  },
+  "line": {
+   "region": "cpu",
+   "x": 1030,
+   "y": 506,
+   "w": 250,
+   "h": 84,
+   "title": "the line",
+   "sub": "one new block, waiting"
+  },
+  "proof": {
+   "region": "cpu",
+   "x": 1030,
+   "y": 640,
+   "w": 250,
+   "h": 84,
+   "title": "the proof",
+   "sub": "9,600 games against main"
+  },
+  "orphan": {
+   "region": "cpu",
+   "x": 1320,
+   "y": 640,
+   "w": 250,
+   "h": 84,
+   "title": "orphaned",
+   "sub": "off the line, kept as a trial"
+  },
+  "flag": {
+   "region": "cpu",
+   "x": 1610,
+   "y": 640,
+   "w": 240,
+   "h": 84,
+   "title": "a flag",
+   "sub": "a person decides"
+  }
+ },
+ "acts": {
+  "cpu": {
+   "name": "THE BRAIN'S LOOP",
+   "sub": "the CPU fleet changes the game's own brain",
+   "col": "#ff8c5a"
+  },
+  "gpu": {
+   "name": "THE NET'S LOOP",
+   "sub": "the cards grow the net the game ships",
+   "col": "#58c4dd"
+  },
+  "touch": {
+   "name": "WHERE THE LOOPS MEET",
+   "sub": "both end in main, and each plays inside the other's world",
+   "col": "#83c167"
+  }
+ },
+ "steps": [
+  {
+   "id": "c1",
+   "say": "Start where the game is. Every dial and switch of its brain, exactly as shipped, is read out of main. Nothing changes by looking. But every question the fleet will ask is asked against this, and against nothing else.",
+   "act": "cpu",
+   "a": "brain",
+   "b": "search",
+   "moves": "today's values",
+   "what": "The values the game ships today: every dial and switch of its brain, read from main.",
+   "why": "Every change is measured against exactly this. The search starts from what is, not from what was.",
+   "border": "main to the fleet: read only. Nothing is changed by looking."
+  },
+  {
+   "id": "c2",
+   "say": "The search makes a guess. One dial moved. One switch flipped. Only one, when it can, so that if the game gets better, we know why. A trial is a question, put plainly: is the game better with this one change?",
+   "act": "cpu",
+   "a": "search",
+   "b": "first",
+   "moves": "a trial",
+   "what": "One proposed change: one dial moved alone, one switch flipped, or a few dials the fit suggests.",
+   "why": "A trial is a question: is the game's own brain better with this one change?",
+   "rule": "Half of new trials move one dial alone, so a gain can be traced to its cause."
+  },
+  {
+   "id": "c3",
+   "say": "The answer costs games. One hundred and fifty of them, on thirteen maps, each played twice on the same roll of the dice: once with the change, once without. Most guesses do nothing. The first read exists to let them go cheaply.",
+   "act": "cpu",
+   "a": "first",
+   "b": "on",
+   "moves": "a promising read",
+   "what": "The trial's score after 150 whole games on 13 maps, with and without the change, on the same seeds.",
+   "why": "Most changes do nothing. A cheap first look sends away what plainly does not help.",
+   "rule": "Read on above z 0.25; dropped under it. Each stage adds seeds and raises the bar."
+  },
+  {
+   "id": "c4",
+   "say": "A guess that looks good is read again, with more games and a higher bar each time. But notice the trap. We chose it because it scored high, and part of any high score is luck. So it is sent where its luck must start over.",
+   "act": "cpu",
+   "a": "on",
+   "b": "held",
+   "moves": "a pass",
+   "what": "A trial that stayed over the bar at every stage, with all its reads pooled.",
+   "why": "A trial picked for scoring high is flattered by its own luck. It must be read again where luck starts over.",
+   "rule": "The held-out reads use seeds no trial has ever seen."
+  },
+  {
+   "id": "c5",
+   "say": "Fresh seeds. Games no trial has ever been measured on. If the gain is real, it is still there. If it was luck, it is gone. Up to six such reads are pooled. What survives is a candidate: something we now have reason to believe.",
+   "act": "cpu",
+   "a": "held",
+   "b": "gates",
+   "moves": "a candidate",
+   "what": "A trial whose gain held on fresh seeds: up to six reads of 400 games, pooled.",
+   "why": "Now it is believed to be better. The gates ask whether it is better without breaking something.",
+   "rule": "Pooled gain three errors clear, and no map two errors under."
+  },
+  {
+   "id": "c6",
+   "say": "Belief is not enough, because points do not show everything. So the gates ask three things. Is the gain worth a generation? Does every scenario the game must pass still pass? And if it gives something up, does it gain enough to pay for it? Then it becomes one commit, on the line.",
+   "act": "cpu",
+   "a": "gates",
+   "b": "line",
+   "moves": "a promotion: one commit",
+   "what": "The candidate written as the brain's new values, in one commit, tests run.",
+   "why": "The gates protect what points do not show: scenarios the game must still pass, fights it must not give away.",
+   "rule": "Gain at least 0.25 a seat. A floor may give 5 points, not collapse. A trade is weighed by its gain.",
+   "border": "the fleet to the line: only what held on fresh seeds and passed every gate."
+  },
+  {
+   "id": "c7",
+   "say": "The line is a waiting room for one. The new game, complete, plays the old game, complete: nine thousand six hundred games. Ten times what any trial was given. And nothing else may join the line until this is decided.",
+   "act": "cpu",
+   "a": "line",
+   "b": "proof",
+   "moves": "the line against main",
+   "what": "The line (main plus the one new block) played against main itself.",
+   "why": "The last check is the plainest: the new game against the old game, at ten times the seeds of any trial.",
+   "rule": "One block at a time. Nothing else joins the line until this one is decided."
+  },
+  {
+   "id": "c8",
+   "say": "If it leads by three of its own errors, it crosses. The commit becomes main. This is the only door by which the game's brain ever changes, and what goes through it is exactly what was measured.",
+   "act": "cpu",
+   "a": "proof",
+   "b": "brain",
+   "pts": [
+    [
+     1030,
+     682
+    ],
+    [
+     1006,
+     682
+    ],
+    [
+     1006,
+     296
+    ],
+    [
+     1230,
+     296
+    ],
+    [
+     1230,
+     240
+    ]
+   ],
+   "moves": "proved: pushed to main",
+   "what": "The block itself: the commit becomes main, and the fleet builds from it.",
+   "why": "This is the only way the game's brain changes. What ships is what was measured, to the commit.",
+   "rule": "Three errors past main over 9,600 games.",
+   "border": "the line to main: the proof. On 13 November: +3.96 a seat, 34 errors clear."
+  },
+  {
+   "id": "c9",
+   "say": "If it does not lead, it comes off. This matters more than it seems. A block that is worth nothing, left in place, becomes the ground every later trial stands on. For one week in November, ten such blocks stood there.",
+   "act": "cpu",
+   "a": "proof",
+   "b": "orphan",
+   "moves": "refused: off the line",
+   "what": "A block whose lead, with two errors added, is still under the gain a generation must show.",
+   "why": "A block worth nothing must not stay: every later trial would be measured against it.",
+   "rule": "Lead plus two errors under 0.25: the line goes back to main."
+  },
+  {
+   "id": "c10",
+   "say": "But refused is not forgotten. The trial goes back to the search, with everything that was ever read of it. On another day, on other values, it may be asked again.",
+   "act": "cpu",
+   "a": "orphan",
+   "b": "search",
+   "pts": [
+    [
+     1320,
+     660
+    ],
+    [
+     1300,
+     660
+    ],
+    [
+     1300,
+     440
+    ],
+    [
+     1280,
+     440
+    ]
+   ],
+   "dash": true,
+   "moves": "read again later",
+   "what": "The orphaned block's trial, kept as a candidate with everything read of it.",
+   "why": "Refused today is not wrong for ever. On new values it may be read again.",
+   "rule": "Not read again while it only asks for today's own values."
+  },
+  {
+   "id": "c11",
+   "say": "There is a third ending. A line can win on every map together, and still lose on one. Twelve maps for, one against: is that a gain? It is not a question of arithmetic. So the process stops, and says so, with the numbers.",
+   "act": "cpu",
+   "a": "proof",
+   "b": "flag",
+   "pts": [
+    [
+     1155,
+     724
+    ],
+    [
+     1155,
+     746
+    ],
+    [
+     1730,
+     746
+    ],
+    [
+     1730,
+     724
+    ]
+   ],
+   "moves": "proved, held by one map",
+   "what": "A line proved on every map together that reads two errors under on one of them.",
+   "why": "Whether twelve maps are worth one is not a number. The process stops and says so.",
+   "rule": "The flag names the map and its numbers, and how to send the line as it is."
+  },
+  {
+   "id": "c12",
+   "say": "And a person answers. On the thirteenth of November the line stood nearly four points ahead, with one map of thirteen two points behind. Paul sent it. This is the one border held by a human hand.",
+   "act": "cpu",
+   "a": "flag",
+   "b": "brain",
+   "pts": [
+    [
+     1850,
+     682
+    ],
+    [
+     1866,
+     682
+    ],
+    [
+     1866,
+     296
+    ],
+    [
+     1400,
+     296
+    ],
+    [
+     1400,
+     240
+    ]
+   ],
+   "moves": "a person sends it",
+   "what": "The same block, sent to main by Paul's word.",
+   "why": "The one border a person holds. On 13 November: flame-war-modified -2.15, the other twelve maps for it. Sent.",
+   "border": "the line to main, by a person: the decision is recorded with the flag."
+  },
+  {
+   "id": "c13",
+   "say": "Last, a ruler that does not move. Today's game against the game of three fixed days, on the same two thousand seeds, every day. A line can pass every gate and still stand still. The yardstick is how we would know.",
+   "act": "cpu",
+   "a": "brain",
+   "b": "yard",
+   "moves": "main, measured",
+   "what": "Today's main played against main of 28 October, 2 November and 6 November, on the same 2,000 seeds daily.",
+   "why": "A line can pass every gate and still stand still. The yardstick says whether main moved at all.",
+   "rule": "Fixed opponents, fixed seeds: the one number that can be compared day to day."
+  },
+  {
+   "id": "g1",
+   "say": "Now the other loop. Three graphics cards are given the rules of the world: the speed of a tank, the reach of its gun, the pillboxes, the trees, the maze. From them each builds a fast copy of that world. A net is worth growing only in the world it will fight in.",
+   "act": "gpu",
+   "a": "rules",
+   "b": "isl",
+   "moves": "the game's numbers",
+   "what": "The world's rules at main: speeds, the gun, 24 shells, the pillboxes, the trees, the maze.",
+   "why": "A net is only worth growing in the world it will fight in. The cards' arena is rebuilt when the rules move.",
+   "border": "main to the cards: the rules are compiled into the arena, never guessed."
+  },
+  {
+   "id": "g2",
+   "say": "On each card, an island: two thousand and forty-eight small nets, fighting the best of their own past, a hundred generations at a sitting. The best of them is examined against a ladder of earlier champions. Beat the top rung, and it is a milestone.",
+   "act": "gpu",
+   "a": "isl",
+   "b": "ms",
+   "moves": "a champion",
+   "what": "The best net of an island after a segment: 100 generations of 2,048 nets fighting its hall of fame.",
+   "why": "Each card proposes. It elects a champion only when it beats the ladder of earlier milestones in an exam.",
+   "rule": "Past the newest standing milestone by two errors, and through the gauntlet's 24 tasks."
+  },
+  {
+   "id": "g3",
+   "say": "But the arena is a copy, and a copy can flatter. So the milestone leaves its card. Five thousand seven hundred and sixty-six numbers, carried to an ordinary machine, to play the real game: one hundred and ninety-two games as itself, and the same games as the net already shipped.",
+   "act": "gpu",
+   "a": "ms",
+   "b": "bridge",
+   "moves": "5,766 numbers",
+   "what": "The milestone's weights, a file of 23 kilobytes, carried from its card to a CPU machine.",
+   "why": "The arena is a fast copy of the world. Only the game itself can say what a net is worth in the game.",
+   "rule": "192 whole games as the Gladiator, and 192 with the shipped net, on the same seeds.",
+   "border": "the cards to the fleet: the net leaves the arena to be read in the real game."
+  },
+  {
+   "id": "g4",
+   "say": "Sometimes the game says no, plainly. The arena admired it. The game did not. Then it must stop being the bar the cards climb toward. It is no rung of the ladder, and an island refused three times running sends its champions nowhere.",
+   "act": "gpu",
+   "a": "bridge",
+   "b": "refused",
+   "moves": "clearly worse",
+   "what": "A milestone the game reads two errors under the net it ships.",
+   "why": "The arena liked it and the game did not. It must stop being the bar the cards climb.",
+   "rule": "No rung of the ladder. After three in a row, its island sends no migrants."
+  },
+  {
+   "id": "g5",
+   "say": "Sometimes the game says yes. And here is the temptation: to believe it. But in forty-four such readings, one will say yes by chance alone. So a yes earns only a second reading, three times as long, on seeds it was not chosen on.",
+   "act": "gpu",
+   "a": "bridge",
+   "b": "confirm",
+   "moves": "past two errors",
+   "what": "A milestone whose first read is two errors over the shipped net.",
+   "why": "One read in forty-four does that by luck. The first read only earns a second.",
+   "rule": "The same pair again on 576 fresh seeds. The second read alone decides."
+  },
+  {
+   "id": "g6",
+   "say": "If the second reading agrees, the net crosses into main. It is the only door by which the game's net ever changes. On the thirteenth of November a net called M 30 went through it, nearly two points better, and confirmed.",
+   "act": "gpu",
+   "a": "confirm",
+   "b": "glad",
+   "pts": [
+    [
+     860,
+     682
+    ],
+    [
+     890,
+     682
+    ],
+    [
+     890,
+     300
+    ],
+    [
+     560,
+     300
+    ],
+    [
+     560,
+     240
+    ]
+   ],
+   "moves": "credited: shipped",
+   "what": "The net itself, committed to main as nets/gladiator.bin.",
+   "why": "This is the only way the game's net changes: credited by the game twice, on seeds it was not chosen on.",
+   "rule": "It ships when no line is settling, so it never voids a proof.",
+   "border": "the fleet to main: M0030 crossed on 13 November, +1.85 +/- 0.70 on its second read."
+  },
+  {
+   "id": "g7",
+   "say": "And now the verdict comes home. The net the game credited, together with the champions of every island still in good standing, is sent back across the border, to every card.",
+   "act": "gpu",
+   "a": "glad",
+   "b": "mig",
+   "pts": [
+    [
+     700,
+     240
+    ],
+    [
+     700,
+     372
+    ]
+   ],
+   "moves": "the shipped net",
+   "what": "The net the game ships, with the newest champions of the islands the game has not refused.",
+   "why": "What the game credited is what every card should grow from. This is the verdict coming back.",
+   "border": "main to the cards: the game's judgement returns as the cards' starting material."
+  },
+  {
+   "id": "g8",
+   "say": "Not as a visitor. Until this day, a net from another card was only an opponent, and three cards grew three different nets. Now a migrant is written into the population itself. If it ranks, it becomes a parent. The cards grow one net.",
+   "act": "gpu",
+   "a": "mig",
+   "b": "isl",
+   "moves": "parents, if they rank",
+   "what": "Each migrant written into every island's population, over children not yet scored.",
+   "why": "Before 13 November a visitor was only an opponent, and three cards grew three nets. Now they grow one.",
+   "rule": "Scored with the rest next generation: a parent if it ranks, gone if it does not."
+  },
+  {
+   "id": "g9",
+   "say": "And the island the game keeps refusing? It is not switched off. It receives the better line, and breeds from it. It simply does not send, until the game stops saying no.",
+   "act": "gpu",
+   "a": "refused",
+   "b": "isl",
+   "pts": [
+    [
+     80,
+     682
+    ],
+    [
+     58,
+     682
+    ],
+    [
+     58,
+     414
+    ],
+    [
+     80,
+     414
+    ]
+   ],
+   "dash": true,
+   "moves": "silence",
+   "what": "Nothing. An island the game keeps refusing still receives, and sends nothing.",
+   "why": "A lineage the game rejects must not spread. It is not switched off: it is given the better line to breed from.",
+   "rule": "It sends again when the game stops refusing its milestones."
+  },
+  {
+   "id": "t1",
+   "say": "One arrow joins the two loops. The shipped net plays in the very games that measure the brain. So the brain is tuned in a world that contains the net, and the net is grown under the brain's rules. Each is part of the other's weather.",
+   "act": "touch",
+   "a": "glad",
+   "b": "first",
+   "moves": "an opponent in every game",
+   "what": "The shipped net plays in the games every trial is measured in.",
+   "why": "The two loops are not separate. The brain is tuned in a world that holds the net, the net grown under the brain's rules.",
+   "border": "main to the fleet: a new net changes what every later read of the brain means."
+  }
+ ],
+ "narration": {
+  "title": "This is how a game learns. Not by anyone's opinion of it. By playing itself, many thousands of times, and keeping only what survives.",
+  "whole": "Begin from far away. There are three territories. Main is the game as people play it: its rules, its brain, its net. Nothing in main is changed by hand. | To the right, eight ordinary machines. They take the game as it is now, and play whole games, to measure one change to its brain at a time. | Only what is proved better goes back. | To the left, three graphics cards. They take the rules of the world, and grow a small neural net inside a fast copy of it. | Only a net the game itself credits goes back. Four arrows. Everything that follows is the inside of them.",
+  "borders": "Between the territories are borders, and each has its price. | From main to the fleet, the crossing is free: to read is to change nothing. | From the fleet to the line: a gain that held on seeds the trial never saw, and every gate. | From the line to main: a proof. The new game against the old, nine thousand six hundred games. | And from the cards to main: the game's own reading of the net. Twice.",
+  "act:cpu": "First, the brain's loop. Thirteen arrows. We will take them one at a time.",
+  "act:gpu": "Now the net's loop. Nine arrows, and the same care at every border.",
+  "act:touch": "And one arrow more, where the two loops meet.",
+  "pattern": "Step back, and the two loops are one shape, drawn at every border. | Something cheap makes a guess. Something honest measures it, on seeds the guess never saw. A rule, written down, decides. One thing crosses. It is checked again on the other side. And the verdict returns to where the guess was made. | It is there between the fleet and the line. | Between the line and main. | And between the cards and main. | A guess is cheap. A crossing is earned. And nothing that was learned is thrown away.",
+  "end": "If it is good, it is promoted, tested, and accepted. And what was learned goes back in.",
+  "hook1": "For one week in November, a game got better ten times. | Ten changes to its brain. Each one tested on hundreds of games. Each one a measured gain. | Added together: six and a half points. | Then all ten were measured at once, against the game as it had been a week before. | The gain was zero.",
+  "hook2": "How can that be? Here is every change the search tried in two weeks. Two thousand six hundred and sixty-seven of them, each placed by how well it scored. | And here is the curve you would get if not one of them did anything at all. | They are the same curve. | So when we kept the best of them, we were keeping the luckiest. | And luck, measured again, goes home.",
+  "hook3": "Every measurement is a little signal, wrapped in a great deal of noise. | A machine that learns must tell the two apart, or it will teach itself its own good fortune. | This is the story of one machine that learns to play a game, | and of the borders it built against its own luck."
+ },
+ "journeys": [
+  {
+   "title": "A real journey: w_smooth = 0.525",
+   "sub": "13 November 2026, on the brain's loop",
+   "col": "#ff8c5a",
+   "legs": [
+    {
+     "step": "c2",
+     "words": "found on 5 November: +2.0 to +4.3 a seat, every time it was read"
+    },
+    {
+     "step": "c3",
+     "words": "its first read: +4.29 a seat"
+    },
+    {
+     "step": "c4",
+     "words": "over every bar"
+    },
+    {
+     "step": "c5",
+     "words": "held out: +3.46 +/- 0.54"
+    },
+    {
+     "step": "c6",
+     "words": "09:09 the trade rule is changed: it gives up 0.44 kills, and gains enough to pay for it"
+    },
+    {
+     "step": "c7",
+     "words": "10:40 on the line, alone. The proof begins"
+    },
+    {
+     "step": "c11",
+     "words": "12:57 proved, +3.91 +/- 0.11, and one map of thirteen reads under: held, and silent"
+    },
+    {
+     "step": "c12",
+     "words": "13:22 the flag is raised. 13:45 Paul sends it. It is main"
+    }
+   ]
+  },
+  {
+   "title": "A real journey: M0030",
+   "sub": "10 to 13 November 2026, on the net's loop",
+   "col": "#58c4dd",
+   "legs": [
+    {
+     "step": "g2",
+     "words": "10 November: calber's island elects its champion at generation 290,500"
+    },
+    {
+     "step": "g3",
+     "words": "read in the game: +2.28 +/- 0.98 over the shipped net, on 192 seeds"
+    },
+    {
+     "step": "g6",
+     "words": "its ship fails on a file size nobody updated. Three days at the border, unread"
+    },
+    {
+     "step": "g5",
+     "words": "13 November: shipped at 11:39, then checked on 576 fresh seeds: +1.85 +/- 0.70. Confirmed"
+    },
+    {
+     "step": "g7",
+     "words": "the game's net returns to the cards"
+    },
+    {
+     "step": "g8",
+     "words": "and at 13:51 the first two migrants join calber's population"
+    }
+   ]
+  }
+ ],
+ "pattern": [
+  {
+   "name": "propose",
+   "sub": "something cheap makes a guess"
+  },
+  {
+   "name": "measure",
+   "sub": "on seeds the guess never saw"
+  },
+  {
+   "name": "gate",
+   "sub": "a rule, written down, with its number"
+  },
+  {
+   "name": "cross",
+   "sub": "one thing at a time over the border"
+  },
+  {
+   "name": "check again",
+   "sub": "after crossing, against what was there"
+  },
+  {
+   "name": "feed back",
+   "sub": "the verdict returns to the proposer"
+  }
+ ],
+ "pattern_rows": [
+  {
+   "name": "the fleet to the line",
+   "col": "#ff8c5a",
+   "cells": [
+    "the search",
+    "held-out reads",
+    "gain, floors, trade",
+    "one commit",
+    "the proof",
+    "an orphan is a trial again"
+   ]
+  },
+  {
+   "name": "the line to main",
+   "col": "#f7d96f",
+   "cells": [
+    "the line itself",
+    "9,600 fresh games",
+    "three errors, every map",
+    "a push",
+    "the yardstick",
+    "today's values to the search"
+   ]
+  },
+  {
+   "name": "the cards to main",
+   "col": "#58c4dd",
+   "cells": [
+    "an island",
+    "the bridge, in the game",
+    "two errors, twice",
+    "a ship",
+    "the next bridge reads",
+    "migrants, and refusals"
+   ]
+  }
+ ],
+ "hook": {
+  "claims": [
+   [
+    "r0220",
+    0.34
+   ],
+   [
+    "r0223",
+    1.23
+   ],
+   [
+    "r0235",
+    0.82
+   ],
+   [
+    "r0239",
+    0.49
+   ],
+   [
+    "r0254",
+    0.95
+   ],
+   [
+    "r0257",
+    0.27
+   ],
+   [
+    "r0279",
+    0.93
+   ],
+   [
+    "r0290",
+    0.86
+   ],
+   [
+    "r0323",
+    0.34
+   ],
+   [
+    "r0326",
+    0.26
+   ]
+  ],
+  "proof": [
+   -0.02,
+   0.1,
+   10400
+  ],
+  "hist": [
+   3,
+   5,
+   16,
+   54,
+   116,
+   245,
+   431,
+   474,
+   508,
+   394,
+   253,
+   114,
+   38,
+   15,
+   1,
+   0
+  ],
+  "trials": 2667,
+  "swing": 8.1,
+  "gain": 0.25
+ }
+}

@@ -1,0 +1,109 @@
+How the Game Learns: the narration, at 150 words a minute (12:42)
+
+[0:00] TEN GAINS, WORTH NOTHING
+For one week in November, a game got better ten times. Ten changes to its brain. Each one tested on hundreds of games. Each one a measured gain. Added together: six and a half points. Then all ten were measured at once, against the game as it had been a week before. The gain was zero.
+
+[0:25] THE SAME CURVE
+How can that be? Here is every change the search tried in two weeks. Two thousand six hundred and sixty-seven of them, each placed by how well it scored. And here is the curve you would get if not one of them did anything at all. They are the same curve. So when we kept the best of them, we were keeping the luckiest. And luck, measured again, goes home.
+
+[0:55] SIGNAL AND NOISE
+Every measurement is a little signal, wrapped in a great deal of noise. A machine that learns must tell the two apart, or it will teach itself its own good fortune. This is the story of one machine that learns to play a game, and of the borders it built against its own luck.
+
+[1:19] TITLE
+This is how a game learns. Not by anyone's opinion of it. By playing itself, many thousands of times, and keeping only what survives.
+
+[1:32] THE WHOLE, IN ONE PICTURE
+Begin from far away. There are three territories. Main is the game as people play it: its rules, its brain, its net. Nothing in main is changed by hand. To the right, eight ordinary machines. They take the game as it is now, and play whole games, to measure one change to its brain at a time. Only what is proved better goes back. To the left, three graphics cards. They take the rules of the world, and grow a small neural net inside a fast copy of it. Only a net the game itself credits goes back. Four arrows. Everything that follows is the inside of them.
+
+[2:17] THE BORDERS
+Between the territories are borders, and each has its price. From main to the fleet, the crossing is free: to read is to change nothing. From the fleet to the line: a gain that held on seeds the trial never saw, and every gate. From the line to main: a proof. The new game against the old, nine thousand six hundred games. And from the cards to main: the game's own reading of the net. Twice.
+
+[2:50] THE BRAIN'S LOOP
+First, the brain's loop. Thirteen arrows. We will take them one at a time.
+
+[2:59] 1. THE BRAIN'S VALUES TO THE SEARCH
+Start where the game is. Every dial and switch of its brain, exactly as shipped, is read out of main. Nothing changes by looking. But every question the fleet will ask is asked against this, and against nothing else.
+
+[3:17] 2. THE SEARCH TO THE FIRST READ
+The search makes a guess. One dial moved. One switch flipped. Only one, when it can, so that if the game gets better, we know why. A trial is a question, put plainly: is the game better with this one change?
+
+[3:36] 3. THE FIRST READ TO READ ON
+The answer costs games. One hundred and fifty of them, on thirteen maps, each played twice on the same roll of the dice: once with the change, once without. Most guesses do nothing. The first read exists to let them go cheaply.
+
+[3:55] 4. READ ON TO HELD-OUT READS
+A guess that looks good is read again, with more games and a higher bar each time. But notice the trap. We chose it because it scored high, and part of any high score is luck. So it is sent where its luck must start over.
+
+[4:16] 5. HELD-OUT READS TO THE GATES
+Fresh seeds. Games no trial has ever been measured on. If the gain is real, it is still there. If it was luck, it is gone. Up to six such reads are pooled. What survives is a candidate: something we now have reason to believe.
+
+[4:37] 6. THE GATES TO THE LINE
+Belief is not enough, because points do not show everything. So the gates ask three things. Is the gain worth a generation? Does every scenario the game must pass still pass? And if it gives something up, does it gain enough to pay for it? Then it becomes one commit, on the line.
+
+[5:01] 7. THE LINE TO THE PROOF
+The line is a waiting room for one. The new game, complete, plays the old game, complete: nine thousand six hundred games. Ten times what any trial was given. And nothing else may join the line until this is decided.
+
+[5:19] 8. THE PROOF TO THE BRAIN'S VALUES
+If it leads by three of its own errors, it crosses. The commit becomes main. This is the only door by which the game's brain ever changes, and what goes through it is exactly what was measured.
+
+[5:37] 9. THE PROOF TO ORPHANED
+If it does not lead, it comes off. This matters more than it seems. A block that is worth nothing, left in place, becomes the ground every later trial stands on. For one week in November, ten such blocks stood there.
+
+[5:56] 10. ORPHANED TO THE SEARCH
+But refused is not forgotten. The trial goes back to the search, with everything that was ever read of it. On another day, on other values, it may be asked again.
+
+[6:11] 11. THE PROOF TO A FLAG
+There is a third ending. A line can win on every map together, and still lose on one. Twelve maps for, one against: is that a gain? It is not a question of arithmetic. So the process stops, and says so, with the numbers.
+
+[6:31] 12. A FLAG TO THE BRAIN'S VALUES
+And a person answers. On the thirteenth of November the line stood nearly four points ahead, with one map of thirteen two points behind. Paul sent it. This is the one border held by a human hand.
+
+[6:48] 13. THE BRAIN'S VALUES TO THE YARDSTICK
+Last, a ruler that does not move. Today's game against the game of three fixed days, on the same two thousand seeds, every day. A line can pass every gate and still stand still. The yardstick is how we would know.
+
+[7:07] THE NET'S LOOP
+Now the net's loop. Nine arrows, and the same care at every border.
+
+[7:15] 14. THE WORLD'S RULES TO THREE ISLANDS
+Now the other loop. Three graphics cards are given the rules of the world: the speed of a tank, the reach of its gun, the pillboxes, the trees, the maze. From them each builds a fast copy of that world. A net is worth growing only in the world it will fight in.
+
+[7:39] 15. THREE ISLANDS TO A MILESTONE
+On each card, an island: two thousand and forty-eight small nets, fighting the best of their own past, a hundred generations at a sitting. The best of them is examined against a ladder of earlier champions. Beat the top rung, and it is a milestone.
+
+[7:59] 16. A MILESTONE TO THE BRIDGE
+But the arena is a copy, and a copy can flatter. So the milestone leaves its card. Five thousand seven hundred and sixty-six numbers, carried to an ordinary machine, to play the real game: one hundred and ninety-two games as itself, and the same games as the net already shipped.
+
+[8:22] 17. THE BRIDGE TO REFUSED BY THE GAME
+Sometimes the game says no, plainly. The arena admired it. The game did not. Then it must stop being the bar the cards climb toward. It is no rung of the ladder, and an island refused three times running sends its champions nowhere.
+
+[8:42] 18. THE BRIDGE TO THE SECOND READ
+Sometimes the game says yes. And here is the temptation: to believe it. But in forty-four such readings, one will say yes by chance alone. So a yes earns only a second reading, three times as long, on seeds it was not chosen on.
+
+[9:02] 19. THE SECOND READ TO THE GLADIATOR
+If the second reading agrees, the net crosses into main. It is the only door by which the game's net ever changes. On the thirteenth of November a net called M 30 went through it, nearly two points better, and confirmed.
+
+[9:21] 20. THE GLADIATOR TO MIGRANTS
+And now the verdict comes home. The net the game credited, together with the champions of every island still in good standing, is sent back across the border, to every card.
+
+[9:36] 21. MIGRANTS TO THREE ISLANDS
+Not as a visitor. Until this day, a net from another card was only an opponent, and three cards grew three different nets. Now a migrant is written into the population itself. If it ranks, it becomes a parent. The cards grow one net.
+
+[9:56] 22. REFUSED BY THE GAME TO THREE ISLANDS
+And the island the game keeps refusing? It is not switched off. It receives the better line, and breeds from it. It simply does not send, until the game stops saying no.
+
+[10:12] WHERE THE LOOPS MEET
+And one arrow more, where the two loops meet.
+
+[10:18] 23. THE GLADIATOR TO THE FIRST READ
+One arrow joins the two loops. The shipped net plays in the very games that measure the brain. So the brain is tuned in a world that contains the net, and the net is grown under the brain's rules. Each is part of the other's weather.
+
+[10:39] A REAL JOURNEY: W_SMOOTH = 0.525
+The same arrows, now with one real thing travelling over them. found on 5 November: +2.0 to +4.3 a seat, every time it was read its first read: +4.29 a seat over every bar held out: +3.46 +/- 0.54 09:09 the trade rule is changed: it gives up 0.44 kills, and gains enough to pay for it 10:40 on the line, alone. The proof begins 12:57 proved, +3.91 +/- 0.11, and one map of thirteen reads under: held, and silent 13:22 the flag is raised. 13:45 Paul sends it. It is main
+
+[11:18] A REAL JOURNEY: M0030
+The same arrows, now with one real thing travelling over them. 10 November: calber's island elects its champion at generation 290,500 read in the game: +2.28 +/- 0.98 over the shipped net, on 192 seeds its ship fails on a file size nobody updated. Three days at the border, unread 13 November: shipped at 11:39, then checked on 576 fresh seeds: +1.85 +/- 0.70. Confirmed the game's net returns to the cards and at 13:51 the first two migrants join calber's population
+
+[11:54] ONE SHAPE, AT EVERY BORDER
+Step back, and the two loops are one shape, drawn at every border. Something cheap makes a guess. Something honest measures it, on seeds the guess never saw. A rule, written down, decides. One thing crosses. It is checked again on the other side. And the verdict returns to where the guess was made. It is there between the fleet and the line. Between the line and main. And between the cards and main. A guess is cheap. A crossing is earned. And nothing that was learned is thrown away.
+
+[12:32] THE PRINCIPLE
+If it is good, it is promoted, tested, and accepted. And what was learned goes back in.
