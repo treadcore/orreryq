@@ -1442,7 +1442,7 @@ class Plan:
                 skip = self.decreed() | set(choices) | {"bot_style", "patch", "model"}
                 names = sorted(k for k, v in dflt.items() if v > 0 and k not in skip)
                 far.update({"todo": ["%s.%s" % (k, e) for k in names for e in ("lo", "hi")], "total": 2 * len(names), "round": far.get("round", 0) + 1, "on": on})
-                self.flag("far", "one dial at a time, round %d: each of %d dials read alone at %.3g times and a %.3gth of today's, %d trials" % (
+                self.flag("far", "one dial at a time, round %d: each of %d dials read alone at %.3g times today's value and at today's over %.3g, %d trials" % (
                     far["round"] + 1, len(names), self.far_step(far), self.far_step(far), far["total"]), key="far:%s:%d" % (game, far["round"]), progress=True)
         # A job retired by a generation before it ran was never read: it goes back.
         gone = self.ids("stopped")
