@@ -171,6 +171,19 @@
    "down": "finds reach the line sooner, more reads lost to the generation after"
   },
   {
+   "key": "held_reads",
+   "attr": "HELD_READS",
+   "label": "Held-out reads, at most",
+   "default": 1,
+   "min": 1,
+   "max": 9,
+   "step": 1,
+   "unit": "reads of 400 seeds",
+   "what": "A held-out read that is promising and undecided (pooled z from 1.0 up to the bar) is read again on fresh seeds and pooled, up to this many reads. One read is good to 0.40 a seat, so at a bar of z 2.5 only +1.0 passes; six are good to 0.17. 1: one read decides, as it was.",
+   "up": "smaller true gains can pass; more seeds on each promising trial",
+   "down": "only large gains pass"
+  },
+  {
    "key": "settle_seeds",
    "attr": "SETTLE_SEEDS",
    "label": "The line settles over",

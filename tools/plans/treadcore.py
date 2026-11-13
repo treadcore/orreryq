@@ -993,6 +993,7 @@ class Plan:
                 if not first or first["every"][1] <= 0 or first["every"][0] < 0:
                     continue
                 jobs += self.held_read(jid, 2, seq[jid]["text"], high=False)
+        jobs += self.held_more_jobs(seq)
         # Then the reads on, the most promising first: a test begun is
         # finished before most new ones begin (Fishtest's way). A third of
         # the room is kept for new trials, so a backlog of reads on (the
@@ -1723,6 +1724,33 @@ class Plan:
     # better reaches z 3 one time in 750, near the old rule's one in 2,000; a
     # trial +0.6 does six times in ten.
     HELD_Z = 3.0
+
+    HELD_READS = 1
+    HELD_ON_Z = 1.0
+
+    def held_more_jobs(self, seq):
+        """THE HELD-OUT READ IS READ ON (13 November). One read of 400 seeds is good to about 0.40 a seat, so at
+        a bar of z 2.5 only a read of +1.0 passes, and a trial truly +0.3 passes four times in a hundred:
+        "a generation takes one read" was the rule of a low bar. A held-out read that is promising and
+        undecided (pooled z from HELD_ON_Z up to the bar) is read again on fresh seeds, pooled, up to
+        HELD_READS reads in all: at 6, 2,400 seeds, good to 0.17. One read, as it was, at 1."""
+        jobs, more = [], self.state.setdefault("held_more", {})
+        if self.HELD_READS <= 1:
+            return jobs
+        pairs = self.held_pairs()
+        for jid in list(self.state["held_read"])[-200:]:
+            ds = pairs.get(jid, [])
+            if jid not in seq or not ds or len(ds) < more.get(jid, 1) or len(ds) >= self.HELD_READS:
+                continue
+            p_ = self.pool(ds)
+            if not p_ or p_["every"][1] <= 0:
+                continue
+            z_ = p_["every"][0] / p_["every"][1]
+            if self.HELD_ON_Z <= z_ < self.HELD_Z - self.ease():
+                more[jid] = len(ds) + 1
+                jobs += self.held_read(jid, len(ds) + 1, seq[jid]["text"], high=True)
+        return jobs
+
 
     def held_pass(self, ds):
         """True when a trial's held-out reads, pooled, pass: one is enough for a generation."""

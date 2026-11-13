@@ -1383,5 +1383,34 @@ assert w.trade_allow(None) == 2.5 and w.trade_allow(0.3) == 2.5 and abs(w.trade_
 assert P.trade_rule([("kills less deaths a seat -0.47", -0.47, 0.1, 0.1)], w.trade_allow(3.3))[2] == "within"
 assert P.trade_rule([("kills less deaths a seat -0.47", -0.47, 0.1, 0.1)], w.trade_allow(1.0))[2] == "past"
 assert P.trade_rule([("kills less deaths a seat -1.33", -1.33, 0.1, 0.1)], w.trade_allow(2.89))[2] == "past"
+# THE HELD-OUT READ IS READ ON: promising and undecided, it is read again, pooled, up to HELD_READS; not while
+# a read is out, not past the bar, not under HELD_ON_Z, and never at HELD_READS 1.
+class More(P):
+    HELD_READS = 4
+    def __init__(self, z):
+        self.state, self.z, self.asked, self.reads = {"held_read": ["w1"]}, z, [], ["d1"]
+    def held_pairs(self):
+        return {"w1": list(self.reads)}
+    def pool(self, ds):
+        return {"every": (self.z * 0.4, 0.4, 400 * len(ds)), "below": []}
+    def ease(self):
+        return 0.5
+    def held_read(self, jid, k, text, high=True):
+        self.asked.append((jid, k))
+        return [{"id": "h%d" % k}]
+
+
+seq_ = {"w1": {"text": "w_a = 1\n"}}
+mo = More(1.8)
+assert [j["id"] for j in mo.held_more_jobs(seq_)] == ["h2"] and mo.asked == [("w1", 2)], "undecided at z 1.8: read again"
+assert mo.held_more_jobs(seq_) == [], "its second read is out: nothing more"
+mo.reads = ["d1", "d2"]
+assert len(mo.held_more_jobs(seq_)) == 1 and mo.asked[-1] == ("w1", 3)
+mo.reads = ["d1", "d2", "d3", "d4"]
+assert mo.held_more_jobs(seq_) == [], "four reads: no more"
+assert More(2.6).held_more_jobs(seq_) == [] and More(0.4).held_more_jobs(seq_) == [], "past the bar it has passed; under 1.0 it is not promising"
+one = More(1.8)
+one.HELD_READS = 1
+assert one.held_more_jobs(seq_) == [], "one read decides, as it was"
 print("the line settling, a block coming off, a refusal kept, and one dial at a time round after round: every check holds")
 
