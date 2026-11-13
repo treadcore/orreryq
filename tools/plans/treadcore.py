@@ -142,7 +142,11 @@ def load(p, default=None):
 
 
 def save(p, v, compact=False):
-    tmp = p + ".tmp"
+    # The temp file is this process's own, as keep_cache's is. A pass and the sync both keep plan/push.json, and
+    # with one shared name the second to rename found its file gone and the pass died (12 November, 01:16 and
+    # 15:12, each in the second a sync ended). WORSE THAN THE CRASH, the two had opened one file to write: the
+    # rename that won could put a mixture of both in place. Now each leaves a whole file, and the last one stands.
+    tmp = "%s.%d.tmp" % (p, os.getpid())
     with open(tmp, "w") as f:
         # Compact for what a screen reads each minute and no person does: the Timeline's bins,
         # indented, are an array a line and more than doubled pipeline.json.
