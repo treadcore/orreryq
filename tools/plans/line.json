@@ -123,11 +123,11 @@
    "attr": "ANCHOR",
    "label": "Anchor reads back",
    "default": 3,
-   "min": 1,
+   "min": 0,
    "max": 12,
    "step": 1,
    "unit": "generations",
-   "what": "How many generations back each new generation is read against, to catch slow drift.",
+   "what": "How many generations back each new generation is read against, to catch slow drift. 0: no anchor reads; the yardstick and a line coming off ask what they asked.",
    "up": "catches slower drift, on an older baseline",
    "down": "catches only recent drift"
   },
@@ -284,6 +284,19 @@
    "step": 0.5,
    "unit": "times",
    "what": "A candidate or the line that gives up building, road or fights past its floor goes on by itself while the loss is at most this many times the floor (2.5: a quarter of what the other teams build or lay, or 0.25 kills less deaths a seat), and is refused by itself past it. The score counts building since SCORE_VERSION 1, so a read that clears the bar has paid for what it gave up. Nothing waits for a person (Paul, 4 November: \"automate this please\"). 1 refuses every trade past its floor."
+  },
+  {
+   "key": "trade_gain",
+   "attr": "TRADE_GAIN",
+   "label": "A trade weighed by its gain",
+   "default": 0.0,
+   "min": 0.0,
+   "max": 10.0,
+   "step": 0.25,
+   "unit": "a seat",
+   "what": "Up to this gain a seat the trade rule's limit is as it was; past it the limit grows in proportion to the gain, so a gain of three points may give up three times what a gain of one may. 0: the limit is the same whatever is gained, as it was.",
+   "up": "only larger gains buy a larger trade",
+   "down": "smaller gains buy larger trades; 0 turns it off"
   },
   {
    "key": "pause_resume_min",

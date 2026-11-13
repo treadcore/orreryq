@@ -1371,9 +1371,17 @@ assert "9600 of 9600" in w.settling(), "neither proved nor refused at its seeds:
 w.state["proof"]["last"]["seeds"] = 19200
 assert w.settling() is None, "twice its seeds and still undecided: let go"
 # REFUSED BY THE TRADE RULE, NOT ASKED AGAIN WHILE THE RULE STANDS.
-w.state["refused"] = {P.refusal_key("w_smooth = 0.525\n"): [w.TRADE_TIMES, w.GIVE_BUILT, w.GIVE_ROAD, w.GIVE_KD]}
+w.state["refused"] = {P.refusal_key("w_smooth = 0.525\n"): [w.TRADE_TIMES, w.GIVE_BUILT, w.GIVE_ROAD, w.GIVE_KD, w.TRADE_GAIN]}
 assert w.refused_still("w_smooth=0.525") and not w.refused_still("w_smooth = 0.6")
 w.TRADE_TIMES = 5.0
 assert not w.refused_still("w_smooth = 0.525"), "the rule moved: it may be asked again"
+# A TRADE WEIGHED AGAINST WHAT IT BUYS: as it was with no gain named or the value at 0; in proportion past it.
+w.TRADE_TIMES, w.TRADE_GAIN = 2.5, 0.0
+assert w.trade_allow(3.3) == 2.5
+w.TRADE_GAIN = 1.0
+assert w.trade_allow(None) == 2.5 and w.trade_allow(0.3) == 2.5 and abs(w.trade_allow(3.3) - 8.25) < 1e-9
+assert P.trade_rule([("kills less deaths a seat -0.47", -0.47, 0.1, 0.1)], w.trade_allow(3.3))[2] == "within"
+assert P.trade_rule([("kills less deaths a seat -0.47", -0.47, 0.1, 0.1)], w.trade_allow(1.0))[2] == "past"
+assert P.trade_rule([("kills less deaths a seat -1.33", -1.33, 0.1, 0.1)], w.trade_allow(2.89))[2] == "past"
 print("the line settling, a block coming off, a refusal kept, and one dial at a time round after round: every check holds")
 

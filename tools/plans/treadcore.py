@@ -1821,7 +1821,9 @@ class Plan:
         two held-out reads), the values each moved put back. Today's better,
         it fails; if not, it passes as any trial and promotes itself, the
         drift undone."""
-        if not self.auto():
+        # ANCHOR 0: no anchor reads (13 November). The yardstick reads today against fixed days on fixed seeds,
+        # and a line that fails its check comes off; the anchor was the one thing that asked either question.
+        if not self.auto() or not self.ANCHOR:
             return
         done = self.state.setdefault("anchored", [])
         p = self.promotions()
@@ -3031,25 +3033,42 @@ class Plan:
                 out.append(("%s %+.2f +/- %.2f%s" % (word, mean, se, " (%.0f%% of the %.1f the others do)" % (-100 * mean / of, of) if share and of else ""), mean, se, bar))
         return out if detail else self.trade_rule(out, self.TRADE_TIMES)[0]
 
-    def trade(self, dirs, sign=1):
+    # A TRADE IS WEIGHED AGAINST WHAT IT BUYS (Paul, 13 November: "we are fixing old training decisions.
+    # adapt. just trial runs"). The limit was the same whatever was gained: 2.5 times a floor, so 0.25
+    # kills less deaths a seat, for a gain of +0.3 and for one of +3.3 alike. w_smooth 0.525 gained +3.3
+    # held out and gave up 0.47, and was refused thirteen times beside trials let through for giving up
+    # 0.2 on a gain of 0.3. With TRADE_GAIN set, the limit stands as it was up to that gain a seat and
+    # grows in proportion past it: at 1.0, a gain of +3.3 may give up 3.3 times what a gain of +1 may.
+    # 0 is the rule as it was. A trial, to be read again when the fleet has shown what it lets through.
+    TRADE_GAIN = 0.0
+    _allow = 2.5
+
+    def trade_allow(self, gain=None):
+        """How many times its floor a trade may give up, for this gain a seat."""
+        if not self.TRADE_GAIN or gain is None or gain <= self.TRADE_GAIN:
+            return self.TRADE_TIMES
+        return self.TRADE_TIMES * gain / self.TRADE_GAIN
+
+    def trade(self, dirs, sign=1, gain=None):
         """gives_up, judged by the trade rule: (words, worst ratio to the floor, "within" | "past" | None)."""
-        return self.trade_rule(self.gives_up(dirs, sign, detail=True), self.TRADE_TIMES)
+        self._allow = self.trade_allow(gain)
+        return self.trade_rule(self.gives_up(dirs, sign, detail=True), self._allow)
 
     def trades_away(self, name, v):
         """True for a candidate whose held-out reads give up building or fights past the trade rule's
         limit: it stays a candidate. Within the limit it goes on, and a flag says what it traded."""
-        lost, worst, verdict = self.trade(v.get("held_dirs"))
+        lost, worst, verdict = self.trade(v.get("held_dirs"), gain=v.get("held_mean"))
         if verdict == "within":
             self.flag("trade", "%s goes on by the trade rule: held out %+.2f, and it gives up %s, %.1f times its floor (the rule allows %.1f)" % (
-                name, v.get("held_mean") or 0.0, ", ".join(lost), worst, self.TRADE_TIMES), key="trade:%s" % name, progress=True)
+                name, v.get("held_mean") or 0.0, ", ".join(lost), worst, self._allow), key="trade:%s" % name, progress=True)
         elif verdict == "past":
             self.flag("trade", "%s refused by the trade rule: held out %+.2f, but it gives up %s, %.1f times its floor (the rule allows %.1f)" % (
-                name, v.get("held_mean") or 0.0, ", ".join(lost), worst, self.TRADE_TIMES), key="trade:%s" % name, progress=True)
+                name, v.get("held_mean") or 0.0, ", ".join(lost), worst, self._allow), key="trade:%s" % name, progress=True)
             # REFUSED, IT IS NOT ASKED AGAIN UNTIL THE RULE MOVES (13 November). w_smooth 0.525 was the strongest
             # older candidate on every set of defaults, so reread_older read it again each time, and each time
             # the rule refused it: 13 times, 11,382 seeds. What was refused is kept with the rule it was
             # refused under; a person moving the rule, or a hold, is what asks again.
-            self.state.setdefault("refused", {})[self.refusal_key(v.get("weights", ""))] = [self.TRADE_TIMES, self.GIVE_BUILT, self.GIVE_ROAD, self.GIVE_KD]
+            self.state.setdefault("refused", {})[self.refusal_key(v.get("weights", ""))] = [self.TRADE_TIMES, self.GIVE_BUILT, self.GIVE_ROAD, self.GIVE_KD, self.TRADE_GAIN]
         return verdict == "past"
 
     @staticmethod
@@ -3058,7 +3077,7 @@ class Plan:
 
     def refused_still(self, text):
         """True for a trial the trade rule refused, while the rule stands as it stood then."""
-        return (self.state.get("refused") or {}).get(self.refusal_key(text)) == [self.TRADE_TIMES, self.GIVE_BUILT, self.GIVE_ROAD, self.GIVE_KD]
+        return (self.state.get("refused") or {}).get(self.refusal_key(text)) == [self.TRADE_TIMES, self.GIVE_BUILT, self.GIVE_ROAD, self.GIVE_KD, self.TRADE_GAIN]
 
     def batch(self, ev, name):
         """The strongest candidate's weights and, on top, each other current candidate that moves
@@ -5958,17 +5977,17 @@ class Plan:
                 # came after waits for its own proof. Only if it is still on the line: a commit to main
                 # replays the line under new hashes, and then this read is of no commit that remains.
                 on_line = head and run(["git", "-C", self.tc, "merge-base", "--is-ancestor", head, line.get("commit", "")]).returncode == 0
-                lost, worst, verdict = self.trade(ds, sign=-1) if -d / se >= self.HELD_Z and not p["above"] and on_line else ([], 0.0, None)
+                lost, worst, verdict = self.trade(ds, sign=-1, gain=-d) if -d / se >= self.HELD_Z and not p["above"] and on_line else ([], 0.0, None)
                 if verdict == "past":
                     # Refused by itself: the line stays the fleet's working line, and the next proof reads it
                     # again with whatever has landed on it since.
                     self.flag("trade", "the line %s reads %+.2f past main but gives up %s, %.1f times its floor: refused by the trade rule (it allows %.1f); "
-                              "the fleet works on from the line and the next proof reads it again" % (head[:7], -d, ", ".join(lost), worst, self.TRADE_TIMES),
+                              "the fleet works on from the line and the next proof reads it again" % (head[:7], -d, ", ".join(lost), worst, self._allow),
                               key="trade-line:%s" % head[:12], progress=True)
                 elif -d / se >= self.HELD_Z and not p["above"] and on_line:
                     if verdict == "within":
                         self.flag("trade", "the line %s goes to main by the trade rule: %+.2f past main, and it gives up %s, %.1f times its floor (the rule allows %.1f)" % (
-                            head[:7], -d, ", ".join(lost), worst, self.TRADE_TIMES), key="trade-line:%s" % head[:12], progress=True)
+                            head[:7], -d, ", ".join(lost), worst, self._allow), key="trade-line:%s" % head[:12], progress=True)
                     try:
                         with contextlib.redirect_stdout(sys.stderr):
                             self.resolve(upto=head, carried=carried)
