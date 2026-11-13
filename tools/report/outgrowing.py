@@ -654,7 +654,10 @@ def view(q, out):
            "hours": [[d, v[0], v[1], (D["energy"].get(d) or [0, 0])[0], (D["energy"].get(d) or [0, 0])[1]] for d, v in sorted(D["hours"].items())],
            "totals": {"gpu_h": gh, "cpu_h": ch, "gpu_kwh": ge, "cpu_kwh": ce, "rate": D["rate"]}, "bought": bought,
            "ships": D["ships"], "clone": [{"n": c.get("n"), "asked": c.get("asked"), "diff": c.get("diff"), "se": c.get("se"), "holds": c.get("holds")} for c in D["clone"]],
-           "versions": D["versions"], "homes": homes, "gpu_home": gpu_home, "proof": D.get("proof_last"), "line": D["line"]}
+           "versions": D["versions"], "homes": homes, "gpu_home": gpu_home, "proof": D.get("proof_last"), "line": D["line"],
+           # The Yardstick tab (13 November): the planner's own rows, and what the line waits for.
+           "rating": (json.load(open(os.path.join(q, "plan", "rating.json"))) if os.path.exists(os.path.join(q, "plan", "rating.json")) else {}).get("rows") or [],
+           "orphans": st.get("orphans") or [], "settling": (p.settling() or "") if hasattr(p, "settling") else ""}
     tmp = out + ".part"
     with open(tmp, "w") as f:
         json.dump(doc, f, default=str)

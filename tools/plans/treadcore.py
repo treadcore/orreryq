@@ -2847,6 +2847,15 @@ class Plan:
         self.state.setdefault("orphans", []).append({"at": time.strftime("%Y-%m-%dT%H:%M:%S"), "head": head, "lead": round(lead, 2), "se": round(se, 2), "seeds": seeds, "promotions": off})
         self.state["families_queued"] = []
         self._sha = None
+        # MAIN IS BUILT AGAIN, WHATEVER WAS BUILT BEFORE. Each time main moves the old builds are pruned, so
+        # a build of main made before the line began may be gone from a machine while its job still reads
+        # as done, and then nothing would ask for it and every job there would wait on nothing. The done
+        # builds of the commit the fleet now builds are set aside and asked again: minutes, where a build stands.
+        if getattr(self, "q", None):
+            aside = os.path.join(self.q, "orphan-rebuilt")
+            for f in glob.glob(os.path.join(self.q, "done", "*-prep-*-%s.json" % self.short())):
+                os.makedirs(aside, exist_ok=True)
+                os.rename(f, os.path.join(aside, os.path.basename(f)))
         self.flag("line", "the line %s came off: its proof read %+.2f +/- %.2f over main in %d seeds, and with two errors added that is under the %.2f a generation is worth; "
                   "%s orphaned, and the fleet builds main again" % (head[:7], lead, se, seeds, self.MIN_GAIN, ", ".join(off) or "nothing"), key="orphan:%s" % head[:12], progress=True)
         return True

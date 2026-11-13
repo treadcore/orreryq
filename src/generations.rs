@@ -24,7 +24,7 @@ pub struct State {
     pub off: [usize; 8],
 }
 
-pub const TABS: [&str; 7] = ["Roads", "Days", "Turnaround", "Kept", "GPU", "Gauntlet", "Hours"];
+pub const TABS: [&str; 8] = ["Roads", "Days", "Turnaround", "Kept", "GPU", "Gauntlet", "Hours", "Yardstick"];
 
 fn s(v: &Value, k: &str) -> String {
     match v.get(k) {
@@ -206,7 +206,8 @@ pub fn draw(ui: &mut Ui, at: Rect, doc: Option<&Value>, st: &mut State) {
         3 => kept(ui, body, doc, off),
         4 => ladder(ui, body, doc),
         5 => elections(ui, body, doc, off),
-        _ => hours(ui, body, doc, off),
+        6 => hours(ui, body, doc, off),
+        _ => yardstick(ui, body, doc, off),
     }
 }
 
@@ -683,6 +684,48 @@ fn hours(ui: &mut Ui, at: Rect, doc: &Value, off: &mut usize) {
         }
     }
     let (area, first, shown) = ui.scroll_list(side, lines.len(), 15, off);
+    for (i, (l, col)) in lines.iter().skip(first).take(shown).enumerate() {
+        ui.label_in(area.x, area.y + i as i32 * 15, area.w, l, &F6X10, *col);
+    }
+}
+
+/// The fixed yardstick and the blocks that came off (Paul, 13 November: "The fixed yardstick. Remove a
+/// block that fails"; the report Every Block Checked). Every other tab reads a child against its
+/// parent. This one reads today's defaults against main as it stood on fixed days, on the same seeds
+/// every day, so its rows move only when strength does; and under them, each line the proof read its
+/// seeds and refused, with the read that took it off. A list, newest first: the planner's own rows
+/// (plan/rating.json and its state), nothing worked out here.
+fn yardstick(ui: &mut Ui, at: Rect, doc: &Value, off: &mut usize) {
+    let t = ui.t;
+    let (g, c) = (gpu(ui), cpu(ui));
+    let mut lines: Vec<(String, Rgb)> = vec![];
+    lines.push(("The yardstick: today's defaults over main as it stood, a seat (the same seeds every day)".into(), t.ink));
+    let rows = arr(doc, "rating");
+    if rows.is_empty() {
+        lines.push(("  no day read yet: the first round's reads are in the queue".into(), t.dim));
+    }
+    for r in rows.iter().rev() {
+        let (lead, se) = (n(r, "lead").unwrap_or(0.0), n(r, "se").unwrap_or(0.0));
+        let col = if se > 0.0 && lead / se >= 2.0 { g } else if se > 0.0 && lead / se <= -2.0 { c } else { t.dim };
+        lines.push((format!("  {}  {} over main of {:<7} ({})  {:+.2} +/- {:.2}  {:.0} seeds", s(r, "at").chars().take(10).collect::<String>(), s(r, "today"), s(r, "label"), s(r, "against"), lead, se, n(r, "seeds").unwrap_or(0.0)), col));
+    }
+    lines.push((String::new(), t.dim));
+    lines.push(("Blocks that came off: a line read its seeds, its lead with two errors added under what a generation is worth".into(), t.ink));
+    let orphans = arr(doc, "orphans");
+    if orphans.is_empty() {
+        lines.push(("  none yet".into(), t.dim));
+    }
+    for o in orphans.iter().rev() {
+        let gens: Vec<String> = arr(o, "promotions").iter().filter_map(|x| x.as_str().map(str::to_string)).collect();
+        lines.push((format!("  {}  the line {} came off: {:+.2} +/- {:.2} over main in {:.0} seeds; {} orphaned", s(o, "at").replace('T', " "), s(o, "head").chars().take(7).collect::<String>(),
+            n(o, "lead").unwrap_or(0.0), n(o, "se").unwrap_or(0.0), n(o, "seeds").unwrap_or(0.0), if gens.is_empty() { "nothing".to_string() } else { gens.join(", ") }), c));
+    }
+    if let Some(sv) = doc.get("settling").and_then(|x| x.as_str()).filter(|x| !x.is_empty()) {
+        lines.push((String::new(), t.dim));
+        lines.push(("The line now".into(), t.ink));
+        lines.push((format!("  {}", sv), t.dim));
+    }
+    let (area, first, shown) = ui.scroll_list(at, lines.len(), 15, off);
     for (i, (l, col)) in lines.iter().skip(first).take(shown).enumerate() {
         ui.label_in(area.x, area.y + i as i32 * 15, area.w, l, &F6X10, *col);
     }
