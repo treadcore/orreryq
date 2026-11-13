@@ -1024,7 +1024,10 @@ class Plan:
             # A stalled search took half of each generation for wide trials: 40% of the
             # lanes on 31 October, 843 trials and none past the first bars, where the
             # fit passed 21 of 514 and the A/B 4 of 17. One a generation keeps the door open.
-            wide = self.wide_trials(1, out, g, defaults) if s["stalled"] else []
+            # And since 13 November none (WIDE 0): 1,277 wide trials since w17000 read z -0.07 on average
+            # with a spread of 1.00, which is what no effect at all reads, and 17 past two errors where
+            # chance alone gives 29.
+            wide = self.wide_trials(self.WIDE, out, g, defaults) if s["stalled"] and self.WIDE else []
             far = self.far_trials(max(1, int(want * self.FAR_SHARE)), out, defaults)
             asked = self.region_trials(want, out)
             temper = self.temper_trials(max(1, int(want * self.TEMPER_SHARE)), out)
@@ -1409,6 +1412,7 @@ class Plan:
     # and the fit could not reach it. So under each new game every dial is read alone at a quarter and at
     # four times today's value, a share of each generation until they are done. They are ordinary trials,
     # and go by the ordinary road: nothing is promoted because it was far.
+    WIDE = 0          # wide trials a generation when the search has stalled: 1 before 13 November
     FAR_SHARE = 0.5   # half of each generation's new trials, since 13 November (0.25 before)
     # ONE DIAL AT A TIME, ROUND AFTER ROUND (Paul, 13 November: "can we adjust one parameter at a time ...
     # is there a way to make it more specific"). The fit's trials move three or four dials together:
@@ -1806,7 +1810,11 @@ class Plan:
     DRY_AGAIN_MIN = 60
     # Easing the read-on bars with the rest only spends lanes on what will be dropped: 38% of
     # them on 31 October. Kept within half an error: more gain a day at every ease simulated.
-    KEEP_EASE = 0.5
+    # WHAT THE FIRST BAR LET THROUGH (13 November). With the ease at 0.5 the first keep bar stood at z 0: half
+    # of all trials that do nothing read on. Of 2,960 trials since w17000, 267 began at z 0 to 0.25; 265
+    # read on, for 21,108 seeds and 16 held-out reads, and none became a candidate. The 15 that did all
+    # began at 0.34 or over. At 0.25 the first bar is z 0.25 and each later bar a quarter higher. 0.5 was.
+    KEEP_EASE = 0.25
 
     def promotions(self):
         """[(approved epoch, run id, state)] of the promotions on main, oldest first."""
@@ -1934,8 +1942,9 @@ class Plan:
             return sum(d / se ** 2 for d, se, _ in rows) / iw, 1 / math.sqrt(iw), sum(n for _, _, n in rows)
         if not every:
             return None
-        rows = [comb(r) for r in maps.values()]
-        return {"every": comb(every), "below": any(dd < -2 * se for dd, se, _ in rows), "above": any(dd > 2 * se for dd, se, _ in rows)}
+        rows = {k: comb(r) for k, r in maps.items()}
+        return {"every": comb(every), "below": any(dd < -2 * se for dd, se, _ in rows.values()), "above": any(dd > 2 * se for dd, se, _ in rows.values()),
+                "maps": {k: (round(dd, 2), round(se, 2)) for k, (dd, se, _) in rows.items()}}
 
     @staticmethod
     def one_map(d):
@@ -3327,7 +3336,15 @@ class Plan:
         # measured against itself.
         promoted = {self.rstate(r["id"]).get("candidate") for r in self.runs()
                     if r["kind"] == "promote" and self.rstate(r["id"]).get("status") in ("approved", "self-modified")}
-        older = sorted(((k, v) for k, v in ev.items() if k.startswith(self.name + "/") and not v.get("current")
+        # And so is another candidate that asked for the same values: w12077 and w15613 are w_smooth
+        # 0.525 as w20026 was, and on 13 November both were read again on the line that had just taken
+        # it, 150 seeds each of the defaults against themselves.
+        now_ = self.defaults_at(self.sha())
+
+        def is_defaults(text):
+            w_ = parse_weights(text)
+            return bool(w_) and "caps" not in text and all(k in now_ and abs(float(now_[k]) - v) <= 1e-9 * max(1.0, abs(v)) for k, v in w_.items())
+        older = sorted(((k, v) for k, v in ev.items() if k.startswith(self.name + "/") and not v.get("current") and not is_defaults(v["weights"])
                         and k not in promoted and v["held_mean"] is not None and done.get(k) != blob and not self.refused_still(v["weights"])),
                        key=lambda kv: -kv[1]["held_mean"])[:self.REREAD]
         for k, v in older:
@@ -4756,7 +4773,7 @@ class Plan:
             if m["id"] == cur.get("label") and cur.get("diff") is not None:
                 refused = cur["diff"] < -2 * cur["se"]
                 was = (m.get("game") or {}).get("refused")
-                m["game"] = {"diff": cur["diff"], "se": cur["se"], "refused": refused, "credited": bool(cur.get("holds")), "read": cur.get("read")}
+                m["game"] = {"diff": cur["diff"], "se": cur["se"], "refused": refused, "credited": bool(cur.get("credited")), "read": cur.get("read")}
                 if refused and not was:
                     self.flag("crucible", "%s is refused by the game (%+.2f +/- %.2f a seat under the shipped Gladiator): it is no rung of the ladder, and the newest standing is %s" % (
                         m["id"], cur["diff"], cur["se"], self.ladder_top(lad)), key="game-refused:%s" % m["id"], progress=True)
@@ -5062,6 +5079,7 @@ class Plan:
     # -1.35 +/- 1.79 a seat -- an error as large as any step a generation makes. Four times the seeds halve
     # it, for about six minutes of one machine a GPU generation.
     BRIDGE_SEEDS = 192
+    BRIDGE_CONFIRM = 576   # the second read's seeds: three times the first, good to about 0.57 a seat
     BRIDGE_SEED0 = 80000000
 
     # ---- the GPU's generations: the gauntlet, its floors and the bar (6 November) -------------------
@@ -5312,25 +5330,62 @@ class Plan:
                                   key="replace-brain:%s" % cur["label"])
                     # IN AUTO MODE IT SHIPS ITSELF (Paul, 4 November: "Ship itself in auto mode"), as a
                     # promotion does when the push is allowed; otherwise it waits for the press.
-                    auto = diff > 2 * se and self.auto() and self.push_check()["ok"]
-                    if auto:
-                        tool = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bridge.py")
-                        subprocess.Popen(["sh", "-c", '"$0" -I "$@" > "$LOG" 2>&1', sys.executable, tool, self.q, "ship", cur["label"]],
-                                         env=dict(os.environ, LOG=os.path.join(self.pd, "bridge-ship.log")),
-                                         stdin=subprocess.DEVNULL, start_new_session=True)
-                        cur["shipping"] = "by itself, auto mode"
-                    self.flag("bridge", "bridge %d: %s reads %+.2f +/- %.2f a seat as the Gladiator over the shipped %s (%d seeds on %s): %s" % (
-                        cur["n"], cur["label"], diff, se, cur["shipped"], cur["seeds"], c[3],
-                        "shipping itself (auto mode): plan/bridge-ship.log says how it went" if auto
-                        else "SHIP IT -- fleet-queue.py QUEUE bridge ship %s, or Ship on Results, Growth" % cur["label"] if diff > 2 * se
-                        else "not better outside two errors; the shipped one stays"),
-                        key="bridge:%d" % cur["n"], progress=diff <= 2 * se or auto)
+                    # ONE READ CREDITS NOTHING (13 November). A milestone shipped on one read of BRIDGE_SEEDS past two
+                    # errors, and of 22 reads one in forty does that by chance alone: four in ten that some
+                    # read of the 22 did. M0030 read +2.28 +/- 0.98 so and shipped; the two milestones a few
+                    # hundred generations on read -0.68 and -0.93. So a first read past two errors asks for a
+                    # second, of the same pair on BRIDGE_CONFIRM fresh seeds, and the second alone decides:
+                    # it was not chosen for being high, so its number is fair. And a ship moves main, which
+                    # voids a proof in hand (it did, the same day): it waits until the line has settled.
+                    kind, won = cur.get("kind"), diff > 2 * se
+                    if kind == "check":
+                        # The Gladiator shipped before, read against one that shipped on a single read.
+                        cur.update({"holds": None, "credited": None})
+                        self.flag("bridge", "bridge %d: the shipped %s went out on one read, and read again on %d fresh seeds it stands %+.2f +/- %.2f a seat over %s, the one before it: %s" % (
+                            cur["n"], cur["shipped"], cur["seeds"], -diff, se, cur["label"],
+                            "confirmed" if -diff > 2 * se else "NOT CONFIRMED. It stays until Paul says; to go back: fleet-queue.py QUEUE bridge ship %s" % cur["label"]),
+                            key="bridge:%d" % cur["n"], progress=-diff > 2 * se)
+                    elif kind == "confirm":
+                        cur["credited"] = won
+                        if won:
+                            br["to_ship"] = cur["label"]
+                        self.flag("bridge", "bridge %d: %s, read a second time on %d fresh seeds, stands %+.2f +/- %.2f a seat over the shipped %s: %s" % (
+                            cur["n"], cur["label"], cur["seeds"], diff, se, cur["shipped"],
+                            "credited; it ships when the line has settled" if won else "the first read was chance; the shipped one stays"),
+                            key="bridge:%d" % cur["n"], progress=True)
+                    else:
+                        # Not yet "holds": the Growth page offers Ship on a read that holds.
+                        cur.update({"credited": False, "holds": False, "past": won})
+                        if won:
+                            br["confirm"] = cur["label"]
+                        self.flag("bridge", "bridge %d: %s reads %+.2f +/- %.2f a seat as the Gladiator over the shipped %s (%d seeds on %s): %s" % (
+                            cur["n"], cur["label"], diff, se, cur["shipped"], cur["seeds"], c[3],
+                            "past two errors, so it is read a second time on %d fresh seeds, and that read decides" % self.BRIDGE_CONFIRM if won
+                            else "not better outside two errors; the shipped one stays"),
+                            key="bridge:%d" % cur["n"], progress=True)
                 else:
                     cur.update({"holds": None, "why": "a census of the pair failed", "read": time.strftime("%Y-%m-%dT%H:%M:%S")})
-                if self.game_says(cur, home):
+                if cur.get("kind") != "check" and self.game_says(cur, home):
                     self.ladder_write(home)
                 br["reads"] = (br.get("reads") or [])[-30:] + [cur]
                 br["current"] = cur = None
+            # A credited milestone ships, in auto mode by itself (Paul, 4 November: "Ship itself in auto
+            # mode"), once no line is settling: its commit to main would void the proof.
+            if br.get("to_ship") and not self.settling():
+                label = br.pop("to_ship")
+                auto = self.auto() and self.push_check()["ok"]
+                if auto:
+                    tool = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bridge.py")
+                    subprocess.Popen(["sh", "-c", '"$0" -I "$@" > "$LOG" 2>&1', sys.executable, tool, self.q, "ship", label],
+                                     env=dict(os.environ, LOG=os.path.join(self.pd, "bridge-ship.log")),
+                                     stdin=subprocess.DEVNULL, start_new_session=True)
+                    for r in reversed(br.get("reads") or []):
+                        if r.get("label") == label and r.get("credited"):
+                            r["shipping"] = "by itself, auto mode"
+                            break
+                self.flag("bridge", "%s, credited on its second read, %s" % (label, "ships itself (auto mode): plan/bridge-ship.log says how it went" if auto
+                          else "waits to be shipped: fleet-queue.py QUEUE bridge ship %s, or Ship on Results, Growth" % label),
+                          key="bridge-ship:%s" % label, progress=auto)
             if not cur:
                 ms = sorted(glob.glob(os.path.join(self.crucible_dir("milestones", home=home), "M*.bin")))
                 label = os.path.basename(ms[-1])[:-4] if ms else None
@@ -5344,17 +5399,34 @@ class Plan:
                     label = unread[0]
                     ms = [m for m in ms if os.path.basename(m)[:-4] == label]
                 fast = [h["name"] for h in self.hosts if "fast" in h.get("caps", [])] or [h["name"] for h in self.hosts if "cpu" in h.get("caps", [])]
-                if label and label != br.get("shipped") and label not in read and fast:
+                # A second read goes before a new milestone's first: the confirmation of a read past two
+                # errors, or the check of a Gladiator that shipped on one read before this rule.
+                kind, seeds = None, self.BRIDGE_SEEDS
+                once = next((r for r in br.get("reads") or [] if r.get("credited") and not r.get("kind") and not r.get("checked")
+                             and r.get("label") == br.get("shipped") and r.get("shipped") in names), None)
+                if br.get("confirm") in names:
+                    kind, label = "confirm", br["confirm"]
+                elif once:
+                    kind, label = "check", once["shipped"]
+                if kind:
+                    ms, seeds = [m for m in ms if os.path.basename(m)[:-4] == label], self.BRIDGE_CONFIRM
+                if label and fast and (kind or (label != br.get("shipped") and label not in read)):
+                    if kind == "confirm":
+                        br.pop("confirm")
+                    elif kind == "check":
+                        once["checked"] = True
                     n = br["n"] = br.get("n", 0) + 1
                     seed0 = self.BRIDGE_SEED0 + 1000 * n
                     jc, js = "bridge-%03d-c" % n, "bridge-%03d-s" % n
-                    out = [self.census_job(jc, "bridge %d: %s as the Gladiator" % (n, label), "bot_style = 17\n", "", self.BRIDGE_SEEDS, seed0, 900, "all",
+                    out = [self.census_job(jc, "bridge %d: %s as the Gladiator%s" % (n, label, ", %s" % kind if kind else ""), "bot_style = 17\n", "", seeds, seed0, 900, "all",
                                            host=fast[0], env="GLADIATOR=$Q/trials/%s.champ " % jc,
                                            also=[{"src": ms[-1], "dst": "~/%s/trials/%s.champ" % (self.home, jc)}]),
                            self.census_job(js, "bridge %d: the shipped Gladiator, %s, on the same seeds" % (n, br.get("shipped")), "bot_style = 17\n", "",
-                                           self.BRIDGE_SEEDS, seed0, 900, "all", host=fast[0])]
+                                           seeds, seed0, 900, "all", host=fast[0])]
                     br["current"] = {"n": n, "label": label, "shipped": br.get("shipped"), "jobs": [jc, js], "seed0": seed0,
-                                     "seeds": self.BRIDGE_SEEDS, "host": fast[0], "asked": time.strftime("%Y-%m-%dT%H:%M:%S")}
+                                     "seeds": seeds, "host": fast[0], "asked": time.strftime("%Y-%m-%dT%H:%M:%S")}
+                    if kind:
+                        br["current"]["kind"] = kind
             br["note"] = ("reading %s against the shipped %s on %s" % (br["current"]["label"], br.get("shipped"), br["current"]["host"]) if br.get("current")
                           else "the game ships %s as the Gladiator; every milestone since has been read" % br.get("shipped"))
         save(os.path.join(self.pd, "bridge.json"), {k: v for k, v in br.items()} | {"home": home, "at": time.strftime("%Y-%m-%dT%H:%M:%S")})
@@ -6122,6 +6194,18 @@ class Plan:
                     except SystemExit as e:
                         print("resolve: %s" % e, file=sys.stderr)
                     return []
+                # HELD BY A MAP, AND SAID (13 November). A line past main on every map together and two errors
+                # under it on one does not land, and nothing said so: w_smooth 0.525 read +3.91 +/- 0.11 over
+                # 9,600 seeds, twelve maps of thirteen for it, flame-war-modified -1.96 +/- 0.40 against, and
+                # it stood on the line as if still being read. At a proof's seeds a map two errors under is
+                # a real loss there, not the chance it guards against at 400. Whether the whole is worth
+                # the one map is a person's call: the flag stays up until it is acknowledged or the line lands.
+                if -d / se >= self.HELD_Z and p["above"] and on_line and n_ >= (self.SETTLE_SEEDS or 0):
+                    under = sorted((k, -dd, e) for k, (dd, e) in p["maps"].items() if dd > 2 * e)
+                    self.flag("line", "the line %s is proved past main on every map together (%+.2f +/- %.2f over %d seeds) and HELD OFF MAIN by %d map(s) of %d where it reads under: %s. "
+                              "It stays the fleet's working line. To send it to main as it is: fleet-queue.py %s resolve" % (
+                                  head[:7], -d, se, n_, len(under), len(p["maps"]), "; ".join("%s %+.2f +/- %.2f" % u for u in under), self.q),
+                              key="map-held:%s" % head[:12])
                 if self.SETTLE_SEEDS and n_ >= self.SETTLE_SEEDS and -d + 2 * se < self.MIN_GAIN and self.orphan(head, -d, se, n_):
                     return []
                 if d / se >= 2:

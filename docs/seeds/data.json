@@ -1,0 +1,533 @@
+{
+ "from": 17000,
+ "trials": 3023,
+ "old": {
+  "n": 2960,
+  "seeds": 355335,
+  "first": 162800,
+  "held": 161,
+  "cand": 15
+ },
+ "cand_first_z": [
+  0.34,
+  0.48,
+  0.59,
+  0.64,
+  0.67,
+  0.76,
+  0.82,
+  0.85,
+  0.9,
+  0.93,
+  0.95,
+  1.12,
+  1.14,
+  1.18,
+  2.21
+ ],
+ "kinds": [
+  {
+   "kind": "sample",
+   "words": "the fit's samples, three or four dials",
+   "n": 1390,
+   "seeds": 176770,
+   "mean": 0.003548710056022138,
+   "sd": 1.0243541302468795,
+   "se_mean": 0.026822089039291005,
+   "over2": 36,
+   "under2": 36,
+   "null2": 31.6225,
+   "held": 68,
+   "cand": 7
+  },
+  {
+   "kind": "wide",
+   "words": "wide trials, a stalled search's",
+   "n": 1277,
+   "seeds": 149554,
+   "mean": -0.0712251092401156,
+   "sd": 1.0014742179276652,
+   "se_mean": 0.027983662310423867,
+   "over2": 17,
+   "under2": 42,
+   "null2": 29.05175,
+   "held": 59,
+   "cand": 4
+  },
+  {
+   "kind": "ab",
+   "words": "a switch or a choice flipped",
+   "n": 238,
+   "seeds": 24587,
+   "mean": -0.6573440880217704,
+   "sd": 1.6062551179620106,
+   "se_mean": 0.06482037235521644,
+   "over2": 5,
+   "under2": 41,
+   "null2": 5.414499999999999,
+   "held": 16,
+   "cand": 3
+  },
+  {
+   "kind": "far",
+   "words": "one dial alone, far",
+   "n": 23,
+   "seeds": 4374,
+   "mean": 0.014907776945225633,
+   "sd": 0.9762880207301297,
+   "se_mean": 0.20851441405707477,
+   "over2": 0,
+   "under2": 1,
+   "null2": 0.52325,
+   "held": 0,
+   "cand": 0
+  },
+  {
+   "kind": "best",
+   "words": "the fit's best",
+   "n": 43,
+   "seeds": 8831,
+   "mean": 0.25717315599849017,
+   "sd": 1.0615880019956163,
+   "se_mean": 0.15249857033260467,
+   "over2": 0,
+   "under2": 0,
+   "null2": 0.97825,
+   "held": 2,
+   "cand": 0
+  }
+ ],
+ "hist": [
+  3,
+  5,
+  16,
+  54,
+  116,
+  245,
+  431,
+  474,
+  508,
+  394,
+  253,
+  114,
+  38,
+  15,
+  1,
+  0
+ ],
+ "noise_n": 2667,
+ "buckets": [
+  {
+   "lo": -9,
+   "hi": -1,
+   "n": 515,
+   "on": 0,
+   "after": 0,
+   "held": 2,
+   "cand": 0
+  },
+  {
+   "lo": -1,
+   "hi": -0.5,
+   "n": 474,
+   "on": 0,
+   "after": 0,
+   "held": 2,
+   "cand": 0
+  },
+  {
+   "lo": -0.5,
+   "hi": 0,
+   "n": 522,
+   "on": 0,
+   "after": 0,
+   "held": 2,
+   "cand": 0
+  },
+  {
+   "lo": 0,
+   "hi": 0.25,
+   "n": 267,
+   "on": 265,
+   "after": 21108,
+   "held": 16,
+   "cand": 0
+  },
+  {
+   "lo": 0.25,
+   "hi": 0.5,
+   "n": 277,
+   "on": 270,
+   "after": 24996,
+   "held": 14,
+   "cand": 2
+  },
+  {
+   "lo": 0.5,
+   "hi": 0.75,
+   "n": 251,
+   "on": 248,
+   "after": 28185,
+   "held": 24,
+   "cand": 3
+  },
+  {
+   "lo": 0.75,
+   "hi": 1,
+   "n": 191,
+   "on": 188,
+   "after": 27081,
+   "held": 25,
+   "cand": 6
+  },
+  {
+   "lo": 1,
+   "hi": 1.5,
+   "n": 279,
+   "on": 277,
+   "after": 49033,
+   "held": 36,
+   "cand": 3
+  },
+  {
+   "lo": 1.5,
+   "hi": 2,
+   "n": 125,
+   "on": 124,
+   "after": 27166,
+   "held": 21,
+   "cand": 0
+  },
+  {
+   "lo": 2,
+   "hi": 9,
+   "n": 59,
+   "on": 57,
+   "after": 14966,
+   "held": 19,
+   "cand": 1
+  }
+ ],
+ "proof": {
+  "last": {
+   "head": "394c4ac",
+   "d": 3.91,
+   "se": 0.11,
+   "z": 34.4,
+   "seeds": 9600,
+   "reads": 12
+  },
+  "maps": [
+   {
+    "map": "fortressisles2",
+    "d": 10.17,
+    "se": 0.32
+   },
+   {
+    "map": "fidos-airstrip",
+    "d": 9.03,
+    "se": 0.42
+   },
+   {
+    "map": "proving",
+    "d": 8.11,
+    "se": 0.33
+   },
+   {
+    "map": "constanine",
+    "d": 4.49,
+    "se": 0.29
+   },
+   {
+    "map": "naval",
+    "d": 4.12,
+    "se": 0.28
+   },
+   {
+    "map": "island",
+    "d": 3.96,
+    "se": 0.31
+   },
+   {
+    "map": "industry",
+    "d": 3.49,
+    "se": 0.33
+   },
+   {
+    "map": "atlantic",
+    "d": 2.71,
+    "se": 0.48
+   },
+   {
+    "map": "generated",
+    "d": 2.46,
+    "se": 0.31
+   },
+   {
+    "map": "big-lizard",
+    "d": 1.75,
+    "se": 0.6
+   },
+   {
+    "map": "fortressislesx",
+    "d": 1.64,
+    "se": 0.32
+   },
+   {
+    "map": "europe",
+    "d": 1.02,
+    "se": 0.45
+   },
+   {
+    "map": "flame-war-modified",
+    "d": -1.96,
+    "se": 0.4
+   }
+  ]
+ },
+ "shipped": "M0030-calber-cuda-g290500",
+ "bridge": [
+  {
+   "n": 1,
+   "label": "M0016-calber-cuda-g277100",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 48,
+   "diff": -1.35,
+   "se": 1.794,
+   "kind": null,
+   "credited": null,
+   "read": "2026-11-06T10:40:28"
+  },
+  {
+   "n": 2,
+   "label": "M0017-calber-cuda-g277600",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": -0.44,
+   "se": 1.068,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-06T11:52:33"
+  },
+  {
+   "n": 3,
+   "label": "M0018-boburner-cuda-g111700",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": -4.72,
+   "se": 0.979,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-06T12:43:48"
+  },
+  {
+   "n": 4,
+   "label": "M0019-boburner-cuda-g111900",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": -5.82,
+   "se": 1.076,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-06T14:01:27"
+  },
+  {
+   "n": 5,
+   "label": "M0020-boburner-cuda-g112700",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": -8.75,
+   "se": 1.008,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-06T18:38:28"
+  },
+  {
+   "n": 6,
+   "label": "M0021-boburner-cuda-g112900",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": -8.47,
+   "se": 1.07,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-06T20:21:20"
+  },
+  {
+   "n": 7,
+   "label": "M0022-calber-cuda-g280400",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": 1.26,
+   "se": 0.967,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-06T21:01:44"
+  },
+  {
+   "n": 8,
+   "label": "M0023-calber-cuda-g281200",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": 1.02,
+   "se": 0.878,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-07T01:06:42"
+  },
+  {
+   "n": 9,
+   "label": "M0024-calber-cuda-g281700",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": 0.2,
+   "se": 0.998,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-07T04:16:24"
+  },
+  {
+   "n": 10,
+   "label": "M0025-boburner-cuda-g114000",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": -7.11,
+   "se": 1.008,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-07T05:40:42"
+  },
+  {
+   "n": 11,
+   "label": "M0026-boburner-cuda-g114700",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": -7.27,
+   "se": 1.0,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-07T11:34:13"
+  },
+  {
+   "n": 12,
+   "label": "M0027-boburner-cuda-g115200",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": -7.31,
+   "se": 1.061,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-07T15:59:59"
+  },
+  {
+   "n": 13,
+   "label": "M0028-boburner-cuda-g117500",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": -7.13,
+   "se": 1.02,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-08T22:33:04"
+  },
+  {
+   "n": 14,
+   "label": "M0029-boburner-cuda-g119800",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": -8.0,
+   "se": 1.003,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-09T16:45:05"
+  },
+  {
+   "n": 15,
+   "label": "M0030-calber-cuda-g290500",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": 2.28,
+   "se": 0.983,
+   "kind": null,
+   "credited": true,
+   "read": "2026-11-10T00:53:11"
+  },
+  {
+   "n": 16,
+   "label": "M0031-calber-cuda-g291400",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": -0.68,
+   "se": 1.026,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-10T05:31:12"
+  },
+  {
+   "n": 17,
+   "label": "M0032-calber-cuda-g291900",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": -0.93,
+   "se": 1.026,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-10T08:35:10"
+  },
+  {
+   "n": 18,
+   "label": "M0033-boburner-cuda-g123600",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": -6.76,
+   "se": 1.006,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-10T20:06:13"
+  },
+  {
+   "n": 19,
+   "label": "M0034-boburner-cuda-g129100",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": -5.01,
+   "se": 1.026,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-12T10:54:10"
+  },
+  {
+   "n": 20,
+   "label": "M0035-boburner-cuda-g129400",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": -5.05,
+   "se": 1.018,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-12T13:52:00"
+  },
+  {
+   "n": 21,
+   "label": "M0036-boburner-cuda-g131100",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": -7.2,
+   "se": 1.061,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-13T01:26:20"
+  },
+  {
+   "n": 22,
+   "label": "M0037-boburner-cuda-g131600",
+   "shipped": "M0015-calber-cuda-g241300",
+   "seeds": 192,
+   "diff": -6.32,
+   "se": 1.086,
+   "kind": null,
+   "credited": false,
+   "read": "2026-11-13T05:05:50"
+  }
+ ]
+}
