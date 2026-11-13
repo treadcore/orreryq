@@ -1,0 +1,29 @@
+<style>
+.ogv { --s1: #1c5cab; --s2: #c04a1c; --s3: #0f7a55; --s1f: #1c5cab33; --s2f: #c04a1c30; --s3f: #0f7a5533; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ogv { --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s1f: #3987e540; --s2f: #d9592638; --s3f: #199e7040; } }
+:root[data-theme="dark"] .ogv { --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s1f: #3987e540; --s2f: #d9592638; --s3f: #199e7040; }
+.ogv { margin: 1.2em 0 .4em; }
+.ogv svg { display: block; width: 100%; height: auto; overflow: visible; }
+.ogv text { font-family: var(--cond); fill: var(--ink); font-size: 12px; }
+.ogv .dim { fill: var(--dim); }
+.ogv .num { font-family: var(--mono); font-size: 11px; }
+.ogv .ttl { font-weight: 600; font-size: 13px; }
+.ogv .grid { stroke: var(--line); stroke-width: 1; }
+.ogv .axis { stroke: var(--dim); stroke-width: 1; }
+.ogv .box { fill: var(--tile); stroke: var(--line); stroke-width: 1.5; }
+.ogv .gpu { fill: var(--s1f); stroke: var(--s1); stroke-width: 2; }
+.ogv .cpu { fill: var(--s2f); stroke: var(--s2); stroke-width: 2; }
+.ogv .main { fill: var(--s3f); stroke: var(--s3); stroke-width: 2; }
+.ogv .wire { fill: none; stroke: var(--dim); stroke-width: 1.5; }
+.ogv .wire-gpu { fill: none; stroke: var(--s1); stroke-width: 2; }
+.ogv .wire-cpu { fill: none; stroke: var(--s2); stroke-width: 2; }
+.ogv .wire-main { fill: none; stroke: var(--s3); stroke-width: 2; }
+.ogv .no { fill: none; stroke: var(--dim); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.ogv .f1 { fill: var(--s1); } .ogv .f2 { fill: var(--s2); } .ogv .f3 { fill: var(--s3); }
+.ogv .l1 { stroke: var(--s1); stroke-width: 2; fill: none; } .ogv .l2 { stroke: var(--s2); stroke-width: 2; fill: none; } .ogv .l3 { stroke: var(--s3); stroke-width: 2; fill: none; }
+.ogv .bar2 { fill: var(--s2); } .ogv .bar3 { fill: var(--s3f); stroke: var(--s3); stroke-width: 1.5; }
+.ogv .wait { fill: none; stroke: var(--s3); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.ogv .thr { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.ogv .hollow { fill: var(--base); stroke-width: 2; }
+.ogv rect.hit:hover, .ogv circle:hover { stroke: var(--ink); stroke-width: 2.5; }
+</style><div class="ogv"><svg viewBox="0 0 960 246" role="img" aria-label="Fig. 1: where the CPU machines&#x27; hours went, by the kind of job"><line x1="230.0" y1="14.0" x2="230.0" y2="200.0" class="grid"/><text x="230.0" y="216.0" text-anchor="middle" class="dim num">0%</text><line x1="370.0" y1="14.0" x2="370.0" y2="200.0" class="grid"/><text x="370.0" y="216.0" text-anchor="middle" class="dim num">10%</text><line x1="510.0" y1="14.0" x2="510.0" y2="200.0" class="grid"/><text x="510.0" y="216.0" text-anchor="middle" class="dim num">20%</text><line x1="650.0" y1="14.0" x2="650.0" y2="200.0" class="grid"/><text x="650.0" y="216.0" text-anchor="middle" class="dim num">30%</text><line x1="790.0" y1="14.0" x2="790.0" y2="200.0" class="grid"/><text x="790.0" y="216.0" text-anchor="middle" class="dim num">40%</text><text x="220.0" y="39.0" text-anchor="end" class="">reads on</text><rect x="230" y="26" width="576.9" height="18" rx="3" class="bar2"><title>reads on: 4741 jobs, 193.0 hours, 41.2% of the CPU machines&#x27; job-hours</title></rect><text x="812.9" y="39.0" text-anchor="start" class="num">41.2%  4,741 jobs</text><text x="220.0" y="69.0" text-anchor="end" class="">first reads</text><rect x="230" y="56" width="499.6" height="18" rx="3" class="bar2"><title>first reads: 3510 jobs, 167.1 hours, 35.7% of the CPU machines&#x27; job-hours</title></rect><text x="735.6" y="69.0" text-anchor="start" class="num">35.7%  3,510 jobs</text><text x="220.0" y="99.0" text-anchor="end" class="">the transform rotation</text><rect x="230" y="86" width="135.2" height="18" rx="3" class="bar3"><title>the transform rotation: 1496 jobs, 45.2 hours, 9.7% of the CPU machines&#x27; job-hours</title></rect><text x="371.2" y="99.0" text-anchor="start" class="num">9.7%  1,496 jobs</text><text x="220.0" y="129.0" text-anchor="end" class="">held-out reads</text><rect x="230" y="116" width="116.7" height="18" rx="3" class="bar2"><title>held-out reads: 829 jobs, 39.0 hours, 8.3% of the CPU machines&#x27; job-hours</title></rect><text x="352.7" y="129.0" text-anchor="start" class="num">8.3%  829 jobs</text><text x="220.0" y="159.0" text-anchor="end" class="">the proof</text><rect x="230" y="146" width="56.3" height="18" rx="3" class="bar2"><title>the proof: 128 jobs, 18.8 hours, 4.0% of the CPU machines&#x27; job-hours</title></rect><text x="292.3" y="159.0" text-anchor="start" class="num">4.0%  128 jobs</text><text x="220.0" y="189.0" text-anchor="end" class="">everything else</text><rect x="230" y="176" width="15.2" height="18" rx="3" class="bar2"><title>everything else: 152 jobs, 5.1 hours, 1.1% of the CPU machines&#x27; job-hours</title></rect><text x="251.2" y="189.0" text-anchor="start" class="num">1.1%  152 jobs</text><text x="545.0" y="234.0" text-anchor="middle" class="">share of the CPU machines&#x27; job-hours, 10 to 13 November</text></svg></div>

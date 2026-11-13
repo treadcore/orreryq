@@ -1,0 +1,314 @@
+{
+ "since": "2026-11-10",
+ "hours": [
+  {
+   "kind": "reads on",
+   "jobs": 4741,
+   "hours": 192.98336111111269,
+   "share": 0.41210339562021264
+  },
+  {
+   "kind": "first reads",
+   "jobs": 3510,
+   "hours": 167.11902777777843,
+   "share": 0.3568717967364976
+  },
+  {
+   "kind": "the transform rotation",
+   "jobs": 1496,
+   "hours": 45.21305555555557,
+   "share": 0.09654953470357422
+  },
+  {
+   "kind": "held-out reads",
+   "jobs": 829,
+   "hours": 39.0298055555556,
+   "share": 0.08334560714060912
+  },
+  {
+   "kind": "the proof",
+   "jobs": 128,
+   "hours": 18.846361111111115,
+   "share": 0.040245176393740305
+  },
+  {
+   "kind": "everything else",
+   "jobs": 152,
+   "hours": 5.097083333333333,
+   "share": 0.010884489405366127
+  }
+ ],
+ "clone": [
+  {
+   "n": 1,
+   "diff": -2.78,
+   "se": 3.928,
+   "holds": false
+  },
+  {
+   "n": 2,
+   "diff": -1.73,
+   "se": 2.178,
+   "holds": false
+  },
+  {
+   "n": 3,
+   "diff": -0.68,
+   "se": 2.009,
+   "holds": false
+  },
+  {
+   "n": 4,
+   "diff": -2.75,
+   "se": 2.258,
+   "holds": false
+  },
+  {
+   "n": 5,
+   "diff": -1.91,
+   "se": 2.15,
+   "holds": false
+  },
+  {
+   "n": 6,
+   "diff": -2.45,
+   "se": 1.95,
+   "holds": false
+  },
+  {
+   "n": 7,
+   "diff": 0.54,
+   "se": 2.173,
+   "holds": false
+  },
+  {
+   "n": 8,
+   "diff": 2.11,
+   "se": 1.994,
+   "holds": false
+  },
+  {
+   "n": 9,
+   "diff": -3.86,
+   "se": 2.11,
+   "holds": false
+  },
+  {
+   "n": 10,
+   "diff": -2.71,
+   "se": 2.037,
+   "holds": false
+  },
+  {
+   "n": 11,
+   "diff": 1.25,
+   "se": 1.826,
+   "holds": false
+  },
+  {
+   "n": 12,
+   "diff": -1.8,
+   "se": 2.286,
+   "holds": false
+  },
+  {
+   "n": 13,
+   "diff": -3.64,
+   "se": 2.037,
+   "holds": false
+  },
+  {
+   "n": 14,
+   "diff": -0.11,
+   "se": 2.306,
+   "holds": false
+  },
+  {
+   "n": 15,
+   "diff": -2.32,
+   "se": 2.157,
+   "holds": false
+  }
+ ],
+ "isles": [
+  {
+   "island": "boburner",
+   "reads": [
+    {
+     "label": "M0018",
+     "diff": -4.72,
+     "se": 0.979,
+     "holds": false
+    },
+    {
+     "label": "M0019",
+     "diff": -5.82,
+     "se": 1.076,
+     "holds": false
+    },
+    {
+     "label": "M0020",
+     "diff": -8.75,
+     "se": 1.008,
+     "holds": false
+    },
+    {
+     "label": "M0021",
+     "diff": -8.47,
+     "se": 1.07,
+     "holds": false
+    },
+    {
+     "label": "M0025",
+     "diff": -7.11,
+     "se": 1.008,
+     "holds": false
+    },
+    {
+     "label": "M0026",
+     "diff": -7.27,
+     "se": 1.0,
+     "holds": false
+    },
+    {
+     "label": "M0027",
+     "diff": -7.31,
+     "se": 1.061,
+     "holds": false
+    },
+    {
+     "label": "M0028",
+     "diff": -7.13,
+     "se": 1.02,
+     "holds": false
+    },
+    {
+     "label": "M0029",
+     "diff": -8.0,
+     "se": 1.003,
+     "holds": false
+    },
+    {
+     "label": "M0033",
+     "diff": -6.76,
+     "se": 1.006,
+     "holds": false
+    },
+    {
+     "label": "M0034",
+     "diff": -5.01,
+     "se": 1.026,
+     "holds": false
+    },
+    {
+     "label": "M0035",
+     "diff": -5.05,
+     "se": 1.018,
+     "holds": false
+    },
+    {
+     "label": "M0036",
+     "diff": -7.2,
+     "se": 1.061,
+     "holds": false
+    },
+    {
+     "label": "M0037",
+     "diff": -6.32,
+     "se": 1.086,
+     "holds": false
+    }
+   ],
+   "mean": -6.78,
+   "held": 0
+  },
+  {
+   "island": "calber",
+   "reads": [
+    {
+     "label": "M0016",
+     "diff": -1.35,
+     "se": 1.794,
+     "holds": false
+    },
+    {
+     "label": "M0017",
+     "diff": -0.44,
+     "se": 1.068,
+     "holds": false
+    },
+    {
+     "label": "M0022",
+     "diff": 1.26,
+     "se": 0.967,
+     "holds": false
+    },
+    {
+     "label": "M0023",
+     "diff": 1.02,
+     "se": 0.878,
+     "holds": false
+    },
+    {
+     "label": "M0024",
+     "diff": 0.2,
+     "se": 0.998,
+     "holds": false
+    },
+    {
+     "label": "M0030",
+     "diff": 2.28,
+     "se": 0.983,
+     "holds": true
+    },
+    {
+     "label": "M0031",
+     "diff": -0.68,
+     "se": 1.026,
+     "holds": false
+    },
+    {
+     "label": "M0032",
+     "diff": -0.93,
+     "se": 1.026,
+     "holds": false
+    }
+   ],
+   "mean": 0.16999999999999996,
+   "held": 1
+  }
+ ],
+ "tuning": {
+  "anchor": 0,
+  "clone_every_h": 0,
+  "ease_max": 0.5,
+  "ease_now": 0.5,
+  "far_share": 0.5,
+  "held_reads": 6,
+  "queue_per_machine": 2,
+  "settle_gens": 0,
+  "trade_gain": 1.0
+ },
+ "plan": {
+  "weights": {
+   "seeds": 150,
+   "secs": 900,
+   "map": "all",
+   "seed0": 20000000,
+   "held_seeds": 400,
+   "held_seed0": 60000000,
+   "promote_every_min": 75
+  },
+  "rotation": false
+ },
+ "proof": {
+  "head": "f1ce347",
+  "d": -0.05,
+  "se": 0.11,
+  "z": -0.45,
+  "seeds": 8000,
+  "reads": 10
+ },
+ "orphans": [],
+ "line": true
+}
