@@ -1,0 +1,279 @@
+<meta charset="utf-8">
+<title>The Loop Closed</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* READ ALONG (tools/report/page.html's teleprompt): the button in the bar, and the reading line while it plays. */
+.tele { font: inherit; color: var(--dim); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 1px 8px; cursor: pointer; }
+.tele:hover, .tele[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); }
+.tele-line { position: fixed; left: 0; right: 0; height: 0; border-top: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); pointer-events: none; z-index: 15; }
+.tele-line[hidden] { display: none; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="index.html">Orreryq</a> · lab report</strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a><a href="#svi">VI</a><a href="#svii">VII</a><a href="#sviii">VIII</a><a href="#references">References</a><button class="tele" id="tele" type="button" aria-pressed="false" title="Scroll at reading speed; each film plays when it reaches you. Esc, the wheel or a touch stops it.">Read along</button></div></div>
+<div class="tele-line" id="tele-line" hidden></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">Orreryq · the search · floors that give, the game&#x27;s verdict back to the cards, the watch that flags, and what more cards speed</p>
+    <h1>The Loop Closed: Floors That Give, the Game's Verdict Back to the Cards, a Watch That Flags, and What More CUDA Cards Would Speed</h1>
+    <div class="front"><p class="note">Paul Richeson · Lab Report — IEEE Format · 13 November 2026</p><p>Paul Richeson, treadcore.org; Claude Code (Claude Fable 5.2) as the pair. Copyright (c) 2026 Paul Richeson. MIT licensed, as orrery and treadcore.</p><p>Companions: orrery <code>tools/plans/treadcore.py</code> (<code>FLOOR_GIVE</code>, <code>guard_verdict</code>, <code>game_says</code>, <code>standing</code>, <code>ladder_top</code>, <code>island_refused</code>, <code>watching</code>), <code>tools/fleet-queue.py</code> (<code>Queue.ack</code>, health's words), <code>tools/deploy-watch.py</code>, <code>tools/report/loop.py</code> (the diagrams and numbers here); treadcore <code>scripts/floors.py</code>, <code>scenario.rs</code> (<code>FLOOR_GIVE</code>), LR 158. The data: <code>docs/loop/data.json</code>, read at 10:37 on 13 November. The day's reports before this: [1] to [4]. orrery b4ae394 and the commit of this report; treadcore 6a706cd.</p></div>
+  </header>
+  <nav class="toc" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. The design, in one picture</a></li><li><a href="#sii">II. A floor gives</a></li><li><a href="#siii">III. The game's verdict comes back to the cards</a></li><li><a href="#siv">IV. What more CUDA cards would speed</a></li><li><a href="#sv">V. The watch flags, and the page asks for less</a></li><li><a href="#svi">VI. Seen for the first time</a></li><li><a href="#svii">VII. What is open</a></li><li><a href="#sviii">VIII. How to make it again</a></li><li><a href="#references">References</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>Paul, after <em>The First Morning</em> [4]: "I want to accept the world, the best suggested way to move forward ... and adapting the tests to just pass with current numbers. Then we can progress forward. Please use your best intuition to design a better learning process. ... Fix the milestone process to be more adaptive and cyclical. Remove bottlenecks and checkpoints: if it's good, it should promote, test and accept. Reincorporate the adjustments found back into the loop. Create a diagram explaining how adding more CUDA GPUs will accelerate this, and in what way." Asked which tests should follow the brain, he named all three kinds; asked what a drop should do: "pass on a small drop". <strong>Five things were built.</strong> (1) <strong>A floor gives.</strong> A family or a gauntlet file under its floor by no more than 0.05 of a share passes, and the promotion moves that floor down to what the new brain scored; under by more is a collapse and still refuses. (2) <strong>The game's verdict comes back to the cards.</strong> A milestone the game reads under the shipped Gladiator by two errors is no rung of the ladder: 14 of 37 are marked, every one of boburner's that was read, and the one to beat is calber's M0032 where it was boburner's M0037. An island whose last three read milestones were all refused sends no migrants, and the net the game ships goes to every island each segment. (3) <strong>The watch runs by itself</strong>, every ten minutes in the planner, and raises a flag for each check that reads <code>BAD</code>. (4) <strong>A refusal is progress</strong>: a candidate refused by a family is said once with its reason and wants no acknowledging. (5) <strong>Acknowledge all works</strong>: one flag file broken in the cut of 8 November had stopped every acknowledgement. <strong>Three things were seen for the first time</strong> [4]: a trade let through (<code>w_smooth = 0.525</code>, +3.46 held out for 0.44 kills less deaths), the yardstick's first day (<strong>+3.87 ± 0.25</strong> over main of 28 October, <strong>+1.57 ± 0.22</strong> over 2 November, <strong>+0.20 ± 0.22</strong> over 6 November), and the four parts of <code>w_smooth</code> read alone, none of which carries its gain by itself. <strong>On the cards:</strong> more of them speed proposals, breadth and the wait for a credited net, each in proportion or better. They do not speed the search of the game's own dials, which is read in whole games on the CPUs. And they make more of what the arena likes, which over 22 milestones agreed with the game at −0.40.</p><p><em>Index Terms</em>: adaptive thresholds, regression tolerance, closed-loop selection, island model, migration, coevolution, hall of fame, parallel speedup, alerting.</p></section><section id="si"><h2>I. The design, in one picture</h2><style>
+.ogv { --s1: #1c5cab; --s2: #c04a1c; --s3: #0f7a55; --s1f: #1c5cab33; --s2f: #c04a1c30; --s3f: #0f7a5533; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ogv { --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s1f: #3987e540; --s2f: #d9592638; --s3f: #199e7040; } }
+:root[data-theme="dark"] .ogv { --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s1f: #3987e540; --s2f: #d9592638; --s3f: #199e7040; }
+.ogv { margin: 1.2em 0 .4em; }
+.ogv svg { display: block; width: 100%; height: auto; overflow: visible; }
+.ogv text { font-family: var(--cond); fill: var(--ink); font-size: 12px; }
+.ogv .dim { fill: var(--dim); }
+.ogv .num { font-family: var(--mono); font-size: 11px; }
+.ogv .ttl { font-weight: 600; font-size: 13px; }
+.ogv .grid { stroke: var(--line); stroke-width: 1; }
+.ogv .axis { stroke: var(--dim); stroke-width: 1; }
+.ogv .box { fill: var(--tile); stroke: var(--line); stroke-width: 1.5; }
+.ogv .gpu { fill: var(--s1f); stroke: var(--s1); stroke-width: 2; }
+.ogv .cpu { fill: var(--s2f); stroke: var(--s2); stroke-width: 2; }
+.ogv .main { fill: var(--s3f); stroke: var(--s3); stroke-width: 2; }
+.ogv .wire { fill: none; stroke: var(--dim); stroke-width: 1.5; }
+.ogv .wire-gpu { fill: none; stroke: var(--s1); stroke-width: 2; }
+.ogv .wire-cpu { fill: none; stroke: var(--s2); stroke-width: 2; }
+.ogv .wire-main { fill: none; stroke: var(--s3); stroke-width: 2; }
+.ogv .no { fill: none; stroke: var(--dim); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.ogv .f1 { fill: var(--s1); } .ogv .f2 { fill: var(--s2); } .ogv .f3 { fill: var(--s3); }
+.ogv .l1 { stroke: var(--s1); stroke-width: 2; fill: none; } .ogv .l2 { stroke: var(--s2); stroke-width: 2; fill: none; } .ogv .l3 { stroke: var(--s3); stroke-width: 2; fill: none; }
+.ogv .bar2 { fill: var(--s2); } .ogv .bar3 { fill: var(--s3f); stroke: var(--s3); stroke-width: 1.5; }
+.ogv .wait { fill: none; stroke: var(--s3); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.ogv .thr { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.ogv .hollow { fill: var(--base); stroke-width: 2; }
+.ogv rect.hit:hover, .ogv circle:hover { stroke: var(--ink); stroke-width: 2.5; }
+</style><div class="ogv"><svg viewBox="0 0 1106 542" role="img" aria-label="Diagram 1: the learning process, both loops, with what comes back"><text x="20.0" y="14.0" text-anchor="start" class="ttl">THE GAME&#x27;S OWN BRAIN, on the CPU machines</text><rect x="20" y="26" width="204" height="58" rx="6" class="cpu"/><text x="30.0" y="44.0" text-anchor="start" class="ttl">the search</text><text x="30.0" y="60.0" text-anchor="start" class="dim num">the fit&#x27;s trials; one dial</text><text x="30.0" y="74.0" text-anchor="start" class="dim num">at a time; the A/B versions</text><rect x="308" y="26" width="190" height="58" rx="6" class="cpu"/><text x="318.0" y="44.0" text-anchor="start" class="ttl">the reads</text><text x="318.0" y="60.0" text-anchor="start" class="dim num">stages from 150 seeds;</text><text x="318.0" y="74.0" text-anchor="start" class="dim num">held out, read on to six</text><rect x="596" y="26" width="211" height="58" rx="6" class="cpu"/><text x="606.0" y="44.0" text-anchor="start" class="ttl">the gates</text><text x="606.0" y="60.0" text-anchor="start" class="dim num">gain 0.25; floors that give;</text><text x="606.0" y="74.0" text-anchor="start" class="dim num">a trade by its gain</text><rect x="896" y="26" width="190" height="58" rx="6" class="gpu"/><text x="906.0" y="44.0" text-anchor="start" class="ttl">the line</text><text x="906.0" y="60.0" text-anchor="start" class="dim num">one block at a time,</text><text x="906.0" y="74.0" text-anchor="start" class="dim num">settling: 9,600 seeds</text><path d="M224.9,55.0 L306.0,55.0" class="wire"/><polygon points="306.0,55.0 298.9,58.6 298.9,51.4" style="fill:var(--dim)"/><path d="M498.0,55.0 L594.0,55.0" class="wire"/><polygon points="594.0,55.0 586.9,58.6 586.9,51.4" style="fill:var(--dim)"/><path d="M807.6,55.0 L894.0,55.0" class="wire"/><polygon points="894.0,55.0 886.9,58.6 886.9,51.4" style="fill:var(--dim)"/><rect x="896" y="136" width="190" height="44" rx="6" class="main"/><text x="906.0" y="154.0" text-anchor="start" class="ttl">main</text><text x="906.0" y="170.0" text-anchor="start" class="dim num">proved at z 3: pushed</text><rect x="596" y="136" width="225" height="58" rx="6" class="main"/><text x="606.0" y="154.0" text-anchor="start" class="ttl">orphaned</text><text x="606.0" y="170.0" text-anchor="start" class="dim num">refused: off the line;</text><text x="606.0" y="184.0" text-anchor="start" class="dim num">its trial is a candidate still</text><path d="M991.0,84.0 L991.0,134.0" class="wire"/><polygon points="991.0,134.0 987.4,126.9 994.6,126.9" style="fill:var(--dim)"/><text x="997.0" y="113.0" text-anchor="start" class="dim">proved</text><path d="M896.0,55.0 L823.0,165.0" class="wire"/><polygon points="823.0,165.0 823.9,157.1 830.0,161.1" style="fill:var(--dim)"/><text x="865.5" y="114.0" text-anchor="start" class="dim">refused</text><path d="M596.0,165.0 L500.0,55.0" class="no"/><polygon points="500.0,55.0 507.4,58.0 502.0,62.8" style="fill:var(--dim)"/><text x="554.0" y="114.0" text-anchor="start" class="dim">read again</text><rect x="896" y="226" width="190" height="58" rx="6" class="cpu"/><text x="906.0" y="244.0" text-anchor="start" class="ttl">the yardstick</text><text x="906.0" y="260.0" text-anchor="start" class="dim num">main today against main</text><text x="906.0" y="274.0" text-anchor="start" class="dim num">of three fixed days</text><path d="M991.0,180.0 L991.0,224.0" class="no"/><polygon points="991.0,224.0 987.4,216.9 994.6,216.9" style="fill:var(--dim)"/><text x="20.0" y="308.0" text-anchor="start" class="ttl">THE NETS, on the cards</text><rect x="20" y="320" width="204" height="58" rx="6" class="cpu"/><text x="30.0" y="338.0" text-anchor="start" class="ttl">the islands, a card each</text><text x="30.0" y="354.0" text-anchor="start" class="dim num">2,048 nets, 100 generations</text><text x="30.0" y="368.0" text-anchor="start" class="dim num">a segment, in the arena</text><rect x="308" y="320" width="190" height="58" rx="6" class="gpu"/><text x="318.0" y="338.0" text-anchor="start" class="ttl">a milestone</text><text x="318.0" y="354.0" text-anchor="start" class="dim num">elected on the card:</text><text x="318.0" y="368.0" text-anchor="start" class="dim num">the gauntlet, the ladder</text><rect x="596" y="320" width="200" height="58" rx="6" class="cpu"/><text x="606.0" y="338.0" text-anchor="start" class="ttl">the bridge</text><text x="606.0" y="354.0" text-anchor="start" class="dim num">read in the game as the</text><text x="606.0" y="368.0" text-anchor="start" class="dim num">Gladiator: 2 x 192 seeds</text><path d="M224.9,349.0 L306.0,349.0" class="wire"/><polygon points="306.0,349.0 298.9,352.6 298.9,345.4" style="fill:var(--dim)"/><path d="M498.0,349.0 L594.0,349.0" class="wire"/><polygon points="594.0,349.0 586.9,352.6 586.9,345.4" style="fill:var(--dim)"/><rect x="896" y="320" width="190" height="58" rx="6" class="main"/><text x="906.0" y="338.0" text-anchor="start" class="ttl">refused by the game</text><text x="906.0" y="354.0" text-anchor="start" class="dim num">NEW: no rung; its island</text><text x="906.0" y="368.0" text-anchor="start" class="dim num">sends no migrants</text><path d="M796.0,349.0 L894.0,349.0" class="wire"/><polygon points="894.0,349.0 886.9,352.6 886.9,345.4" style="fill:var(--dim)"/><text x="845.0" y="343.0" text-anchor="middle" class="dim">refused</text><rect x="596" y="440" width="200" height="58" rx="6" class="main"/><text x="606.0" y="458.0" text-anchor="start" class="ttl">shipped</text><text x="606.0" y="474.0" text-anchor="start" class="dim num">past two errors:</text><text x="606.0" y="488.0" text-anchor="start" class="dim num">nets/gladiator.bin on main</text><path d="M696.0,378.0 L696.0,438.0" class="wire"/><polygon points="696.0,438.0 692.4,430.9 699.6,430.9" style="fill:var(--dim)"/><text x="702.0" y="412.0" text-anchor="start" class="dim">credited</text><rect x="308" y="440" width="204" height="58" rx="6" class="gpu"/><text x="318.0" y="458.0" text-anchor="start" class="ttl">migrants, each segment</text><text x="318.0" y="474.0" text-anchor="start" class="dim num">NEW: the shipped net; the</text><text x="318.0" y="488.0" text-anchor="start" class="dim num">standing islands&#x27; champions</text><path d="M596.0,469.0 L514.9,469.0" class="no"/><polygon points="514.9,469.0 522.0,465.4 522.0,472.6" style="fill:var(--dim)"/><path d="M308.0,469.0 L226.9,349.0" class="wire"/><polygon points="226.9,349.0 233.9,352.9 227.9,356.9" style="fill:var(--dim)"/><rect x="20" y="518" width="16" height="12" rx="2" class="gpu"/><text x="42.0" y="528.0" text-anchor="start" class="">data: what is kept, and where</text><rect x="340" y="518" width="16" height="12" rx="2" class="cpu"/><text x="362.0" y="528.0" text-anchor="start" class="">a function, by its name in the code</text><rect x="660" y="518" width="16" height="12" rx="2" class="main"/><text x="682.0" y="528.0" text-anchor="start" class="">an outcome</text></svg></div>
+<p class="note">Diagram 1. The learning process on the evening of 13 November. Above, the game's own brain: the search, the reads, the gates, the line that settles, and main. Below, the cards: the islands, a milestone, the bridge that reads it in the game. Dashed arrows are what comes back: an orphaned block's trial to the search, main to the yardstick, and, new here, the game's verdict to the islands.</p><p><strong>The principle Paul asked for is one sentence: if it is good, it is promoted, tested and accepted, and what was learned goes back in.</strong> Three places broke it before today. A candidate good by points and a point under one floor was refused whole. A milestone the game refused stayed the cards' own bar and spread to the other islands. And what needed a person stood beside what did not, so the page that asks for attention asked for it 23 times.</p></section><section id="sii"><h2>II. A floor gives</h2><div class="ogv"><svg viewBox="0 0 960 272" role="img" aria-label="Diagram 2: a floor that gives"><rect x="20" y="70" width="198" height="58" rx="6" class="gpu"/><text x="30.0" y="88.0" text-anchor="start" class="ttl">a brain&#x27;s score on a file</text><text x="30.0" y="104.0" text-anchor="start" class="dim num">a family, or a gauntlet</text><text x="30.0" y="118.0" text-anchor="start" class="dim num">file: a share of runs held</text><rect x="308" y="70" width="200" height="58" rx="6" class="cpu"/><text x="318.0" y="88.0" text-anchor="start" class="ttl">floors.py / FLOOR_GIVE</text><text x="318.0" y="104.0" text-anchor="start" class="dim num">against the file&#x27;s floor,</text><text x="318.0" y="118.0" text-anchor="start" class="dim num">with a give of 0.05</text><path d="M218.2,99.0 L306.0,99.0" class="wire"/><polygon points="306.0,99.0 298.9,102.6 298.9,95.4" style="fill:var(--dim)"/><rect x="620" y="10" width="250" height="44" rx="6" class="main"/><text x="630.0" y="28.0" text-anchor="start" class="ttl">on its floor</text><text x="630.0" y="44.0" text-anchor="start" class="dim num">holds; nothing moves</text><rect x="620" y="80" width="250" height="58" rx="6" class="main"/><text x="630.0" y="98.0" text-anchor="start" class="ttl">under by no more than the give</text><text x="630.0" y="114.0" text-anchor="start" class="dim num">passes; the floor moves down to</text><text x="630.0" y="128.0" text-anchor="start" class="dim num">what it scored, in the commit</text><rect x="620" y="170" width="250" height="58" rx="6" class="main"/><text x="630.0" y="188.0" text-anchor="start" class="ttl">under by more: a collapse</text><text x="630.0" y="204.0" text-anchor="start" class="dim num">refused, nothing written: a raid</text><text x="630.0" y="218.0" text-anchor="start" class="dim num">on the held ground at 0 of 400</text><path d="M508.0,99.0 L618.0,32.0" class="wire"/><polygon points="618.0,32.0 613.8,38.8 610.0,32.6" style="fill:var(--dim)"/><path d="M508.0,99.0 L618.0,109.0" class="wire"/><polygon points="618.0,109.0 610.6,112.0 611.2,104.7" style="fill:var(--dim)"/><path d="M508.0,99.0 L618.0,199.0" class="wire"/><polygon points="618.0,199.0 610.3,196.9 615.2,191.5" style="fill:var(--dim)"/><rect x="20" y="170" width="539" height="58" rx="6" class="box"/><text x="30.0" y="188.0" text-anchor="start" class="ttl">what it changes</text><text x="30.0" y="204.0" text-anchor="start" class="dim num">G20 at 58% of 60% stopped seven candidates in a week: it passes now,</text><text x="30.0" y="218.0" text-anchor="start" class="dim num">and G20&#x27;s floor becomes 0.57. A floor only moves down here; up is a person&#x27;s.</text><rect x="20" y="248" width="16" height="12" rx="2" class="gpu"/><text x="42.0" y="258.0" text-anchor="start" class="">data: what is kept, and where</text><rect x="340" y="248" width="16" height="12" rx="2" class="cpu"/><text x="362.0" y="258.0" text-anchor="start" class="">a function, by its name in the code</text><rect x="660" y="248" width="16" height="12" rx="2" class="main"/><text x="682.0" y="258.0" text-anchor="start" class="">an outcome</text></svg></div>
+<p class="note">Diagram 2. The three things a score under a floor can be.</p><p><strong>What was built.</strong> treadcore (LR 158, 6a706cd): the families' test reads <code>FLOOR_GIVE</code>, a share, and a family within it of its floor "holds, a small drop". <code>scripts/floors.py</code> reads the families' lines and the gauntlet's table against the scenario files; a small drop passes and, at a promotion, its floor is rewritten to what was scored less a hundredth; a collapse exits 1 with nothing written. orrery: the value <code>floor_give</code> (0.05; 0 is every floor a wall, as it was) reaches the families' jobs, the guard's verdict and the promotion, whose commit now carries the scenario files.</p><div class="table"><table><thead><tr><th>Case</th><th>Before</th><th>Now</th></tr></thead><tbody><tr><td>G20 at 58% of a 60% floor (seven candidates in a week)</td><td>waits</td><td>passes; G20's floor becomes 0.57</td></tr><tr><td>a family at 52% of 55%</td><td>refused</td><td>passes; its floor becomes 0.51</td></tr><tr><td>"a raid on the held ground" at 0 of 400, floor 95%</td><td>refused</td><td>refused: a collapse</td></tr></tbody></table></div><p class="note">Table I. The rule on three real cases.</p><p><strong>The third kind of test needed nothing new but one line.</strong> The brain's unit tests have read a pinned brain, not the defaults, since treadcore's LR 147: no promotion has failed on a moved default since 5 November. The one that failed today was this morning's own test of the split, which expected <code>w_smooth</code> off by default. It names <code>w_smooth</code> now.</p><p><strong>What it costs, said plainly.</strong> A floor moved down stays down until a person raises it. A run of small drops can walk a floor a long way, five points at a time. The watch's <code>floors</code> line lists each floor moved.</p></section><section id="siii"><h2>III. The game's verdict comes back to the cards</h2><div class="table"><table><thead><tr><th>Island</th><th>Milestones</th><th>Read in the game</th><th>Refused</th><th>Credited</th><th>Mean in the game</th></tr></thead><tbody><tr><td>boburner</td><td>17</td><td>14</td><td><strong>14</strong></td><td>0</td><td><strong>−6.78</strong></td></tr><tr><td>calber</td><td>19</td><td>8</td><td>0</td><td>1</td><td>+0.17</td></tr><tr><td>whitewolf</td><td>1</td><td>0</td><td>0</td><td>0</td><td>—</td></tr></tbody></table></div><p class="note">Table II. The ladder of the maze home, 37 milestones, by the island that made each. "Refused" is read under the shipped Gladiator by two errors.</p><p><strong>Before.</strong> The card elected and the game credited, and there it ended. Each of boburner's fourteen stood in turn as the newest rung, the one every island's next champion was examined against and the reference of every gauntlet; and each segment took the other islands' newest champions as migrants, boburner's among them.</p><p><strong>What was built</strong> (<code>game_says</code>, <code>standing</code>, <code>ladder_top</code>, <code>island_refused</code>).</p><ul><li><strong>A refused milestone is no rung.</strong> The bridge writes its read on the milestone. The ladder the segments are sent leaves the refused out, and the one to beat is the newest standing. At 10:35 that moved from M0037 (boburner) to <strong>M0032 (calber)</strong>.</li><li><strong>A refused island sends no migrants</strong> while its last three read milestones were all refused. It still receives them: migration between islands is what keeps them one search and not three [6].</li><li><strong>The game's net goes to every island</strong>, each segment, beside the standing islands' champions: what the game credited is what the cards grow from, a hall of fame of one [5].</li><li><strong>A refusal is said once</strong>, as progress, with the read.</li></ul><p><strong>What was not built.</strong> A champion is still read in the game only once the card has elected it a milestone: the game does not yet read an island's best when no milestone comes. And an island is pulled by migrants, not restarted: boburner's population is what it was.</p></section><section id="siv"><h2>IV. What more CUDA cards would speed</h2><div class="ogv"><svg viewBox="0 0 960 400" role="img" aria-label="Diagram 3: what more CUDA cards speed, and what they do not"><rect x="20" y="20" width="190" height="44" rx="6" class="gpu"/><text x="30.0" y="38.0" text-anchor="start" class="ttl">N cards</text><text x="30.0" y="54.0" text-anchor="start" class="dim num">an island each; today 3</text><rect x="320" y="10" width="238" height="58" rx="6" class="cpu"/><text x="330.0" y="28.0" text-anchor="start" class="ttl">proposals: x N</text><text x="330.0" y="44.0" text-anchor="start" class="dim num">champions an hour and milestones</text><text x="330.0" y="58.0" text-anchor="start" class="dim num">a day rise with the cards</text><rect x="320" y="90" width="231" height="58" rx="6" class="cpu"/><text x="330.0" y="108.0" text-anchor="start" class="ttl">breadth: N lineages</text><text x="330.0" y="124.0" text-anchor="start" class="dim num">each island its own population;</text><text x="330.0" y="138.0" text-anchor="start" class="dim num">the game&#x27;s net seeds them all</text><rect x="320" y="170" width="285" height="58" rx="6" class="cpu"/><text x="330.0" y="188.0" text-anchor="start" class="ttl">the wait for a credited net</text><text x="330.0" y="204.0" text-anchor="start" class="dim num">1 - (1 - p)^N a day, p a card&#x27;s chance:</text><text x="330.0" y="218.0" text-anchor="start" class="dim num">about 2.7 days at 3 cards, 1.7 at 6</text><path d="M210.0,42.0 L318.0,39.0" class="wire"/><polygon points="318.0,39.0 311.0,42.8 310.8,35.6" style="fill:var(--dim)"/><path d="M210.0,42.0 L318.0,119.0" class="wire"/><polygon points="318.0,119.0 310.1,117.8 314.3,111.9" style="fill:var(--dim)"/><path d="M210.0,42.0 L318.0,199.0" class="wire"/><polygon points="318.0,199.0 311.0,195.2 317.0,191.1" style="fill:var(--dim)"/><rect x="668" y="10" width="245" height="58" rx="6" class="cpu"/><text x="678.0" y="28.0" text-anchor="start" class="ttl">the bridge: x N reads</text><text x="678.0" y="44.0" text-anchor="start" class="dim num">384 seeds a milestone: at 6 cards</text><text x="678.0" y="58.0" text-anchor="start" class="dim num">about 2% of the CPU fleet</text><path d="M558.4,39.0 L666.0,39.0" class="wire"/><polygon points="666.0,39.0 658.9,42.6 658.9,35.4" style="fill:var(--dim)"/><rect x="668" y="170" width="220" height="58" rx="6" class="main"/><text x="678.0" y="188.0" text-anchor="start" class="ttl">a better Gladiator, sooner</text><text x="678.0" y="204.0" text-anchor="start" class="dim num">only if the arena rewards</text><text x="678.0" y="218.0" text-anchor="start" class="dim num">what the game does</text><path d="M605.3,199.0 L666.0,199.0" class="wire"/><polygon points="666.0,199.0 658.9,202.6 658.9,195.4" style="fill:var(--dim)"/><path d="M790.5,68.0 L778.0,168.0" class="wire"/><polygon points="778.0,168.0 775.3,160.5 782.5,161.4" style="fill:var(--dim)"/><rect x="20" y="270" width="493" height="86" rx="6" class="box"/><text x="30.0" y="288.0" text-anchor="start" class="ttl">what a card does not speed</text><text x="30.0" y="304.0" text-anchor="start" class="dim num">The dials of the game&#x27;s own brain are read in whole games on the CPUs:</text><text x="30.0" y="318.0" text-anchor="start" class="dim num">178,000 seeds a day whatever the cards. A card reads no census.</text><text x="30.0" y="332.0" text-anchor="start" class="dim num">And the arena agreed with the game at -0.40 over 22 milestones:</text><text x="30.0" y="346.0" text-anchor="start" class="dim num">more cards make more of what the arena likes.</text><rect x="668" y="270" width="220" height="58" rx="6" class="box"/><text x="678.0" y="288.0" text-anchor="start" class="ttl">so, before the fourth card</text><text x="678.0" y="304.0" text-anchor="start" class="dim num">mend the exam; keep the</text><text x="678.0" y="318.0" text-anchor="start" class="dim num">game&#x27;s verdict coming back</text><rect x="20" y="376" width="16" height="12" rx="2" class="gpu"/><text x="42.0" y="386.0" text-anchor="start" class="">data: what is kept, and where</text><rect x="340" y="376" width="16" height="12" rx="2" class="cpu"/><text x="362.0" y="386.0" text-anchor="start" class="">a function, by its name in the code</text><rect x="660" y="376" width="16" height="12" rx="2" class="main"/><text x="682.0" y="386.0" text-anchor="start" class="">an outcome</text></svg></div>
+<p class="note">Diagram 3. A card is an island. What rises with the number of cards, what it costs the CPUs, and what no card touches.</p><p><strong>Three things rise with the cards.</strong></p><ol><li><strong>Proposals, in proportion.</strong> A card runs one island: 2,048 nets for 100 generations a segment, about forty minutes with its gauntlet. Three cards made 18 milestones of their own in 6.4 days, under three a day. Six would make about six.</li><li><strong>Breadth.</strong> Each island is its own lineage. With the game's net going to all of them, more islands are more starts from the same credited place.</li><li><strong>The wait for a credited net, better than in proportion at first.</strong> If a card's chance of a credited milestone in a day is <em>p</em>, the chance that at least one of <em>N</em> has one is 1 − (1 − <em>p</em>)^<em>N</em>. Calber's record is one credited in eight read, about one a week. At that rate for each card, three cards wait about 2.7 days for the next and six about 1.7: each card added shortens the wait, by less each time.</li></ol><p><strong>One thing rises with them and is cheap.</strong> Every milestone is read in the game: two censuses of 192 seeds, 384 in all. Six a day is 2,300 seeds, a little over 1% of what the CPU machines read; even twenty cards would ask about 4%.</p><p><strong>Two things no card speeds.</strong></p><ul><li><strong>The game's own brain.</strong> Its dials are read in whole games of treadcore on the CPUs, 178,000 seeds a day whatever the cards do [1]. A card reads no census: the scripted brain is not on it. The line, its proof and the yardstick are all CPU work.</li><li><strong>The arena's judgement.</strong> Over the 22 milestones the bridge has read, a milestone's margin in the arena's exam and its read in the game agree at <strong>−0.40</strong>. More cards make more of what the arena rewards. Until the exam rewards what the game does, a fourth card buys mostly more refusals, now at least refused quickly and kept off the ladder.</li></ul><p><strong>So the order is: the exam, then the cards.</strong> And one use of a card that would change the first limit: a census of the scripted brain on the card. That is a port of the game's rules to CUDA, not a setting, and it is the only road by which a card would speed the dials.</p></section><section id="sv"><h2>V. The watch flags, and the page asks for less</h2><div class="ogv"><svg viewBox="0 0 960 292" role="img" aria-label="Diagram 4: a flag that wants a person, and one that does not"><rect x="20" y="70" width="170" height="58" rx="6" class="gpu"/><text x="30.0" y="88.0" text-anchor="start" class="ttl">something happened</text><text x="30.0" y="104.0" text-anchor="start" class="dim num">the planner or the</text><text x="30.0" y="118.0" text-anchor="start" class="dim num">keeper raises a flag</text><rect x="284" y="70" width="200" height="44" rx="6" class="cpu"/><text x="294.0" y="88.0" text-anchor="start" class="ttl">does anything wait</text><text x="294.0" y="104.0" text-anchor="start" class="dim num">on a person?</text><path d="M190.0,99.0 L282.0,92.0" class="wire"/><polygon points="282.0,92.0 275.2,96.2 274.6,88.9" style="fill:var(--dim)"/><rect x="596" y="10" width="325" height="72" rx="6" class="main"/><text x="606.0" y="28.0" text-anchor="start" class="ttl">progress: said once, no Acknowledge</text><text x="606.0" y="44.0" text-anchor="start" class="dim num">a candidate passed; a generation landed;</text><text x="606.0" y="58.0" text-anchor="start" class="dim num">NEW: a candidate refused by a family&#x27;s floor;</text><text x="606.0" y="72.0" text-anchor="start" class="dim num">NEW: a milestone refused by the game</text><rect x="596" y="130" width="305" height="58" rx="6" class="main"/><text x="606.0" y="148.0" text-anchor="start" class="ttl">attention: on the page until acknowledged</text><text x="606.0" y="164.0" text-anchor="start" class="dim num">a machine that cannot be reached; a failed</text><text x="606.0" y="178.0" text-anchor="start" class="dim num">promotion; NEW: the watch reading BAD</text><path d="M484.0,92.0 L594.0,46.0" class="wire"/><polygon points="594.0,46.0 588.8,52.1 586.0,45.4" style="fill:var(--dim)"/><text x="539.0" y="63.0" text-anchor="middle" class="dim">no</text><path d="M484.0,92.0 L594.0,159.0" class="wire"/><polygon points="594.0,159.0 586.0,158.4 589.8,152.2" style="fill:var(--dim)"/><text x="539.0" y="119.5" text-anchor="middle" class="dim">yes</text><rect x="20" y="190" width="472" height="58" rx="6" class="box"/><text x="30.0" y="208.0" text-anchor="start" class="ttl">13 November</text><text x="30.0" y="224.0" text-anchor="start" class="dim num">Seven of 23 flags were families doing their work. One flag file was</text><text x="30.0" y="238.0" text-anchor="start" class="dim num">not JSON, and Acknowledge all died on it before reaching any other.</text><rect x="20" y="268" width="16" height="12" rx="2" class="gpu"/><text x="42.0" y="278.0" text-anchor="start" class="">data: what is kept, and where</text><rect x="340" y="268" width="16" height="12" rx="2" class="cpu"/><text x="362.0" y="278.0" text-anchor="start" class="">a function, by its name in the code</text><rect x="660" y="268" width="16" height="12" rx="2" class="main"/><text x="682.0" y="278.0" text-anchor="start" class="">an outcome</text></svg></div>
+<p class="note">Diagram 4. Which flags want a person.</p><ul><li><strong>The watch runs in the planner</strong> every ten minutes (<code>watching</code>), keeps its fourteen lines in <code>plan/deploy-watch.json</code>, and raises a flag of kind <code>watch</code> for each that reads <code>BAD</code>. Two lines were added: the ladder (what the game refused, the one to beat, who sends no migrants) and the floors moved.</li><li><strong>A candidate refused by a family is progress</strong>, with the family and the count: "grove/w18795 is refused, as it should be: a raid on the held ground held 0 of 400 (floor 95.0%)". Seven of the 23 flags on the page that morning were these.</li><li><strong>Acknowledge all.</strong> <code>Queue.ack</code> read every flag file with no guard. One, written twice over in the power cut of 8 November, was not JSON ("Extra data: line 1 column 193"), and every acknowledgement died on it before reaching another. It passes over what it cannot read; the file is mended; the sixteen flags still standing were acknowledged at Paul's word.</li><li><strong>Health says what is so</strong>: the bar "stands there: a dry spell widens the search and does not lower it".</li></ul></section><section id="svi"><h2>VI. Seen for the first time</h2><p><strong>The yardstick's first day</strong> (the line as it stood at 08:12, f1ce347, on 2,000 seeds a brain):</p><div class="table"><table><thead><tr><th>Against main of</th><th>Today's lead, a seat</th><th>Dials that differ</th></tr></thead><tbody><tr><td>28 October</td><td><strong>+3.87 ± 0.25</strong></td><td>47</td></tr><tr><td>2 November</td><td><strong>+1.57 ± 0.22</strong></td><td>40</td></tr><tr><td>6 November</td><td>+0.20 ± 0.22</td><td>22</td></tr></tbody></table></div><p class="note">Table III. The first rows of <code>plan/rating.json</code>. They say by another road what the proof and the anchors said [1]: real gains through the first week, and none measurable since 6 November.</p><p><strong>A trade let through.</strong> <code>w_smooth = 0.525</code> (w20026) read +3.46 ± 0.54 held out and gave up 0.44 kills less deaths a seat, 4.4 floors where the rule weighed by its gain allows 8.7. Paul's word on it that morning: "let it through". Its first promotion failed on the test of section II; with that mended the planner asked again by itself (r0332), and it was running when this was written.</p><p><strong>The parts of <code>w_smooth</code>, each on alone</strong> (first reads of 150 seeds, asked ahead of the A/B queue at Paul's word):</p><div class="table"><table><thead><tr><th>Part</th><th>Score, a seat</th><th>Kills less deaths</th></tr></thead><tbody><tr><td>the turret's confirmation</td><td>−2.09 ± 0.71</td><td>−0.14 ± 0.14</td></tr><tr><td>the stance's advance scalar</td><td>+0.03 ± 0.71</td><td>−0.05 ± 0.11</td></tr><tr><td>resupply by the doctrine alone</td><td>+1.93 ± 0.87</td><td><strong>−1.46 ± 0.14</strong></td></tr><tr><td>the rung's confirmation</td><td>+0.31 ± 0.64</td><td>+0.09 ± 0.12</td></tr><tr><td>all of <code>w_smooth</code> 0.525</td><td>+4.29 ± 0.90</td><td>−0.34 ± 0.20</td></tr></tbody></table></div><p class="note">Table IV. One read each; the held-out reads of the first two were inside their noise.</p><p><strong>No part carries the gain alone.</strong> Resupply by the doctrine carries about half of it and more than all of the fights lost; the turret's confirmation costs by itself. What is left is the blend, the one thing the four switches do not cover, or the parts together. These are single reads and settle nothing yet.</p></section><section id="svii"><h2>VII. What is open</h2><ul><li><strong>The exam</strong> that elects a milestone on the card still rewards what the game does not. This is the largest thing left on the cards' side.</li><li><strong>The game reading an island's best champion</strong> when no milestone comes, and <strong>restarting an island</strong> the game keeps refusing: not built.</li><li><strong>The blend of <code>w_smooth</code></strong> is not split from its switches.</li><li><strong>A generation that settles and is proved</strong> has still not been seen. r0332 is the first that could.</li><li><strong>Floors can walk down.</strong> Nothing raises one back.</li><li><strong>The shipped Gladiator is still M0015</strong>, though the bridge credited M0030 on 10 November: why that ship did not land has not been read.</li></ul></section><section id="sviii"><h2>VIII. How to make it again</h2><p><code>python3 tools/report/loop.py ~/code/treadcore/build/queue/grove docs/loop</code> writes <code>docs/loop/data.json</code> and the four diagrams. The checks: <code>python3 -I tools/plans/board-check.py</code>, <code>sh tools/fleet-queue-check.sh</code>, <code>cargo test</code>; in treadcore, <code>cargo test -p treadcore-brain --release</code>.</p></section><section id="references"><h2>References</h2><p>[1] orrery, <em>Always Forward</em>, lab report, 13 November 2026.</p><p>[2] orrery, <em>Every Block Checked</em>, lab report, 13 November 2026.</p><p>[3] orrery, <em>Old Decisions, Reopened</em>, lab report, 13 November 2026.</p><p>[4] orrery, <em>The First Morning</em>, lab report, 13 November 2026.</p><p>[5] C. D. Rosin and R. K. Belew, "New methods for competitive coevolution," <em>Evolutionary Computation</em>, vol. 5, no. 1, pp. 1–29, 1997.</p><p>[6] E. Cantú-Paz, "A survey of parallel genetic algorithms," <em>Calculateurs Parallèles, Réseaux et Systèmes Répartis</em>, vol. 10, no. 2, pp. 141–171, 1998.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>
+
+<script>
+/* READ ALONG (Paul, 6 November: "scrolls the webpage with enough reading time, which then it starts the animation
+   when its in view, stops scrolling to view it, then continues scrolling ... like a teleprompt"). One timeline,
+   made from the page itself: each block read at WPM past a reading line a third of the way down, each figure
+   held for a look its caption and size set, each film held and played to its end. The button plays it here;
+   tools/report/teleprompt.py asks the same function in headless Chrome and films it, so the page and its video
+   keep the same pace. window.teleprompt = {timeline, play, stop}. */
+(function () {
+  var WPM = 180, LINE = 0.33, SPEED = 700;
+  function words(el) { return ((el.innerText || el.textContent || "").trim().split(/\s+/).filter(Boolean)).length; }
+  function blocks() {
+    var sel = ".mast h1, .mast .front p, main h2, main h3, main p, main li, main table, main pre, main blockquote, main figure, main video, main svg, main img";
+    var all = Array.prototype.slice.call(document.querySelectorAll(sel)), out = [];
+    all.forEach(function (el) {
+      for (var a = el.parentElement; a; a = a.parentElement) if (all.indexOf(a) >= 0 && a.tagName !== "LI") return;
+      if (el.tagName === "LI" && el.querySelector("li")) { /* a list item with its own list: read its first line only */ }
+      if (el.closest("figure") && el.tagName !== "FIGURE" && el.closest("figure") !== el) return;
+      out.push(el);
+    });
+    return out;
+  }
+  function timeline(opt) {
+    opt = opt || {};
+    var wpm = opt.wpm || WPM, vh = opt.height || window.innerHeight, line = vh * LINE, top0 = opt.top || 0;
+    var segs = [], t = 0, y = 0, films = [];
+    function go(to, dur, kind, extra) {
+      to = Math.max(0, Math.round(to));
+      var dy = Math.abs(to - y);
+      if (dy > 2) { var d = Math.max(0.4, dy / SPEED); segs.push({t0: t, t1: t + d, y0: y, y1: to, kind: "move"}); t += d; y = to; }
+      if (dur > 0) { var s = {t0: t, t1: t + dur, y0: y, y1: y, kind: kind}; for (var k in (extra || {})) s[k] = extra[k]; segs.push(s); t += dur; }
+    }
+    blocks().forEach(function (el) {
+      var r = el.getBoundingClientRect(), top = r.top + window.scrollY - top0, h = r.height;
+      if (h < 2) return;
+      var video = el.tagName === "VIDEO" ? el : (el.querySelector ? el.querySelector("video") : null);
+      var cap = el.tagName === "FIGURE" && el.querySelector("figcaption") ? words(el.querySelector("figcaption")) : 0;
+      var next = el.nextElementSibling;
+      if (!cap && next && next.tagName === "P" && /^<em>Fig\./.test(next.innerHTML.trim())) cap = 0;
+      var visual = video || el.tagName === "FIGURE" || el.tagName === "SVG" || el.tagName === "svg" || el.tagName === "IMG" || (el.querySelector && el.querySelector("svg, img"));
+      if (video) {
+        var dur = isFinite(video.duration) && video.duration > 0 ? video.duration : parseFloat(video.getAttribute("data-duration") || "10");
+        var vr = video.getBoundingClientRect();
+        films.push({src: video.getAttribute("src"), x: vr.left, y: vr.top + window.scrollY - top0, w: vr.width, h: vr.height, dur: dur});
+        go(top + h / 2 - vh / 2, 0.6 + dur + cap * 60 / wpm, "film", {film: films.length - 1});
+      } else if (visual) {
+        var look = Math.min(14, 3 + cap * 60 / wpm + h / 250);
+        if (h > vh * 0.85) { go(top - 40, 0.5, "look"); var d2 = Math.max(look, (h - vh + 80) / 60); segs.push({t0: t, t1: t + d2, y0: y, y1: Math.round(top + h - vh + 40), kind: "look"}); t += d2; y = Math.round(top + h - vh + 40); }
+        else go(top + h / 2 - vh / 2, look, "look");
+      } else {
+        var n = words(el), read = Math.max(el.tagName.charAt(0) === "H" ? 1.2 : 1.0, n * 60 / wpm * (el.tagName === "TABLE" ? 1.25 : el.tagName === "PRE" ? 1.5 : 1));
+        go(top - line, 0, "read");
+        segs.push({t0: t, t1: t + read, y0: y, y1: Math.max(0, Math.round(top + h - line)), kind: "read"});
+        t += read; y = Math.max(0, Math.round(top + h - line));
+      }
+    });
+    return {wpm: wpm, height: vh, width: opt.width || window.innerWidth, line: Math.round(line), duration: t, segments: segs, films: films,
+            page: Math.round(document.documentElement.scrollHeight - top0)};
+  }
+  function yAt(tl, t) {
+    for (var i = 0; i < tl.segments.length; i++) { var s = tl.segments[i]; if (t < s.t1) return s.y0 + (s.y1 - s.y0) * Math.max(0, (t - s.t0) / (s.t1 - s.t0)); }
+    return tl.segments.length ? tl.segments[tl.segments.length - 1].y1 : 0;
+  }
+  var raf = 0, playing = null;
+  function stop() {
+    if (!playing) return;
+    cancelAnimationFrame(raf); playing = null;
+    var b = document.getElementById("tele"); if (b) { b.setAttribute("aria-pressed", "false"); b.textContent = "Read along"; }
+    var l = document.getElementById("tele-line"); if (l) l.hidden = true;
+    removeEventListener("wheel", stop); removeEventListener("touchstart", stop); removeEventListener("keydown", key);
+  }
+  function key(e) { if (e.key === "Escape") stop(); }
+  function play(opt) {
+    stop();
+    var tl = timeline(opt), vids = Array.prototype.slice.call(document.querySelectorAll("main video")), started = performance.now(), held = 0, cur = -1;
+    playing = tl;
+    var b = document.getElementById("tele"); if (b) { b.setAttribute("aria-pressed", "true"); b.textContent = "Stop"; }
+    var l = document.getElementById("tele-line"); if (l) { l.style.top = tl.line + "px"; l.hidden = false; }
+    addEventListener("wheel", stop, {passive: true}); addEventListener("touchstart", stop, {passive: true}); addEventListener("keydown", key);
+    function step(now) {
+      if (!playing) return;
+      var t = (now - started) / 1000 - held, i = 0;
+      while (i < tl.segments.length && t >= tl.segments[i].t1) i++;
+      if (i >= tl.segments.length) { stop(); return; }
+      var s = tl.segments[i];
+      if (i !== cur) {
+        cur = i;
+        if (s.kind === "film") { var f = tl.films[s.film], v = vids.filter(function (x) { return x.getAttribute("src") === f.src; })[0];
+          if (v) { v.muted = true; v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function () {}); s.v = v; } }
+      }
+      /* A film that has not reached its end holds the clock: the page waits for it. */
+      if (s.kind === "film" && s.v && !s.v.ended && t > s.t1 - 0.2) { held += 1 / 60; }
+      window.scrollTo(0, yAt(tl, Math.min(t, s.t1)));
+      raf = requestAnimationFrame(step);
+    }
+    raf = requestAnimationFrame(step);
+    return tl;
+  }
+  window.teleprompt = {timeline: timeline, play: play, stop: stop, yAt: yAt};
+  var b = document.getElementById("tele");
+  if (b) b.addEventListener("click", function () { if (playing) stop(); else play(); });
+})();
+</script>

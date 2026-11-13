@@ -63,6 +63,7 @@ import random
 import shlex
 import glob
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -4727,9 +4728,50 @@ class Plan:
                         lad["milestones"].append(dict(m, carried=parent))
         return lad
 
+    # THE GAME'S VERDICT COMES BACK TO THE CARDS (Paul, 13 November: "fix the milestone process to be more
+    # adaptive and cyclical ... reincorporate the adjustments found back into the loop"). The card elected
+    # and the game credited, and there it ended: boburner's island made fourteen milestones that the game
+    # read at -4.7 to -8.75 a seat under the shipped one, each stood as the newest rung every island's
+    # next champion was examined against, and each was sent to the other two islands as a migrant. Now a
+    # milestone the game refuses (read under the shipped Gladiator by two errors) is marked so, and three
+    # things follow. It is no rung: the ladder the segments are sent leaves it out, and the newest
+    # standing milestone is the one to beat. Its island's champions are no migrants while its last
+    # GAME_REFUSED reads were all refused. And the net the game ships goes to every island as a
+    # migrant each segment, so what the game credited is what the cards grow from.
+    GAME_REFUSED = 3
+
+    @staticmethod
+    def standing(ms):
+        """The milestones the game has not refused, oldest first."""
+        return [m for m in ms if not (m.get("game") or {}).get("refused")]
+
+    def ladder_top(self, lad):
+        st = self.standing(lad.get("milestones") or [])
+        return st[-1]["id"] if st else None
+
+    def game_says(self, cur, home):
+        """A bridge read, written on its milestone: what the game made of it."""
+        lad = self.ladder_state(home)
+        for m in lad.get("milestones", []):
+            if m["id"] == cur.get("label") and cur.get("diff") is not None:
+                refused = cur["diff"] < -2 * cur["se"]
+                was = (m.get("game") or {}).get("refused")
+                m["game"] = {"diff": cur["diff"], "se": cur["se"], "refused": refused, "credited": bool(cur.get("holds")), "read": cur.get("read")}
+                if refused and not was:
+                    self.flag("crucible", "%s is refused by the game (%+.2f +/- %.2f a seat under the shipped Gladiator): it is no rung of the ladder, and the newest standing is %s" % (
+                        m["id"], cur["diff"], cur["se"], self.ladder_top(lad)), key="game-refused:%s" % m["id"], progress=True)
+                return refused != was
+        return False
+
+    def island_refused(self, island, home):
+        """True while an island's last GAME_REFUSED milestones the game read were all refused."""
+        read = [m for m in self.ladder_state(home).get("milestones", []) if m.get("island") == island and m.get("game")]
+        return len(read) >= self.GAME_REFUSED and all(m["game"].get("refused") for m in read[-self.GAME_REFUSED:])
+
     def ladder_rungs(self, ms):
         """At most LADDER_SLOTS milestones, oldest first: the newest half,
-        and the older ones spread evenly."""
+        and the older ones spread evenly. Only those the game has not refused."""
+        ms = self.standing(ms)
         n = self.LADDER_SLOTS
         if len(ms) <= n:
             return list(ms)
@@ -4824,7 +4866,7 @@ class Plan:
         home = self.crucible_home()
         if self.gpu_home(home):
             lad = self.ladder_state(home)
-            top = lad["milestones"][-1]["id"] if lad["milestones"] else None
+            top = self.ladder_top(lad)
             if top and self.gpu_force(lad, home, top):
                 self.ladder_write(home)
         if not by:
@@ -4846,7 +4888,7 @@ class Plan:
     def crucible_ladder_home(self, fresh, home):
         lad = self.ladder_state(home)
         rows = [r for r in (self.crucible_exam(n, j, home=home) for n, j in fresh) if r]
-        top = lad["milestones"][-1]["id"] if lad["milestones"] else None
+        top = self.ladder_top(lad)
         # Strongest first: the margin over the newest milestone; with no
         # milestone yet, the yardstick's wins.
         # A forest home weighs the gauntlet's step first; the others, the margin head to head.
@@ -5232,6 +5274,11 @@ class Plan:
             br["note"] = "the fleet's commit has no Gladiator to swap: treadcore's LR 138 is not on main"
         else:
             br["shipped"] = self.shipped_gladiator(home)
+            if not br.get("said") and br.get("reads"):
+                # The reads made before the verdict came back to the cards, written on their milestones once.
+                if any([self.game_says(r, home) for r in br["reads"]]):
+                    self.ladder_write(home)
+                br["said"] = True
             done, gone = self.ids("done"), self.ids("failed", "stopped")
             cur = br.get("current")
             if cur and all(j in done | gone for j in cur["jobs"]):
@@ -5266,6 +5313,8 @@ class Plan:
                         key="bridge:%d" % cur["n"], progress=diff <= 2 * se or auto)
                 else:
                     cur.update({"holds": None, "why": "a census of the pair failed", "read": time.strftime("%Y-%m-%dT%H:%M:%S")})
+                if self.game_says(cur, home):
+                    self.ladder_write(home)
                 br["reads"] = (br.get("reads") or [])[-30:] + [cur]
                 br["current"] = cur = None
             if not cur:
@@ -5713,9 +5762,15 @@ class Plan:
                 imports = []
                 for o in cr:
                     champ = self.crucible_dir("latest", o + ".bin")
-                    if o != name and os.path.exists(champ):
+                    if o != name and os.path.exists(champ) and not self.island_refused(o, kind):
                         send.append({"src": champ, "dst": "~/%s/in/%s.bin" % (home, o)})
                         imports.append("$H/in/%s.bin" % o)
+                # What the game ships, to every island: the one net the game has credited.
+                shipped = (self.state.get("bridge") or {}).get("shipped") or ""
+                game = self.crucible_dir("milestones", shipped + ".bin", home=kind)
+                if shipped and os.path.exists(game):
+                    send.append({"src": game, "dst": "~/%s/in/game.bin" % home})
+                    imports.append("$H/in/game.bin")
                 send += [{"src": self.crucible_dir("ladder", f), "dst": "~/%s/ladder/%s" % (home, f)}
                          for f in ["slot-%d.bin" % i for i in range(self.LADDER_SLOTS)] + ["ladder.txt"]]
                 forest = bool(c.get("world") and c.get("forest"))
@@ -5866,6 +5921,7 @@ class Plan:
         jobs += self.adopt_jobs()
         jobs += self.line_proof()
         jobs += self.rating()
+        self.watching()
         jobs += self.width_watch()
         jobs += self.gauntlet_watch()
         self.ticker_scan()
@@ -6158,6 +6214,30 @@ class Plan:
         else:
             rt["last_at"] = time.time()
         return jobs
+
+    # THE WATCH, BY ITSELF (Paul, 13 November, of The First Morning's first open item: "the watch is run by
+    # hand ... a BAD is seen only by whoever runs it"). Every WATCH_EVERY_MIN the planner reads
+    # tools/deploy-watch.py's checks, keeps them in plan/deploy-watch.json for a page to draw, and
+    # raises a flag for each that reads BAD: a mechanism doing what it must not is a person's to see,
+    # the same hour, on the Flags page. A LOOK is kept and not flagged. It moves nothing.
+    WATCH_EVERY_MIN = 10
+
+    def watching(self):
+        if not self.WATCH_EVERY_MIN or time.time() - self.state.get("watched_at", 0) < self.WATCH_EVERY_MIN * 60:
+            return
+        self.state["watched_at"] = time.time()
+        try:
+            sp = importlib.util.spec_from_file_location("deploy_watch", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "deploy-watch.py"))
+            dw = importlib.util.module_from_spec(sp)
+            sp.loader.exec_module(dw)
+            doc = dw.watch(self.q)
+        except Exception as e:  # the watch is for reading; planning goes on
+            print("watch: %r" % e, file=sys.stderr)
+            return
+        save(os.path.join(self.pd, "deploy-watch.json"), doc)
+        for c in doc["checks"]:
+            if c["level"] == "BAD":
+                self.flag("watch", "the watch reads BAD on %s: %s" % (c["name"], c["words"]), key="watch:%s:%s" % (c["name"], time.strftime("%Y-%m-%d %H")))
 
     def src_tree(self, commit):
         """The tree of the game's source at a commit: what a proof's question is about."""

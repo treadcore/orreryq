@@ -1,0 +1,260 @@
+{
+ "home": "crucible-world-hybrid-forest-nav",
+ "milestones": 37,
+ "standing_top": "M0032-calber-cuda-g291900",
+ "isles": {
+  "boburner-cuda": {
+   "made": 17,
+   "read": 14,
+   "refused": 14,
+   "credited": 0,
+   "diffs": [
+    -4.72,
+    -5.82,
+    -8.75,
+    -8.47,
+    -7.11,
+    -7.27,
+    -7.31,
+    -7.13,
+    -8.0,
+    -6.76,
+    -5.01,
+    -5.05,
+    -7.2,
+    -6.32
+   ],
+   "mean": -6.78
+  },
+  "calber-cuda": {
+   "made": 19,
+   "read": 8,
+   "refused": 0,
+   "credited": 1,
+   "diffs": [
+    -1.35,
+    -0.44,
+    1.26,
+    1.02,
+    0.2,
+    2.28,
+    -0.68,
+    -0.93
+   ],
+   "mean": 0.16999999999999996
+  },
+  "whitewolf-cuda": {
+   "made": 1,
+   "read": 0,
+   "refused": 0,
+   "credited": 0,
+   "diffs": [],
+   "mean": null
+  }
+ },
+ "ladder_days": 6.421909722222222,
+ "made": 18,
+ "rating": [
+  {
+   "at": "2026-11-13T08:12:22",
+   "today": "f1ce347",
+   "against": "dc3df01",
+   "label": "28 Oct",
+   "lead": 3.868,
+   "se": 0.249,
+   "seeds": 2000,
+   "dials": 47
+  },
+  {
+   "at": "2026-11-13T08:12:22",
+   "today": "f1ce347",
+   "against": "da7e1da",
+   "label": "2 Nov",
+   "lead": 1.575,
+   "se": 0.223,
+   "seeds": 2000,
+   "dials": 40
+  },
+  {
+   "at": "2026-11-13T08:12:22",
+   "today": "f1ce347",
+   "against": "63f2667",
+   "label": "6 Nov",
+   "lead": 0.195,
+   "se": 0.223,
+   "seeds": 2000,
+   "dials": 22
+  }
+ ],
+ "parts": [
+  {
+   "job": "w20032",
+   "name": "the turret's confirmation",
+   "census": [
+    -2.09,
+    0.71
+   ],
+   "kd": [
+    -0.13688888888888892,
+    0.13575362846981673
+   ],
+   "held": [
+    [
+     -0.54,
+     0.49
+    ],
+    [
+     0.4,
+     0.48
+    ]
+   ]
+  },
+  {
+   "job": "w20033",
+   "name": "the stance's advance scalar",
+   "census": [
+    0.03,
+    0.71
+   ],
+   "kd": [
+    -0.05177777777777776,
+    0.1124457663809488
+   ],
+   "held": [
+    [
+     -0.51,
+     0.37
+    ],
+    [
+     0.16,
+     0.45
+    ]
+   ]
+  },
+  {
+   "job": "w20034",
+   "name": "resupply by the doctrine alone",
+   "census": [
+    1.93,
+    0.87
+   ],
+   "kd": [
+    -1.4575555555555568,
+    0.13612582702106601
+   ],
+   "held": []
+  },
+  {
+   "job": "w20035",
+   "name": "the rung's confirmation",
+   "census": [
+    0.31,
+    0.64
+   ],
+   "kd": [
+    0.08844444444444445,
+    0.11640141858131348
+   ],
+   "held": []
+  },
+  {
+   "job": "w20026",
+   "name": "all of w_smooth 0.525",
+   "census": [
+    4.29,
+    0.9
+   ],
+   "kd": [
+    -0.33711111111111125,
+    0.19971631301419462
+   ],
+   "held": [
+    [
+     3.46,
+     0.54
+    ]
+   ]
+  }
+ ],
+ "watch": {
+  "at": "2026-11-13T10:37:37",
+  "since": "2026-11-13T07:39:00",
+  "checks": [
+   {
+    "level": "ok",
+    "name": "planner",
+    "words": "15 passes in the last half hour, a median 10 s each, the longest wait between two 193 s",
+    "passes": 15,
+    "worst_gap": 193.0
+   },
+   {
+    "level": "LOOK",
+    "name": "jobs",
+    "words": "1 job(s) failed since 07:39: r0331-promote"
+   },
+   {
+    "level": "ok",
+    "name": "orphans",
+    "words": "2 line(s) came off, 10 promotion(s) orphaned, none back; the last at 09:33, -0.02 +/- 0.10 in 10400 seeds"
+   },
+   {
+    "level": "ok",
+    "name": "line",
+    "words": "no line: the fleet builds main, and the next generation will be the first to settle"
+   },
+   {
+    "level": "LOOK",
+    "name": "first read",
+    "words": "no new trial in the queue to read its size from"
+   },
+   {
+    "level": "ok",
+    "name": "one dial",
+    "words": "round 2: 245 of 256 trials still to ask"
+   },
+   {
+    "level": "ok",
+    "name": "held-out",
+    "words": "3 trial(s) read on past their first held-out read: w19840 to read 2, w19913 to read 2, w19935 to read 2"
+   },
+   {
+    "level": "LOOK",
+    "name": "trade",
+    "words": "1 trade(s) let through and 0 refused since 07:39; 0 refusal(s) kept: grove/w20026 goes on by the trade rule: held out +3.46, and it gives up kills less deaths a seat -0.44 +/- 0.12, 4.4 times its floor (the rule allows "
+   },
+   {
+    "level": "ok",
+    "name": "yardstick",
+    "words": "2026-11-13 08:12, today's f1ce347: +3.87 +/- 0.25 over main of 28 Oct; +1.57 +/- 0.22 over main of 2 Nov; +0.20 +/- 0.22 over main of 6 Nov",
+    "rows": 3
+   },
+   {
+    "level": "ok",
+    "name": "set aside",
+    "words": "since 09:09: no rotation run, no clone round, no anchor read"
+   },
+   {
+    "level": "ok",
+    "name": "w_smooth's parts",
+    "words": "asked: rung, stance, supply, turret (4 read)"
+   },
+   {
+    "level": "ok",
+    "name": "ladder",
+    "words": "37 milestone(s), 14 refused by the game; the one to beat is M0032-calber-cuda-g291900; no migrants from boburner-cuda"
+   },
+   {
+    "level": "ok",
+    "name": "floors",
+    "words": "0 floor(s) moved down by a small drop since 07:39"
+   },
+   {
+    "level": "ok",
+    "name": "pace",
+    "words": "84 census jobs finished in the last hour (each is larger than before: a first read is 150 seeds)"
+   }
+  ],
+  "worst": "LOOK"
+ },
+ "shipped": "M0015-calber-cuda-g241300"
+}

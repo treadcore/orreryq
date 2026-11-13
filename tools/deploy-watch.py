@@ -147,6 +147,24 @@ def watch(q, since=SINCE):
                     titles[(m.group(1), d)] += 1
     parts = sorted({k[0] for k in titles})
     say("ok" if len(parts) == 4 else "LOOK", "w_smooth's parts", ("asked: %s (%d read)" % (", ".join(parts), sum(v for k, v in titles.items() if k[1] == "done")) if parts else "no trial of a part asked yet: the A/B trials reach them in their turn"))
+    # 12. the cards' ladder: what the game refused, the one to beat, which islands send no migrants
+    for key in [k for k in st if k.startswith("crucible_ladder:")][-1:]:
+        ms = st[key].get("milestones") or []
+        ref = [m for m in ms if (m.get("game") or {}).get("refused")]
+        stand = [m for m in ms if not (m.get("game") or {}).get("refused")]
+        isles = collections.defaultdict(list)
+        for m in ms:
+            if m.get("game"):
+                isles[m.get("island")].append(m["game"].get("refused"))
+        quiet = sorted(i for i, v in isles.items() if len(v) >= 3 and all(v[-3:]))
+        say("ok" if stand else "BAD", "ladder", "%d milestone(s), %d refused by the game; the one to beat is %s%s" % (
+            len(ms), len(ref), stand[-1]["id"] if stand else "none", "; no migrants from %s" % ", ".join(quiet) if quiet else ""))
+    # 13. floors moved by a small drop, since the design went live
+    moved = []
+    for f in glob.glob(os.path.join(q, "logs", "r*-promote.log")):
+        if os.path.getmtime(f) >= ep(since):
+            moved += re.findall(r"^(?:family|gauntlet) (\S+): .* its floor moves to ([\d.]+)$", open(f, errors="replace").read(), re.M)
+    say("LOOK" if moved else "ok", "floors", "%d floor(s) moved down by a small drop since %s%s" % (len(moved), since[11:16], ": " + ", ".join("%s to %s" % m for m in moved[-4:]) if moved else ""))
     # 11. the fleet's pace: census jobs finished in the last hour
     last_h = len([e for e in events if e["event"] == "done" and e.get("kind") in ("weights", "census") and now - ep(e["t"]) < 3600])
     say("ok" if last_h else "BAD", "pace", "%d census jobs finished in the last hour (each is larger than before: a first read is %s seeds)" % (last_h, want))

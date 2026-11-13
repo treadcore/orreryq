@@ -1443,5 +1443,22 @@ gv.FLOOR_GIVE = 0.05
 open(gv_tsv, "w").write("name\tbrain\ta\tb\tshare\nG20 a thing\tscripted\t0\t0\t0.30\n")
 assert gv.guard_verdict(gv_tsv)[0] is False, "30% of a 60% floor is a collapse"
 _sh.rmtree(gv_dir)
+# THE GAME'S VERDICT COMES BACK TO THE CARDS: a milestone the game refuses is no rung and not the one to beat;
+# an island whose last three read were all refused sends no migrants; one read and not refused stands.
+gq = tempfile.mkdtemp()
+gi = Isle(gq)
+gi.flags = []
+gi.flag = lambda kind, text, key=None, progress=False: gi.flags.append(text)
+ms_ = [{"id": "M1-a-g1", "island": "a"}, {"id": "M2-b-g1", "island": "b"}, {"id": "M3-b-g2", "island": "b"}, {"id": "M4-b-g3", "island": "b"}]
+gi.state["crucible_ladder:crucible-world-hybrid"] = {"milestones": ms_}
+assert gi.ladder_top(gi.ladder_state()) == "M4-b-g3" and not gi.island_refused("b", "crucible-world-hybrid")
+assert gi.game_says({"label": "M1-a-g1", "diff": 0.4, "se": 1.0, "holds": False}, "crucible-world-hybrid") is True and not ms_[0]["game"]["refused"]
+for m_ in ms_[1:]:
+    assert gi.game_says({"label": m_["id"], "diff": -5.0, "se": 1.0, "holds": False}, "crucible-world-hybrid")
+assert gi.ladder_top(gi.ladder_state()) == "M1-a-g1", "the newest standing milestone is the one to beat"
+assert [m_["id"] for m_ in gi.ladder_rungs(ms_)] == ["M1-a-g1"] and len(gi.flags) == 3
+assert gi.island_refused("b", "crucible-world-hybrid") and not gi.island_refused("a", "crucible-world-hybrid")
+assert gi.game_says({"label": "M4-b-g3", "diff": -5.0, "se": 1.0}, "crucible-world-hybrid") is False and len(gi.flags) == 3, "said once"
+_sh.rmtree(gq)
 print("the line settling, a block coming off, a refusal kept, and one dial at a time round after round: every check holds")
 
