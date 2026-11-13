@@ -5279,6 +5279,20 @@ class Plan:
                 if any([self.game_says(r, home) for r in br["reads"]]):
                     self.ladder_write(home)
                 br["said"] = True
+            # A SHIP THAT DID NOT LAND IS SAID (13 November): the ship runs apart from the pass and wrote
+            # its end only to a log, so M0030's refusal on 10 November was read by nobody for three days.
+            for r in br.get("reads") or []:
+                if r.get("shipping") and not r.get("ship_seen"):
+                    try:
+                        with open(os.path.join(self.pd, "bridge-ship.log")) as f:
+                            said = f.read().strip()
+                    except OSError:
+                        said = ""
+                    if r["label"] in said:
+                        r["ship_seen"] = True
+                        if "shipped as the Gladiator" not in said and br.get("shipped") != r["label"]:
+                            self.flag("bridge", "%s was credited by the game (%+.2f +/- %.2f a seat) and its ship did not land: %s. To ship it: fleet-queue.py QUEUE bridge ship %s" % (
+                                r["label"], r["diff"], r["se"], said.splitlines()[-1][:200], r["label"]), key="ship-failed:%s" % r["label"])
             done, gone = self.ids("done"), self.ids("failed", "stopped")
             cur = br.get("current")
             if cur and all(j in done | gone for j in cur["jobs"]):

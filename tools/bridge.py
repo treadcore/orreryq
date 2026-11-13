@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""bridge.py QUEUE status | ship LABEL | ship-clone N -- a world milestone of crucible's islands shipped as the game's
+"""bridge.py QUEUE status | ship LABEL [--dry] | ship-clone N [--dry] -- a world milestone of crucible's islands shipped as the game's
 Gladiator (treadcore style 17, nets/gladiator.bin).
 
 Paul, 4 November: "yes do step 2, the duelist with world senses". The planner reads each new milestone in
@@ -22,7 +22,11 @@ import sys
 import time
 
 TC = os.path.expanduser("~/code/treadcore")
-WORLD_BYTES = 5236 * 4
+# A world champion's file by its size: the world net, and the maze net the islands have grown since
+# 6 November (nine senses of the way and two outputs more). The game reads either as the Gladiator
+# (treadcore styles.rs, Champion::from_bytes), so either ships. M0030 was credited on 10 November and
+# did not ship because only the first size was known here.
+WORLD_SHAPES = {5236 * 4: "5,236 floats, 55-48-48-4", 5766 * 4: "5,766 floats, 64-48-48-6"}
 
 
 def load(p, d=None):
@@ -81,14 +85,15 @@ def event(q, **kw):
         f.write(json.dumps(dict({"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "event": "bridge"}, **kw)) + "\n")
 
 
-def ship(q, label):
+def ship(q, label, dry=False):
     if not re.match(r"^M\d{4}-[\w-]+-g\d+$", label):
         raise SystemExit("not a milestone's name: %r" % label)
     br = load(os.path.join(q, "plan", "bridge.json"), {}) or {}
     home = br.get("home") or "crucible-world-hybrid"
     src = os.path.join(q, home, "milestones", label + ".bin")
-    if not os.path.exists(src) or os.path.getsize(src) != WORLD_BYTES:
-        raise SystemExit("%s: no world champion of %d bytes in %s/milestones" % (label, WORLD_BYTES, home))
+    if not os.path.exists(src) or os.path.getsize(src) not in WORLD_SHAPES:
+        raise SystemExit("%s: no world champion of %s bytes in %s/milestones" % (label, " or ".join(map(str, sorted(WORLD_SHAPES))), home))
+    floats = WORLD_SHAPES[os.path.getsize(src)]
     read = next((r for r in reversed(br.get("reads", [])) if r.get("label") == label), None)
     said = ("read %+.2f +/- %.2f a seat over the shipped %s on %d seeds (bridge %d, %s)" % (read["diff"], read["se"], read["shipped"], read["seeds"], read["n"], read.get("on"))
             if read and read.get("diff") is not None else "not read by the bridge: shipped by hand")
@@ -97,14 +102,16 @@ def ship(q, label):
         if "fn gladiator_file" not in open(os.path.join(wt, "source", "treadcore-brain", "src", "styles.rs")).read():
             raise SystemExit("main has no Gladiator yet (treadcore LR 138): nothing to ship into")
     sha = ship_file(q, src, "gladiator.bin",
-                    "nets/gladiator.bin\t17 Gladiator\tcrucible world milestone %s, shipped %s by orrery's bridge\t%s; 5,236 floats, 55-48-48-4" % (label, time.strftime("%d %B %Y"), said),
+                    "nets/gladiator.bin\t17 Gladiator\tcrucible world milestone %s, shipped %s by orrery's bridge\t%s; %s" % (label, time.strftime("%d %B %Y"), said, floats),
                     "Gladiator: %s ships as style 17, crucible's world champion in every fight\n\n%s.\nShipped by orrery's bridge (tools/bridge.py ship), from QUEUE/%s/milestones." % (label, said[0].upper() + said[1:], home),
-                    edit=has_gladiator)
+                    edit=has_gladiator, dry=dry)
+    if dry:
+        return
     event(q, did="shipped", label=label, commit=sha)
     print("%s shipped as the Gladiator at %s, pushed to main; the fleet builds it next" % (label, sha))
 
 
-def ship_clone(q, n):
+def ship_clone(q, n, dry=False):
     """Clone round n's net into nets/scholar.bin, style 6's file: the first such ship also points style 6
     at it (until then style 6 is nets/bc2.bin), in the same commit and under the same tests."""
     cl = load(os.path.join(q, "plan", "clone.json"), {}) or {}
@@ -124,7 +131,9 @@ def ship_clone(q, n):
     sha = ship_file(q, r["cand"], "scholar.bin",
                     "nets/scholar.bin\t6 Scholar\tthe rules at %s cloned on the GPU (orrery clone %d), shipped %s\t%s" % (r.get("commit"), n, time.strftime("%d %B %Y"), said),
                     "Scholar: clone %d of the rules at %s ships as style 6\n\n%s.\nCloned and judged by orrery's clone stage (tools/bridge.py ship-clone)." % (n, r.get("commit"), said[0].upper() + said[1:]),
-                    edit=point_style_6)
+                    edit=point_style_6, dry=dry)
+    if dry:
+        return
     event(q, did="clone shipped", n=n, commit=sha)
     print("clone %d shipped as the Scholar at %s, pushed to main" % (n, sha))
 
@@ -133,13 +142,20 @@ def main(a):
     if len(a) < 2:
         print(__doc__)
         sys.exit(2)
+    # --dry runs the tests and commits nothing. A word this does not know stops it: on 13 November
+    # "ship M0030 --dry" shipped, the dry run being in ship_file and asked for by no verb, and the
+    # extra word passed over in silence.
+    dry = "--dry" in a
+    a = [x for x in a if x != "--dry"]
+    if len(a) > 3 or any(x.startswith("-") for x in a[1:]):
+        raise SystemExit("not understood: %s" % " ".join(a[1:]))
     q, cmd = os.path.abspath(a[0]), a[1]
     if cmd == "status":
         print(json.dumps(load(os.path.join(q, "plan", "bridge.json"), {}), indent=1))
     elif cmd == "ship" and len(a) > 2:
-        ship(q, a[2])
+        ship(q, a[2], dry)
     elif cmd == "ship-clone" and len(a) > 2 and a[2].isdigit():
-        ship_clone(q, int(a[2]))
+        ship_clone(q, int(a[2]), dry)
     else:
         print(__doc__)
         sys.exit(2)
