@@ -117,10 +117,16 @@
     ],
     "lane_of": "saskatchewan",
     "build_of": "saskatchewan"
+   },
+   {
+    "name": "boburner-cuda",
+    "caps": [
+     "cuda"
+    ],
+    "lane_of": "boburner"
    }
   ],
-  "bench": [
-   "boburner-cuda"
-  ]
- }
+  "bench": []
+ },
+ "note": "boburner-cuda back in the queue and on crucible at 10:13 on 13 November, at Paul's word (\"please. turn it back on.\")"
 }
