@@ -50,5 +50,7 @@ calber-update-f15|F15 on calber|Orreryq · the fleet · a BIOS list read correct
 calber-ssd|Six Cheap SSDs, Thirteen Ways|Orreryq · the fleet · the fastest layout for calber's six SATA SSDs, measured
 network|The Share and the Wire|Orreryq · the fleet · calber's array over NFS from every machine, and the home network mapped from inside
 firmware|Every Part's Firmware|Orreryq · the fleet · every part's firmware, what is current, and how each is updated
+forward|Always Forward|Orreryq · the search · incremental progress, the stall, and a harness that keeps what it learns
+checked|Every Block Checked|Orreryq · the search · what was built on 13 November: a line that settles, a block that comes off, one dial at a time, the yardstick
 LIST
 python3 ../tools/report/collect.py
