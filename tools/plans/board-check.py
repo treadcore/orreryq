@@ -1424,5 +1424,24 @@ assert More(2.6).held_more_jobs(seq_) == [] and More(0.4).held_more_jobs(seq_) =
 one = More(1.8)
 one.HELD_READS = 1
 assert one.held_more_jobs(seq_) == [], "one read decides, as it was"
+# A SMALL DROP PASSES, A COLLAPSE DOES NOT: the guard's verdict with the give, and without it.
+class Give(P):
+    def __init__(self):
+        pass
+    def gauntlet_floors(self):
+        return {"G20 a thing": 0.60, "G3 another": 0.50}
+
+
+gv_dir = tempfile.mkdtemp()
+gv_tsv = os.path.join(gv_dir, "gauntlet.tsv")
+open(gv_tsv, "w").write("name\tbrain\ta\tb\tshare\nG20 a thing\tscripted\t0\t0\t0.58\nG3 another\tscripted\t0\t0\t0.70\n")
+gv = Give()
+assert gv.guard_verdict(gv_tsv) == (True, []), "58% of a 60% floor is a small drop: it holds"
+gv.FLOOR_GIVE = 0.0
+assert gv.guard_verdict(gv_tsv)[0] is False, "with no give the floor is a wall, as it was"
+gv.FLOOR_GIVE = 0.05
+open(gv_tsv, "w").write("name\tbrain\ta\tb\tshare\nG20 a thing\tscripted\t0\t0\t0.30\n")
+assert gv.guard_verdict(gv_tsv)[0] is False, "30% of a 60% floor is a collapse"
+_sh.rmtree(gv_dir)
 print("the line settling, a block coming off, a refusal kept, and one dial at a time round after round: every check holds")
 

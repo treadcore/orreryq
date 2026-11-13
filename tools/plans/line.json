@@ -312,6 +312,19 @@
    "down": "smaller gains buy larger trades; 0 turns it off"
   },
   {
+   "key": "floor_give",
+   "attr": "FLOOR_GIVE",
+   "label": "A floor gives",
+   "default": 0.05,
+   "min": 0.0,
+   "max": 0.25,
+   "step": 0.01,
+   "unit": "of a share",
+   "what": "A family or a gauntlet file under its floor by no more than this holds, and at the promotion its floor is moved down to what the new brain scored; under by more is a collapse and refuses. 0: every floor a wall, as it was.",
+   "up": "larger drops pass, and floors move further each generation",
+   "down": "floors hold harder; 0 turns the give off"
+  },
+  {
    "key": "pause_resume_min",
    "attr": "PAUSE_RESUME_MIN",
    "label": "A pause of auto promotion lasts",

@@ -2400,12 +2400,13 @@ class Plan:
                 "N=$(nproc 2>/dev/null || sysctl -n hw.ncpu)\n"
                 "i=0; while IFS=$'\\t' read -r name set; do\n"
                 "  i=$((i+1)); ( printf '%%s\\n%%s\\n' \"$name\" \"$set\" > $O/$i.set\n"
-                "    t0=$(date +%%s); SCENARIO_SET=\"$set\" $C/census-bin --ignored every_family_holds_its_floor --nocapture > $O/$i.log 2>&1 && r=holds || r=UNDER\n"
+                "    t0=$(date +%%s); FLOOR_GIVE=GIVE_NOW SCENARIO_SET=\"$set\" $C/census-bin --ignored every_family_holds_its_floor --nocapture > $O/$i.log 2>&1 && r=holds || r=UNDER\n"
                 "    echo \"$r $(( $(date +%%s) - t0 ))\" > $O/$i.verdict ) &\n"
                 "  while [ $(jobs -rp | wc -l) -ge $N ]; do sleep 2; done\n"
                 "done < $O/candidates.tsv; wait\n"
                 "for v in $O/*.verdict; do k=$(basename $v .verdict); echo \"$(cat $v) $(head -1 $O/$k.set)\"; done\n"
             ) % (self.home, self.cdir(), fid, b)
+            cmd = cmd.replace("GIVE_NOW", "%g" % self.FLOOR_GIVE)
             jobs.append({"id": fid, "kind": "families", "title": "families: %s" % ", ".join(c[0] for c in part)[:110],
                          "needs": "cpu", "after_host": self.after_host(), "cmd": cmd,
                          "fetch": "%s/out/%s" % (self.home, fid), "timeout_s": 12 * 3600, "priority": "high",
@@ -4046,14 +4047,17 @@ class Plan:
                 "export CARGO_TARGET_DIR=$W/target\n"
                 "cargo test -q -p treadcore-brain --release > $O/tests.txt 2>&1 || { tail -30 $O/tests.txt; echo 'the tests failed: not committed'; exit 1; }\n"
                 "grep 'test result' $O/tests.txt\n"
-                "cargo test -q -p treadcore-brain --release -- --ignored every_family_holds_its_floor --nocapture > $O/families-full.txt 2>&1 || { grep -E '^family|panicked|under' $O/families-full.txt; echo 'a family fell under its floor: not committed'; exit 1; }\n"
+                "FLOOR_GIVE=GIVE_NOW cargo test -q -p treadcore-brain --release -- --ignored every_family_holds_its_floor --nocapture > $O/families-full.txt 2>&1 || { grep -E '^family|panicked|under' $O/families-full.txt; echo 'a family fell under its floor: not committed'; exit 1; }\n"
                 "grep -E '^family' $O/families-full.txt > $O/families.txt; cat $O/families.txt\n"
                 # THE GAUNTLET'S FLOORS (treadcore LR 143): the batch's defaults on the rules, every file on
                 # its floor, or nothing is committed. A commit without GAUNTLET_BRAINS skips it.
                 "if grep -q GAUNTLET_BRAINS source/treadcore-brain/src/learn.rs; then\n"
                 "  GAUNTLET=1 GAUNTLET_RUNS=100 GAUNTLET_BRAINS=scripted OUT=$O THREADS=$(nproc 2>/dev/null || sysctl -n hw.ncpu) cargo test -q -p treadcore-brain --release --lib -- --ignored learn::harness::train --nocapture > $O/gauntlet.txt 2>&1 || true\n"
-                "  python3 -I -c \"import glob,re,sys; f={}; [f.__setitem__(re.search(r'^name\\\\s*=\\\\s*\\\\\\\"([^\\\\\\\"]+)', t, re.M).group(1), float(re.search(r'^floor\\\\s*=\\\\s*([\\\\d.]+)', t, re.M).group(1))) for t in (open(p).read() for p in glob.glob('scenarios/gauntlet/*.toml')) if re.search(r'^floor', t, re.M)]; u=[l.split(chr(9))[0] for l in open(sys.argv[1]).read().splitlines()[1:] if l.split(chr(9))[1]=='scripted' and float(l.split(chr(9))[4]) < f.get(l.split(chr(9))[0], 0)]; print('gauntlet: holds' if not u else 'gauntlet under its floor: ' + '; '.join(u)); sys.exit(1 if u else 0)\" $O/gauntlet.tsv || { echo 'a gauntlet under its floor: not committed'; exit 1; }\n"
+                "  python3 -I -c \"import glob,re,sys; f={}; [f.__setitem__(re.search(r'^name\\\\s*=\\\\s*\\\\\\\"([^\\\\\\\"]+)', t, re.M).group(1), float(re.search(r'^floor\\\\s*=\\\\s*([\\\\d.]+)', t, re.M).group(1))) for t in (open(p).read() for p in glob.glob('scenarios/gauntlet/*.toml')) if re.search(r'^floor', t, re.M)]; u=[l.split(chr(9))[0] for l in open(sys.argv[1]).read().splitlines()[1:] if l.split(chr(9))[1]=='scripted' and float(l.split(chr(9))[4]) < f.get(l.split(chr(9))[0], 0) - GIVE_NOW]; print('gauntlet: holds' if not u else 'gauntlet under its floor: ' + '; '.join(u)); sys.exit(1 if u else 0)\" $O/gauntlet.tsv || { echo 'a gauntlet under its floor: not committed'; exit 1; }\n"
                 "fi\n"
+                # The floors, read together where the commit can (treadcore LR 158): a small drop passes and
+                # its floor moves down in the scenario file; a collapse stops the promotion with nothing written.
+                "if [ -f scripts/floors.py ]; then python3 -I scripts/floors.py --give GIVE_NOW --write $O/families.txt $O/gauntlet.tsv > $O/floors.txt 2>&1 || { cat $O/floors.txt; echo 'a floor collapsed: not committed'; exit 1; }; cat $O/floors.txt; git add scenarios/families scenarios/gauntlet; fi\n"
                 # Both files set-defaults.py writes: weights.rs alone left
                 # Tactics::default() behind, and main failed its tests from
                 # dc3df01 until d7e8c09 (29 October).
@@ -4063,6 +4067,7 @@ class Plan:
                 "git bundle create -q $O/promote.bundle %s..$B && echo 'the commit travels back as promote.bundle'\n"
                 "git rev-parse HEAD > $O/commit.txt; echo \"prepared $(cat $O/commit.txt) on $B\"\n"
             ) % (self.home, rid, branch, out, fetch_line, base, b1, b2, shlex.quote(who[0]), shlex.quote(who[1]), base)
+            cmd = cmd.replace("GIVE_NOW", "%g" % self.FLOOR_GIVE)
             st = {"status": "running", "job": jid, "candidate": name, "branch": branch, "changed": changed, "can_push": can_push,
                   "evidence": {k: ev.get(k) for k in ("census", "held", "families")}}
             self.rsave(rid, st)
@@ -4292,6 +4297,9 @@ class Plan:
         if re.search(r"^a gauntlet under its floor: not committed$", log, re.M):
             m = re.search(r"^gauntlet under its floor: (.*)$", log, re.M)
             return "a gauntlet fell under its floor%s: see logs/%s.log" % (" (%s)" % m.group(1) if m else "", jid)
+        if re.search(r"^a floor collapsed: not committed$", log, re.M):
+            m = re.search(r"^(?:family|gauntlet) (\S+): .* is a collapse", log, re.M)
+            return "a floor collapsed%s: see logs/%s.log" % (" (%s)" % m.group(1) if m else "", jid)
         m = re.search(r"^((?:fatal|error)(?:\[\w+\])?: .*)$", log, re.M)
         return "%s%s: see logs/%s.log" % (self.JOB_FAULT, " (%s)" % m.group(1)[:160] if m else "", jid)
 
@@ -4635,7 +4643,13 @@ class Plan:
         fam = load(os.path.join(self.pd, "families.json"), {}) or {}
         for name, v in fam.items():
             if v.get("verdict") == "UNDER":
-                self.flag("families", "%s falls under a family's floor" % name, key="under:%s" % name)
+                # REFUSED, AND RIGHTLY: IT IS NOT A PERSON'S TO ACKNOWLEDGE (Paul, 13 November: "explain that they
+                # are correctly rejected because of their performance, perhaps we need a way to filter"). A
+                # candidate under a family's floor has been refused by the rule that exists to refuse it, and
+                # nothing waits on anyone: it is said once, with the family and the count, as progress.
+                low = ["%s held %s of %s (floor %s)" % (x["family"].replace("-", " "), x.get("held"), x.get("runs"), x.get("floor"))
+                       for x in v.get("families", []) if x.get("verdict") == "UNDER"]
+                self.flag("families", "%s is refused, as it should be: %s" % (name, "; ".join(low) or "a family under its floor"), key="under:%s" % name, progress=True)
             elif v.get("verdict") == "ERROR":
                 self.flag("families", "%s: its families could not run; read again on the next commit" % name, key="error:%s:%s" % (name, self.short()))
 
@@ -4929,12 +4943,21 @@ class Plan:
         src = run(["git", "-C", self.tc, "show", "%s:source/treadcore-brain/src/learn.rs" % self.sha()]).stdout
         return "GAUNTLET_WEIGHTS" in src
 
+    # A SMALL DROP PASSES AND MOVES ITS FLOOR; A COLLAPSE DOES NOT (Paul, 13 November: "adapting the tests to
+    # just pass with current numbers. Then we can progress forward"; asked, "pass on a small drop"). A
+    # floor was a wall: seven candidates in a week waited on the gauntlet's G20 at 58% against 60%. A
+    # family or a gauntlet file under its floor by no more than FLOOR_GIVE (a share) holds; at the
+    # promotion treadcore's scripts/floors.py moves that floor down to what the new brain scored, and the
+    # commit carries it. Under by more is a collapse and refuses, as a-raid-on-the-held-ground did at 0
+    # of 400. 0: every floor a wall, as it was.
+    FLOOR_GIVE = 0.05
+
     def guard_verdict(self, tsv):
         """(holds, the files under their floors) of a gauntlet read's tsv, the rules' rows."""
         floors, under = self.gauntlet_floors(), []
         for line in open(tsv).read().splitlines()[1:]:
             p = line.split("\t")
-            if len(p) >= 5 and p[1] == "scripted" and p[0] in floors and float(p[4]) < floors[p[0]]:
+            if len(p) >= 5 and p[1] == "scripted" and p[0] in floors and float(p[4]) < floors[p[0]] - self.FLOOR_GIVE:
                 under.append("%s %.0f%% under %.0f%%" % (p[0].split(" ")[0], 100 * float(p[4]), 100 * floors[p[0]]))
         return not under, under
 

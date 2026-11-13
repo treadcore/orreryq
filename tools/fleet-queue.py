@@ -295,7 +295,14 @@ class Queue:
     def ack(self, fid, by):
         n = 0
         for f in sorted(glob.glob(self.p("flags", "*.json"))):
-            j = json.load(open(f))
+            # ONE FLAG THAT CANNOT BE READ DOES NOT STOP THE REST (13 November). A flag written twice over in
+            # the cut of 8 November was not JSON, and Acknowledge all died on it with "Extra data: line 1
+            # column 193" before it reached any other: 23 flags stood unacknowledged behind one bad file.
+            # flags() and progress() had always passed over such a file; this did not.
+            try:
+                j = json.load(open(f))
+            except (OSError, ValueError):
+                continue
             if not j.get("ack") and not j.get("progress") and (fid == "all" or j["id"] == fid):
                 j["ack"] = {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "by": by}
                 with open(f + ".tmp", "w") as out:
@@ -1757,7 +1764,7 @@ def health(q):
             check("warn", "search", said + ": dry %d trials since it widened, the next gain wants a change to the brain itself"
                   % (s["reads"] - s["widened_at"]))
         elif s.get("stalled"):
-            check("ok", "search", said + ": widened (bound %s, half of each generation wide trials)" % s.get("bound"))
+            check("ok", "search", said + ": widened (the fit reaches %s doublings, and one wide trial a generation)" % s.get("bound"))
         else:
             check("ok", "search", said)
     # The line: generations carried, not yet proven past main.
@@ -1784,8 +1791,13 @@ def health(q):
     if d.get("since"):
         every = d.get("every_min", 240)
         ago = (now() - d["since"]) / 60
-        said = "the ratchet: a generation passes at held-out z %.2f, %s since the last, generation %d of this run; harder each generation, easier after %d h dry" % (
-            d.get("held_z", 3), took(ago * 60), d.get("generations", 0), 4)
+        # The bar's own words: since 13 November it stands (its ease and its ceiling are one number) and
+        # "easier after 4 h dry" was no longer true of it; and "since the last" is since the bar last
+        # moved, which a line coming off also does, so it is not called a generation.
+        pinned = d.get("ease", 0) >= d.get("floor", 3.0) - 0.051
+        said = "the bar: a generation passes at held-out z %.2f; %s since it last moved, %d step(s) this run; %s" % (
+            d.get("held_z", 3), took(ago * 60), d.get("generations", 0),
+            "it stands there: a dry spell widens the search and does not lower it" if pinned else "harder each generation, easier after 4 h dry")
         if d.get("ease", 0) >= d.get("floor", 3.0) and ago > 480:
             check("warn", "difficulty", said + ": at its easiest and nothing found: the brain itself needs a change")
         else:
