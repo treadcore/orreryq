@@ -3497,7 +3497,7 @@ class Plan:
             first = len(jobs)
             rid, kind, p = r["id"], r["kind"], r.get("params", {})
             st = self.rstate(rid)
-            if st["status"] in ("done", "failed", "stopped", "approved", "self-modified", "rejected"):
+            if st["status"] in ("done", "failed", "stopped", "approved", "self-modified", "rejected", "orphaned"):
                 continue
             if kind in self.CENSUS_KINDS:
                 jobs += self.census_run(rid, kind, p, st)
@@ -3975,7 +3975,10 @@ class Plan:
         return max(ev.items(), key=lambda kv: kv[1]["held_mean"]) if ev else (None, None)
 
     def promote_run(self, rid, p, st):
-        if st["status"] in ("prepared", "approved", "self-modified", "rejected"):
+        # ORPHANED IS AN END (13 November, 09:27). The first line to come off was back within a minute: its ten
+        # promotions, marked orphaned, read here as runs not yet finished, and each was prepared and put
+        # on the line again, one every seven seconds. A status this did not know was work to do.
+        if st["status"] in ("prepared", "approved", "self-modified", "rejected", "orphaned"):
             return []
         if st["status"] == "new":
             # Without push permission the promotion still runs: it is
@@ -7413,7 +7416,7 @@ if __name__ == "__main__":
         sys.exit(0)
     p = Plan(sys.argv[1])
     cmd = sys.argv[2]
-    p.writer = cmd in ("plan", "now", "approve", "resolve", "why", "tag", "adopt")
+    p.writer = cmd in ("plan", "now", "approve", "resolve", "why", "tag", "adopt", "orphan")
     if cmd == "plan":
         # A pass measured on request: plan/profile-next there, the next pass runs under cProfile and
         # writes what it spent its time on to plan/profile.txt (the duty-cycle report's passes took
@@ -7454,6 +7457,14 @@ if __name__ == "__main__":
             p.rsave(sys.argv[3], st)
             p.keep()
         print(st.get("why", st.get("status")))
+    elif cmd == "orphan":
+        # orphan: the line taken off again on the read that took it off before, when it carries the same
+        # promotions and nothing else (13 November: the first orphaned line was rebuilt by a fault, not read anew).
+        line, last = p.state.get("local_line"), (p.state.get("orphans") or [None])[-1]
+        if not line or not last or line.get("promotions") != last.get("promotions"):
+            sys.exit("no line that the last orphaning read: nothing done")
+        print("off" if p.orphan(line["commit"], last["lead"], last["se"], last["seeds"]) else "not taken off")
+        p.keep()
     elif cmd == "resolve":
         # resolve: the local line (self-modified promotions) pushed to main.
         p.resolve()

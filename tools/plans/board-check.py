@@ -1364,6 +1364,7 @@ assert git(tc, "rev-parse", g.LINE) == main_before == git(tc, "rev-parse", "orig
 g._sha = None
 assert g.sha() == base and g.state["orphans"][0]["promotions"] == ["r1", "r2"], "the fleet builds main again"
 _sh.rmtree(root)
+assert g.promote_run("r1", {"candidate": "grove/w1"}, {"status": "orphaned"}) == [], "orphaned is an end: the run is not prepared again"
 w = Settle([(time.time() - 31 * 60, "r0", {})])
 w.state["local_line"] = {"commit": "abcdef0123456789", "promotions": ["r0"]}
 w.state["proof"] = {"last": {"head": "abcdef0", "d": 0.2, "se": 0.08, "seeds": 9600}}
