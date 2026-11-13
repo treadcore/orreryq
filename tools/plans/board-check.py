@@ -30,6 +30,9 @@ assert {x["id"]: x for x in t}["b"]["essential"]
 
 class Ratchet(P):
     """The ease alone: no queue, promotions given."""
+    # The ratchet's own motion, on the numbers it was made with: since 13 November the defaults pin the bar
+    # (START_EASE and EASE_MAX both 0.5), and at those nothing here would move.
+    START_EASE, EASE_MAX = 2.5, 2.75
     def __init__(self):
         self.state = {}
         self.got = []
@@ -38,16 +41,16 @@ class Ratchet(P):
 
 
 r, base = Ratchet(), time.time
-assert r.ease() == P.START_EASE
+assert r.ease() == r.START_EASE
 for i in range(3):  # each generation harder
     r._ease = None
     r.got = [(time.time(), "r%d" % i, {})]
     e = r.ease()
-assert abs(e - (P.START_EASE - 3 * P.HARDEN)) < 1e-9, e
+assert abs(e - (r.START_EASE - 3 * P.HARDEN)) < 1e-9, e
 # Four hours dry: easier; each hour after, easier again; never past the ceiling.
 try:
     d = r.state["difficulty"]["since"]
-    for hours, want in ((3.9, e), (4.0, e + P.EASE_STEP), (5.5, min(P.EASE_MAX, e + 2 * P.EASE_STEP)), (99, P.EASE_MAX)):
+    for hours, want in ((3.9, e), (4.0, e + P.EASE_STEP), (5.5, min(r.EASE_MAX, e + 2 * P.EASE_STEP)), (99, r.EASE_MAX)):
         time.time = lambda: d + hours * 3600
         r._ease = None
         got = r.ease()
@@ -70,6 +73,8 @@ HOLD_Q = tempfile.mkdtemp()
 
 
 class C(P):
+    # Pinned to the rule's own numbers: the defaults moved on 13 November, and these claims are of the rule.
+    ANCHOR, HELD_READS = 3, 1
     def __init__(self, ev):
         self.name, self.state, self.ev, self.got, self.flags, self.CARRY_MAX = "grove", {"adopt": []}, ev, [], [], 2
         self.q = HOLD_Q
@@ -316,6 +321,8 @@ assert b.batch({"a": ev["a"]}, "a") == (ev["a"]["weights"], [])
 
 # ---- The window: what passes inside half an hour waits.
 class Window(P):
+    # Pinned to the rule's own numbers: the defaults moved on 13 November, and these claims are of the rule.
+    GENERATION_EVERY_MIN, TRADE_GAIN, SETTLE_GENS = 30, 0.0, 2
     def __init__(self, got):
         self.state, self.got, self.asked = {}, got, []
     def auto(self):
@@ -447,6 +454,8 @@ print("regions: every check holds")
 
 # ---- The temperament matrix's rounds, and the width watch's steps.
 class Temper(P):
+    # Pinned to the rule's own numbers: the defaults moved on 13 November, and these claims are of the rule.
+    TEMPER_EVERY = 12
     def __init__(self, gens):
         self.state, self.gens, self.gone, self.flags, self.runs_asked = {}, gens, set(), [], []
     def promotions(self):
@@ -561,6 +570,8 @@ print("long reads: every check holds")
 
 # ---- Less noise: a floor on the gain, a dial that has just moved, and what a commit says it changed.
 class Noise(P):
+    # Pinned to the rule's own numbers: the defaults moved on 13 November, and these claims are of the rule.
+    SETTLE_GENS, TRADE_GAIN = 2, 0.0
     HELD_Z = 3.0
     def __init__(self):
         self.state, self.flags = {}, []

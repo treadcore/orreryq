@@ -1,0 +1,126 @@
+{
+ "at": "2026-11-13T09:48:01",
+ "what": "the queue's own settings on the day the new design was committed to: what is live beside the code's defaults, kept here because the queue's files are not in the repository",
+ "orrery": "79aea74",
+ "treadcore_main": "2945c7e",
+ "tuning.json": {
+  "ease_now": 0.5,
+  "queue_per_machine": 2
+ },
+ "hold.json": {},
+ "plan.json": {
+  "rotation": false,
+  "weights": {
+   "seeds": 150,
+   "secs": 900,
+   "map": "all",
+   "seed0": 20000000,
+   "held_seeds": 400,
+   "held_seed0": 60000000,
+   "promote_every_min": 75
+  },
+  "crucible": {
+   "gens": 100,
+   "pop": 2048,
+   "eps": 256,
+   "yard": 10,
+   "hybrid": true,
+   "world": true,
+   "forest": true,
+   "task_p": 0.5,
+   "gauntlet_runs": 256,
+   "nav": true
+  }
+ },
+ "config.json": {
+  "hosts": [
+   {
+    "name": "boburner",
+    "caps": [
+     "cpu",
+     "fast"
+    ]
+   },
+   {
+    "name": "columbia",
+    "caps": [
+     "cpu"
+    ]
+   },
+   {
+    "name": "whitewolf",
+    "caps": [
+     "cpu",
+     "gpu"
+    ]
+   },
+   {
+    "name": "whitewolf-cuda",
+    "caps": [
+     "cuda"
+    ],
+    "lane_of": "whitewolf"
+   },
+   {
+    "name": "macmini",
+    "caps": [
+     "cpu",
+     "fast"
+    ]
+   },
+   {
+    "name": "mac",
+    "caps": [
+     "own"
+    ],
+    "cpus": 1,
+    "background": true
+   },
+   {
+    "name": "calber",
+    "caps": [
+     "cpu",
+     "gpu"
+    ]
+   },
+   {
+    "name": "calber-cuda",
+    "caps": [
+     "cuda"
+    ],
+    "lane_of": "calber"
+   },
+   {
+    "name": "saskatchewan",
+    "caps": [
+     "cpu",
+     "fast"
+    ]
+   },
+   {
+    "name": "bosporus",
+    "caps": [
+     "cpu"
+    ]
+   },
+   {
+    "name": "jaguaribe",
+    "caps": [
+     "cpu"
+    ]
+   },
+   {
+    "name": "saskatchewan-2",
+    "caps": [
+     "cpu",
+     "fast"
+    ],
+    "lane_of": "saskatchewan",
+    "build_of": "saskatchewan"
+   }
+  ],
+  "bench": [
+   "boburner-cuda"
+  ]
+ }
+}

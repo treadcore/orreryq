@@ -1408,7 +1408,7 @@ class Plan:
     # and the fit could not reach it. So under each new game every dial is read alone at a quarter and at
     # four times today's value, a share of each generation until they are done. They are ordinary trials,
     # and go by the ordinary road: nothing is promoted because it was far.
-    FAR_SHARE = 0.25
+    FAR_SHARE = 0.5   # half of each generation's new trials, since 13 November (0.25 before)
     # ONE DIAL AT A TIME, ROUND AFTER ROUND (Paul, 13 November: "can we adjust one parameter at a time ...
     # is there a way to make it more specific"). The fit's trials move three or four dials together:
     # 7,051 of 8,082 first reads since 6 November, their true gains spread 0.25 to 0.30 a seat, and
@@ -1490,7 +1490,7 @@ class Plan:
     # sine wave, and goes by the ordinary road. Three reads of 400 seeds go with them, to fold: the waves
     # driving nothing, which are the same games and show chance; the mood as it stands; and the mood at full.
     TEMPER_SHARE = 0.15
-    TEMPER_EVERY = 12
+    TEMPER_EVERY = 0   # off since 13 November: three rounds, 24 settings, 9,869 seeds, none past z 2 upward (12 before)
     TEMPER_STEP = 0.5
     TEMPER_ROWS = ("engage", "press", "retreat", "trigger")
 
@@ -1725,7 +1725,7 @@ class Plan:
     # trial +0.6 does six times in ten.
     HELD_Z = 3.0
 
-    HELD_READS = 1
+    HELD_READS = 6
     HELD_ON_Z = 1.0
 
     def held_more_jobs(self, seq):
@@ -1795,8 +1795,10 @@ class Plan:
     # 2.1 (the "10% easier" asked, held z 0.9) one in 56 minutes, 20% truly worse; 2.5 one in
     # 38, 28% worse; 2.75 one in 30, 34% worse; gain a day about +14 at all of them. So a
     # generation is carried, unproven, and only line_proof puts the line on main.
-    START_EASE = 2.5
-    EASE_MAX = 2.75       # held z 0.25. Calibrated on 1 November (docs/whole-line): past it, half is truly worse
+    # THE BAR STANDS AT z 2.5 (13 November, Always Forward): the ease began at 2.5 and could reach 2.75, a held-out
+    # bar of z 0.25, and from 6 to 13 November ten generations passed it and were worth nothing together.
+    START_EASE = 0.5
+    EASE_MAX = 0.5
     HARDEN = 0.05         # each generation
     DRY_MIN = 240         # nothing for four hours
     EASE_STEP = 0.25      # then this, and again each DRY_AGAIN_MIN
@@ -1841,7 +1843,7 @@ class Plan:
                   "dry_min": round(dry), "eases_at_min": self.DRY_MIN + (self.DRY_AGAIN_MIN * steps if steps else 0)})
         return self._ease
 
-    ANCHOR = 3
+    ANCHOR = 0   # none since 13 November (3 before): the yardstick and a line coming off ask what it asked
 
     def anchor_trial(self):
         """Each promotion, once its machines build it, read against the
@@ -2813,7 +2815,7 @@ class Plan:
         _COMMITS[d] = c
         return c
 
-    GENERATION_EVERY_MIN = 30
+    GENERATION_EVERY_MIN = 0   # since 13 November the line settling holds a generation; half an hour before
 
     # THE LINE SETTLES BEFORE IT GROWS (Paul, 13 November, on Always Forward: "it seems that we abandon a
     # block too frequently"). A generation on the line moved its head, and the proof's pool began again:
@@ -2908,7 +2910,7 @@ class Plan:
     # nothing: a gain must be MIN_GAIN points a seat. And A DIAL STILL MOVING IS NOT SETTLED: one moved in
     # the last SETTLE_GENS generations moves again only at full z 3, so no dial wanders on luck.
     MIN_GAIN = 0.25
-    SETTLE_GENS = 2
+    SETTLE_GENS = 0   # off since 13 November (2 before): the bar at z 2.5 and the line settling do its work
 
     def changed_from_line(self, text):
         """A trial's weights as "name old -> new" lines, against what the fleet builds now."""
@@ -3068,7 +3070,7 @@ class Plan:
     # 0.2 on a gain of 0.3. With TRADE_GAIN set, the limit stands as it was up to that gain a seat and
     # grows in proportion past it: at 1.0, a gain of +3.3 may give up 3.3 times what a gain of +1 may.
     # 0 is the rule as it was. A trial, to be read again when the fleet has shown what it lets through.
-    TRADE_GAIN = 0.0
+    TRADE_GAIN = 1.0
     _allow = 2.5
 
     def trade_allow(self, gain=None):
@@ -5429,7 +5431,7 @@ class Plan:
     CLONE_JUDGE_SEEDS = 48
     CLONE_SEED0 = 9700000
     CLONE_JUDGE_SEED0 = 81000000
-    CLONE_EVERY_H = 12
+    CLONE_EVERY_H = 0   # off since 13 November: fifteen rounds, no clone shipped (12 before)
 
     def shipped_scholar(self):
         """The file style 6 plays at the fleet's commit, by styles.rs: "bc2.bin" until a clone ships."""
