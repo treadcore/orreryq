@@ -527,7 +527,10 @@ class Plan:
 
     # ---- preparing the hosts --------------------------------------------------------
     def prep_id(self, host):
-        return "prep-%s-%s" % (host, self.short())
+        # A second lane on a machine ("build_of" in config.json, the keeper's builder()) has no build of
+        # its own: the machine's first lane built it, and that build is the one asked after.
+        of = next((h.get("build_of") for h in (getattr(self, "qcfg", None) or {}).get("hosts", []) if h.get("name") == host and h.get("build_of")), None)
+        return "prep-%s-%s" % (of or host, self.short())
 
     def prepare_jobs(self):
         sha, short = self.sha(), self.short()
@@ -551,7 +554,7 @@ class Plan:
         known = self.ids("queue", "running", "done", "failed", "stopped") - self.retry_failed_builds()
         for h in self.hosts:
             jid = self.prep_id(h["name"])
-            if jid in known:
+            if jid in known or h.get("build_of"):
                 continue
             cmd = (
                 "set -e; [ -f ~/.cargo/env ] && . ~/.cargo/env; export PATH=$HOME/.cargo/bin:$PATH\n"
@@ -1405,6 +1408,18 @@ class Plan:
     # four times today's value, a share of each generation until they are done. They are ordinary trials,
     # and go by the ordinary road: nothing is promoted because it was far.
     FAR_SHARE = 0.25
+    # ONE DIAL AT A TIME, ROUND AFTER ROUND (Paul, 13 November: "can we adjust one parameter at a time ...
+    # is there a way to make it more specific"). The fit's trials move three or four dials together:
+    # 7,051 of 8,082 first reads since 6 November, their true gains spread 0.25 to 0.30 a seat, and
+    # what passed held +0.06 and -0.02 on fresh seeds; nothing says which dial did what, and a good move
+    # is read with two that cancel it. The 875 that moved one dial spread 1.15. The far read was the one
+    # road that asks one dial alone, and it ran once a game. Now when a round is done the next begins on
+    # the defaults of its day, a step nearer: four times, twice, then the root of two, and round those
+    # two again for as long as the defaults keep moving. A round on defaults already read waits.
+    FAR_STEPS = (4.0, 2.0, 1.41)
+
+    def far_step(self, far):
+        return self.FAR_STEPS[min(far.get("round", 0), len(self.FAR_STEPS) - 1)] if far.get("round", 0) < len(self.FAR_STEPS) else self.FAR_STEPS[1 + (far["round"] - 1) % 2]
 
     def far_trials(self, n, out, defaults):
         """Up to n trials of the far read still to do, written to out as far-NAME.lo/hi.weights."""
@@ -1415,9 +1430,20 @@ class Plan:
             _, choices = self.versions()
             skip = self.decreed() | set(choices) | {"bot_style", "patch", "model"}
             names = sorted(k for k, v in dflt.items() if v > 0 and k not in skip)
-            far = self.state["far"] = {"game": game, "todo": ["%s.%s" % (k, e) for k in names for e in ("lo", "hi")], "asked": {}, "total": 2 * len(names)}
+            far = self.state["far"] = {"game": game, "todo": ["%s.%s" % (k, e) for k in names for e in ("lo", "hi")], "asked": {}, "total": 2 * len(names),
+                                       "round": 0, "on": hashlib.sha1(open(defaults).read().encode()).hexdigest()[:12]}
             self.flag("far", "game %s: each of %d dials to be read at a quarter and four times, %d trials" % (game, len(names), far["total"]),
                       key="far:%s" % game, progress=True)
+        elif not far["todo"] and len(self.FAR_STEPS) > 1:
+            on = hashlib.sha1(open(defaults).read().encode()).hexdigest()[:12]
+            if far.get("round", 0) + 1 < len(self.FAR_STEPS) or on != far.get("on"):
+                dflt = parse_weights(open(defaults).read())
+                _, choices = self.versions()
+                skip = self.decreed() | set(choices) | {"bot_style", "patch", "model"}
+                names = sorted(k for k, v in dflt.items() if v > 0 and k not in skip)
+                far.update({"todo": ["%s.%s" % (k, e) for k in names for e in ("lo", "hi")], "total": 2 * len(names), "round": far.get("round", 0) + 1, "on": on})
+                self.flag("far", "one dial at a time, round %d: each of %d dials read alone at %.3g times and a %.3gth of today's, %d trials" % (
+                    far["round"] + 1, len(names), self.far_step(far), self.far_step(far), far["total"]), key="far:%s:%d" % (game, far["round"]), progress=True)
         # A job retired by a generation before it ran was never read: it goes back.
         gone = self.ids("stopped")
         for jid, what in list(far.get("asked", {}).items()):
@@ -1432,9 +1458,10 @@ class Plan:
                 break
             name, end = key.rsplit(".", 1)
             d = dflt.get(name, 0)
-            y = d / 4 if end == "lo" else d * 4
+            step = self.far_step(far)
+            y = d / step if end == "lo" else d * step
             if end == "hi" and name in unit:
-                y = d + (1 - d) / 2 if d < 1 else d
+                y = d + (1 - d) * min(0.5, (step - 1) / 2) if d < 1 else d
             lo, hi = self.ranges().get(name, (None, None))
             if lo is not None:
                 y = min(hi, max(lo, y))
@@ -1443,7 +1470,8 @@ class Plan:
                 continue
             f = os.path.join(out, "far-%s.weights" % key)
             with open(f, "w") as fh:
-                fh.write("# orrery: far, under game %s: %s at %s today's\n%s = %.6g\n" % (game, name, "a quarter of" if end == "lo" else "four times", name, y))
+                fh.write("# orrery: far, under game %s: %s at %s today's\n%s = %.6g\n" % (
+                    game, name, ("a quarter of" if end == "lo" else "four times") if step == 4 else ("1/%.3g of" % step if end == "lo" else "%.3g times" % step), name, y))
             files.append(f)
         return files
 
@@ -2756,6 +2784,37 @@ class Plan:
         return c
 
     GENERATION_EVERY_MIN = 30
+
+    # THE LINE SETTLES BEFORE IT GROWS (Paul, 13 November, on Always Forward: "it seems that we abandon a
+    # block too frequently"). A generation on the line moved its head, and the proof's pool began again:
+    # of 37 heads the proof read, 28 were left unproved, after a median 1.2 hours and 1,600 seeds, where
+    # a true +0.25 against a seed's swing of 8.1 takes 9,400 to show at z 3. Four were left past z 2,
+    # one (8017a71) at 2.92 over 13,600 seeds. So while the line's head has not been read SETTLE_SEEDS
+    # seeds by its proof, no generation joins it: the proof goes first, SETTLE_JOBS reads at a time and
+    # no hour between, and the head either goes to main or has been read enough to say it does not.
+    # What passes meanwhile stays a candidate on the same defaults, and the strongest goes next. A
+    # head whose proof cannot be asked (the line's values are main's) holds nothing past SETTLE_MAX_H.
+    # 0 seeds: off, as it was.
+    SETTLE_SEEDS = 9600
+    SETTLE_JOBS = 6
+    SETTLE_MAX_H = 8
+
+    def settling(self):
+        """What the line waits for before another generation, in words; None when nothing."""
+        line = self.state.get("local_line")
+        if not line or not self.SETTLE_SEEDS or not line.get("commit"):
+            return None
+        p = self.promotions()
+        if p and time.time() - p[-1][0] > self.SETTLE_MAX_H * 3600:
+            return None
+        pf = self.state.get("proof") or {}
+        last, head = pf.get("last") or {}, line["commit"]
+        seeds = last.get("seeds", 0) if last.get("head") == head[:7] else 0
+        if seeds >= self.SETTLE_SEEDS:
+            return None
+        return "the line %s settles first: its proof has read %d of %d seeds%s" % (
+            head[:7], seeds, self.SETTLE_SEEDS, ", %+.2f +/- %.2f so far" % (last["d"], last["se"]) if seeds else "")
+
     # Minutes a pause of auto promotion lasts before it goes on by itself (or less, if main moves).
     PAUSE_RESUME_MIN = 60
 
@@ -3035,6 +3094,10 @@ class Plan:
         # rows. What passes meanwhile waits, and goes together.
         p = self.promotions()
         if p and time.time() - p[-1][0] < self.GENERATION_EVERY_MIN * 60:
+            return
+        wait = self.settling()
+        if wait:
+            self.flag("line", wait + "; what passes meanwhile waits, and the strongest goes next", key="settling:%s" % self.state["local_line"]["commit"][:12], progress=True)
             return
         tried = self.state.setdefault("auto_tried", [])
         self.retry_after_main(autos, tried)
@@ -5858,7 +5921,9 @@ class Plan:
                 if d / se >= 2:
                     self.flag("line", "the line %s reads %+.2f +/- %.2f against main over %d seeds: under it; the anchor reads should undo it" % (head[:7], -d, se, n_),
                               key="line-under:%s" % head[:12])
-        if time.time() - pf.get("last_at", 0) < self.PROOF_EVERY_MIN * 60 or self._built_everywhere() is False:
+        # A head still settling is read at once and more at a time: nothing may join the line until it is.
+        settling = bool(self.settling())
+        if (not settling and time.time() - pf.get("last_at", 0) < self.PROOF_EVERY_MIN * 60) or self._built_everywhere() is False:
             return []
         remote, branch = self.push_target()
         main = run(["git", "-C", self.tc, "rev-parse", "%s/%s" % (remote, branch)]).stdout.strip()
@@ -5876,7 +5941,7 @@ class Plan:
         key = [self.src_tree(line["commit"]), self.src_tree(main)]
         key = key if all(key) else None
         nth = len(pooled.get("jobs") or []) // 2 + 1 if ((key and pooled.get("key") == key) or (pooled.get("head"), pooled.get("main")) == (line["commit"], main)) else 1
-        for k in range(2):
+        for k in range(self.SETTLE_JOBS if settling else 2):
             n_ = self.state["proof_n"] = self.state.get("proof_n", 0) + 1
             jid = "pv%04d" % n_
             jobs.append({"id": jid, "kind": "weights", "title": "proof %d of the line %s against main (%d seeds%s)" % (

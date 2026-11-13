@@ -171,6 +171,32 @@
    "down": "finds reach the line sooner, more reads lost to the generation after"
   },
   {
+   "key": "settle_seeds",
+   "attr": "SETTLE_SEEDS",
+   "label": "The line settles over",
+   "default": 9600,
+   "min": 0,
+   "max": 40000,
+   "step": 800,
+   "unit": "seeds",
+   "what": "No generation joins the line until its proof has read the line's head this many seeds; the proof goes first meanwhile, six reads at a time. 9,600 shows a true +0.25 at z 3. 0 is off: a generation lands whenever it passes, as it was.",
+   "up": "each block is proved or refused before the next; generations come later",
+   "down": "generations come sooner, and move the head before its proof can say anything"
+  },
+  {
+   "key": "far_share",
+   "attr": "FAR_SHARE",
+   "label": "One dial at a time",
+   "default": 0.25,
+   "min": 0.0,
+   "max": 1.0,
+   "step": 0.05,
+   "unit": "of new trials",
+   "what": "The share of each generation's new trials that move one dial alone, round after round (four times, twice, the root of two), where the fit's move three or four together.",
+   "up": "more trials that say which dial did what",
+   "down": "more of the fit's trials, several dials together"
+  },
+  {
    "key": "min_gain",
    "attr": "MIN_GAIN",
    "label": "Least gain to land",

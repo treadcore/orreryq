@@ -402,6 +402,19 @@ assert os.path.basename(f.far_trials(1, root, dfile)[0]) == os.path.basename(two
 left = len(f.state["far"]["todo"])
 f.far_trials(1, root, dfile)
 assert len(f.state["far"]["todo"]) == left and not f.state["far"]["asked"]
+# ONE DIAL AT A TIME, ROUND AFTER ROUND: the round done, the next is a step nearer, on the defaults of its day;
+# past the last step a round waits for the defaults to move.
+f.state["far"]["todo"] = []
+said = {os.path.basename(x)[4:-8]: open(x).read().splitlines()[-1] for x in f.far_trials(100, root, dfile)}
+assert f.state["far"]["round"] == 1 and said["w_a.lo"] == "w_a = 1" and said["w_a.hi"] == "w_a = 4" and said["share.hi"] == "share = 0.75", said
+f.state["far"]["todo"] = []
+said = {os.path.basename(x)[4:-8]: open(x).read().splitlines()[-1] for x in f.far_trials(100, root, dfile)}
+assert f.state["far"]["round"] == 2 and said["w_a.hi"] == "w_a = 2.82" and said["share.hi"] == "share = 0.6025", said
+f.state["far"]["todo"] = []
+assert f.far_trials(100, root, dfile) == [] and f.state["far"]["round"] == 2, "every step read on these defaults: the next round waits"
+open(dfile, "w").write("w_a = 3\nw_held = 2\nw_kept = 2\nzero = 0\nbio = 1\nshare = 0.5\nfull = 1\n")
+said = {os.path.basename(x)[4:-8]: open(x).read().splitlines()[-1] for x in f.far_trials(100, root, dfile)}
+assert f.state["far"]["round"] == 3 and said["w_a.hi"] == "w_a = 6", "the defaults moved: round again, at twice"
 _sh.rmtree(root)
 
 print("the line, batches, the window, memory and the far read: every check holds")
@@ -707,6 +720,7 @@ PR_LINE = subprocess.run(["git", "-C", pr_tc, "rev-parse", "HEAD"], capture_outp
 
 class Proof(P):
     PROOF_EVERY_MIN = 60
+    SETTLE_SEEDS = 0  # the claims below are of the proof's own pace; Settle, after them, is the line settling
     def __init__(self):
         self.q, self.tc, self.home = pr_root, pr_tc, "fleet/q-grove"
         self.cfg = {"weights": {"held_seeds": 400}}
@@ -767,6 +781,16 @@ assert pv.state["proof"]["pooled"]["jobs"] == ["pv0005", "pv0006"] and pv.state[
 pv.state["proof"] = {"jobs": ["pv0005", "pv0006"], "head": PR_LINE2, "n": 1, "pooled": {"head": PR_LINE2, "main": None, "jobs": ["pv0001"]}}
 pv.line_proof()
 assert pv.state["proof"]["pooled"]["jobs"] == ["pv0005", "pv0006"], "no main known, no pool"
+class SettleProof(Proof):
+    SETTLE_SEEDS = 9600
+    def promotions(self):
+        return [(time.time() - 60, "r1", {})]
+
+
+sp = SettleProof()
+sp.state["proof"] = {"last_at": time.time()}
+assert len(sp.line_proof()) == 6, "a head still settling is read at once, six reads at a time"
+
 _sh.rmtree(pr_root)
 print("the line's proof, pooled: every check holds")
 
@@ -1272,3 +1296,29 @@ assert pv["week"]["cells"]["a"]["first"][:2] == [14, 1] and pv["all"]["hours"] =
 assert pv["days"] == [["2026-11-02", 10, 1, 50.0], ["2026-11-05", 4, 0, 20.0]]
 _sh.rmtree(eq_)
 print("the Lineup's ends and the Hit Parade's tally: every check holds")
+
+# ---- THE LINE SETTLES BEFORE IT GROWS: while the head's proof has not read its seeds, nothing joins the line,
+# and the proof is asked at once, six reads at a time; read enough, the line takes the strongest candidate.
+class Settle(Window):
+    SETTLE_SEEDS = 9600
+
+
+w = Settle([(time.time() - 31 * 60, "r0", {})])
+w.state["local_line"] = {"commit": "abcdef0123456789", "promotions": ["r0"]}
+assert "0 of 9600" in w.settling()
+w.auto_promote()
+assert not w.asked, "a head not yet read: no generation joins it"
+w.state["proof"] = {"last": {"head": "abcdef0", "d": 0.1, "se": 0.2, "seeds": 4800}}
+w.auto_promote()
+assert not w.asked and "4800 of 9600 seeds, +0.10 +/- 0.20" in w.settling()
+w.state["proof"]["last"]["head"] = "0000000"
+assert "0 of 9600" in w.settling(), "a read of another head is not this one's"
+w.state["proof"]["last"].update(head="abcdef0", seeds=9600)
+w.auto_promote()
+assert w.settling() is None and w.asked == [{"candidate": "grove/w1"}], "read enough: the strongest goes next"
+w = Settle([(time.time() - 9 * 3600, "r0", {})])
+w.state["local_line"] = {"commit": "abcdef0123456789", "promotions": ["r0"]}
+assert w.settling() is None, "a proof that never comes holds nothing past the limit"
+
+print("the line settling, and one dial at a time round after round: every check holds")
+

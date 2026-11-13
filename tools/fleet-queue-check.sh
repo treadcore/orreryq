@@ -150,4 +150,24 @@ q machine a restart now >/dev/null
 i=0; until [ "$(grep -c '"machine back from restart"' "$Q/events.jsonl")" = 2 ]; do i=$((i + 1)); [ $i -lt 60 ] || { echo "FAILED: a never came back from restart now"; exit 1; }; sleep 0.5; done
 grep -q '"requeued", "job": "x3"' "$Q/events.jsonl" && [ "$(cat "$Q/bootid")" = onexx ] && echo "ok  restart now sent the job in hand back, then rebooted, and the machine came back"
 wait_for done where x3
+# A SECOND LANE ON ONE MACHINE: "build_of" names the lane whose builds are its own, so a job that waits
+# on its host's build starts on the second lane once the first has built, and no build is asked of it.
+python3 - "$Q/config.json" <<'PY'
+import json, sys
+c = json.load(open(sys.argv[1]))
+c["hosts"].append({"name": "a2", "target": "-", "caps": ["cpu"], "build_of": "a"})
+json.dump(c, open(sys.argv[1], "w"))
+PY
+cat > "$Q/pa.in" <<E
+{"id": "prep-a", "kind": "k1", "title": "prep-a", "needs": "host:a", "cmd": "true"}
+E
+q add "$Q/pa.in" >/dev/null
+wait_for done where prep-a
+q machine a pause >/dev/null
+cat > "$Q/y1.in" <<E
+{"id": "y1", "kind": "k1", "title": "y1", "needs": "cpu", "after_host": "prep-{host}", "cmd": "true"}
+E
+q add "$Q/y1.in" >/dev/null
+wait_for done where y1
+grep '"done", "job": "y1"' "$Q/events.jsonl" | grep -q '"host": "a2"' && echo "ok  a second lane runs a job on the build its machine's first lane made"
 echo "PASS"

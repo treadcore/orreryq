@@ -564,11 +564,21 @@ def fits(host, job):
     return need in host.get("caps", ["cpu"])
 
 
+def builder(host):
+    """The name a host's builds are done under. A SECOND LANE ON ONE MACHINE (Paul, 13 November: "yes
+    build 1 and 2") is a host entry of its own, the same target, with "build_of" naming the machine's
+    first: a census splits its seeds over every core and is as long as its slowest share, so between
+    jobs and in each job's tail most of the cores stand idle (saskatchewan, a minute sampled each five
+    seconds: 3, 2, 0, 0, 0, 8, 6, 4, 4, 17, 17, 17 census processes on 24 threads). A second lane takes
+    its own job into those gaps. It builds nothing: what the first lane built on that machine is its build."""
+    return host.get("build_of", host["name"])
+
+
 def ready(host, job, done):
     """The host could start the job now: it fits, and what it waits for
     (its jobs, and its build on this host) is done."""
     ah = job.get("after_host")
-    if ah and ah.format(host=host["name"]) not in done:
+    if ah and ah.format(host=builder(host)) not in done:
         return False
     return fits(host, job) and all(a in done for a in job.get("after", []))
 
@@ -687,7 +697,7 @@ def idle_reason(q, cfg, names, info=None):
             empty.append(n)
             continue
         for j in mine:
-            b = j.get("after_host", "").format(host=n) if j.get("after_host") else None
+            b = j.get("after_host", "").format(host=builder(by[n])) if j.get("after_host") else None
             if b and b in failed:
                 broken[n] = b
                 break
