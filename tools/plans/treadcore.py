@@ -2854,7 +2854,11 @@ class Plan:
         last, head = pf.get("last") or {}, line["commit"]
         seeds = last.get("seeds", 0) if last.get("head") == head[:7] else 0
         # Read its seeds and neither proved nor refused (orphan): it is read on, to twice as many, then let go.
-        undecided = seeds < 2 * self.SETTLE_SEEDS and last.get("se") and last["d"] + 2 * last["se"] >= self.MIN_GAIN
+        # Proved is decided too (13 November): a line three errors past main that a map holds off main was
+        # "neither proved nor refused" by this line, and its proof went on taking the fast machines six
+        # jobs at a time towards twice the seeds, with nothing left to learn.
+        proved = bool(last.get("se")) and last["d"] / last["se"] >= self.HELD_Z
+        undecided = not proved and seeds < 2 * self.SETTLE_SEEDS and last.get("se") and last["d"] + 2 * last["se"] >= self.MIN_GAIN
         if seeds >= self.SETTLE_SEEDS and not undecided:
             return None
         return "the line %s settles first: its proof has read %d of %d seeds%s" % (
@@ -6029,13 +6033,25 @@ class Plan:
         # The queue's order is first come, so depth is how long a finding waits.
         cpu_queued = len([j for j in self.ids("queue") if not j.startswith("x-")])
         want = max(0, self.QUEUE_PER_MACHINE * len(self.hosts) - cpu_queued)
+        # WHAT ONLY A FAST MACHINE CAN TAKE IS NO WORK FOR THE OTHERS (13 November). The count above is of
+        # every queued job. At 13:07 it was 26 of 26: fifteen pieces of held-out reads and a proof for the
+        # four fast lanes, two bridge censuses pinned to boburner, two stale pieces, and nothing a plain
+        # CPU lane could start; columbia, whitewolf, calber, bosporus and jaguaribe stood idle a quarter of
+        # an hour while the keeper asked for a plan each minute and was answered "full". So the plain
+        # lanes have a share of their own, of jobs any CPU machine may take, and it is topped up too:
+        # the same number a machine, so the queue is no deeper for them than it was meant to be.
+        plain = [h for h in self.hosts if "cpu" in h.get("caps", ["cpu"]) and "fast" not in h.get("caps", []) and not h.get("paused")]
+        theirs = [j for j in self.queue_jobs() if j.get("needs") == "cpu" and not j.get("background") and not j.get("id", "").startswith("x-")
+                  and (not j.get("after_host") or j["after_host"].endswith(self.short()))]
+        plain_want = max(0, self.QUEUE_PER_MACHINE * len(plain) - len(theirs))
         # The families first, a share of the queue: a candidate waits on them.
         jobs += self.family_jobs(max(0, (want - len(jobs) + 1) // 2))
         try:
             jobs += self.guard_jobs(2)
         except Exception as e:  # a read missed is asked again at the next plan
             print("guard: %s" % e, file=sys.stderr)
-        jobs += self.weight_jobs(max(0, want - len(jobs)))
+        # The plain lanes' share is not spent by what was planned above for the fast ones (a proof's six jobs).
+        jobs += self.weight_jobs(max(0, want - len(jobs), plain_want))
         # The GPU lanes' own work: it takes no treadcore lane.
         jobs += self.crucible_jobs()
         try:
@@ -6115,7 +6131,7 @@ class Plan:
         for f in glob.glob(os.path.join(self.q, "queue", "*.json")):
             j = load(f, {}) or {}
             cmd = j.get("cmd", "")
-            if j.get("kind") != "weights" or here in cmd or not re.match(r"[weh]\d+$", j.get("id", "")):
+            if j.get("kind") != "weights" or here in cmd or not re.match(r"[weh]\d+(-p\d+)?$", j.get("id", "")):
                 continue
             m = re.search(r"/c/(\w+);", cmd)
             if m and not self.same_defaults(m.group(1)):
