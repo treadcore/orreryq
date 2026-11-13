@@ -791,6 +791,37 @@ sp = SettleProof()
 sp.state["proof"] = {"last_at": time.time()}
 assert len(sp.line_proof()) == 6, "a head still settling is read at once, six reads at a time"
 
+
+# THE FIXED YARDSTICK: once a day, main's values of a fixed day against today's, on the same seeds each day;
+# its rows are kept, and it asks nothing again until the day is out.
+class Rate(Proof):
+    RATING_BRAINS = (("then", PR_MAIN),)
+    RATING_SEEDS = 800
+    def auto(self):
+        return True
+    def sha(self):
+        return PR_LINE
+    def census_cmd(self, text, seeds, seed0, jid):
+        self.seeds0.append(seed0)
+        return text
+
+
+rt = Rate()
+rt.pd, rt.seeds0 = os.path.join(pr_root, "plan-rt"), []
+os.makedirs(rt.pd)
+asked = rt.rating()
+assert [j["id"] for j in asked] == ["rt0001", "rt0002"] and "a = 1.0" in asked[0]["cmd"], "main's values of that day, as the trial"
+assert rt.rating() == [], "its reads not back: nothing more"
+rt.read([j["id"] for j in asked], d="-0.50", se="0.40")
+assert rt.rating() == []
+row = json.load(open(os.path.join(rt.pd, "rating.json")))["rows"][0]
+assert row["label"] == "then" and row["lead"] > 0 and row["seeds"] == 800 and row["against"] == PR_MAIN[:7], row
+assert any(k == "rating" for k, _ in rt.flags) and rt.rating() == [], "read today: not again till tomorrow"
+first = list(rt.seeds0)
+rt.state["rating"]["last_at"] = 0
+rt.seeds0 = []
+assert len(rt.rating()) == 2 and rt.seeds0 == first, "the next day: the same seeds"
+
 _sh.rmtree(pr_root)
 print("the line's proof, pooled: every check holds")
 
@@ -1313,12 +1344,36 @@ w.auto_promote()
 assert not w.asked and "4800 of 9600 seeds, +0.10 +/- 0.20" in w.settling()
 w.state["proof"]["last"]["head"] = "0000000"
 assert "0 of 9600" in w.settling(), "a read of another head is not this one's"
-w.state["proof"]["last"].update(head="abcdef0", seeds=9600)
+w.state["proof"]["last"].update(head="abcdef0", seeds=9600, se=0.05)
 w.auto_promote()
 assert w.settling() is None and w.asked == [{"candidate": "grove/w1"}], "read enough: the strongest goes next"
 w = Settle([(time.time() - 9 * 3600, "r0", {})])
 w.state["local_line"] = {"commit": "abcdef0123456789", "promotions": ["r0"]}
 assert w.settling() is None, "a proof that never comes holds nothing past the limit"
 
-print("the line settling, and one dial at a time round after round: every check holds")
+# A BLOCK THAT FAILS ITS CHECK COMES OFF: read its seeds, and still under what a generation is worth with two
+# errors added, the line's promotions are orphaned, its branch is main's, and the fleet builds main. Main is not touched.
+root, tc, pd, base = fresh()
+g = Git(tc, pd)
+head = line_of(tc, g, base, "r1", "r2")
+main_before = git(tc, "rev-parse", "origin/main")
+assert not g.orphan("0" * 40, 0.0, 0.08, 9600), "a read of another head orphans nothing"
+assert g.orphan(head, -0.01, 0.08, 9600)
+assert "local_line" not in g.state and g.st["r1"]["status"] == "orphaned" and g.st["r2"]["status"] == "orphaned"
+assert git(tc, "rev-parse", g.LINE) == main_before == git(tc, "rev-parse", "origin/main"), "the branch is main's, and main is where it was"
+g._sha = None
+assert g.sha() == base and g.state["orphans"][0]["promotions"] == ["r1", "r2"], "the fleet builds main again"
+_sh.rmtree(root)
+w = Settle([(time.time() - 31 * 60, "r0", {})])
+w.state["local_line"] = {"commit": "abcdef0123456789", "promotions": ["r0"]}
+w.state["proof"] = {"last": {"head": "abcdef0", "d": 0.2, "se": 0.08, "seeds": 9600}}
+assert "9600 of 9600" in w.settling(), "neither proved nor refused at its seeds: it is read on"
+w.state["proof"]["last"]["seeds"] = 19200
+assert w.settling() is None, "twice its seeds and still undecided: let go"
+# REFUSED BY THE TRADE RULE, NOT ASKED AGAIN WHILE THE RULE STANDS.
+w.state["refused"] = {P.refusal_key("w_smooth = 0.525\n"): [w.TRADE_TIMES, w.GIVE_BUILT, w.GIVE_ROAD, w.GIVE_KD]}
+assert w.refused_still("w_smooth=0.525") and not w.refused_still("w_smooth = 0.6")
+w.TRADE_TIMES = 5.0
+assert not w.refused_still("w_smooth = 0.525"), "the rule moved: it may be asked again"
+print("the line settling, a block coming off, a refusal kept, and one dial at a time round after round: every check holds")
 

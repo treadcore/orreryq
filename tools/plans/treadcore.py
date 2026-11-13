@@ -2810,10 +2810,46 @@ class Plan:
         pf = self.state.get("proof") or {}
         last, head = pf.get("last") or {}, line["commit"]
         seeds = last.get("seeds", 0) if last.get("head") == head[:7] else 0
-        if seeds >= self.SETTLE_SEEDS:
+        # Read its seeds and neither proved nor refused (orphan): it is read on, to twice as many, then let go.
+        undecided = seeds < 2 * self.SETTLE_SEEDS and last.get("se") and last["d"] + 2 * last["se"] >= self.MIN_GAIN
+        if seeds >= self.SETTLE_SEEDS and not undecided:
             return None
         return "the line %s settles first: its proof has read %d of %d seeds%s" % (
             head[:7], seeds, self.SETTLE_SEEDS, ", %+.2f +/- %.2f so far" % (last["d"], last["se"]) if seeds else "")
+
+    # A BLOCK THAT FAILS ITS CHECK COMES OFF (Paul, 13 November: "Remove a block that fails"). The proof and
+    # the anchors read ten generations as worth nothing for a week and nothing acted on it: the line kept
+    # them, the fleet built on them, and the search measured every trial against them. A line read its
+    # SETTLE_SEEDS whose lead, with two errors added, is still under MIN_GAIN is not worth a generation
+    # by its own proof: its promotions are marked orphaned, the branch goes back to main, and the fleet
+    # builds main again. Nothing on main is touched and nothing is pushed. The trials are not forgotten:
+    # each stays a candidate of its day, to be read again on main's defaults like any older one.
+    def orphan(self, head, lead, se, seeds):
+        line = self.state.get("local_line")
+        if not line or line.get("commit") != head:
+            return False
+        remote, branch = self.push_target()
+        main = run(["git", "-C", self.tc, "rev-parse", "%s/%s" % (remote, branch)]).stdout.strip()
+        if not main:
+            return False
+        off = []
+        for rid in line.get("promotions", []):
+            st = self.rstate(rid)
+            if st.get("status") == "self-modified":
+                st.update({"status": "orphaned", "orphaned": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                           "detail": "orphaned: the line %s read %+.2f +/- %.2f over main in %d seeds, under the %.2f a generation is worth; it was at %s" % (
+                               head[:7], lead, se, seeds, self.MIN_GAIN, st.get("commit", "")[:7])})
+                self.rsave(rid, st)
+                off.append(rid)
+        run(["git", "-C", self.tc, "branch", "-f", self.LINE, main])
+        self.state.pop("local_line", None)
+        self.state["proof"] = {"last_at": time.time(), "orphaned": {"head": head, "lead": round(lead, 2), "se": round(se, 2), "seeds": seeds, "promotions": off}}
+        self.state.setdefault("orphans", []).append({"at": time.strftime("%Y-%m-%dT%H:%M:%S"), "head": head, "lead": round(lead, 2), "se": round(se, 2), "seeds": seeds, "promotions": off})
+        self.state["families_queued"] = []
+        self._sha = None
+        self.flag("line", "the line %s came off: its proof read %+.2f +/- %.2f over main in %d seeds, and with two errors added that is under the %.2f a generation is worth; "
+                  "%s orphaned, and the fleet builds main again" % (head[:7], lead, se, seeds, self.MIN_GAIN, ", ".join(off) or "nothing"), key="orphan:%s" % head[:12], progress=True)
+        return True
 
     # Minutes a pause of auto promotion lasts before it goes on by itself (or less, if main moves).
     PAUSE_RESUME_MIN = 60
@@ -3000,7 +3036,20 @@ class Plan:
         elif verdict == "past":
             self.flag("trade", "%s refused by the trade rule: held out %+.2f, but it gives up %s, %.1f times its floor (the rule allows %.1f)" % (
                 name, v.get("held_mean") or 0.0, ", ".join(lost), worst, self.TRADE_TIMES), key="trade:%s" % name, progress=True)
+            # REFUSED, IT IS NOT ASKED AGAIN UNTIL THE RULE MOVES (13 November). w_smooth 0.525 was the strongest
+            # older candidate on every set of defaults, so reread_older read it again each time, and each time
+            # the rule refused it: 13 times, 11,382 seeds. What was refused is kept with the rule it was
+            # refused under; a person moving the rule, or a hold, is what asks again.
+            self.state.setdefault("refused", {})[self.refusal_key(v.get("weights", ""))] = [self.TRADE_TIMES, self.GIVE_BUILT, self.GIVE_ROAD, self.GIVE_KD]
         return verdict == "past"
+
+    @staticmethod
+    def refusal_key(text):
+        return ";".join("%s=%.6g" % kv for kv in sorted(parse_weights(text).items()))
+
+    def refused_still(self, text):
+        """True for a trial the trade rule refused, while the rule stands as it stood then."""
+        return (self.state.get("refused") or {}).get(self.refusal_key(text)) == [self.TRADE_TIMES, self.GIVE_BUILT, self.GIVE_ROAD, self.GIVE_KD]
 
     def batch(self, ev, name):
         """The strongest candidate's weights and, on top, each other current candidate that moves
@@ -3219,7 +3268,7 @@ class Plan:
         promoted = {self.rstate(r["id"]).get("candidate") for r in self.runs()
                     if r["kind"] == "promote" and self.rstate(r["id"]).get("status") in ("approved", "self-modified")}
         older = sorted(((k, v) for k, v in ev.items() if k.startswith(self.name + "/") and not v.get("current")
-                        and k not in promoted and v["held_mean"] is not None and done.get(k) != blob),
+                        and k not in promoted and v["held_mean"] is not None and done.get(k) != blob and not self.refused_still(v["weights"])),
                        key=lambda kv: -kv[1]["held_mean"])[:self.REREAD]
         for k, v in older:
             self.adopt(v["weights"], "%s again on %s" % (k.split("/", 1)[1], self.short()))
@@ -5732,6 +5781,7 @@ class Plan:
         self.propagation()
         jobs += self.adopt_jobs()
         jobs += self.line_proof()
+        jobs += self.rating()
         jobs += self.width_watch()
         jobs += self.gauntlet_watch()
         self.ticker_scan()
@@ -5918,6 +5968,8 @@ class Plan:
                     except SystemExit as e:
                         print("resolve: %s" % e, file=sys.stderr)
                     return []
+                if self.SETTLE_SEEDS and n_ >= self.SETTLE_SEEDS and -d + 2 * se < self.MIN_GAIN and self.orphan(head, -d, se, n_):
+                    return []
                 if d / se >= 2:
                     self.flag("line", "the line %s reads %+.2f +/- %.2f against main over %d seeds: under it; the anchor reads should undo it" % (head[:7], -d, se, n_),
                               key="line-under:%s" % head[:12])
@@ -5949,6 +6001,78 @@ class Plan:
                          "needs": self.long_needs(), "after_host": self.after_host(), "cmd": self.census_cmd(text, w["held_seeds"], 700000000 + 200000 * n_, jid),
                          "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 6 * 3600, "priority": "high"})
         pf.update({"jobs": [j["id"] for j in jobs], "head": line["commit"], "main": main, "key": key, "n": len(line.get("promotions", []))})
+        return jobs
+
+    # THE FIXED YARDSTICK (Paul, 13 November: "The fixed yardstick"; Always Forward, step 4). Every read the
+    # line makes is of a child against its parent, and a chain of those cannot say whether the brain is
+    # stronger than it was a week ago: from 6 to 13 November ten generations each beat their parent on
+    # their day and together beat nothing. So once a day today's defaults are read against main as it
+    # stood on fixed days, each as a trial of its values on today's game, RATING_SEEDS seeds, AND THE
+    # SAME SEEDS EVERY DAY, so a day's difference is the brain's and not the draw's. plan/rating.json
+    # keeps every row. It decides nothing and promotes nothing: it is the record that only moves when
+    # strength does, and where a generation that beats its parent and loses to its grandparent shows.
+    # A dial the old main did not have stays at today's value: it is today's code with that day's numbers.
+    RATING_EVERY_H = 24
+    RATING_SEEDS = 2000
+    RATING_BRAINS = (("28 Oct", "dc3df01"), ("2 Nov", "da7e1da"), ("6 Nov", "63f2667"))
+
+    def rating(self):
+        w = self.cfg.get("weights")
+        if not w or not self.RATING_SEEDS or not self.auto() or not self.cpu_ready():
+            return []
+        rt = self.state.setdefault("rating", {})
+        f = os.path.join(self.pd, "rating.json")
+        rnd = rt.get("round")
+        if rnd:
+            known = self.ids("done", "failed", "stopped")
+            if not all(j in known for b in rnd["brains"] for j in b["jobs"]):
+                return []
+            doc = load(f, {}) or {}
+            rows, said = doc.setdefault("rows", []), []
+            for b in rnd["brains"]:
+                ds = [d for j in b["jobs"] for d in glob.glob(os.path.join(self.q, "results", j, self.home, "out", j, "*", ""))]
+                p = self.pool(ds) if ds else None
+                if p and p["every"][1] > 0:
+                    d, se, n_ = p["every"]
+                    rows.append({"at": rnd["at"], "today": rnd["today"][:7], "against": b["sha"][:7], "label": b["label"],
+                                 "lead": round(-d, 3), "se": round(se, 3), "seeds": n_, "dials": b.get("dials")})
+                    said.append("%+.2f +/- %.2f over main of %s" % (-d, se, b["label"]))
+            save(f, doc)
+            rt.update({"round": None, "last_at": time.time()})
+            if said:
+                self.flag("rating", "the yardstick, %s at %s: today's defaults read %s" % (rnd["at"][:10], rnd["today"][:7], "; ".join(said)),
+                          key="rating:%s" % rnd["at"], progress=True)
+            return []
+        if time.time() - rt.get("last_at", 0) < self.RATING_EVERY_H * 3600 or self._built_everywhere() is False:
+            return []
+        today = self.sha()
+        now_, per = self.defaults_at(today), w["held_seeds"]
+        brains, jobs = [], []
+        for bi, (label, ref) in enumerate(self.RATING_BRAINS):
+            old = run(["git", "-C", self.tc, "rev-parse", "--verify", "-q", ref + "^{commit}"]).stdout.strip()
+            then = self.defaults_at(old) if old else {}
+            vals = {k: v for k, v in then.items() if k in now_ and now_[k] != v}
+            lines = ["%s = %s" % (k, v) for k, v in sorted(vals.items()) if not k.startswith("caps:")]
+            caps = [("" if vals[k] in (1, 1.0) else "-") + k[5:] for k in sorted(vals) if k.startswith("caps:")]
+            if caps:
+                lines.append("caps = baseline, " + ", ".join(caps))
+            if not lines:
+                continue
+            text = "# the yardstick: main's values of %s (%s), read as a trial against today's\n" % (label, old[:7]) + "\n".join(lines) + "\n"
+            ids = []
+            for i in range(max(1, self.RATING_SEEDS // per)):
+                n_ = self.state["rating_n"] = self.state.get("rating_n", 0) + 1
+                jid = "rt%04d" % n_
+                # The same seeds each day, each brain and piece its own block of them.
+                jobs.append({"id": jid, "kind": "weights", "title": "the yardstick: main of %s (%s) against today's %s, piece %d (%d seeds)" % (label, old[:7], today[:7], i + 1, per),
+                             "needs": self.long_needs(), "after_host": self.after_host(), "cmd": self.census_cmd(text, per, 800000000 + 1000000 * bi + 10000 * i, jid),
+                             "fetch": "%s/out/%s" % (self.home, jid), "timeout_s": 6 * 3600})
+                ids.append(jid)
+            brains.append({"label": label, "sha": old, "jobs": ids, "dials": len(vals)})
+        if brains:
+            rt["round"] = {"at": time.strftime("%Y-%m-%dT%H:%M:%S"), "today": today, "brains": brains}
+        else:
+            rt["last_at"] = time.time()
         return jobs
 
     def src_tree(self, commit):

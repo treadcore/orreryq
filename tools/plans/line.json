@@ -197,6 +197,19 @@
    "down": "more of the fit's trials, several dials together"
   },
   {
+   "key": "rating_seeds",
+   "attr": "RATING_SEEDS",
+   "label": "The yardstick reads",
+   "default": 2000,
+   "min": 0,
+   "max": 8000,
+   "step": 400,
+   "unit": "seeds a brain a day",
+   "what": "Once a day today's defaults are read against main as it stood on 28 October, 2 November and 6 November, this many seeds each, the same seeds every day; plan/rating.json keeps the rows. It promotes nothing. 0 is off.",
+   "up": "a finer yardstick, more of the fleet (2,000 is about 3%)",
+   "down": "a coarser one"
+  },
+  {
    "key": "min_gain",
    "attr": "MIN_GAIN",
    "label": "Least gain to land",
