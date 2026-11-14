@@ -31,7 +31,7 @@ import os
 import sys
 
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["still", "100", "/tmp/process-blend.png"]
@@ -256,7 +256,7 @@ def build_map():
         S["arrow"][s["id"]] = dict(o=cu, head=hd, m=m, col=col)
     # what moves: one token, its trail, its name, the two rings of a border crossed, the rectangle of a landing
     tm = glow(YELLOW, 5.0)
-    S["tok"] = dict(o=ball(tm, 0.085), m=tm, trail=[], label=text("", 0.2, glow(INK, 3.0), (0, 0, 0), align="CENTER", weight=600), plate=cube(glow(BG, 1.0)))
+    S["tok"] = dict(o=ball(tm, 0.085), m=tm, trail=[], label=text("", 0.15, glow(INK, 3.0), (0, 0, 0), align="CENTER", weight=600), plate=cube(glow(BG, 1.0)))
     S["tok"]["plate"].visible_shadow = False
     for i in range(8):
         mm = glow(YELLOW, 3.0)
@@ -601,19 +601,74 @@ def battle_at(t, spot=None):
 
 # ---- the camera: where it is and what it looks at, at t ----------------------------------------------------
 
+UP_MAP, UP_BOARD = Vector((0, 1, 0)), Vector((0, 0, 1))
+
+
+def field_of(sc):
+    if sc["kind"] == "step":
+        return pf.SI[sc["step"]].get("field")
+    return (sc.get("journey") or {}).get("field")
+
+
+def present(t):
+    """THE FIELDS ARE SHOWN WHEN THEY ARE PRESENTED (Paul, 13 November: "I see they are out of view, pan around
+    to bring them into view, zoom out a bit when they are presented"). Looking straight down, the fields behind
+    the map are off the top of the picture. So the camera goes to them: as the map is first seen it starts back
+    far enough to hold all four with the map under them; and when the script first names a generation, or names
+    another, it pulls back and pans to that field, stays while a duel plays, and returns to the step. A field
+    named again by the next step is not visited again. Returns how far over it is, and where: aim, distance,
+    elevation."""
+    bt, sc = S.get("battle"), pf.scene_at(t)
+    if not bt:
+        return 0.0, None, 0, 0
+    u, dur = t - sc["t0"], sc["t1"] - sc["t0"]
+    if sc["kind"] == "whole":
+        first = sc["cues"][0]
+        return 1 - smooth((u - 4.5) / (first - 5.0)), Vector((0, 5.0, 0)), 34.0, math.radians(84)
+    f = field_of(sc)
+    i = pf.SCENES.index(sc)
+    if not f or (i and field_of(pf.SCENES[i - 1]) == f):
+        return 0.0, None, 0, 0
+    g = next((g for g in bt["gens"] if g["data"]["name"] == f), None)
+    if g is None:
+        return 0.0, None, 0, 0
+    n = min(9.0, dur * 0.45)
+    a = sc["t0"] + dur * 0.56 - n / 2
+    w = smooth((t - a) / 2.0) * smooth((a + n - t) / 2.0)
+    # the step's words fill the lower third of the picture, so the field is framed in what is above them
+    return w, Vector((g["cx"], ARENA_Y - 3.6, 0)), 25.5, math.radians(78)
+
+
 def map_pose(t):
+    """Almost straight down, so that the words lying on the blocks are read as they were written: a title seen
+    from 44 degrees is half its height. The depth is kept by movement, not by tilt: the camera leans into a
+    pan (a few degrees, about the thing it looks at, so the blocks slide against the floor under them) and it
+    never quite stops drifting. The top of the picture is always the top of the map: no lean turns the page."""
     cx, cy, z = pf.camera(t)
     aim = P(cx, cy)
-    e = math.radians(lerp(84, 44, seg(z, pf.FAR, 1.0)))      # low enough that the fields behind the map are in the picture
+    lx, ly, _ = pf.camera(max(0.0, t - 0.5))
+    v = (aim - P(lx, ly)) * z                                    # how fast the picture is panning, as the eye sees it
+    lean = lambda q: math.radians(5.0) * math.tanh(q / 1.6)
+    e = math.radians(lerp(88, 83, seg(z, pf.FAR, 1.0)))
+    ax = (math.pi / 2 - e) - lean(v.y) + math.radians(0.9) * math.sin(t * 0.17 + 1.0)      # back from the vertical
+    ay = lean(v.x) + math.radians(1.3) * math.sin(t * 0.23)                                # to the side of it
     d = 17.5 / z
-    return aim + Vector((0, -math.cos(e) * d, math.sin(e) * d)), aim
+    off = Vector((math.sin(ay) * math.cos(ax), -math.sin(ax), math.cos(ay) * math.cos(ax)))
+    pos = aim + off * d
+    w, fa, fd, fe = present(t)
+    if w > 0:
+        # the same lean and drift, about the field: the camera is carried over to it and back, never cut
+        fx = (math.pi / 2 - fe) + math.radians(0.9) * math.sin(t * 0.17 + 1.0)
+        fpos = fa + Vector((math.sin(ay) * math.cos(fx), -math.sin(fx), math.cos(ay) * math.cos(fx))) * fd
+        pos, aim = pos.lerp(fpos, w), aim.lerp(fa, w)
+    return pos, aim, UP_MAP
 
 
 def board_pose(k):
     """In front of a board, square on, at the distance where a pixel of the drawn film is a pixel here: the
     charts were laid out to keep clear of the teleprompt's corner, and at this distance they still do."""
     d = pf.W * K2 / 1.2
-    return Vector((BOARD[k], BY - d, 540 * K2 + 0.5)), Vector((BOARD[k], BY, 540 * K2))
+    return Vector((BOARD[k], BY - d, 540 * K2 + 0.5)), Vector((BOARD[k], BY, 540 * K2)), UP_BOARD
 
 
 def pose_of(sc, t):
@@ -634,11 +689,18 @@ def pose(t):
         p = smooth((t - sc["t0"]) / (3.2 if sc["kind"] in ("title", "pattern") else 2.2))
         # a journey between boards and map rises on the way, so the flight reads as a flight
         lift = Vector((0, 0, 9.0 * math.sin(math.pi * p))) if (prev[1] - cur[1]).length > 40 else Vector((0, 0, 0))
-        return prev[0].lerp(cur[0], p) + lift, prev[1].lerp(cur[1], p)
+        return prev[0].lerp(cur[0], p) + lift, prev[1].lerp(cur[1], p), prev[2].lerp(cur[2], p)
     return cur
 
 
-# ---- apply(t): every object, from the time alone ------------------------------------------------------------
+def look(pos, aim, up):
+    """The camera's turn for looking from pos at aim with up as the top of the picture. Blender's own
+    track-to takes the world's z for up, which spins the picture when the camera looks straight down."""
+    f = (aim - pos).normalized()
+    r = f.cross(up).normalized()
+    u = r.cross(f)
+    return Matrix((r, u, -f)).transposed().to_euler()
+
 
 def token_at(s, p, op, col, name):
     tk, pts, z = S["tok"], pf.path_of(s), SLAB + BLOCK * 0.55
@@ -656,18 +718,21 @@ def token_at(s, p, op, col, name):
             g, _, _ = pf.along(pts, pk)
             o.location = P(g[0], g[1], z)
             set_glow(m, op * (1 - (i + 1) / 9.0), col)
+    # its name rides over it while it travels and is gone as it lands: the blocks' own words are under it, and
+    # the step's panel says what moves for as long as the step is told
     lab = tk["label"]
-    say(lab, name, op)
+    lo = op * (1 - seg(p, 0.78, 0.96))
+    say(lab, name, lo)
     cam = S["cam"]
-    lab.location = P(q[0], q[1], z + 0.42)
+    quat = cam.rotation_euler.to_quaternion()
+    back_, up = quat @ Vector((0, 0, -1)), quat @ Vector((0, 1, 0))
+    lab.location = P(q[0], q[1], z + 0.3) + up * 0.2
     lab.rotation_euler = cam.rotation_euler
     pl = tk["plate"]
-    show(pl, op > 0.3 and bool(name))
-    back_ = cam.matrix_world.to_quaternion() @ Vector((0, 0, -1))        # a little behind the words, as the camera sees them
-    up = cam.matrix_world.to_quaternion() @ Vector((0, 1, 0))
-    pl.location = lab.location + back_ * 0.03 + up * 0.07
+    show(pl, lo > 0.3 and bool(name))
+    pl.location = lab.location + back_ * 0.03 + up * 0.05
     pl.rotation_euler = cam.rotation_euler
-    pl.scale = (len(name) * 0.118 + 0.3, 0.34, 0.004)
+    pl.scale = (len(name) * 0.086 + 0.22, 0.25, 0.004)
     L = pf.length(pts)
     for (o, m), at, c in zip(S["rip"], cr or (0, 0), (YELLOW, reg_col(s["b"]))):
         d = (p - at) * L
@@ -686,9 +751,9 @@ def apply(t):
     k, u, dur = sc["kind"], t - sc["t0"], sc["t1"] - sc["t0"]
     cur = pf.SI[sc["step"]] if k == "step" else None
     h, cam = S["hud"], S["cam"]
-    pos, aim = pose(t)
+    pos, aim, up = pose(t)
     cam.location = pos
-    cam.rotation_euler = (aim - pos).to_track_quat("-Z", "Y").to_euler()
+    cam.rotation_euler = look(pos, aim, up)
     # the territories rise when the opening names them
     wh = pf.WH
     born_r = {"main": wh["t0"] + 0.2, "cpu": wh["t0"] + wh["cues"][0] - 0.4, "gpu": wh["t0"] + wh["cues"][2] - 0.4}
@@ -1117,15 +1182,20 @@ def main():
         shoot(float(ARGS[1]), ARGS[2])
     elif mode == "frames":
         a, b, out_dir = int(ARGS[1]), int(ARGS[2]), ARGS[3]
-        scene(int(ARGS[4]) if len(ARGS) > 4 else 24)
+        sc = scene(int(ARGS[4]) if len(ARGS) > 4 else 24)
+        if len(ARGS) > 5:       # a draft: frames A B DIR SAMPLES HEIGHT. The card is paid by the pixel and the sample
+            sc.render.resolution_x, sc.render.resolution_y = int(ARGS[5]) * pf.W // pf.H, int(ARGS[5])
         os.makedirs(out_dir, exist_ok=True)
         # JPEG: eighteen thousand PNGs of this are thirty gigabytes
-        bpy.context.scene.render.image_settings.file_format = "JPEG"
-        bpy.context.scene.render.image_settings.quality = 93
-        for i in range(a, min(b, int(pf.LENGTH * FPS))):
-            f = os.path.join(out_dir, "f%05d.jpg" % i)
-            if not os.path.exists(f):
-                shoot(i / FPS, f)
+        sc.render.image_settings.file_format = "JPEG"
+        sc.render.image_settings.quality = 93
+        # one animation, not a still a frame: a still starts the renderer again each time, and at 720p that
+        # start was three quarters of a frame's cost (2.2 frames a second as stills, 3.7 as an animation)
+        bpy.app.handlers.frame_change_pre.append(lambda scene, *_: apply(scene.frame_current / FPS))
+        sc.frame_start, sc.frame_end = a, min(b, int(pf.LENGTH * FPS)) - 1
+        sc.render.filepath = os.path.join(out_dir, "f#####")
+        sc.render.use_overwrite = False         # a frame already there is kept, so a stopped render is resumed
+        bpy.ops.render.render(animation=True)
     elif mode == "stills":        # several moments in one session: stills OUTDIR T1,T2,... [SAMPLES]
         scene(int(ARGS[3]) if len(ARGS) > 3 else 16)
         for t in [float(x) for x in ARGS[2].split(",")]:
