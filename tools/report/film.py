@@ -29,7 +29,6 @@ import os
 import shutil
 import subprocess
 import tempfile
-from concurrent.futures import ThreadPoolExecutor
 
 
 # ---- easing: every curve takes a share 0..1 and returns a share ------------------------------------------------
@@ -181,15 +180,24 @@ def render(svg, png, w, h):
     subprocess.run(["rsvg-convert", "-w", str(w), "-h", str(h), "-o", png], input=svg.encode(), check=True)
 
 
+_JOB = {}
+
+
+def _one(i):
+    j = _JOB
+    render(j["frame"](i / j["fps"]), os.path.join(j["tmp"], "f%05d.png" % i), *j["size"])
+
+
 def render_film(frame, length, fps, size, out, poster_at=None, crf=23):
-    """Every frame of frame(t) for t in [0, length), a core each, then the film; the poster is one of its frames."""
+    """Every frame of frame(t) for t in [0, length), a core each, then the film; the poster is one of its frames.
+    A process a core, forked, not a thread: drawing a frame is Python, and threads took turns at it (5 frames a
+    second on eight cores on 13 November, where the rasteriser alone would do 30)."""
+    import multiprocessing
     tmp = tempfile.mkdtemp(prefix="film-")
     n = int(length * fps)
-
-    def one(i):
-        render(frame(i / fps), os.path.join(tmp, "f%05d.png" % i), *size)
-    with ThreadPoolExecutor(os.cpu_count() or 4) as ex:
-        list(ex.map(one, range(n)))
+    _JOB.update(frame=frame, fps=fps, tmp=tmp, size=size)
+    with multiprocessing.get_context("fork").Pool(os.cpu_count() or 4) as pool:
+        pool.map(_one, range(n), chunksize=24)
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(fps), "-i", os.path.join(tmp, "f%05d.png"), "-c:v", "libx264", "-pix_fmt", "yuv420p",
                     "-crf", str(crf), "-preset", "slow", "-tune", "animation", "-movflags", "+faststart", out], check=True)
     if poster_at is not None:
