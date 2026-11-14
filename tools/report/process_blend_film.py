@@ -455,12 +455,145 @@ def build_boards():
         pt["last"].append((btext("pattern", "", 78, 880 + kk * 46, 33, INK, 2.8), l))
 
 
+# ---- the battles: the recordings, reenacted behind the map ---------------------------------------------------
+#
+# Paul, 13 November: "taking the data and the generations of the recording showing the bots and their traces, in a
+# multidimensional battle decision best of montage background, behind the blocks and animations ... 3d assets
+# that run from the recording files. design it in the easy way, simply."
+#
+# The recording is docs/process/battles.json (tools/report/battles.py: crucible's own trace of four generations,
+# 48 duels each from one start in one arena). Each generation has a field behind the map, oldest on the left.
+# On it stand the arena's pillars, pillboxes, groves and walls; the champion's path in EVERY duel is drawn faint,
+# all from the one start (the many ways the same moment went: blue where it won, red where it lost); and its
+# best duels are played by two small tanks, one after another, three times the speed they were fought at, the
+# path of the duel in hand drawn behind the champion as it goes, a shell a bright bead, a hit a flash.
+AK, ARENA_Y, PLAY = 0.14, 10.9, 3.0
+TANK = 4.5       # a tank is drawn this many times its size: at a field's scale a true one is a speck
+
+
+def A(g, x, y, z=0.0):
+    c = S["battle"]["half"]
+    return Vector((g["cx"] + (x - c) * AK, ARENA_Y + (y - c) * AK, z))
+
+
+def tank(col):
+    bpy.ops.object.empty_add()
+    e = bpy.context.object
+    m = body(col, 0.25, 0.35)
+    for lo, hi in (((-0.5, -0.36, 0), (0.5, 0.36, 0.3)), ((-0.22, -0.22, 0.3), (0.22, 0.22, 0.5)), ((0.1, -0.05, 0.36), (0.8, 0.05, 0.44))):
+        o = cube(m, parent=e)
+        place(o, [v * AK * TANK for v in lo], [v * AK * TANK for v in hi])
+    return e
+
+
+def build_battles():
+    path = os.path.join(os.path.dirname(pf.STORY_PATH), "battles.json")
+    if not os.path.exists(path):
+        S["battle"] = None
+        return
+    import json
+    d = json.load(open(path))
+    gens = d["generations"]
+    bt = S["battle"] = dict(half=d["arena"] / 2, dt=d["dt"], hp=d["hp"], pb_hp=d["pb_hp"], gens=[])
+    size = d["arena"] * AK
+    pitch = size + 0.7
+    stone, wood, leaf = body("#8a8f98", 0.55, 0.05), body("#b08a5a", 0.5, 0.05), body("#4f8a4a", 0.45, 0.08)
+    for gi, gd in enumerate(gens):
+        g = dict(cx=(gi - (len(gens) - 1) / 2) * pitch, data=gd, pbs=[], trails=[])
+        o = cube(body("#141a22", 0.0, 0.0))
+        place(o, A(g, 0, 0, 0.0), A(g, d["arena"], d["arena"], 0.02))
+        a, b = A(g, 0, 0, 0.03), A(g, d["arena"], d["arena"], 0.03)
+        tube([a, (b.x, a.y, a.z), b, (a.x, b.y, a.z)], glow(pf.GPU, 1.6), r=0.02, cyclic=True)
+        text("generation %s" % format(gd["gen"], ","), 0.42, glow(INK, 2.4), (a.x, a.y - 0.55, 0.03), weight=700)
+        text("%s  ·  won %d of %d, lost %d" % (gd["name"], gd["won"], d["duels"], gd["lost"]), 0.24, glow(pf.GPU, 2.2), (a.x, a.y - 0.92, 0.03))
+        for x, y, r in d["pillars"]:
+            bpy.ops.mesh.primitive_cylinder_add(radius=r * AK, depth=0.5, location=A(g, x, y, 0.25), vertices=20)
+            bpy.context.object.data.materials.append(stone)
+        for x, y, r in d["groves"]:
+            bpy.ops.mesh.primitive_cone_add(radius1=r * AK, depth=0.55, location=A(g, x, y, 0.28), vertices=16)
+            bpy.context.object.data.materials.append(leaf)
+        for x0, y0, x1, y1 in d["walls"]:
+            place(cube(wood), A(g, x0, y0, 0.0), A(g, x1, y1, 0.3))
+        for x, y in d["boxes"]:
+            m = body(YELLOW, 0.4, 0.3)
+            bpy.ops.mesh.primitive_cylinder_add(radius=1.1 * AK, depth=1.0, location=A(g, x, y, 0.2), vertices=6)
+            o = bpy.context.object
+            o.data.materials.append(m)
+            g["pbs"].append((o, m))
+        # every duel's path from the one start: the fan of what the same moment became
+        win, lose, draw = glow(pf.GPU, 0.55), glow(RED, 0.45), glow(INK, 0.10)
+        outcome = {}
+        for bd in gd["best"]:
+            outcome[bd["duel"]] = bd["outcome"]
+        order = sorted(range(len(gd["ghosts"])), key=lambda k: k)
+        for k in order:
+            pts = gd["ghosts"][k]
+            if len(pts) > 1:
+                # a duel's end tells how it went: the trace gives won, lost, drawn only for the best; the rest are drawn plain
+                tube([A(g, x, y, 0.05) for x, y in pts], win if outcome.get(k) == 1 else lose if outcome.get(k) == -1 else draw, r=0.012)
+        g["me"], g["foe"] = tank(pf.GPU), tank(pf.CPU)
+        g["shell"] = [ball(glow(YELLOW, 6.0), 0.07), ball(glow(YELLOW, 6.0), 0.07)]
+        g["flash"] = [(ball(m_, 1.0), m_) for m_ in (glow("#ffffff", 8.0), glow("#ffffff", 8.0))]
+        for bd in gd["best"]:
+            g["trails"].append(tube([A(g, r[0], r[1], 0.09) for r in bd["rec"][::3]] + [A(g, bd["rec"][-1][0], bd["rec"][-1][1], 0.09)], glow(pf.GPU, 3.2), r=0.028))
+        g["spans"] = [len(bd["rec"]) * d["dt"] / PLAY + 2.0 for bd in gd["best"]]
+        bt["gens"].append(g)
+
+
+def battle_at(t):
+    bt = S["battle"]
+    if not bt:
+        return
+    for gi, g in enumerate(bt["gens"]):
+        total = sum(g["spans"])
+        u = (t + gi * 7.3) % total            # each field at its own place in its round, so they are never in step
+        k = 0
+        while u >= g["spans"][k]:
+            u -= g["spans"][k]
+            k += 1
+        rec = g["data"]["best"][k]["rec"]
+        f = min(len(rec) - 1.001, u * PLAY / bt["dt"])
+        i = int(f)
+        a, b, fr = rec[i], rec[i + 1], f - i
+        for j, tr in enumerate(g["trails"]):
+            show(tr, j == k)
+        g["trails"][k].data.bevel_factor_end = max(0.002, (i + fr) / (len(rec) - 1))
+        for o, off, hit in ((g["me"], 0, 19), (g["foe"], 7, 18)):
+            alive = a[off + 3] > 0
+            o.location = A(g, lerp(a[off], b[off], fr), lerp(a[off + 1], b[off + 1], fr), 0.03)
+            dh = (b[off + 2] - a[off + 2] + math.pi) % (2 * math.pi) - math.pi
+            o.rotation_euler = (0, 0, a[off + 2] + dh * fr)
+            for c_ in o.children:
+                show(c_, alive)
+        for j, off in enumerate((0, 7)):
+            sh = g["shell"][j]
+            on = a[off + 6] > 0 and b[off + 6] > 0
+            show(sh, on)
+            if on:
+                sh.location = A(g, lerp(a[off + 4], b[off + 4], fr), lerp(a[off + 5], b[off + 5], fr), 0.14)
+        # a hit: a flash where the struck tank stood, for half a second of the duel
+        for j, (ev, off) in enumerate(((18, 7), (19, 0))):
+            fl, m = g["flash"][j]
+            age = next((i - s_ + fr for s_ in range(i, max(-1, i - 6), -1) if int(rec[s_][ev]) == 1), None)
+            show(fl, age is not None)
+            if age is not None:
+                kk = age / 6.0
+                dead = rec[min(len(rec) - 1, i + 1)][off + 3] <= 0
+                fl.location = A(g, rec[i][off], rec[i][off + 1], 0.2)
+                fl.scale = [(0.12 + (0.9 if dead else 0.35) * out(kk))] * 3
+                set_glow(m, 1 - kk, YELLOW if dead else "#ffffff")
+        for (o, m), hp in zip(g["pbs"], a[14:18]):
+            show(o, hp > 0)
+            if hp > 0:
+                o.scale = (1, 1, 0.25 + 0.75 * hp / bt["pb_hp"])
+
+
 # ---- the camera: where it is and what it looks at, at t ----------------------------------------------------
 
 def map_pose(t):
     cx, cy, z = pf.camera(t)
     aim = P(cx, cy)
-    e = math.radians(lerp(84, 54, seg(z, pf.FAR, 1.0)))
+    e = math.radians(lerp(84, 44, seg(z, pf.FAR, 1.0)))      # low enough that the fields behind the map are in the picture
     d = 17.5 / z
     return aim + Vector((0, -math.cos(e) * d, math.sin(e) * d)), aim
 
@@ -644,6 +777,7 @@ def apply(t):
             pulse = 0.5 + 0.5 * math.sin((u - c[i]) * 5) if u < c[i] + 5 else 0.0
             set_glow(m, appear(u, c[i], dur, 0.6) * (0.35 + 0.65 * pulse))
     hud_at(t, sc, k, u, dur, cur)
+    battle_at(t)
     if k in S["board"] or k == "end":
         board_at(k, u, dur, sc)
     else:
@@ -924,6 +1058,7 @@ def scene(samples=24):
     build_hud()
     build_map()
     build_boards()
+    build_battles()
     park()
     for name in ("BLENDER_EEVEE_NEXT", "BLENDER_EEVEE"):
         try:
