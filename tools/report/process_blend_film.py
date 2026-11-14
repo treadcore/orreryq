@@ -335,6 +335,9 @@ def build_hud():
         h["mini"]["regs"].append(panel(ox + r["x"] * k, oy + r["y"] * k, ox + (r["x"] + r["w"]) * k, oy + (r["y"] + r["h"]) * k, mix(BG, r["col"], 0.22), 1))
     for n, (rk, x, y, w, hh, _, _) in pf.N.items():
         h["mini"]["nodes"][n] = panel(ox + x * k, oy + y * k, ox + (x + w) * k, oy + (y + hh) * k, mix(BG, pf.REGIONS[rk]["col"], 0.55), 2)
+    # its arrows too: it is the flow chart, small, and it is what keeps the chart on every screen
+    h["mini"]["arrows"] = [tube([H(ox + q[0] * k, oy + q[1] * k, 2) for q in pf.path_of(st)], glow(mix(BG, reg_col(st["a"]), 0.9), 1.6), r=0.0005, parent=S["cam"])
+                           for st in pf.STEPS]
     h["minit"] = hud("where this step is in the whole", 1576, 196, 13, DIM, 1.8)
     # THE TELEPROMPT, in front of the camera
     tp = pf.TP
@@ -917,15 +920,23 @@ def hud_at(t, sc, k, u, dur, cur):
     # the path down, and the small map
     cop = seg(u, 0.4, 1.1) * (1 - seg(t, sc["t1"] - 0.5, sc["t1"])) if step else 0.0
     pshow(h["crumbbg"], cop)
-    pshow(h["mini"]["bg"], cop)
-    for o in h["mini"]["regs"]:
-        pshow(o, cop)
-    say(h["minit"], None, cop)
+    # THE FLOW CHART IS ON EVERY SCREEN (Paul, 13 November: "it must be in every screen, some part of it"). Where
+    # the diagram itself is not the picture (the opening's charts, the title, the closing shape, and while the
+    # camera is away at a field) the small one stands in its corner
+    if step:
+        mop = cop
+    elif k in ("whole", "borders", "act", "journey"):
+        mop = 1.0 if present(t)[0] > 0.35 else 0.0
+    else:
+        mop = 1.0
+    pshow(h["mini"]["bg"], mop)
+    for o in h["mini"]["regs"] + h["mini"]["arrows"]:
+        pshow(o, mop)
+    say(h["minit"], "where this step is in the whole" if step else "the whole flow chart", mop)
     for n, o in h["mini"]["nodes"].items():
-        pshow(o, cop)
-        if step:
-            on = n in (cur["a"], cur["b"])
-            set_glow(bpy.data.materials[o["m"]], 1.0, INK if on else mix(BG, reg_col(n), 0.55), 3.0 if on else 1.0)
+        pshow(o, mop)
+        on = step and n in (cur["a"], cur["b"])
+        set_glow(bpy.data.materials[o["m"]], 1.0, INK if on else mix(BG, reg_col(n), 0.55), 3.0 if on else 1.0)
     if step:
         parts = [("THE WHOLE", DIM), (pf.ACTS[cur["act"]][0], pf.ACTS[cur["act"]][2]), ("%s  →  %s" % (pf.N[cur["a"]][5], pf.N[cur["b"]][5]), INK)]
         x = 44
