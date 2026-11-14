@@ -607,39 +607,59 @@ def battle_at(t, spot=None):
 UP_MAP, UP_BOARD = Vector((0, 1, 0)), Vector((0, 0, 1))
 
 
-def field_of(sc):
-    if sc["kind"] == "step":
-        return pf.SI[sc["step"]].get("field")
-    return (sc.get("journey") or {}).get("field")
+ZMAX, ZMIN = 1.35, 0.9
+
+
+def chart_view(t):
+    """Where the camera is over the flow chart at t: its middle and its zoom, in the drawn film's own units.
+    THE STEP'S TWO BLOCKS AND ITS ARROW ARE ALWAYS WHOLLY IN VIEW (Paul, 13 November: "I can't see enough of the
+    flow chart. When you walk about the flow chart, make sure the item is in view ... the zooming and panning
+    of the flowchart timed with the teleprompt is most important"). The drawn film went in to 1.85; here the
+    step's words cover the lower third and the path a strip at the top, so the picture is fitted to what is
+    left (pixels 70 to 686 of 1080) and never closer than 1.35, which keeps the step's neighbours in the
+    picture with it. The camera moves when the narration moves to the next arrow: a scene begins on its first
+    word."""
+    sc = pf.scene_at(t)
+
+    def want(s, end=False):
+        if s["kind"] == "title" or s["kind"].startswith("hook"):
+            return (pf.W / 2, pf.H / 2, pf.FAR)
+        if s["kind"] != "step":
+            return (pf.W / 2, pf.H / 2, 1.0)
+        x0, y0, x1, y1 = pf.bbox(pf.SI[s["step"]])
+        z = max(ZMIN, min(ZMAX, 0.82 * pf.W / (x1 - x0 + 60), 616.0 / (y1 - y0 + 70)))
+        z *= 1 + pf.PUSH * (clamp((t - s["t0"]) / (s["t1"] - s["t0"])) if not end else 1.0)
+        return ((x0 + x1) / 2, (y0 + y1) / 2 + 162 / z, z)
+    i = pf.SCENES.index(sc)
+    a = want(pf.SCENES[i - 1], True) if i else want(sc)
+    b = want(sc)
+    p = smooth((t - sc["t0"]) / (sc["cues"][0] if sc["kind"] == "whole" else 1.6))
+    return (lerp(a[0], b[0], p), lerp(a[1], b[1], p), math.exp(lerp(math.log(a[2]), math.log(b[2]), p)))
+
+
+ALL_FIELDS = (Vector((0, 3.0, 0)), 37.0, math.radians(84))       # all four fields, the map under them
 
 
 def present(t):
-    """THE FIELDS ARE SHOWN WHEN THEY ARE PRESENTED (Paul, 13 November: "I see they are out of view, pan around
-    to bring them into view, zoom out a bit when they are presented"). Looking straight down, the fields behind
-    the map are off the top of the picture. So the camera goes to them: as the map is first seen it starts back
-    far enough to hold all four with the map under them; and when the script first names a generation, or names
-    another, it pulls back and pans to that field, stays while a duel plays, and returns to the step. A field
-    named again by the next step is not visited again. Returns how far over it is, and where: aim, distance,
-    elevation."""
-    bt, sc = S.get("battle"), pf.scene_at(t)
-    if not bt:
-        return 0.0, None, 0, 0
+    """THE GAMES ARE SHOWN ON THE TITLE SCREENS, and only there (Paul, 13 November: "perhaps we don't need
+    animation in background, it's just space ... zooming out showing computation should occur during title
+    screens"). Looking straight down, the fields behind the map are off the top of the picture, and a walk
+    along the chart is not the time to leave it. So on the film's title, and on the card that opens each loop,
+    the camera pulls back until all four fields are in the picture with the chart under them; as the map is
+    first told it comes down from there. Returns how far over it is, and where: aim, distance, elevation."""
+    sc = pf.scene_at(t)
+    if not S.get("battle"):
+        return (0.0,) + ALL_FIELDS
     u, dur = t - sc["t0"], sc["t1"] - sc["t0"]
-    if sc["kind"] == "whole":
-        first = sc["cues"][0]
-        return 1 - smooth((u - 4.5) / (first - 5.0)), Vector((0, 5.0, 0)), 34.0, math.radians(84)
-    f = field_of(sc)
-    i = pf.SCENES.index(sc)
-    if not f or (i and field_of(pf.SCENES[i - 1]) == f):
-        return 0.0, None, 0, 0
-    g = next((g for g in bt["gens"] if g["data"]["name"] == f), None)
-    if g is None:
-        return 0.0, None, 0, 0
-    n = min(9.0, dur * 0.45)
-    a = sc["t0"] + dur * 0.56 - n / 2
-    w = smooth((t - a) / 2.0) * smooth((a + n - t) / 2.0)
-    # the step's words fill the lower third of the picture, so the field is framed in what is above them
-    return w, Vector((g["cx"], ARENA_Y - 3.6, 0)), 25.5, math.radians(78)
+    if sc["kind"] == "title":
+        w = 1.0
+    elif sc["kind"] == "whole":
+        w = 1 - smooth((u - 3.0) / (sc["cues"][0] - 3.5))
+    elif sc["kind"] == "act":
+        w = smooth(u / 2.2) * smooth((dur - u) / 2.0)
+    else:
+        w = 0.0
+    return (w,) + ALL_FIELDS
 
 
 def map_pose(t):
@@ -647,9 +667,9 @@ def map_pose(t):
     from 44 degrees is half its height. The depth is kept by movement, not by tilt: the camera leans into a
     pan (a few degrees, about the thing it looks at, so the blocks slide against the floor under them) and it
     never quite stops drifting. The top of the picture is always the top of the map: no lean turns the page."""
-    cx, cy, z = pf.camera(t)
+    cx, cy, z = chart_view(t)
     aim = P(cx, cy)
-    lx, ly, _ = pf.camera(max(0.0, t - 0.5))
+    lx, ly, _ = chart_view(max(0.0, t - 0.5))
     v = (aim - P(lx, ly)) * z                                    # how fast the picture is panning, as the eye sees it
     lean = lambda q: math.radians(5.0) * math.tanh(q / 1.6)
     e = math.radians(lerp(88, 83, seg(z, pf.FAR, 1.0)))
