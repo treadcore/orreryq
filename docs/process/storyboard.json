@@ -15,7 +15,8 @@
    "h": 170,
    "col": "#83c167",
    "name": "MAIN",
-   "sub": "the game as it ships: its rules, its brain, its net"
+   "sub": "the game as it ships: its rules, its brain, its net",
+   "cue": null
   },
   "gpu": {
    "x": 40,
@@ -24,7 +25,8 @@
    "h": 440,
    "col": "#58c4dd",
    "name": "THE CARDS",
-   "sub": "three GPUs play the world and grow the net"
+   "sub": "three GPUs play the world and grow the net",
+   "cue": 2
   },
   "cpu": {
    "x": 1000,
@@ -33,14 +35,16 @@
    "h": 440,
    "col": "#ff8c5a",
    "name": "THE CPU FLEET",
-   "sub": "eight machines play whole games and measure the brain"
+   "sub": "eight machines play whole games and measure the brain",
+   "cue": 0
   }
  },
  "line_box": {
   "x": 1014,
   "y": 490,
   "w": 282,
-  "h": 250
+  "h": 250,
+  "after": "c6"
  },
  "nodes": {
   "rules": {
@@ -468,7 +472,8 @@
    "moves": "the game's numbers",
    "what": "The world's rules at main: speeds, the gun, 24 shells, the pillboxes, the trees, the maze.",
    "why": "A net is only worth growing in the world it will fight in. The cards' arena is rebuilt when the rules move.",
-   "border": "main to the cards: the rules are compiled into the arena, never guessed."
+   "border": "main to the cards: the rules are compiled into the arena, never guessed.",
+   "field": "M0001"
   },
   {
    "id": "g2",
@@ -479,7 +484,8 @@
    "moves": "a champion",
    "what": "The best net of an island after a segment: 100 generations of 2,048 nets fighting its hall of fame.",
    "why": "Each card proposes. It elects a champion only when it beats the ladder of earlier milestones in an exam.",
-   "rule": "Past the newest standing milestone by two errors, and through the gauntlet's 24 tasks."
+   "rule": "Past the newest standing milestone by two errors, and through the gauntlet's 24 tasks.",
+   "field": "M0032"
   },
   {
    "id": "g3",
@@ -491,7 +497,8 @@
    "what": "The milestone's weights, a file of 23 kilobytes, carried from its card to a CPU machine.",
    "why": "The arena is a fast copy of the world. Only the game itself can say what a net is worth in the game.",
    "rule": "192 whole games as the Gladiator, and 192 with the shipped net, on the same seeds.",
-   "border": "the cards to the fleet: the net leaves the arena to be read in the real game."
+   "border": "the cards to the fleet: the net leaves the arena to be read in the real game.",
+   "field": "M0032"
   },
   {
    "id": "g4",
@@ -502,7 +509,8 @@
    "moves": "clearly worse",
    "what": "A milestone the game reads two errors under the net it ships.",
    "why": "The arena liked it and the game did not. It must stop being the bar the cards climb.",
-   "rule": "No rung of the ladder. After three in a row, its island sends no migrants."
+   "rule": "No rung of the ladder. After three in a row, its island sends no migrants.",
+   "field": "M0001"
   },
   {
    "id": "g5",
@@ -513,7 +521,8 @@
    "moves": "past two errors",
    "what": "A milestone whose first read is two errors over the shipped net.",
    "why": "One read in forty-four does that by luck. The first read only earns a second.",
-   "rule": "The same pair again on 576 fresh seeds. The second read alone decides."
+   "rule": "The same pair again on 576 fresh seeds. The second read alone decides.",
+   "field": "M0030"
   },
   {
    "id": "g6",
@@ -547,7 +556,8 @@
    "what": "The net itself, committed to main as nets/gladiator.bin.",
    "why": "This is the only way the game's net changes: credited by the game twice, on seeds it was not chosen on.",
    "rule": "It ships when no line is settling, so it never voids a proof.",
-   "border": "the fleet to main: M0030 crossed on 13 November, +1.85 +/- 0.70 on its second read."
+   "border": "the fleet to main: M0030 crossed on 13 November, +1.85 +/- 0.70 on its second read.",
+   "field": "M0030"
   },
   {
    "id": "g7",
@@ -568,7 +578,8 @@
    "moves": "the shipped net",
    "what": "The net the game ships, with the newest champions of the islands the game has not refused.",
    "why": "What the game credited is what every card should grow from. This is the verdict coming back.",
-   "border": "main to the cards: the game's judgement returns as the cards' starting material."
+   "border": "main to the cards: the game's judgement returns as the cards' starting material.",
+   "field": "M0030"
   },
   {
    "id": "g8",
@@ -579,7 +590,8 @@
    "moves": "parents, if they rank",
    "what": "Each migrant written into every island's population, over children not yet scored.",
    "why": "Before 13 November a visitor was only an opponent, and three cards grew three nets. Now they grow one.",
-   "rule": "Scored with the rest next generation: a parent if it ranks, gone if it does not."
+   "rule": "Scored with the rest next generation: a parent if it ranks, gone if it does not.",
+   "field": "M0030"
   },
   {
    "id": "g9",
@@ -705,7 +717,8 @@
      "step": "g8",
      "words": "and at 13:51 the first two migrants join calber's population"
     }
-   ]
+   ],
+   "field": "M0030"
   }
  ],
  "pattern": [
@@ -841,5 +854,144 @@
   "trials": 2667,
   "swing": 8.1,
   "gain": 0.25
+ },
+ "slug": "process",
+ "report": "film-lab-report",
+ "blurb": "How a game learns to play itself, as one block diagram walked arrow by arrow, from the outside in: three territories, the borders between them and what it costs to cross each, the brain's loop on the CPU fleet, the net's loop on the graphics cards, two real journeys of 13 November 2026, and the one shape every border shares. The narration scrolls in the corner at 150 words a minute.",
+ "credits": [
+  "Orrery  ·  treadcore.org",
+  "Paul Richeson: producer, animator, writer, coder, implementer, developer, founder",
+  "Team pair: Claude Code (Claude Fable 5.2)",
+  "MIT License  ·  Copyright (c) 2026 Paul Richeson"
+ ],
+ "whole": {
+  "head": "THE WHOLE, IN ONE PICTURE",
+  "arrows": [
+   {
+    "a": [
+     1290,
+     236
+    ],
+    "b": [
+     1290,
+     376
+    ],
+    "col": "#ff8c5a",
+    "words": "what the game is now",
+    "off": -26,
+    "cue": 0,
+    "lag": 2.2
+   },
+   {
+    "a": [
+     1440,
+     376
+    ],
+    "b": [
+     1440,
+     236
+    ],
+    "col": "#83c167",
+    "words": "only what was proved better",
+    "off": 26,
+    "cue": 1,
+    "lag": 0
+   },
+   {
+    "a": [
+     370,
+     236
+    ],
+    "b": [
+     370,
+     376
+    ],
+    "col": "#58c4dd",
+    "words": "the rules of the world",
+    "off": -26,
+    "cue": 2,
+    "lag": 2.2
+   },
+   {
+    "a": [
+     520,
+     376
+    ],
+    "b": [
+     520,
+     236
+    ],
+    "col": "#83c167",
+    "words": "only a net the game credits",
+    "off": 26,
+    "cue": 3,
+    "lag": 0
+   }
+  ]
+ },
+ "borders": {
+  "head": "THE BORDERS, AND WHAT IT TAKES TO CROSS EACH",
+  "rows": [
+   {
+    "col": "#ff8c5a",
+    "name": "main to the fleet",
+    "need": "free: reading changes nothing",
+    "pts": [
+     [
+      1000,
+      282
+     ],
+     [
+      1880,
+      282
+     ]
+    ]
+   },
+   {
+    "col": "#f7d96f",
+    "name": "the fleet to the line",
+    "need": "a gain that held on fresh seeds, and every gate",
+    "pts": [
+     [
+      1000,
+      300
+     ],
+     [
+      1000,
+      770
+     ]
+    ]
+   },
+   {
+    "col": "#83c167",
+    "name": "the line to main",
+    "need": "a proof: the new game against the old, 9,600 games",
+    "pts": [
+     [
+      1000,
+      306
+     ],
+     [
+      1880,
+      306
+     ]
+    ]
+   },
+   {
+    "col": "#58c4dd",
+    "name": "the cards to main",
+    "need": "the game's own reading of the net, twice",
+    "pts": [
+     [
+      40,
+      300
+     ],
+     [
+      920,
+      300
+     ]
+    ]
+   }
+  ]
  }
 }

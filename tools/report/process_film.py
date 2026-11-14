@@ -5,6 +5,8 @@
     python3 tools/report/process_film.py still T OUT.png    the frame at T seconds, to look at one
     python3 tools/report/process_film.py page               docs/process-film.html and a still of each step
     python3 tools/report/process_film.py list               the scenes and when each begins
+    python3 tools/report/process_film.py youtube [MASTER]   the kit for YouTube: output/youtube/SLUG/ (not the repository)
+    ... --story docs/NAME/storyboard.json                   another report's film: every output goes beside its storyboard
 
 Paul, 13 November: "I really need only diagrams showing step by step transitions. So like describe the arrows,
 from source to destination, each step in context to the whole. I want a visual description of the purpose of
@@ -47,12 +49,14 @@ STORY_PATH = sys.argv[sys.argv.index("--story") + 1] if "--story" in sys.argv el
 if "--story" in sys.argv:
     del sys.argv[sys.argv.index("--story"):sys.argv.index("--story") + 2]
 STORY = json.load(open(STORY_PATH))
-REGIONS, LINE_BOX, STEPS, NAR = STORY["regions"], STORY["line_box"], STORY["steps"], STORY["narration"]
+REGIONS, LINE_BOX, STEPS, NAR = STORY["regions"], STORY.get("line_box"), STORY["steps"], STORY["narration"]
 N = {k: (v["region"], v["x"], v["y"], v["w"], v["h"], v["title"], v["sub"]) for k, v in STORY["nodes"].items()}
 ACTS = {k: (v["name"], v["sub"], v["col"]) for k, v in STORY["acts"].items()}
-JOURNEYS = [dict(j, legs=[(l["step"], l["words"]) for l in j["legs"]]) for j in STORY["journeys"]]
-PATTERN = [(x["name"], x["sub"]) for x in STORY["pattern"]]
-PATTERN_ROWS = [(x["name"], x["col"], x["cells"]) for x in STORY["pattern_rows"]]
+JOURNEYS = [dict(j, legs=[(l["step"], l["words"]) for l in j["legs"]]) for j in STORY.get("journeys", [])]
+PATTERN = [(x["name"], x["sub"]) for x in STORY.get("pattern", [])]
+PATTERN_ROWS = [(x["name"], x["col"], x["cells"]) for x in STORY.get("pattern_rows", [])]
+SLUG = STORY.get("slug") or os.path.basename(os.path.dirname(os.path.abspath(STORY_PATH)))
+OUT_DIR = os.path.dirname(os.path.abspath(STORY_PATH))
 for _s in STEPS:
     if _s.get("pts"):
         _s["pts"] = [tuple(q) for q in _s["pts"]]
@@ -126,7 +130,8 @@ def timeline():
     tl = film.Timeline(WPM, LEAD, TAIL)
     # THE COLD OPEN, before the title: a true thing that should not be possible, then why it is, then the question.
     for k in ("hook1", "hook2", "hook3"):
-        tl.say(k, NAR[k])
+        if k in NAR and STORY.get("hook"):
+            tl.say(k, NAR[k])
     tl.say("title", NAR["title"])
     tl.say("whole", NAR["whole"])
     tl.say("borders", NAR["borders"])
@@ -138,8 +143,10 @@ def timeline():
         tl.say("step", s["say"], 12.0, step=s["id"])
     for j in JOURNEYS:
         tl.say("journey", "The same arrows, now with one real thing travelling over them. " + " ".join("| " + w_ for _, w_ in j["legs"]), journey=j)
-    tl.say("pattern", NAR["pattern"])
-    tl.say("end", NAR["end"], 7.0)
+    if PATTERN:
+        tl.say("pattern", NAR["pattern"])
+    # the close holds long enough to read the credits under it
+    tl.say("end", NAR["end"], 12.0 if STORY.get("credits") else 7.0)
     return tl
 
 
@@ -148,7 +155,7 @@ SCENES, LENGTH = TL.scenes, TL.t
 STEP_T = {s["step"]: s["t0"] for s in SCENES if s["kind"] == "step"}
 FIRST_STEP = min(STEP_T.values())
 WH = next(s for s in SCENES if s["kind"] == "whole")
-PATTERN_T = next(s["t0"] for s in SCENES if s["kind"] == "pattern")
+PATTERN_T = next(s["t0"] for s in SCENES if s["kind"] in ("pattern", "end"))
 AFTER_STEPS = max(s["t1"] for s in SCENES if s["kind"] == "step")
 
 
@@ -346,17 +353,19 @@ def the_map(t):
     sc = scene_at(t)
     k = sc["kind"]
     wh = WH
-    born_r = {"main": wh["t0"] + 0.2, "cpu": wh["t0"] + wh["cues"][0] - 0.4, "gpu": wh["t0"] + wh["cues"][2] - 0.4}
+    born_r = region_born()
     big = 1 - seg(t, FIRST_STEP - 1.4, FIRST_STEP - 0.4)
     # A faint plane under everything, as under 3Blue1Brown's figures: it gives the camera's moves something to move against.
     go = 0.05 * seg(t, wh["t0"], wh["t0"] + 2.0)
     b = "".join('<line x1="%d" y1="-1200" x2="%d" y2="2300" stroke="%s" stroke-opacity="%.3f"/>' % (x, x, INK, go * (2 if x % 480 == 0 else 1)) for x in range(-1920, 3841, 80))
     b += "".join('<line x1="-1920" y1="%d" x2="3840" y2="%d" stroke="%s" stroke-opacity="%.3f"/>' % (y, y, INK, go * (2 if y % 480 == 0 else 1)) for y in range(-1200, 2301, 80))
-    b += "".join(region(r, seg(t, born_r[r], born_r[r] + 1.2), big=big) for r in ("main", "cpu", "gpu"))
-    lo = seg(t, STEP_T["c6"] + 4.6, STEP_T["c6"] + 5.6)
-    b += '<rect x="%d" y="%d" width="%d" height="%d" rx="14" fill="none" stroke="%s" stroke-opacity="%.3f" stroke-width="2" stroke-dasharray="4 7"/>' % (
-        LINE_BOX["x"], LINE_BOX["y"], LINE_BOX["w"], LINE_BOX["h"], LINE, 0.9 * lo)
-    b += text(LINE_BOX["x"] + LINE_BOX["w"] - 12, LINE_BOX["y"] + LINE_BOX["h"] - 10, "THE LINE", 13, LINE, "end", 700, op=lo, spacing=2)
+    b += "".join(region(r, seg(t, born_r[r], born_r[r] + 1.2), big=big) for r in REGIONS)
+    if LINE_BOX:        # a territory inside a territory, drawn when the step that first enters it has landed
+        at = STEP_T[LINE_BOX.get("after", STEPS[0]["id"])]
+        lo = seg(t, at + 4.6, at + 5.6)
+        b += '<rect x="%d" y="%d" width="%d" height="%d" rx="14" fill="none" stroke="%s" stroke-opacity="%.3f" stroke-width="2" stroke-dasharray="4 7"/>' % (
+            LINE_BOX["x"], LINE_BOX["y"], LINE_BOX["w"], LINE_BOX["h"], LINE, 0.9 * lo)
+        b += text(LINE_BOX["x"] + LINE_BOX["w"] - 12, LINE_BOX["y"] + LINE_BOX["h"] - 10, LINE_BOX.get("name", "THE LINE"), 13, LINE, "end", 700, op=lo, spacing=2)
     cur = SI[sc["step"]] if k == "step" else None
     hot_nodes, lit, scales = {}, {}, {}
     if cur:
@@ -404,6 +413,11 @@ def the_map(t):
     for sid, (p, col) in lit.items():
         b += arrow(SI[sid], 1.0, col, 4.5, 0.95) + ripple(SI[sid], p, 1.0) + token(SI[sid], p, col, SI[sid]["moves"], 1.0, 1.25)
     return b
+
+
+def region_born():
+    """When each territory appears: with the opening's first words, or at the cue of the narration that names it."""
+    return {k: WH["t0"] + (WH["cues"][r["cue"]] - 0.4 if r.get("cue") is not None and r["cue"] < len(WH["cues"]) else 0.2) for k, r in REGIONS.items()}
 
 
 def leg_at(sc, u):
@@ -496,7 +510,7 @@ def lower(t, sc):
     return b
 
 
-HOOK = STORY["hook"]
+HOOK = STORY.get("hook")
 
 
 def hook1_scene(t, sc):
@@ -618,29 +632,32 @@ def big_arrow(a, b, col, p, op, label, off=0):
 
 
 def whole_scene(t, sc):
+    """The whole: the territories and the few arrows between them, each drawn when the narration reaches its cue."""
     u, end, c = t - sc["t0"], sc["t1"] - sc["t0"], sc["cues"]
-    b = text(60, 62, "THE WHOLE, IN ONE PICTURE", 22, INK, weight=700, op=appear(u, 0.4, end, 0.6), spacing=3)
-    b += big_arrow((1290, 236), (1290, 376), CPU, seg(u, c[0] + 2.2, c[0] + 3.4), appear(u, c[0] + 2.2, end), "what the game is now", -26)
-    b += big_arrow((1440, 376), (1440, 236), MAIN, seg(u, c[1], c[1] + 1.2), appear(u, c[1], end), "only what was proved better", 26)
-    b += big_arrow((370, 236), (370, 376), GPU, seg(u, c[2] + 2.2, c[2] + 3.4), appear(u, c[2] + 2.2, end), "the rules of the world", -26)
-    b += big_arrow((520, 376), (520, 236), MAIN, seg(u, c[3], c[3] + 1.2), appear(u, c[3], end), "only a net the game credits", 26)
+    wh = STORY.get("whole", {})
+    b = text(60, 62, wh.get("head", "THE WHOLE, IN ONE PICTURE"), 22, INK, weight=700, op=appear(u, 0.4, end, 0.6), spacing=3)
+    for ar in wh.get("arrows", []):
+        if ar["cue"] < len(c):
+            a = c[ar["cue"]] + ar.get("lag", 0)
+            b += big_arrow(tuple(ar["a"]), tuple(ar["b"]), ar["col"], seg(u, a, a + 1.2), appear(u, a, end), ar["words"], ar.get("off", 26))
     return b
 
 
 def borders_scene(t, sc):
+    """The borders: each lit when it is named, with what it takes to cross it."""
     u, end, c = t - sc["t0"], sc["t1"] - sc["t0"], sc["cues"]
-    b = text(60, 62, "THE BORDERS, AND WHAT IT TAKES TO CROSS EACH", 22, INK, weight=700, op=appear(u, 0.4, end, 0.6), spacing=3)
-    rows = [(c[0], CPU, "main to the fleet", "free: reading changes nothing", [(1000, 282), (1880, 282)]),
-            (c[1], LINE, "the fleet to the line", "a gain that held on fresh seeds, and every gate", [(1000, 300), (1000, 770)]),
-            (c[2], MAIN, "the line to main", "a proof: the new game against the old, 9,600 games", [(1000, 306), (1880, 306)]),
-            (c[3], GPU, "the cards to main", "the game's own reading of the net, twice", [(40, 300), (920, 300)])]
-    for i, (a, col, name, need, pts) in enumerate(rows):
+    bd = STORY.get("borders", {})
+    b = text(60, 62, bd.get("head", "THE BORDERS"), 22, INK, weight=700, op=appear(u, 0.4, end, 0.6), spacing=3)
+    for i, r in enumerate(bd.get("rows", [])):
+        if i >= len(c):
+            break
+        a, col = c[i], r["col"]
         o = appear(u, a, end, 0.6)
         pulse = 0.5 + 0.5 * math.sin((u - a) * 5) if a <= u < a + 5 else 0.0
-        b += polyline(pts, col, 5 + 5 * pulse, o * (0.5 + 0.5 * pulse))
+        b += polyline([tuple(q) for q in r["pts"]], col, 5 + 5 * pulse, o * (0.5 + 0.5 * pulse))
         y = 836 + i * 56
         b += '<rect x="60" y="%d" width="16" height="16" rx="3" fill="%s" fill-opacity="%.3f"/>' % (y - 15, col, o)
-        b += text(92, y, name, 28, INK, weight=600, op=o) + text(420, y, need, 28, DIM, op=o * seg(u, a + 0.8, a + 1.6))
+        b += text(92, y, r["name"], 28, INK, weight=600, op=o) + text(420, y, r["need"], 28, DIM, op=o * seg(u, a + 0.8, a + 1.6))
     return b
 
 
@@ -706,9 +723,14 @@ def pattern_scene(t, sc):
 def end_scene(t, sc):
     u = t - sc["t0"]
     op = appear(u, 0.3, sc["t1"] - sc["t0"], 0.8)
-    return (text(W / 2, 470, STORY["closing"][0], 56, INK, "middle", 600, op=op) +
-            text(W / 2, 546, STORY["closing"][1], 56, INK, "middle", 600, op=op * seg(u, TL.lead + 9 * 60.0 / WPM, TL.lead + 9 * 60.0 / WPM + 1.0)) +
-            text(W / 2, 660, "tools/report/process_film.py  ·  docs/process-film.html", 22, FAINT, "middle", op=op * seg(u, 2.2, 3.2), family=MONO))
+    cr = STORY.get("credits", [])
+    y0 = 400 if cr else 470
+    b = (text(W / 2, y0, STORY["closing"][0], 56, INK, "middle", 600, op=op) +
+         text(W / 2, y0 + 76, STORY["closing"][1], 56, INK, "middle", 600, op=op * seg(u, TL.lead + 9 * 60.0 / WPM, TL.lead + 9 * 60.0 / WPM + 1.0)))
+    # THE CREDITS, under the close (Paul, 13 November: "MIT License Paul Richeson Team Pair under Orrery and treadcore.org")
+    for i, l in enumerate(cr):
+        b += text(W / 2, y0 + 190 + i * 44, l, 30 if i == 0 else 24, INK if i < 2 else DIM, "middle", 700 if i == 0 else 400, op=op * seg(u, 6.0 + i * 0.5, 6.8 + i * 0.5))
+    return b
 
 
 def frame(t):
@@ -744,14 +766,15 @@ def chapters():
         elif k == "act":
             out.append((s["t0"], ACTS[s["act"]][0].capitalize(), None))
         else:
-            out.append((s["t0"], {"hook1": "Ten gains, worth nothing", "hook2": "The same curve", "hook3": "Signal and noise", "title": "Title", "whole": "The whole, in one picture", "borders": "The borders", "pattern": "One shape, at every border", "end": "The principle"}[k], None))
+            out.append((s["t0"], dict({"hook1": "Ten gains, worth nothing", "hook2": "The same curve", "hook3": "Signal and noise", "title": "Title", "whole": "The whole, in one picture",
+                                  "borders": "The borders", "pattern": "One shape, at every border", "end": "The close, and the credits"}, **STORY.get("chapter_names", {}))[k], None))
     return out
 
 
 def script(out_dir):
     """The teleprompt as files: captions for the film (WebVTT) and the whole narration with its times."""
     names = {round(t0, 1): name for t0, name, _ in chapters()}
-    return film.captions(TL, lambda sc: names[round(sc["t0"], 1)], out_dir, "How the Game Learns")
+    return film.captions(TL, lambda sc: names[round(sc["t0"], 1)], out_dir, STORY["title"])
 
 
 def page(out_dir):
@@ -768,14 +791,17 @@ def page(out_dir):
                        for k, f in (("What moves", "what"), ("Why", "why"), ("The rule", "rule"), ("The border", "border"), ("Narration", "say")) if st.get(f))
         cards.append('<article class="step" style="--c:%s"><header><button class="seek" data-t="%.1f" aria-label="Play this step in the film">&#9654; %s</button>'
                      '<h3>%s</h3><p class="path"><b>%s</b> <i>&rarr;</i> <b>%s</b> <span>%s</span></p></header>'
-                     '<img loading="lazy" src="process/step-%s.svg" alt="The block diagram with the arrow from %s to %s lit" width="1920" height="1080"><dl>%s</dl></article>' % (
+                     '<img loading="lazy" src="@SLUG@/step-%s.svg" alt="The block diagram with the arrow from %s to %s lit" width="1920" height="1080"><dl>%s</dl></article>' % (
                          col, t0, clock(t0), esc(name.split(". ", 1)[0] + ". " + ACTS[st["act"]][0].capitalize()), esc(N[st["a"]][5]), esc(N[st["b"]][5]), esc(st["moves"]),
                          st["id"], esc(N[st["a"]][5]), esc(N[st["b"]][5]), rows))
     words = script(out_dir)
     html = (PAGE.replace("@NAV@", "".join(nav)).replace("@CARDS@", "".join(cards)).replace("@LEN@", clock(LENGTH)).replace("@N@", str(len(STEPS)))
-            .replace("@WPM@", str(WPM)).replace("@WORDS@", format(words, ",")))
-    open(os.path.join(os.path.dirname(out_dir), "process-film.html"), "w").write(html)
-    print("%s: %d steps; %s" % (os.path.join(os.path.dirname(out_dir), "process-film.html"), len(cards), out_dir))
+            .replace("@WPM@", str(WPM)).replace("@WORDS@", format(words, ","))
+            .replace("process/", SLUG + "/").replace("@SLUG@", SLUG).replace("How the Game Learns", STORY["title"].title() if STORY["title"].islower() else STORY["title"])
+            .replace("process_film.py</code>, how a block", "process_film.py</code>, how a block"))
+    dst = os.path.join(os.path.dirname(out_dir), "%s-film.html" % SLUG)
+    open(dst, "w").write(html)
+    print("%s: %d steps; %s" % (dst, len(cards), out_dir))
 
 
 PAGE = """<!doctype html>
@@ -845,8 +871,16 @@ v.addEventListener('timeupdate', () => { let on = null; for (const b of nav) if 
 
 
 def main(a):
-    out_dir = os.path.join(ROOT, "docs", "process")
-    if a[:1] == ["list"]:
+    out_dir = OUT_DIR
+    if a[:1] == ["youtube"]:
+        # the kit a person takes to YouTube: output/youtube/SLUG/, outside the repository (.gitignore: output/)
+        dst = os.path.join(os.environ.get("ORRERY_OUTPUT") or os.path.join(ROOT, "output"), "youtube", SLUG)
+        master = a[1] if len(a) > 1 else os.path.join(out_dir, "film.mp4")
+        made = film.youtube(TL, [(t0, name) for t0, name, _ in chapters()], dst, SLUG, STORY.get("youtube_title") or STORY["title"], STORY.get("blurb", STORY.get("subtitle", "")),
+                            STORY.get("credits", []), master, os.path.join(out_dir, "poster.png"),
+                            "Made by orrery (tools/report/process_film.py) on %s. https://treadcore.org" % __import__("time").strftime("%Y-%m-%d"))
+        print("%s: %s" % (dst, ", ".join(made)))
+    elif a[:1] == ["list"]:
         for t0, name, _ in chapters():
             print("%6.1f  %s  %s" % (t0, clock(t0), name))
         print("%6.1f  the end" % LENGTH)

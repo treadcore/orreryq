@@ -256,7 +256,8 @@ def build_map():
         S["arrow"][s["id"]] = dict(o=cu, head=hd, m=m, col=col)
     # what moves: one token, its trail, its name, the two rings of a border crossed, the rectangle of a landing
     tm = glow(YELLOW, 5.0)
-    S["tok"] = dict(o=ball(tm, 0.085), m=tm, trail=[], label=text("", 0.2, glow(INK, 3.0), (0, 0, 0), align="CENTER", weight=600))
+    S["tok"] = dict(o=ball(tm, 0.085), m=tm, trail=[], label=text("", 0.2, glow(INK, 3.0), (0, 0, 0), align="CENTER", weight=600), plate=cube(glow(BG, 1.0)))
+    S["tok"]["plate"].visible_shadow = False
     for i in range(8):
         mm = glow(YELLOW, 3.0)
         S["tok"]["trail"].append((ball(mm, 0.07 - i * 0.006), mm))
@@ -346,9 +347,13 @@ def build_hud():
     for col, kk in ((INK, 2.3), (YELLOW, 3.4), (INK, 0.75)):       # to come, being spoken, spoken
         t.data.materials.append(glow(col, kk))
     # what the other scenes say on the glass
+    # WORDS OVER A MOVING PICTURE STAND ON A PLATE (Paul, 13 November: "It needs to be in the background, so some
+    # clear way to make words on the screen stand out"). Nothing read is ever laid straight over the fields.
+    h["headbg"] = panel(28, 28, 980, 108, BG)
+    h["credits"] = [hud("", 960, 590 + i * 44, 30 if i == 0 else 24, INK if i < 2 else DIM, 2.6, 700 if i == 0 else 400, "CENTER") for i in range(len(pf.STORY.get("credits", [])))]
     h["head"] = hud("", 60, 62, 22, INK, 2.4, 700)
     h["head2"] = hud("", 60, 92, 19, DIM, 2.0)
-    h["band"] = panel(-10, 390, 1930, 690, BG)
+    h["band"] = panel(-10, 380, 1930, 790, BG)
     h["c1"] = hud("", 960, 520, 84, INK, 3.0, 700, "CENTER")
     h["c2"] = hud("", 960, 584, 34, INK, 2.4, 400, "CENTER")
     h["c3"] = hud("", 960, 646, 22, DIM, 2.0, 400, "CENTER")
@@ -503,8 +508,9 @@ def build_battles():
         o = cube(body("#141a22", 0.0, 0.0))
         place(o, A(g, 0, 0, 0.0), A(g, d["arena"], d["arena"], 0.02))
         a, b = A(g, 0, 0, 0.03), A(g, d["arena"], d["arena"], 0.03)
-        tube([a, (b.x, a.y, a.z), b, (a.x, b.y, a.z)], glow(pf.GPU, 1.6), r=0.02, cyclic=True)
-        text("generation %s" % format(gd["gen"], ","), 0.42, glow(INK, 2.4), (a.x, a.y - 0.55, 0.03), weight=700)
+        g["rim"] = glow(pf.GPU, 1.6)
+        tube([a, (b.x, a.y, a.z), b, (a.x, b.y, a.z)], g["rim"], r=0.03, cyclic=True)
+        g["name"] = text("generation %s" % format(gd["gen"], ","), 0.42, glow(INK, 2.4), (a.x, a.y - 0.55, 0.03), weight=700)
         text("%s  ·  won %d of %d, lost %d" % (gd["name"], gd["won"], d["duels"], gd["lost"]), 0.24, glow(pf.GPU, 2.2), (a.x, a.y - 0.92, 0.03))
         for x, y, r in d["pillars"]:
             bpy.ops.mesh.primitive_cylinder_add(radius=r * AK, depth=0.5, location=A(g, x, y, 0.25), vertices=20)
@@ -521,7 +527,7 @@ def build_battles():
             o.data.materials.append(m)
             g["pbs"].append((o, m))
         # every duel's path from the one start: the fan of what the same moment became
-        win, lose, draw = glow(pf.GPU, 0.55), glow(RED, 0.45), glow(INK, 0.10)
+        win, lose, draw = glow(pf.GPU, 0.45), glow(RED, 0.38), glow(INK, 0.07)
         outcome = {}
         for bd in gd["best"]:
             outcome[bd["duel"]] = bd["outcome"]
@@ -540,11 +546,16 @@ def build_battles():
         bt["gens"].append(g)
 
 
-def battle_at(t):
+def battle_at(t, spot=None):
+    """Every field at t. THE FIELDS FOLLOW THE SCRIPT: a step or a journey of the storyboard may name a
+    generation ("field": "M0030"), and while it is told that generation's field is lit and the others stand back."""
     bt = S["battle"]
     if not bt:
         return
     for gi, g in enumerate(bt["gens"]):
+        on = spot is None or g["data"]["name"] == spot
+        set_glow(g["rim"], (3.2 if spot else 1.0) if on else 0.25, YELLOW if (spot and on) else pf.GPU)
+        set_glow(g["name"].data.materials[0], 1.0 if on else 0.3, YELLOW if (spot and on) else INK)
         total = sum(g["spans"])
         u = (t + gi * 7.3) % total            # each field at its own place in its round, so they are never in step
         k = 0
@@ -650,6 +661,13 @@ def token_at(s, p, op, col, name):
     cam = S["cam"]
     lab.location = P(q[0], q[1], z + 0.42)
     lab.rotation_euler = cam.rotation_euler
+    pl = tk["plate"]
+    show(pl, op > 0.3 and bool(name))
+    back_ = cam.matrix_world.to_quaternion() @ Vector((0, 0, -1))        # a little behind the words, as the camera sees them
+    up = cam.matrix_world.to_quaternion() @ Vector((0, 1, 0))
+    pl.location = lab.location + back_ * 0.03 + up * 0.07
+    pl.rotation_euler = cam.rotation_euler
+    pl.scale = (len(name) * 0.118 + 0.3, 0.34, 0.004)
     L = pf.length(pts)
     for (o, m), at, c in zip(S["rip"], cr or (0, 0), (YELLOW, reg_col(s["b"]))):
         d = (p - at) * L
@@ -777,7 +795,7 @@ def apply(t):
             pulse = 0.5 + 0.5 * math.sin((u - c[i]) * 5) if u < c[i] + 5 else 0.0
             set_glow(m, appear(u, c[i], dur, 0.6) * (0.35 + 0.65 * pulse))
     hud_at(t, sc, k, u, dur, cur)
-    battle_at(t)
+    battle_at(t, (cur or {}).get("field") if cur else (sc["journey"].get("field") if k == "journey" else None))
     if k in S["board"] or k == "end":
         board_at(k, u, dur, sc)
     else:
@@ -886,6 +904,7 @@ def hud_at(t, sc, k, u, dur, cur):
     names = {"whole": "THE WHOLE, IN ONE PICTURE", "borders": "THE BORDERS, AND WHAT IT TAKES TO CROSS EACH", "hook1": "ONE WEEK IN NOVEMBER",
              "hook2": "%s CHANGES, EACH PLACED BY HOW IT SCORED" % format(pf.HOOK["trials"], ","), "hook3": "SIGNAL, AND NOISE, TO SCALE"}
     hop = appear(u, 0.4, dur, 0.6)
+    pshow(h["headbg"], 1 if (k == "journey" or k in names) and hop > 0.3 else 0)
     if k == "journey":
         j = sc["journey"]
         say(h["head"], j["title"].upper(), hop, j["col"])
@@ -903,7 +922,7 @@ def hud_at(t, sc, k, u, dur, cur):
     else:
         say(h["head"], names.get(k, ""), hop if k in names else 0, INK if k in ("whole", "borders") else DIM)
         say(h["head2"], None, 0)
-        pshow(h["jpanel"], 0)
+        pshow(h["jpanel"], 1 if k == "borders" else 0)
         say(h["jlabel"], None, 0)
         say(h["jwords"], None, 0)
     for i, (sq, nm, need) in enumerate(h["legend"]):
@@ -930,12 +949,20 @@ def hud_at(t, sc, k, u, dur, cur):
     elif k == "end":
         o = appear(u, 0.3, dur, 0.8)
         a = pf.LEAD + 9 * 60.0 / pf.WPM
+        pshow(h["band"], 1)
         say(h["c1"], "", 0)
+        h["c2"].location, h["c3"].location = H(960, 452, 2), H(960, 506, 2)
         say(h["c2"], pf.STORY["closing"][0], o, INK)
         say(h["c3"], pf.STORY["closing"][1], o * seg(u, a, a + 1.0), INK)
+        for i, (tx, l) in enumerate(zip(h["credits"], pf.STORY.get("credits", []))):
+            say(tx, l, o * seg(u, 6.0 + i * 0.5, 6.8 + i * 0.5))
     else:
         for key in ("c1", "c2", "c3"):
             say(h[key], None, 0)
+    if k != "end":
+        for tx in h["credits"]:
+            say(tx, None, 0)
+        h["c2"].location, h["c3"].location = H(960, 584, 2), H(960, 646, 2)
 
 
 def board_at(k, u, dur, sc):

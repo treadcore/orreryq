@@ -135,6 +135,40 @@ def captions(tl, names, out_dir, title):
     return sum(len(sc["words"]) for sc in tl.scenes)
 
 
+def youtube(tl, chapters, out_dir, slug, title, blurb, credits, master=None, poster=None, made_by=""):
+    """WHAT A PERSON TAKES TO YOUTUBE, in its own folder outside the repository (output/ is not GitHub's): the
+    film, its title, its description with the chapters as YouTube reads them (a time and a name a line, the
+    first at 0:00), the credits and the licence, its captions (SubRip), its thumbnail, and the narration as a
+    script. `chapters` is [(seconds, name)]. Nothing is uploaded from here: a person does that."""
+    os.makedirs(out_dir, exist_ok=True)
+    seen, lines = set(), []
+    for t, name in chapters:
+        c = clock(t)
+        if c not in seen and (not lines or t - last >= 10):      # YouTube wants chapters ten seconds apart at least
+            seen.add(c)
+            lines.append("%s %s" % (c, name))
+            last = t
+    desc = [title, "", blurb, ""] + lines + [""] + list(credits) + ([made_by] if made_by else [])
+    open(os.path.join(out_dir, "description.txt"), "w").write("\n".join(desc) + "\n")
+    open(os.path.join(out_dir, "title.txt"), "w").write(title + "\n")
+    srt, n = [], 0
+    for sc in tl.scenes:
+        for a, b, words in tl.sentences(sc):
+            n += 1
+            srt += [str(n), "%s --> %s" % (stamp(a).replace(".", ","), stamp(b).replace(".", ",")), words, ""]
+    open(os.path.join(out_dir, "captions.srt"), "w").write("\n".join(srt))
+    open(os.path.join(out_dir, "teleprompt.txt"), "w").write("\n".join(
+        ["%s: the narration, at %d words a minute (%s)" % (title, tl.wpm, clock(tl.t)), ""] + [l for sc in tl.scenes for l in ("[%s]" % clock(sc["t0"]), " ".join(sc["words"]), "")]))
+    made = ["description.txt", "title.txt", "captions.srt", "teleprompt.txt"]
+    if master and os.path.exists(master):
+        shutil.copy(master, os.path.join(out_dir, slug + ".mp4"))
+        made.append(slug + ".mp4")
+    if poster and os.path.exists(poster):
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", poster, "-vf", "scale=1280:720:flags=lanczos", os.path.join(out_dir, "thumbnail.png")], check=True)
+        made.append("thumbnail.png")
+    return made
+
+
 # ---- the teleprompt ----------------------------------------------------------------------------------------------
 
 def teleprompter(tl, t, sc, box, font, ink, dim, lit, faint, width=36):
