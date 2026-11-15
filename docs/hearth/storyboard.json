@@ -1,0 +1,236 @@
+{
+ "title": "The Fleet as the Hearth",
+ "subtitle": "reading the house's air, what the mesh radios can tell, and what to buy",
+ "byline": "treadcore and the Orrery fleet  ·  15 November 2026",
+ "slug": "hearth",
+ "report": "hearth-lab-report",
+ "drawn_by": "tools/report/hearth_film.py",
+ "youtube_title": "The Fleet as the Hearth: reading the house's air",
+ "blurb": "A small fleet of computers put 1,228 W into one house at 14:58 on 15 November 2026, all of it heat. A watt the house needed anyway is a watt of computing that cost nothing more than the heating it replaced. The film walks one block diagram arrow by arrow: the machines' side, measured that day from steps the queue made; three mesh radios, asked over USB for a thermometer, which gave none; and the house, which is a model and a list of what to buy. No room temperature is read yet. The CPU figures are one step each. No controller is built, and the film says so. The narration scrolls in the corner at 150 words a minute.",
+ "closing": ["The machines are read every five seconds.", "The house's air is read by nothing today."],
+ "credits": [
+  "Orrery  ·  treadcore.org",
+  "Paul Richeson: producer, animator, writer, coder, implementer, developer, founder",
+  "Team pair: Claude Code (Claude Fable 5.2)",
+  "MIT License  ·  Copyright (c) 2026 Paul Richeson"
+ ],
+ "wpm": 150,
+ "chapter_names": {
+  "hook1": "1,228 watts, and a room read by nothing",
+  "hook2": "What a computation then costs",
+  "hook3": "The Watts panel, that afternoon",
+  "whole": "The whole, in one picture",
+  "borders": "The four borders",
+  "pattern": "What was done, and what was not",
+  "end": "The close, and the credits"
+ },
+ "regions": {
+  "mac": {"x": 40, "y": 110, "w": 1060, "h": 280, "col": "#83c167", "name": "THE MAC", "sub": "the queue, the record, the fits and the screens", "cue": null},
+  "radios": {"x": 1140, "y": 110, "w": 740, "h": 280, "col": "#b189c6", "name": "THE RADIOS", "sub": "three, on this Mac's USB", "cue": 3},
+  "fleet": {"x": 40, "y": 425, "w": 880, "h": 335, "col": "#ff8c5a", "name": "THE MACHINES", "sub": "every watt they draw leaves them as heat", "cue": 0},
+  "house": {"x": 1000, "y": 425, "w": 880, "h": 335, "col": "#58c4dd", "name": "THE HOUSE", "sub": "two rooms, a fan between them, the outside", "cue": 2}
+ },
+ "nodes": {
+  "queue": {"region": "mac", "x": 80, "y": 172, "w": 290, "h": 90, "title": "the queue", "sub": "Pause, Resume, a lane's CPUs"},
+  "record": {"region": "mac", "x": 420, "y": 172, "w": 290, "h": 90, "title": "the record", "sub": "telemetry, pulled each five minutes"},
+  "fits": {"region": "mac", "x": 760, "y": 172, "w": 290, "h": 90, "title": "the fits", "sub": "tau, R and C; each part's lag"},
+  "screens": {"region": "mac", "x": 420, "y": 286, "w": 290, "h": 90, "title": "the screens", "sub": "one browser page, four panels"},
+  "port": {"region": "radios", "x": 1180, "y": 172, "w": 300, "h": 90, "title": "this Mac's USB", "sub": "read-only text, 115,200 baud"},
+  "techo1": {"region": "radios", "x": 1180, "y": 286, "w": 300, "h": 90, "title": "the first T-Echo", "sub": "MeshCore 1.17.1, a room server"},
+  "techo2": {"region": "radios", "x": 1540, "y": 172, "w": 300, "h": 90, "title": "the second T-Echo", "sub": "answers nothing"},
+  "tdeck": {"region": "radios", "x": 1540, "y": 286, "w": 300, "h": 90, "title": "the T-Deck", "sub": "an interface firmware"},
+  "cpu": {"region": "fleet", "x": 80, "y": 495, "w": 260, "h": 90, "title": "a CPU", "sub": "its tau is a minute"},
+  "collector": {"region": "fleet", "x": 620, "y": 495, "w": 260, "h": 90, "title": "the collector", "sub": "a line every five seconds"},
+  "disk": {"region": "fleet", "x": 80, "y": 645, "w": 260, "h": 90, "title": "a disk, a board", "sub": "every part that is not a CPU"},
+  "watts": {"region": "fleet", "x": 620, "y": 645, "w": 260, "h": 90, "title": "the wall watts", "sub": "all of it heat into the room"},
+  "thermo": {"region": "house", "x": 1050, "y": 495, "w": 270, "h": 90, "title": "a thermometer", "sub": "none stands in a room yet"},
+  "outside": {"region": "house", "x": 1560, "y": 495, "w": 270, "h": 90, "title": "the outside", "sub": "T_out: what drives the loss"},
+  "room1": {"region": "house", "x": 1050, "y": 645, "w": 270, "h": 90, "title": "room one", "sub": "its air, T1: read by nothing"},
+  "room2": {"region": "house", "x": 1560, "y": 645, "w": 270, "h": 90, "title": "room two", "sub": "its air, T2: read by nothing"}
+ },
+ "acts": {
+  "machines": {"name": "THE MACHINES' SIDE", "sub": "measured on 15 November, from steps the queue made", "col": "#ff8c5a"},
+  "radios": {"name": "THE THREE RADIOS", "sub": "each was asked what it is, over USB", "col": "#b189c6"},
+  "house": {"name": "THE HOUSE", "sub": "a model, and what would measure it", "col": "#58c4dd"}
+ },
+ "whole": {
+  "head": "THE WHOLE, IN ONE PICTURE",
+  "arrows": [
+   {"a": [330, 346], "b": [330, 486], "col": "#83c167", "words": "a step", "off": -26, "cue": 0, "lag": 2.0},
+   {"a": [480, 486], "b": [480, 346], "col": "#ff8c5a", "words": "its temperatures", "off": 26, "cue": 1, "lag": 0},
+   {"a": [860, 700], "b": [1060, 700], "col": "#ff8c5a", "words": "heat", "off": 0, "cue": 2, "lag": 4.0},
+   {"a": [1010, 486], "b": [1010, 346], "col": "#9a978d", "words": "nothing yet", "off": -26, "cue": 3, "lag": 3.0}
+  ]
+ },
+ "borders": {
+  "head": "THE FOUR BORDERS",
+  "rows": [
+   {"col": "#83c167", "name": "the Mac to a machine", "need": "the queue's own buttons: Pause, then Resume", "pts": [[40, 401], [920, 401]]},
+   {"col": "#ff8c5a", "name": "a machine to the Mac", "need": "one line every five seconds, pulled every five minutes", "pts": [[40, 413], [920, 413]]},
+   {"col": "#ff8c5a", "name": "a machine to the house", "need": "every watt it draws, as heat", "pts": [[960, 425], [960, 760]]},
+   {"col": "#58c4dd", "name": "the house to the Mac", "need": "nothing: no thermometer stands in a room", "pts": [[1000, 407], [1880, 407]]}
+  ]
+ },
+ "hook": {
+  "at": "14:58, 15 NOVEMBER 2026",
+  "watts": 1228,
+  "machines": [["jaguaribe", 258], ["bosporus", 252], ["calber", 248], ["whitewolf", 176], ["boburner", 154], ["saskatchewan", 125], ["columbia", 15]],
+  "coldest": 28,
+  "formula": "cost = E x price x (1 - f / COP)",
+  "terms": [
+   "E is the job's energy.",
+   "f is the part of its heat the house wanted at that hour: 1 on a cold night, 0 on a day the windows are open.",
+   "COP is what the house's other heating gets from a watt: 1 for a resistance heater, about 3 for a heat pump."
+  ],
+  "cases": [
+   {"head": "a cold night", "sub": "against resistance heat", "share": 0.0, "big": "free", "small": ""},
+   {"head": "a cold night", "sub": "against a heat pump", "share": 0.6667, "big": "two thirds", "small": "of its electricity"},
+   {"head": "a warm day", "sub": "the windows open", "share": 1.0, "big": "all of it", "small": "and more if anything cools the house"}
+  ],
+  "missing": "Two numbers are not in the repository and are Paul's to give: what heats the house besides the fleet, and the price of a kilowatt-hour.",
+  "picture": "heat-watts.png",
+  "room_line": [152, 222, 922, 22]
+ },
+ "pattern": [
+  {"name": "measured", "sub": "Each CPU's time constant, from a step test the queue made. One step each: a first reading, good to a factor of two."},
+  {"name": "measured", "sub": "Each disk's and board's lag behind its machine's watts, given where the fit explains 60% of the part's movement."},
+  {"name": "built", "sub": "One browser page and four panels in Orrery. The panels were checked as pictures, not used."},
+  {"name": "not done", "sub": "No room temperature was read. Every statement about the house is a model."},
+  {"name": "not done", "sub": "No radio gave a thermometer. None was reflashed, configured or written to."},
+  {"name": "not done", "sub": "The second T-Echo's firmware and the T-Deck's were not identified. No probe was bought."},
+  {"name": "not done", "sub": "No controller, dial or throttle is built."}
+ ],
+ "narration": {
+  "hook1": "At two fifty-eight in the afternoon, the fleet put twelve hundred and twenty-eight watts into one house. All of it heat. | Each Linux machine writes a line of its readings every five seconds. | The air of the house is read by nothing. | The nearest thing to a room thermometer is a disk in saskatchewan, at twenty-eight. The room is no warmer than that. How much cooler is not known.",
+  "hook2": "Here is why that matters. A watt the house needed anyway is a watt of computing that cost nothing more than the heating it replaced. | On a cold night, against resistance heat, the computation is free. | Against a heat pump, it costs two thirds of its electricity. | On a warm day it costs all of it, and more if anything cools the house.",
+  "hook3": "This is Orrery's Heat, the Watts panel, that afternoon: each machine's share of the fleet's heat. | And one line above them. The room: read by nothing. | Three mesh radios were on this Mac. They were asked what they are. None of them gave a thermometer. | This film is about the side that is measured, the side that is not, and what would read it.",
+  "title": "The Fleet as the Hearth. The fifteenth of November: reading the house's air, what the mesh radios can tell, and what to buy.",
+  "whole": "Begin from far away. There are four territories. The Mac keeps the queue, and the record of every machine's readings. | Below it, the machines. The queue's own buttons give them a step, | and their temperatures come back to the record. | Beside them, the house: two rooms, a fan between them, and the outside. Every watt the machines draw goes into it as heat. | And on this Mac's USB, three mesh radios. From the house to the Mac, nothing comes back yet.",
+  "borders": "There are four borders. | From the Mac to a machine: the queue's own buttons, Pause and then Resume. | From a machine to the Mac: one line every five seconds, pulled every five minutes. | From a machine to the house: every watt it draws, as heat. | And from the house to the Mac: nothing. No thermometer stands in a room.",
+  "act:machines": "First, the machines' side, measured that day. Six arrows.",
+  "act:radios": "Now the three radios. Three arrows, and no thermometer at the end of any of them.",
+  "act:house": "And the house. Seven arrows. Every one of them is a model, or a thing still to do.",
+  "pattern": "What was done, and what was not. | Each CPU's time constant, from a step the queue made. One step each, good to a factor of two. | Each disk's and board's lag behind its machine's watts. | One page and four panels, checked as pictures. | No room temperature was read. Every statement about the house is a model. | The three radios gave no thermometer, and nothing was written to them. | Two of them were not identified, and no probe was bought. | No controller, dial or throttle is built.",
+  "end": "The machines are read every five seconds. The house's air is read by nothing today. What was built is the machines' side of the balance. The house's side is a model, and a list of what to buy. No controller is built, and none can be before a thermometer stands in each room."
+ },
+ "steps": [
+  {
+   "id": "m1", "act": "machines", "a": "queue", "b": "cpu", "moves": "a step",
+   "say": "The queue's own buttons made the steps. For each machine in turn its CPU lanes were paused, and the job in hand ended. The CPUs sat idle twenty minutes, then took work again. A card's lane kept working throughout.",
+   "what": "A step in a machine's work: its CPU lanes paused, idle twenty minutes, then at work again.",
+   "why": "A thing heated at P watts settles at its surroundings plus P x R, and gets there as 1 - exp(-t / tau).",
+   "border": "The Mac to a machine. One machine in turn; a card's lane kept working throughout."
+  },
+  {
+   "id": "m2", "act": "machines", "a": "cpu", "b": "collector", "moves": "a temperature",
+   "say": "On each Linux machine a collector writes one line every five seconds. It also takes in anything a reader leaves for it in one folder. So a new probe on a Linux machine needs only a reader. This Mac and the Mac mini have no collector.",
+   "what": "One line of key=value every five seconds, written by fleet-telemetry.sh.",
+   "why": "It includes anything found in /run/fleet-sensors/*.kv: a new probe needs only a reader that writes there.",
+   "rule": "This Mac and the Mac mini have no collector."
+  },
+  {
+   "id": "m3", "act": "machines", "a": "collector", "b": "record", "moves": "the new lines",
+   "say": "Every five minutes the Mac pulls the new lines into its record. When the report was written, that record was four and a half hours long. A CPU's tau is a minute. A disk's is an hour. Paul said of the disks: that will be longer, days of data.",
+   "what": "Each machine's new lines, brought to telemetry/MACHINE/ at the five-minute pull.",
+   "why": "A CPU's tau is a minute; a disk's is an hour; a house's is many hours. The record was 4.5 hours long.",
+   "border": "A machine to the Mac. Paul, of the disks: \"that will be longer, days of data.\""
+  },
+  {
+   "id": "m4", "act": "machines", "a": "record", "b": "fits", "moves": "a held step",
+   "say": "From each step, three numbers. Tau: how long the part takes. Degrees a watt: how badly it sheds heat. Joules a degree: how much stuff warms with it. Boburner's CPU, twenty-eight seconds. Saskatchewan's, a hundred and fifteen. These are one step each, and they move. A figure here is a first reading, good to a factor of two.",
+   "what": "The CPU's tau: boburner 28 s, bosporus 55 s, jaguaribe 58 s, whitewolf 82 s, saskatchewan 115 s.",
+   "why": "R, in degrees a watt, is how badly it sheds heat. C, in joules a degree, is how much stuff warms with it. tau = R x C.",
+   "rule": "ONE STEP EACH, AND THEY MOVE. Bosporus read 104 s at 13:53 and 55 s at 14:58. Calber: no step fitted yet. Columbia: no model."
+  },
+  {
+   "id": "m5", "act": "machines", "a": "watts", "b": "disk", "moves": "the soak",
+   "say": "A disk never gets a clean step. So each part that is not a CPU is fitted to its machine's wall watts, passed through one lag. On bosporus the memory follows the watts by nine to twelve minutes. Its disks, by thirty-three minutes to over two hours. Over two hours means the true figure is longer.",
+   "what": "Each part that is not a CPU, fitted to its machine's wall watts passed through one lag.",
+   "why": "The lag that fits best is how slowly the part follows the machine's heat. It is given only where the fit explains 60%.",
+   "rule": "\"Over 2 h\" is the longest lag the 4.5-hour record allows: the true figure is longer."
+  },
+  {
+   "id": "m6", "act": "machines", "a": "fits", "b": "screens", "moves": "tau, R, C, the lags",
+   "say": "All of it is drawn in two places. One browser page, made at every pull. And Orrery's Heat, four panels: Machines, Parts, Watts, Steps. The panels were checked as pictures. They were not clicked through in the running program.",
+   "what": "The fits and the lags, to the browser page and to Orrery's Heat: Machines, Parts, Watts, Steps.",
+   "why": "The page recomputes at every pull, so the disks' figures will settle as the record grows.",
+   "rule": "The pictures were taken with the program's own frame renderer. The panels were not clicked through."
+  },
+  {
+   "id": "r1", "act": "radios", "a": "port", "b": "techo1", "moves": "sensor list",
+   "say": "Each radio was opened at a hundred and fifteen thousand two hundred baud, and sent read-only text. The first T-Echo runs MeshCore as a room server. Asked for its sensors, it lists one: its GPS. No thermometer. Either the board has no BME280, or this build left it out.",
+   "what": "The command \"sensor list\". The answer: \"1 vars, gps=0\".",
+   "why": "MeshCore v1.17.1, role room_server, name Caiques. The T-Echo is sold with and without a BME280.",
+   "rule": "Either the board has no BME280 or this build left it out. The board's label settles which; nothing sent over the wire can."
+  },
+  {
+   "id": "r2", "act": "radios", "a": "port", "b": "techo2", "moves": "text, and one frame",
+   "say": "The second T-Echo answers nothing. Not to text, and not to one frame of the companion protocol, sent from memory. That proves nothing: the frame may have been wrong. The tool that speaks that protocol is not installed here.",
+   "what": "Read-only text, then one companion-protocol frame. Nothing came back.",
+   "why": "It may run the companion firmware, whose serial protocol is binary.",
+   "rule": "UNREAD. The frame may have been wrong. meshcore-cli speaks the protocol and is not installed here."
+  },
+  {
+   "id": "r3", "act": "radios", "a": "port", "b": "tdeck", "moves": "help",
+   "say": "The T-Deck answers every MeshCore command, and help, with: unknown command. What it runs was not identified. The sensors repository Paul found is for another board, and names no temperature or humidity chip. No radio was reflashed, configured or written to.",
+   "what": "Every MeshCore command, and \"help\". The answer each time: \"Error: unknown command\".",
+   "why": "Its boot lines are an interface firmware's. What it runs was not identified.",
+   "rule": "LILYGO-UI/sensors is for the T-DisplayCM0, a Linux board, and names no temperature or humidity chip."
+  },
+  {
+   "id": "h1", "act": "house", "a": "watts", "b": "room1", "moves": "heat",
+   "say": "Now the house. Every watt a computer draws leaves it as heat into the room. So the fleet's wall watts are the heater's output, and that much is known. What else warms the house, the sun, and what the house loses to the outside: none of it is measured yet.",
+   "what": "P_fleet: the fleet's wall watts, 1,228 W at 14:58, all of it heat.",
+   "why": "C_house x dT_in/dt = P_fleet + P_other + P_sun - (T_in - T_out) / R_house",
+   "rule": "P_fleet is known. Everything else is not measured yet.",
+   "border": "A machine to the house. Nothing is stored, and nothing leaves by wire that matters at this scale."
+  },
+  {
+   "id": "h2", "act": "house", "a": "room1", "b": "room2", "moves": "air, by the fan",
+   "say": "There are two rooms, and a fan between them mixing their air. In the model the fan is one number: small when it runs, large when it does not. Each room has its own loss to the outside, and that one number joins them.",
+   "what": "(T1 - T2) / R12: what the fan carries from one room to the other.",
+   "why": "C1 x dT1/dt = P1 - (T1 - T_out) / R1 - (T1 - T2) / R12, and the same for room two.",
+   "rule": "R12 is the fan: small when it runs, large when it does not. P1 and P2 are the watts of the machines in each room."
+  },
+  {
+   "id": "h3", "act": "house", "a": "room1", "b": "outside", "moves": "the loss",
+   "say": "A room loses heat by how far it is above the outside. Sun through the windows is a second heater. Wind and damp change the loss. Humidity does not enter the equations. It matters to comfort, and to the cost of any cooling. Light and wind would come from a weather feed, which nothing here asks today.",
+   "what": "(T1 - T_out) / R1: the loss, by how far the room is above the outside.",
+   "why": "Sun through the windows is a second heater. Wind and damp change R. Humidity does not enter the two equations.",
+   "rule": "An outside probe gives temperature and humidity. Light and wind would come from a weather feed, which nothing here asks today."
+  },
+  {
+   "id": "h4", "act": "house", "a": "techo1", "b": "thermo", "moves": "a sensor, four wires", "dash": true,
+   "say": "How to get a thermometer, soonest first. Ask saskatchewan's two Geiger counters, which have a temperature command that radbeeper does not send. Wire a sensor board to the T-Echo here: a few dollars and four wires. Use the mesh as a mesh, which was not tried. Or USB probes. Prices were not checked, except where a source is cited.",
+   "what": "A BME280 or SHT4x board on the T-Echo's I2C pins: a few dollars and four wires.",
+   "why": "Then MeshCore finds it, or the radio is reflashed with a sketch that prints temperature, humidity and pressure.",
+   "rule": "The other roads: the Geiger counters' GETTEMP, the mesh as a mesh (not tried), USB probes. Paul decides which.",
+   "border": "The radios to the house. A radio used this way is a USB thermometer and no longer a mesh node."
+  },
+  {
+   "id": "h5", "act": "house", "a": "thermo", "b": "collector", "moves": "room.NAME.c", "dash": true,
+   "say": "Where to put them, for two rooms mixed by a fan. One in each room, at sitting height, away from the machines. One outside, in the shade. The fleet's intake and its exhaust. One at the fan. Six probes cover it. A reader writes each reading into one folder, and the collector, the page and Orrery take it up with no other change.",
+   "what": "room.NAME.c and room.NAME.rh, written by a reader into /run/fleet-sensors/ on a Linux machine.",
+   "why": "The collector picks it up, the page draws it and Orrery shows it, with no other change.",
+   "rule": "Six probes: each room, outside in the shade, the fleet's intake and its exhaust, the fan. Humidity at two: one room and outside.",
+   "border": "The house to a machine. Nothing crosses here today."
+  },
+  {
+   "id": "h6", "act": "house", "a": "queue", "b": "watts", "moves": "a step of about 1.2 kW", "dash": true,
+   "pts": [[300, 262], [560, 620], [620, 680]],
+   "say": "The fleet is its own step generator. The queue can drop a kilowatt in a minute and put it back. On a still night with the heating off, a Pause of every lane is a step of about one point two kilowatts into the house. The rooms' fall over the next hours is the house's tau. This is the CPU step test again, with a house for the part. It has not been run.",
+   "what": "shutdown, or a Pause of every lane, on a still night with the heating off: about 1.2 kW.",
+   "why": "The rooms' fall over the next hours is the house's tau; the level they fall toward gives R; C follows.",
+   "rule": "NOT RUN. The same test with the fan off, then on, gives R12. Whether it is run is Paul's to decide."
+  },
+  {
+   "id": "h7", "act": "house", "a": "thermo", "b": "queue", "moves": "a room's temperature", "dash": true,
+   "pts": [[1050, 515], [960, 515], [960, 407], [140, 407], [140, 262]],
+   "say": "With those numbers known, which machines work is a choice of where the heat goes. The queue already has the dials: Pause a machine, set a lane's CPUs. A controller would hold each room at its mark by choosing them. No controller is built. None can be, before a thermometer stands in each room.",
+   "what": "Each room's temperature, to a controller that holds the room at its mark by choosing which machines work.",
+   "why": "The house's hours of tau: the fleet can run hard for an hour and coast the next without the room moving a degree.",
+   "rule": "NOT BUILT. No controller, dial or throttle is built, and none can be before a thermometer stands in each room.",
+   "border": "The house to the Mac. No room temperature was read."
+  }
+ ]
+}

@@ -1,0 +1,82 @@
+The Fleet as the Hearth: the narration, at 150 words a minute (10:13)
+
+[0:00] 1,228 WATTS, AND A ROOM READ BY NOTHING
+At two fifty-eight in the afternoon, the fleet put twelve hundred and twenty-eight watts into one house. All of it heat. Each Linux machine writes a line of its readings every five seconds. The air of the house is read by nothing. The nearest thing to a room thermometer is a disk in saskatchewan, at twenty-eight. The room is no warmer than that. How much cooler is not known.
+
+[0:30] WHAT A COMPUTATION THEN COSTS
+Here is why that matters. A watt the house needed anyway is a watt of computing that cost nothing more than the heating it replaced. On a cold night, against resistance heat, the computation is free. Against a heat pump, it costs two thirds of its electricity. On a warm day it costs all of it, and more if anything cools the house.
+
+[0:58] THE WATTS PANEL, THAT AFTERNOON
+This is Orrery's Heat, the Watts panel, that afternoon: each machine's share of the fleet's heat. And one line above them. The room: read by nothing. Three mesh radios were on this Mac. They were asked what they are. None of them gave a thermometer. This film is about the side that is measured, the side that is not, and what would read it.
+
+[1:26] TITLE
+The Fleet as the Hearth. The fifteenth of November: reading the house's air, what the mesh radios can tell, and what to buy.
+
+[1:38] THE WHOLE, IN ONE PICTURE
+Begin from far away. There are four territories. The Mac keeps the queue, and the record of every machine's readings. Below it, the machines. The queue's own buttons give them a step, and their temperatures come back to the record. Beside them, the house: two rooms, a fan between them, and the outside. Every watt the machines draw goes into it as heat. And on this Mac's USB, three mesh radios. From the house to the Mac, nothing comes back yet.
+
+[2:13] THE FOUR BORDERS
+There are four borders. From the Mac to a machine: the queue's own buttons, Pause and then Resume. From a machine to the Mac: one line every five seconds, pulled every five minutes. From a machine to the house: every watt it draws, as heat. And from the house to the Mac: nothing. No thermometer stands in a room.
+
+[2:39] THE MACHINES' SIDE
+First, the machines' side, measured that day. Six arrows.
+
+[2:45] 1. THE QUEUE TO A CPU
+The queue's own buttons made the steps. For each machine in turn its CPU lanes were paused, and the job in hand ended. The CPUs sat idle twenty minutes, then took work again. A card's lane kept working throughout.
+
+[3:03] 2. A CPU TO THE COLLECTOR
+On each Linux machine a collector writes one line every five seconds. It also takes in anything a reader leaves for it in one folder. So a new probe on a Linux machine needs only a reader. This Mac and the Mac mini have no collector.
+
+[3:24] 3. THE COLLECTOR TO THE RECORD
+Every five minutes the Mac pulls the new lines into its record. When the report was written, that record was four and a half hours long. A CPU's tau is a minute. A disk's is an hour. Paul said of the disks: that will be longer, days of data.
+
+[3:46] 4. THE RECORD TO THE FITS
+From each step, three numbers. Tau: how long the part takes. Degrees a watt: how badly it sheds heat. Joules a degree: how much stuff warms with it. Boburner's CPU, twenty-eight seconds. Saskatchewan's, a hundred and fifteen. These are one step each, and they move. A figure here is a first reading, good to a factor of two.
+
+[4:12] 5. THE WALL WATTS TO A DISK, A BOARD
+A disk never gets a clean step. So each part that is not a CPU is fitted to its machine's wall watts, passed through one lag. On bosporus the memory follows the watts by nine to twelve minutes. Its disks, by thirty-three minutes to over two hours. Over two hours means the true figure is longer.
+
+[4:37] 6. THE FITS TO THE SCREENS
+All of it is drawn in two places. One browser page, made at every pull. And Orrery's Heat, four panels: Machines, Parts, Watts, Steps. The panels were checked as pictures. They were not clicked through in the running program.
+
+[4:55] THE THREE RADIOS
+Now the three radios. Three arrows, and no thermometer at the end of any of them.
+
+[5:04] 7. THIS MAC'S USB TO THE FIRST T-ECHO
+Each radio was opened at a hundred and fifteen thousand two hundred baud, and sent read-only text. The first T-Echo runs MeshCore as a room server. Asked for its sensors, it lists one: its GPS. No thermometer. Either the board has no BME280, or this build left it out.
+
+[5:26] 8. THIS MAC'S USB TO THE SECOND T-ECHO
+The second T-Echo answers nothing. Not to text, and not to one frame of the companion protocol, sent from memory. That proves nothing: the frame may have been wrong. The tool that speaks that protocol is not installed here.
+
+[5:45] 9. THIS MAC'S USB TO THE T-DECK
+The T-Deck answers every MeshCore command, and help, with: unknown command. What it runs was not identified. The sensors repository Paul found is for another board, and names no temperature or humidity chip. No radio was reflashed, configured or written to.
+
+[6:04] THE HOUSE
+And the house. Seven arrows. Every one of them is a model, or a thing still to do.
+
+[6:13] 10. THE WALL WATTS TO ROOM ONE
+Now the house. Every watt a computer draws leaves it as heat into the room. So the fleet's wall watts are the heater's output, and that much is known. What else warms the house, the sun, and what the house loses to the outside: none of it is measured yet.
+
+[6:36] 11. ROOM ONE TO ROOM TWO
+There are two rooms, and a fan between them mixing their air. In the model the fan is one number: small when it runs, large when it does not. Each room has its own loss to the outside, and that one number joins them.
+
+[6:56] 12. ROOM ONE TO THE OUTSIDE
+A room loses heat by how far it is above the outside. Sun through the windows is a second heater. Wind and damp change the loss. Humidity does not enter the equations. It matters to comfort, and to the cost of any cooling. Light and wind would come from a weather feed, which nothing here asks today.
+
+[7:22] 13. THE FIRST T-ECHO TO A THERMOMETER
+How to get a thermometer, soonest first. Ask saskatchewan's two Geiger counters, which have a temperature command that radbeeper does not send. Wire a sensor board to the T-Echo here: a few dollars and four wires. Use the mesh as a mesh, which was not tried. Or USB probes. Prices were not checked, except where a source is cited.
+
+[7:48] 14. A THERMOMETER TO THE COLLECTOR
+Where to put them, for two rooms mixed by a fan. One in each room, at sitting height, away from the machines. One outside, in the shade. The fleet's intake and its exhaust. One at the fan. Six probes cover it. A reader writes each reading into one folder, and the collector, the page and Orrery take it up with no other change.
+
+[8:16] 15. THE QUEUE TO THE WALL WATTS
+The fleet is its own step generator. The queue can drop a kilowatt in a minute and put it back. On a still night with the heating off, a Pause of every lane is a step of about one point two kilowatts into the house. The rooms' fall over the next hours is the house's tau. This is the CPU step test again, with a house for the part. It has not been run.
+
+[8:48] 16. A THERMOMETER TO THE QUEUE
+With those numbers known, which machines work is a choice of where the heat goes. The queue already has the dials: Pause a machine, set a lane's CPUs. A controller would hold each room at its mark by choosing them. No controller is built. None can be, before a thermometer stands in each room.
+
+[9:12] WHAT WAS DONE, AND WHAT WAS NOT
+What was done, and what was not. Each CPU's time constant, from a step the queue made. One step each, good to a factor of two. Each disk's and board's lag behind its machine's watts. One page and four panels, checked as pictures. No room temperature was read. Every statement about the house is a model. The three radios gave no thermometer, and nothing was written to them. Two of them were not identified, and no probe was bought. No controller, dial or throttle is built.
+
+[9:49] THE CLOSE, AND THE CREDITS
+The machines are read every five seconds. The house's air is read by nothing today. What was built is the machines' side of the balance. The house's side is a model, and a list of what to buy. No controller is built, and none can be before a thermometer stands in each room.

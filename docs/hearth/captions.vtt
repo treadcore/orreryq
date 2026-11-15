@@ -1,0 +1,478 @@
+WEBVTT
+
+00:00:00.800 --> 00:00:07.600
+At two fifty-eight in the afternoon, the fleet put twelve hundred and twenty-eight watts into one house.
+
+00:00:07.600 --> 00:00:09.200
+All of it heat.
+
+00:00:09.200 --> 00:00:14.000
+Each Linux machine writes a line of its readings every five seconds.
+
+00:00:14.000 --> 00:00:17.600
+The air of the house is read by nothing.
+
+00:00:17.600 --> 00:00:23.200
+The nearest thing to a room thermometer is a disk in saskatchewan, at twenty-eight.
+
+00:00:23.200 --> 00:00:26.000
+The room is no warmer than that.
+
+00:00:26.000 --> 00:00:28.400
+How much cooler is not known.
+
+00:00:31.000 --> 00:00:33.000
+Here is why that matters.
+
+00:00:33.000 --> 00:00:41.000
+A watt the house needed anyway is a watt of computing that cost nothing more than the heating it replaced.
+
+00:00:41.000 --> 00:00:45.400
+On a cold night, against resistance heat, the computation is free.
+
+00:00:45.400 --> 00:00:49.800
+Against a heat pump, it costs two thirds of its electricity.
+
+00:00:49.800 --> 00:00:56.200
+On a warm day it costs all of it, and more if anything cools the house.
+
+00:00:58.800 --> 00:01:02.400
+This is Orrery's Heat, the Watts panel, that afternoon:
+
+00:01:02.400 --> 00:01:05.200
+each machine's share of the fleet's heat.
+
+00:01:05.200 --> 00:01:07.200
+And one line above them.
+
+00:01:07.200 --> 00:01:08.000
+The room:
+
+00:01:08.000 --> 00:01:09.200
+read by nothing.
+
+00:01:09.200 --> 00:01:12.000
+Three mesh radios were on this Mac.
+
+00:01:12.000 --> 00:01:14.400
+They were asked what they are.
+
+00:01:14.400 --> 00:01:16.800
+None of them gave a thermometer.
+
+00:01:16.800 --> 00:01:24.400
+This film is about the side that is measured, the side that is not, and what would read it.
+
+00:01:27.000 --> 00:01:29.000
+The Fleet as the Hearth.
+
+00:01:29.000 --> 00:01:30.600
+The fifteenth of November:
+
+00:01:30.600 --> 00:01:36.200
+reading the house's air, what the mesh radios can tell, and what to buy.
+
+00:01:38.800 --> 00:01:40.400
+Begin from far away.
+
+00:01:40.400 --> 00:01:42.000
+There are four territories.
+
+00:01:42.000 --> 00:01:46.800
+The Mac keeps the queue, and the record of every machine's readings.
+
+00:01:46.800 --> 00:01:48.400
+Below it, the machines.
+
+00:01:48.400 --> 00:01:54.800
+The queue's own buttons give them a step, and their temperatures come back to the record.
+
+00:01:54.800 --> 00:01:56.400
+Beside them, the house:
+
+00:01:56.400 --> 00:02:00.000
+two rooms, a fan between them, and the outside.
+
+00:02:00.000 --> 00:02:04.000
+Every watt the machines draw goes into it as heat.
+
+00:02:04.000 --> 00:02:07.200
+And on this Mac's USB, three mesh radios.
+
+00:02:07.200 --> 00:02:11.200
+From the house to the Mac, nothing comes back yet.
+
+00:02:13.800 --> 00:02:15.400
+There are four borders.
+
+00:02:15.400 --> 00:02:17.800
+From the Mac to a machine:
+
+00:02:17.800 --> 00:02:21.000
+the queue's own buttons, Pause and then Resume.
+
+00:02:21.000 --> 00:02:23.400
+From a machine to the Mac:
+
+00:02:23.400 --> 00:02:27.000
+one line every five seconds, pulled every five minutes.
+
+00:02:27.000 --> 00:02:29.400
+From a machine to the house:
+
+00:02:29.400 --> 00:02:31.800
+every watt it draws, as heat.
+
+00:02:31.800 --> 00:02:34.600
+And from the house to the Mac:
+
+00:02:34.600 --> 00:02:35.000
+nothing.
+
+00:02:35.000 --> 00:02:37.400
+No thermometer stands in a room.
+
+00:02:40.000 --> 00:02:42.800
+First, the machines' side, measured that day.
+
+00:02:42.800 --> 00:02:43.600
+Six arrows.
+
+00:02:46.200 --> 00:02:49.000
+The queue's own buttons made the steps.
+
+00:02:49.000 --> 00:02:55.400
+For each machine in turn its CPU lanes were paused, and the job in hand ended.
+
+00:02:55.400 --> 00:02:59.400
+The CPUs sat idle twenty minutes, then took work again.
+
+00:02:59.400 --> 00:03:01.800
+A card's lane kept working throughout.
+
+00:03:04.400 --> 00:03:09.200
+On each Linux machine a collector writes one line every five seconds.
+
+00:03:09.200 --> 00:03:14.400
+It also takes in anything a reader leaves for it in one folder.
+
+00:03:14.400 --> 00:03:19.200
+So a new probe on a Linux machine needs only a reader.
+
+00:03:19.200 --> 00:03:22.800
+This Mac and the Mac mini have no collector.
+
+00:03:25.400 --> 00:03:30.200
+Every five minutes the Mac pulls the new lines into its record.
+
+00:03:30.200 --> 00:03:35.800
+When the report was written, that record was four and a half hours long.
+
+00:03:35.800 --> 00:03:38.200
+A CPU's tau is a minute.
+
+00:03:38.200 --> 00:03:40.200
+A disk's is an hour.
+
+00:03:40.200 --> 00:03:42.200
+Paul said of the disks:
+
+00:03:42.200 --> 00:03:45.000
+that will be longer, days of data.
+
+00:03:47.600 --> 00:03:49.600
+From each step, three numbers.
+
+00:03:49.600 --> 00:03:50.000
+Tau:
+
+00:03:50.000 --> 00:03:52.000
+how long the part takes.
+
+00:03:52.000 --> 00:03:53.200
+Degrees a watt:
+
+00:03:53.200 --> 00:03:55.200
+how badly it sheds heat.
+
+00:03:55.200 --> 00:03:56.400
+Joules a degree:
+
+00:03:56.400 --> 00:03:58.800
+how much stuff warms with it.
+
+00:03:58.800 --> 00:04:00.400
+Boburner's CPU, twenty-eight seconds.
+
+00:04:00.400 --> 00:04:02.400
+Saskatchewan's, a hundred and fifteen.
+
+00:04:02.400 --> 00:04:05.600
+These are one step each, and they move.
+
+00:04:05.600 --> 00:04:10.800
+A figure here is a first reading, good to a factor of two.
+
+00:04:13.400 --> 00:04:16.200
+A disk never gets a clean step.
+
+00:04:16.200 --> 00:04:23.800
+So each part that is not a CPU is fitted to its machine's wall watts, passed through one lag.
+
+00:04:23.800 --> 00:04:28.600
+On bosporus the memory follows the watts by nine to twelve minutes.
+
+00:04:28.600 --> 00:04:32.200
+Its disks, by thirty-three minutes to over two hours.
+
+00:04:32.200 --> 00:04:35.800
+Over two hours means the true figure is longer.
+
+00:04:38.400 --> 00:04:41.600
+All of it is drawn in two places.
+
+00:04:41.600 --> 00:04:44.400
+One browser page, made at every pull.
+
+00:04:44.400 --> 00:04:46.400
+And Orrery's Heat, four panels:
+
+00:04:46.400 --> 00:04:48.000
+Machines, Parts, Watts, Steps.
+
+00:04:48.000 --> 00:04:50.400
+The panels were checked as pictures.
+
+00:04:50.400 --> 00:04:54.000
+They were not clicked through in the running program.
+
+00:04:56.600 --> 00:04:58.200
+Now the three radios.
+
+00:04:58.200 --> 00:05:03.000
+Three arrows, and no thermometer at the end of any of them.
+
+00:05:05.600 --> 00:05:12.400
+Each radio was opened at a hundred and fifteen thousand two hundred baud, and sent read-only text.
+
+00:05:12.400 --> 00:05:16.000
+The first T-Echo runs MeshCore as a room server.
+
+00:05:16.000 --> 00:05:18.800
+Asked for its sensors, it lists one:
+
+00:05:18.800 --> 00:05:19.600
+its GPS.
+
+00:05:19.600 --> 00:05:20.400
+No thermometer.
+
+00:05:20.400 --> 00:05:25.200
+Either the board has no BME280, or this build left it out.
+
+00:05:27.800 --> 00:05:29.800
+The second T-Echo answers nothing.
+
+00:05:29.800 --> 00:05:35.800
+Not to text, and not to one frame of the companion protocol, sent from memory.
+
+00:05:35.800 --> 00:05:37.000
+That proves nothing:
+
+00:05:37.000 --> 00:05:39.400
+the frame may have been wrong.
+
+00:05:39.400 --> 00:05:43.400
+The tool that speaks that protocol is not installed here.
+
+00:05:46.000 --> 00:05:49.600
+The T-Deck answers every MeshCore command, and help, with:
+
+00:05:49.600 --> 00:05:50.400
+unknown command.
+
+00:05:50.400 --> 00:05:52.800
+What it runs was not identified.
+
+00:05:52.800 --> 00:05:59.200
+The sensors repository Paul found is for another board, and names no temperature or humidity chip.
+
+00:05:59.200 --> 00:06:02.400
+No radio was reflashed, configured or written to.
+
+00:06:05.000 --> 00:06:06.200
+And the house.
+
+00:06:06.200 --> 00:06:07.000
+Seven arrows.
+
+00:06:07.000 --> 00:06:12.200
+Every one of them is a model, or a thing still to do.
+
+00:06:14.800 --> 00:06:16.000
+Now the house.
+
+00:06:16.000 --> 00:06:20.800
+Every watt a computer draws leaves it as heat into the room.
+
+00:06:20.800 --> 00:06:26.400
+So the fleet's wall watts are the heater's output, and that much is known.
+
+00:06:26.400 --> 00:06:32.400
+What else warms the house, the sun, and what the house loses to the outside:
+
+00:06:32.400 --> 00:06:34.800
+none of it is measured yet.
+
+00:06:37.400 --> 00:06:42.200
+There are two rooms, and a fan between them mixing their air.
+
+00:06:42.200 --> 00:06:45.400
+In the model the fan is one number:
+
+00:06:45.400 --> 00:06:49.000
+small when it runs, large when it does not.
+
+00:06:49.000 --> 00:06:55.000
+Each room has its own loss to the outside, and that one number joins them.
+
+00:06:57.600 --> 00:07:02.400
+A room loses heat by how far it is above the outside.
+
+00:07:02.400 --> 00:07:05.600
+Sun through the windows is a second heater.
+
+00:07:05.600 --> 00:07:08.000
+Wind and damp change the loss.
+
+00:07:08.000 --> 00:07:10.400
+Humidity does not enter the equations.
+
+00:07:10.400 --> 00:07:14.800
+It matters to comfort, and to the cost of any cooling.
+
+00:07:14.800 --> 00:07:20.400
+Light and wind would come from a weather feed, which nothing here asks today.
+
+00:07:23.000 --> 00:07:25.800
+How to get a thermometer, soonest first.
+
+00:07:25.800 --> 00:07:31.800
+Ask saskatchewan's two Geiger counters, which have a temperature command that radbeeper does not send.
+
+00:07:31.800 --> 00:07:35.000
+Wire a sensor board to the T-Echo here:
+
+00:07:35.000 --> 00:07:37.400
+a few dollars and four wires.
+
+00:07:37.400 --> 00:07:41.400
+Use the mesh as a mesh, which was not tried.
+
+00:07:41.400 --> 00:07:42.600
+Or USB probes.
+
+00:07:42.600 --> 00:07:46.600
+Prices were not checked, except where a source is cited.
+
+00:07:49.200 --> 00:07:53.600
+Where to put them, for two rooms mixed by a fan.
+
+00:07:53.600 --> 00:07:58.000
+One in each room, at sitting height, away from the machines.
+
+00:07:58.000 --> 00:07:60.000
+One outside, in the shade.
+
+00:07:60.000 --> 00:08:02.400
+The fleet's intake and its exhaust.
+
+00:08:02.400 --> 00:08:04.000
+One at the fan.
+
+00:08:04.000 --> 00:08:05.600
+Six probes cover it.
+
+00:08:05.600 --> 00:08:14.400
+A reader writes each reading into one folder, and the collector, the page and Orrery take it up with no other change.
+
+00:08:17.000 --> 00:08:19.800
+The fleet is its own step generator.
+
+00:08:19.800 --> 00:08:25.000
+The queue can drop a kilowatt in a minute and put it back.
+
+00:08:25.000 --> 00:08:35.000
+On a still night with the heating off, a Pause of every lane is a step of about one point two kilowatts into the house.
+
+00:08:35.000 --> 00:08:39.400
+The rooms' fall over the next hours is the house's tau.
+
+00:08:39.400 --> 00:08:44.600
+This is the CPU step test again, with a house for the part.
+
+00:08:44.600 --> 00:08:46.600
+It has not been run.
+
+00:08:49.200 --> 00:08:55.200
+With those numbers known, which machines work is a choice of where the heat goes.
+
+00:08:55.200 --> 00:08:57.600
+The queue already has the dials:
+
+00:08:57.600 --> 00:09:00.400
+Pause a machine, set a lane's CPUs.
+
+00:09:00.400 --> 00:09:05.200
+A controller would hold each room at its mark by choosing them.
+
+00:09:05.200 --> 00:09:06.800
+No controller is built.
+
+00:09:06.800 --> 00:09:10.800
+None can be, before a thermometer stands in each room.
+
+00:09:13.400 --> 00:09:16.200
+What was done, and what was not.
+
+00:09:16.200 --> 00:09:20.200
+Each CPU's time constant, from a step the queue made.
+
+00:09:20.200 --> 00:09:23.800
+One step each, good to a factor of two.
+
+00:09:23.800 --> 00:09:27.400
+Each disk's and board's lag behind its machine's watts.
+
+00:09:27.400 --> 00:09:30.600
+One page and four panels, checked as pictures.
+
+00:09:30.600 --> 00:09:32.600
+No room temperature was read.
+
+00:09:32.600 --> 00:09:35.800
+Every statement about the house is a model.
+
+00:09:35.800 --> 00:09:40.600
+The three radios gave no thermometer, and nothing was written to them.
+
+00:09:40.600 --> 00:09:45.000
+Two of them were not identified, and no probe was bought.
+
+00:09:45.000 --> 00:09:47.800
+No controller, dial or throttle is built.
+
+00:09:50.400 --> 00:09:53.200
+The machines are read every five seconds.
+
+00:09:53.200 --> 00:09:56.400
+The house's air is read by nothing today.
+
+00:09:56.400 --> 00:10:00.400
+What was built is the machines' side of the balance.
+
+00:10:00.400 --> 00:10:05.600
+The house's side is a model, and a list of what to buy.
+
+00:10:05.600 --> 00:10:11.600
+No controller is built, and none can be before a thermometer stands in each room.
