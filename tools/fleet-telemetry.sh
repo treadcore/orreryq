@@ -14,6 +14,7 @@
 #
 # A SAMPLE IS ONE LINE of key=value in ~/.fleet-queue/telemetry/YYYYMMDD.log (UTC days, 14 kept):
 #   t        seconds since 1970
+#   up       seconds since the boot: a machine switched on is a step of its own
 #   busy     the CPUs' use since the last sample, 0 to 1 (/proc/stat)
 #   load     the one-minute load average
 #   mhz      the cores' mean clock now: a CPU holding itself back for heat shows here first
@@ -40,12 +41,18 @@ scan() {
         [ -r "$h/name" ] || continue
         read -r name < "$h/name"
         n=${h##*hwmon}
+        # A CPU with a package sensor is told by it; an older one (a Xeon 5600) has only its cores', and
+        # those are then kept.
+        pkg=
+        for l in "$h"/temp*_label; do
+            [ -r "$l" ] && read -r lab < "$l" && case "$lab" in Package*|Tctl*) pkg=1 ;; esac
+        done
         for f in "$h"/temp*_input "$h"/fan*_input "$h"/pwm[0-9] "$h"/power*_input; do
             [ -r "$f" ] || continue
             b=${f##*/}; b=${b%_input}
             lab=$b
             if [ -r "$h/${b}_label" ]; then read -r lab < "$h/${b}_label"; fi
-            case "$lab" in Core\ *) continue ;; esac
+            case "$lab" in Core\ *) [ -n "$pkg" ] && continue ;; esac
             lab=$(echo "$lab" | tr -c 'A-Za-z0-9\n' '_')
             LIST="$LIST ${name}_$n.$lab:$f"
         done
@@ -71,7 +78,8 @@ sample() {
     fi
     PTOT=$tot; PIDLE=$idle
     read -r load _rest < /proc/loadavg
-    line="t=$now${busy:+ busy=$busy} load=$load"
+    read -r up _rest < /proc/uptime
+    line="t=$now up=${up%.*}${busy:+ busy=$busy} load=$load"
     sum=0; k=0
     for f in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_cur_freq; do
         [ -r "$f" ] && read -r v < "$f" 2>/dev/null && sum=$((sum + v)) && k=$((k + 1))

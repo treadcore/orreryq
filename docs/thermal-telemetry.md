@@ -77,6 +77,29 @@ None of this can be set from Linux on these boards; each is a visit to the machi
 | columbia (MINIX Z300-0dB) | none | it has no fan and no fan header: the case is the heatsink. It settles near 45 at full work; air across it is all there is to add |
 | bosporus, jaguaribe (Supermicro) | the board's controller (IPMI), Fan Mode | Full, or Heavy IO. From Linux, after the root round: `ipmitool raw 0x30 0x45 0x01 0x01` sets Full on most Supermicro boards; check the reading before trusting it |
 
+## The energy balance, and the Heat page
+
+`tools/telemetry.py QUEUE model` (`tools/thermal.py`, run after every pull) writes `QUEUE/plan/thermal.json`; Orrery's Queue tab has a page for it, **Heat**.
+
+- **What goes in comes out.** A machine's watts at the wall are its heat into the room: `tools/plans/power.json`'s model at the CPUs' use measured, the card's watts measured. At 11:00 on 15 November seven machines made about 1,240 W (4,200 BTU/h); carrying that off at a ten-degree rise takes about 370 m3/h of air.
+- **A part is R and C.** A step's watts and where the part settled give R = degrees moved / watts moved; C = tau / R. T_zero = T_settled - R x P is the air the part sits in, inside its case.
+- **The fin.** Where a step needs two exponentials, the fast one is the silicon to its cooler and the slow one the cooler to the air; T_fin = T_die - R_fast x P. No CPU has given a two-part step yet.
+- **The room.** C_room dT/dt = the fleet's watts - (T_room - T_out) / R_room. Nothing in the fleet reads T_room. The page shows the coldest reading any machine gives (30 that morning, a board thermometer on boburner) as what the room is no warmer than. The controller Paul names as the end, one that holds the room by setting the fleet's watts, needs a thermometer in the room before it can be more than this bound. Radbeeper's counters (GMC-320) are logged for radiation only; the GMC-320 line has a temperature command (`GETTEMP`) that radbeeper does not ask, and whether these two units answer it is not tested.
+
+The first parts, from the queue's own Pause on 15 November (each held more than three tau):
+
+| Part | Step | tau | R, C/W | C, J/C | Air at the part |
+|---|---|---|---|---|---|
+| calber's card | 21 to 141 W | 78 s | 0.08 | 960 | 54 |
+| whitewolf's card | 13 to 91 W | 90 s | 0.19 | 490 | 50 |
+| whitewolf's card, cooling | 95 to 14 W | 154 s | | | |
+| boburner's card | 11 to 98 W | 58 s | 0.28 | 210 | 54 |
+| boburner's card, cooling | 77 to 13 W | 82 s | | | |
+
+A card cools more slowly than it heats on both machines where both were measured: its fan slows as it cools. Boburner's card has the least metal and the worst path to air of the three, and sits in 54-degree air: it settles at 82 at 98 W, three under the keeper's limit.
+
+Columbia's CPU fell from 44 to 33 inside one 5-second sample when its job ended: the passive case, not the silicon, is its slow part (its NVMe, 3 degrees over a quarter hour). Bosporus's memory, switched on from cold and idle, climbs with a tau near a quarter hour; that hold was 1.4 tau, so its end is a projection. No CPU has had a held step under load yet: the CPU lanes have not been paused long enough, and the two servers' CPU channels began after they were already working.
+
 ## What is not built
 
 - The dial in Orrery (a history and sliders that set a machine's target and throttle its part in the queue). The data it needs is what this collects; Paul: "There is not a single number, this will take some thinking and analysis of logs."

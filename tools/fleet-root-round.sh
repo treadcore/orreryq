@@ -23,6 +23,9 @@ set -u
 T=$(cd "$(dirname "$0")" && pwd)
 DRY=0
 [ "${1:-}" = "--dry" ] && { DRY=1; shift; }
+# NOT UNDER sudo HERE: root on this Mac has no key to the machines, and every one "does not answer"
+# (Paul, 15 November). The password asked for is each machine's own, by the machine.
+[ "$(id -u)" != 0 ] || { echo "run it as yourself, without sudo: the password it needs is each machine's, asked for by the machine" >&2; exit 2; }
 [ $# -gt 0 ] || { sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 FILES="fleet-poweroff-setup.sh fleet-auto-update.sh fleet-update.sh fleet-firmware.sh fleet-microcode.sh fleet-sensors.sh"
 SSH="ssh -o ConnectTimeout=8"

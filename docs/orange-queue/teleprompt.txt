@@ -1,0 +1,82 @@
+The Orange Queue: the narration, at 150 words a minute (8:40)
+
+[0:00] THREE CARDS, BUSY WITH NOTHING
+At a quarter to two in the morning, three graphics cards read one hundred percent busy. They had read that the whole evening. And since eighteen twenty-one, seven and a half hours before, not one of them had finished a single segment of work.
+
+[0:20] 123 CLOSES, 276 JOBS PUT BACK
+Here is why. Each hour, the jobs the fleet finished. From eighteen forty-two the Mac closed its own connections to the fleet, a hundred and twenty-three times. Every job on a closed connection went back on the queue and was started again, two hundred and seventy-six times. The first copy was never stopped. The fleet went from seventy-nine jobs an hour to twenty-four.
+
+[0:48] THE TIMELINE OF THAT DAY
+This is the fleet's Timeline for that day. Blue and green are work. The orange-red wall is jobs that failed or were sent back. It begins at eighteen forty, on every row at once. What closed the connections is not found. This film is about the fault that turned a nuisance into seven lost hours, and what was built after.
+
+[1:14] TITLE
+The Orange Queue. One night on the fleet, the fourteenth of November, told from the keeper's own events.
+
+[1:24] THE WHOLE, IN ONE PICTURE
+Begin from far away. There are three territories. The Mac is the fleet's coordinator: one process, the keeper, owns the queue, and holds one connection to each machine. Below it, the machines. They run the jobs on their cores, and each job's ending travels back up the same connection. Beside them, three graphics cards, an island of nets on each. A segment of an island's work rides that connection too, and ends the same way. Everything that follows hangs on that connection.
+
+[1:59] THE BORDER, AND WHAT CROSSES IT
+Between the Mac and the rest there is one border, and one way over it. Going out, a job is one ssh command, open until the job ends. Coming back, the job's exit code. Or, when the connection itself fails, two fifty-five. And a card's segment needs thirty-one to forty-five minutes on one connection. That night, no connection lasted seven.
+
+[2:26] AN ORDINARY DAY
+First, an ordinary day. Five arrows: how a job runs, and what it rides.
+
+[2:34] 1. THE QUEUE TO A LANE
+Start on the Mac. One process, the keeper, owns the queue. Each machine has a lane or two. A lane takes a job from the queue, runs it on its machine, and files it as done or as failed.
+
+[2:52] 2. A LANE TO THE SHARED CONNECTION
+A job runs as one ssh command, open until the job ends. Since the fourth of November every command to a machine rides one connection, held by a small process on the Mac: the master.
+
+[3:09] 3. THE SHARED CONNECTION TO A CENSUS JOB
+Over that connection the command reaches the machine, and the job starts in a process group of its own. When it ends, its exit code comes back as ssh's. On an ordinary day seventy-nine jobs an hour finish this way.
+
+[3:27] 4. THE SHARED CONNECTION TO A SEGMENT
+A card's work is a segment: a hundred generations of two thousand and forty-eight nets, on one card. It needs thirty-one to forty-five minutes, and all of it on one connection.
+
+[3:42] 5. A SEGMENT TO ISLAND.STATE
+A segment loads the island's saved state when it starts, and writes it back when it ends. It also imports the champions of the other two islands. Remember that file.
+
+[3:57] THE NIGHT
+Now the night. Seven arrows. The fault is in the third.
+
+[4:04] 6. THE HOUSEKEEPING TO THE SHARED CONNECTION
+At eighteen forty-two the Mac begins closing its own masters: a hundred and twenty-three times by one thirty-six. The closes keep time with the five-minute housekeeping, two minutes after it begins. The obvious mechanism was tested, and is not it. The cause is not established.
+
+[4:25] 7. THE SHARED CONNECTION TO A LANE
+When a master closes, every job on that machine ends at once, each with ssh's own failure: two fifty-five. The keeper reads that as the connection's fault, and not the job's.
+
+[4:40] 8. A LANE TO THE QUEUE
+So the lane puts the job back on the queue, three times at most, and starts it again. Two hundred and seventy-six times that night. And here is the fault. It did not stop the copy already running on the machine.
+
+[4:59] 9. A CENSUS JOB TO LEFT BEHIND
+A closed connection does not stop the job. Each drop left one more copy running. By one fifty-five columbia ran fifteen census jobs on eight cores, fourteen of them left behind. Its load was a hundred and twelve.
+
+[5:16] 10. A SEGMENT TO COPIES ON THE CARD
+On the cards it was the same. By one fifty-five boburner's one card ran six crucible processes at once, and only one was a segment the keeper was waiting for. The cards read a hundred percent busy, on work already written off.
+
+[5:36] 11. COPIES ON THE CARD TO ISLAND.STATE
+Every copy writes the island's state when it ends. A copy that began from an older state can write over a newer one, and the island goes backwards. Whether that happened was not measured.
+
+[5:52] 12. THE PLANNER TO A LANE
+One failed segment fails the five or six queued behind it. Then the card's lane stood idle about thirty-one minutes, until the planner asked a fresh chain, and lost that one to the next drop. On three cards, in seven and a half hours, not one segment was done.
+
+[6:14] WHAT WAS BUILT
+And what was built after, that night and the next morning. Four arrows.
+
+[6:22] 13. A LANE TO A CENSUS JOB
+The first change. On two fifty-five, the lane stops the copy on the machine before the job goes back. A machine that cannot be told is written down, and its copy is stopped when it answers. The check closes a real connection under a real job. Two writers before. One after.
+
+[6:45] 14. A SEGMENT TO SEGMENT.LOCK
+The second change. A segment holds its island's lock for its whole life. A newcomer that finds the lock held is the one the keeper is waiting for. It stops the holder, and takes the lock. One island, one writer.
+
+[7:04] 15. THE SENSORS TO THE HEAT READING
+The third. Nothing read a temperature before this. Now, each two minutes, the keeper reads every machine's sensors and its card, over a connection of its own, and never the one the jobs ride.
+
+[7:20] 16. THE HEAT READING TO A LANE
+A machine at its limit finishes the job in hand and takes nothing new, until it reads eight degrees under. And after any drop, every lane of that machine rests sixty seconds, and the machine is read at once. No real machine has yet reached a limit.
+
+[7:41] PROVED, AND NOT PROVED
+What is proved, and what is not. A real connection was closed under a real job: two writers before the change, one after. The lock was proved on calber, with sleep standing for a segment. The heat hold was proved against a file standing for a sensor. Not proved: no real machine has reached a limit, and no segment carrying the lock had run on a real island. The islands' states were not read for damage. And the cause of the closes is as open as it was.
+
+[8:19] THE CLOSE, AND THE CREDITS
+A job put back is stopped where it ran, first. One island, one writer. A drop is followed by a rest and a reading. These make a close cost minutes. They do not stop the closes. What closed the connections that night is still not found.

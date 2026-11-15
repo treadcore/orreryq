@@ -373,6 +373,8 @@ pub struct Model {
     pub nets: Option<json::Value>,
     /// tools/growth.py's document: crucible's samples a segment, the sizes, the purge's list (growth.rs).
     pub growth: Option<json::Value>,
+    /// tools/thermal.py's document: the fleet's heat, each machine's temperatures and fitted parts (heat.rs).
+    pub thermal: Option<json::Value>,
     /// boots.py's record (QUEUE/plan/boots.json): the last cut and each machine's boot (boots.rs).
     pub boots: Option<json::Value>,
     /// tools/recordings.py's list, with the last seed read (recordings.rs).
@@ -658,6 +660,7 @@ impl Model {
         m.gauntlet = v.get("gauntlet").cloned();
         m.nets = v.get("nets").cloned();
         m.growth = v.get("growth").cloned();
+        m.thermal = v.get("thermal").cloned().filter(|b| !matches!(b, json::Value::Null));
         m.boots = v.get("boots").cloned().filter(|b| !matches!(b, json::Value::Null));
         m.recordings = v.get("recordings").cloned();
         m.montage = v.get("montage").cloned();
@@ -765,14 +768,15 @@ fn bar(ui: &mut Ui, r: Rect, frac: f64, c: Rgb) {
 /// The pages of each chapter this file draws: the Queue's (Fleet, Runs),
 /// the Results' (Candidates, Found, Net, Flags) and the Settings' (Keeper,
 /// Commits), by page number.
-const QUEUE_PAGES: [usize; 2] = [0, 1];
+const QUEUE_PAGES: [usize; 3] = [0, 1, 20];
 const RESULTS_PAGES: [usize; 13] = [5, 2, 3, 13, 14, 18, 15, 16, 17, 8, 10, 12, 4];
 const SETTINGS_PAGES: [usize; 5] = [6, 19, 9, 11, 7];
 
 /// (page number, name, what it shows). Candidates came after the rest and
 /// keeps the number 5, so ORRERY_FRAME_PAGE and a saved page mean what they
 /// meant. Personas (10), Ranges (11) and Gauntlet (12) came on 2 November.
-const PAGES: [(usize, &str, &str); 20] = [
+const PAGES: [(usize, &str, &str); 21] = [
+    (20, "Heat", "the fleet's heat as an energy balance: each machine's watts and temperatures against its limits, six hours of them, and what the steps the queue made say of each part: its time constant, degrees a watt, joules a degree"),
     (19, "After a cut", "after a power cut: when the fleet went quiet and came back, each machine's boot against the one before, the islands' saves, the jobs it cut"),
     (18, "Generations", "the lab report Outgrowing Yourself, live, a tab a figure: the roads to main, the days, every generation's turnaround, what a generation claims and keeps, the GPU's ladder and its elections on the CUDA gauntlet, the hours and what they bought"),
     (15, "Recordings", "the behaviour-cloning recordings: each run's size on its store, its recipe, who reads it; keep, drop, re-record, and a seed read a tank at a time"),
@@ -937,6 +941,7 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State, view: nav::View) -> Option<n
             10 => draw_personas(ui, page, m),
             11 => draw_ranges(ui, page, m, st),
             12 => draw_gauntlet(ui, page, m),
+            20 => crate::heat::draw(ui, page, m.thermal.as_ref()),
             13 => {
                 let operator = st.operator;
                 crate::nets::draw(ui, page, m.nets.as_ref(), &mut st.nets, operator, &mut st.ctl)

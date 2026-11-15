@@ -1,0 +1,219 @@
+{
+ "title": "The Orange Queue",
+ "subtitle": "seven hours of dropped connections, and the jobs left running behind",
+ "byline": "treadcore and the Orrery fleet  ·  14 to 15 November 2026",
+ "slug": "orange-queue",
+ "report": "orange-queue-lab-report",
+ "drawn_by": "tools/report/orange-queue_film.py",
+ "youtube_title": "The Orange Queue: seven hours of dropped connections",
+ "blurb": "One night on a small fleet, 14 to 15 November 2026, as one block diagram walked arrow by arrow. The Mac closed its shared ssh connection to each machine 123 times; every job on a closed connection went back on the queue, 276 times, and its first copy ran on: fifteen censuses on eight cores, six processes on one graphics card, and not one GPU segment finished in seven and a half hours. Then what was built after: a job put back is stopped where it ran, one segment an island, and a temperature reading with a rest after a drop. What closed the connections was not found, and the film says so. The narration scrolls in the corner at 150 words a minute.",
+ "closing": ["A job put back is stopped where it ran, first.", "What closed the connections is still not found."],
+ "credits": [
+  "Orrery  ·  treadcore.org",
+  "Paul Richeson: producer, animator, writer, coder, implementer, developer, founder",
+  "Team pair: Claude Code (Claude Fable 5.2)",
+  "MIT License  ·  Copyright (c) 2026 Paul Richeson"
+ ],
+ "wpm": 150,
+ "chapter_names": {
+  "hook1": "Three cards, busy with nothing",
+  "hook2": "123 closes, 276 jobs put back",
+  "hook3": "The Timeline of that day",
+  "whole": "The whole, in one picture",
+  "borders": "The border, and what crosses it",
+  "pattern": "Proved, and not proved",
+  "end": "The close, and the credits"
+ },
+ "regions": {
+  "mac": {"x": 40, "y": 110, "w": 1840, "h": 280, "col": "#83c167", "name": "THE MAC", "sub": "the keeper, its queue, its lanes, and one connection to each machine", "cue": null},
+  "gpu": {"x": 40, "y": 425, "w": 880, "h": 335, "col": "#58c4dd", "name": "THE CARDS", "sub": "three GPUs, an island of nets on each", "cue": 2},
+  "cpu": {"x": 1000, "y": 425, "w": 880, "h": 335, "col": "#ff8c5a", "name": "THE MACHINES", "sub": "they run the jobs on their cores", "cue": 0}
+ },
+ "nodes": {
+  "queue": {"region": "mac", "x": 90, "y": 172, "w": 280, "h": 90, "title": "the queue", "sub": "jobs waiting, done and failed"},
+  "lane": {"region": "mac", "x": 470, "y": 172, "w": 280, "h": 90, "title": "a lane", "sub": "a thread in the keeper, a machine's"},
+  "conn": {"region": "mac", "x": 850, "y": 172, "w": 280, "h": 90, "title": "the shared connection", "sub": "one a machine, held by a master"},
+  "house": {"region": "mac", "x": 1230, "y": 172, "w": 280, "h": 90, "title": "the housekeeping", "sub": "each five minutes, every machine"},
+  "planner": {"region": "mac", "x": 90, "y": 286, "w": 280, "h": 90, "title": "the planner", "sub": "asks the next chain of segments"},
+  "heat": {"region": "mac", "x": 1230, "y": 286, "w": 280, "h": 90, "title": "the heat reading", "sub": "take_heat, each two minutes"},
+  "job": {"region": "cpu", "x": 1050, "y": 495, "w": 270, "h": 90, "title": "a census job", "sub": "asks nproc, a game a core"},
+  "left": {"region": "cpu", "x": 1050, "y": 645, "w": 270, "h": 90, "title": "left behind", "sub": "copies nobody is waiting for"},
+  "sensor": {"region": "cpu", "x": 1560, "y": 495, "w": 270, "h": 90, "title": "the sensors", "sub": "hwmon, and the card's own"},
+  "segment": {"region": "gpu", "x": 80, "y": 495, "w": 260, "h": 90, "title": "a segment", "sub": "100 generations, 31 to 45 min"},
+  "gleft": {"region": "gpu", "x": 620, "y": 495, "w": 260, "h": 90, "title": "copies on the card", "sub": "segments already written off"},
+  "state": {"region": "gpu", "x": 620, "y": 645, "w": 260, "h": 90, "title": "island.state", "sub": "the island's population"},
+  "lock": {"region": "gpu", "x": 80, "y": 645, "w": 260, "h": 90, "title": "segment.lock", "sub": "one holder an island"}
+ },
+ "acts": {
+  "day": {"name": "AN ORDINARY DAY", "sub": "how a job runs, and what it rides", "col": "#83c167"},
+  "night": {"name": "THE NIGHT", "sub": "18:42 on 14 November to 01:36 on 15 November", "col": "#fc6255"},
+  "built": {"name": "WHAT WAS BUILT", "sub": "the same night, and the next morning", "col": "#f7d96f"}
+ },
+ "whole": {
+  "head": "THE WHOLE, IN ONE PICTURE",
+  "arrows": [
+   {"a": [1290, 346], "b": [1290, 486], "col": "#83c167", "words": "a job, as one ssh command", "off": -26, "cue": 0, "lag": 2.0},
+   {"a": [1440, 486], "b": [1440, 346], "col": "#ff8c5a", "words": "its exit code", "off": 26, "cue": 1, "lag": 0},
+   {"a": [370, 346], "b": [370, 486], "col": "#83c167", "words": "a segment", "off": -26, "cue": 2, "lag": 2.0},
+   {"a": [520, 486], "b": [520, 346], "col": "#58c4dd", "words": "its exit code", "off": 26, "cue": 3, "lag": 0}
+  ]
+ },
+ "borders": {
+  "head": "THE BORDER, AND WHAT CROSSES IT",
+  "rows": [
+   {"col": "#83c167", "name": "the Mac to a machine", "need": "one ssh command, open until the job ends", "pts": [[1000, 401], [1880, 401]]},
+   {"col": "#ff8c5a", "name": "a machine to the Mac", "need": "the exit code; 255 when the connection itself fails", "pts": [[1000, 413], [1880, 413]]},
+   {"col": "#58c4dd", "name": "the Mac to a card", "need": "31 to 45 minutes on one connection; none lasted seven", "pts": [[40, 407], [920, 407]]}
+  ]
+ },
+ "hook": {
+  "at": "01:43, 15 NOVEMBER 2026",
+  "cards": [["boburner", 5], ["whitewolf", 3], ["calber", 3]],
+  "since": "18:21",
+  "hours": ["15", "16", "17", "18", "19", "20", "21", "22", "23", "00", "01"],
+  "done": [86, 95, 85, 62, 34, 18, 20, 23, 24, 24, 17],
+  "back": [0, 0, 0, 14, 33, 52, 40, 34, 43, 25, 35],
+  "closes": 123,
+  "put_back": 276,
+  "rate_before": 79,
+  "rate_after": 24,
+  "first_drop": "18:42",
+  "picture": "pipe-timeline-day.png",
+  "wall": [838, 138, 220, 540]
+ },
+ "pattern": [
+  {"name": "proved", "sub": "tools/leftover-check.sh closes a real connection under a real job: 2 writers before the change, 1 after."},
+  {"name": "proved", "sub": "The island lock, on calber, with sleep standing for crucible: the newcomer stops the holder and runs."},
+  {"name": "proved", "sub": "tools/heat-check.sh: the hold and the rest, against a file standing for a sensor."},
+  {"name": "not proved", "sub": "No real machine has reached a limit. No segment carrying the lock had run on a real island when the report was written."},
+  {"name": "not proved", "sub": "The islands' states were not read for damage."},
+  {"name": "not found", "sub": "The cause of the closes. The changes make a close cost minutes; they do not stop the closes."}
+ ],
+ "narration": {
+  "hook1": "At a quarter to two in the morning, three graphics cards read one hundred percent busy. | They had read that the whole evening. | And since eighteen twenty-one, seven and a half hours before, not one of them had finished a single segment of work.",
+  "hook2": "Here is why. Each hour, the jobs the fleet finished. | From eighteen forty-two the Mac closed its own connections to the fleet, a hundred and twenty-three times. | Every job on a closed connection went back on the queue and was started again, two hundred and seventy-six times. | The first copy was never stopped. | The fleet went from seventy-nine jobs an hour to twenty-four.",
+  "hook3": "This is the fleet's Timeline for that day. Blue and green are work. | The orange-red wall is jobs that failed or were sent back. It begins at eighteen forty, on every row at once. | What closed the connections is not found. | This film is about the fault that turned a nuisance into seven lost hours, and what was built after.",
+  "title": "The Orange Queue. One night on the fleet, the fourteenth of November, told from the keeper's own events.",
+  "whole": "Begin from far away. There are three territories. The Mac is the fleet's coordinator: one process, the keeper, owns the queue, and holds one connection to each machine. | Below it, the machines. They run the jobs on their cores, | and each job's ending travels back up the same connection. | Beside them, three graphics cards, an island of nets on each. A segment of an island's work rides that connection too, | and ends the same way. Everything that follows hangs on that connection.",
+  "borders": "Between the Mac and the rest there is one border, and one way over it. | Going out, a job is one ssh command, open until the job ends. | Coming back, the job's exit code. Or, when the connection itself fails, two fifty-five. | And a card's segment needs thirty-one to forty-five minutes on one connection. That night, no connection lasted seven.",
+  "act:day": "First, an ordinary day. Five arrows: how a job runs, and what it rides.",
+  "act:night": "Now the night. Seven arrows. The fault is in the third.",
+  "act:built": "And what was built after, that night and the next morning. Four arrows.",
+  "pattern": "What is proved, and what is not. | A real connection was closed under a real job: two writers before the change, one after. | The lock was proved on calber, with sleep standing for a segment. | The heat hold was proved against a file standing for a sensor. | Not proved: no real machine has reached a limit, and no segment carrying the lock had run on a real island. | The islands' states were not read for damage. | And the cause of the closes is as open as it was.",
+  "end": "A job put back is stopped where it ran, first. One island, one writer. A drop is followed by a rest and a reading. These make a close cost minutes. They do not stop the closes. What closed the connections that night is still not found."
+ },
+ "steps": [
+  {
+   "id": "d1", "act": "day", "a": "queue", "b": "lane", "moves": "a job",
+   "say": "Start on the Mac. One process, the keeper, owns the queue. Each machine has a lane or two. A lane takes a job from the queue, runs it on its machine, and files it as done or as failed.",
+   "what": "One job, taken from queue/ by the lane of a machine that can run it.",
+   "why": "A lane is a thread in the keeper. It runs one job at a time on its machine and files it under done/ or failed/."
+  },
+  {
+   "id": "d2", "act": "day", "a": "lane", "b": "conn", "moves": "one ssh command",
+   "say": "A job runs as one ssh command, open until the job ends. Since the fourth of November every command to a machine rides one connection, held by a small process on the Mac: the master.",
+   "what": "The job, as one ssh command from the Mac that stays open until the job ends.",
+   "why": "Three machines turned away bursts of separate connections. So every ssh to a machine is a channel inside one.",
+   "rule": "ControlMaster auto, ControlPersist 10m. When a master closes, every job on that machine ends at once."
+  },
+  {
+   "id": "d3", "act": "day", "a": "conn", "b": "job", "moves": "the command",
+   "say": "Over that connection the command reaches the machine, and the job starts in a process group of its own. When it ends, its exit code comes back as ssh's. On an ordinary day seventy-nine jobs an hour finish this way.",
+   "what": "The command. The job starts under set -m in its own process group, its pid in ~/.fleet-queue/ID.pid.",
+   "why": "The pid file is there so the keeper can stop the whole group: on a timeout, on Stop and on Remove.",
+   "border": "The Mac to a machine. The job's exit code comes back as ssh's. 635 jobs in the eight hours before 18:42."
+  },
+  {
+   "id": "d4", "act": "day", "a": "conn", "b": "segment", "moves": "a segment's command",
+   "say": "A card's work is a segment: a hundred generations of two thousand and forty-eight nets, on one card. It needs thirty-one to forty-five minutes, and all of it on one connection.",
+   "what": "A GPU island segment: 100 generations of 2,048 nets, 256 episodes each, on one card.",
+   "why": "A segment waits on the segment before it, so segments are asked for in chains of five or six.",
+   "border": "The Mac to a card. 31 to 45 minutes on one connection."
+  },
+  {
+   "id": "d5", "act": "day", "a": "segment", "b": "state", "moves": "the population",
+   "say": "A segment loads the island's saved state when it starts, and writes it back when it ends. It also imports the champions of the other two islands. Remember that file.",
+   "what": "The island's population: loaded from island.state at the start, written back at the end.",
+   "why": "Each segment also imports the other two islands' champions."
+  },
+  {
+   "id": "n1", "act": "night", "a": "house", "b": "conn", "moves": "a login to every machine",
+   "say": "At eighteen forty-two the Mac begins closing its own masters: a hundred and twenty-three times by one thirty-six. The closes keep time with the five-minute housekeeping, two minutes after it begins. The obvious mechanism was tested, and is not it. The cause is not established.",
+   "what": "The power sample and growth, begun each five minutes, each open an ssh to every machine.",
+   "why": "Of 276 put-backs, 83 fall 110 to 125 seconds after a sample's start. Spread evenly, 14 would.",
+   "rule": "Tested: killing a timed-out client does not close a master. THE CAUSE IS NOT ESTABLISHED."
+  },
+  {
+   "id": "n2", "act": "night", "a": "conn", "b": "lane", "moves": "255",
+   "say": "When a master closes, every job on that machine ends at once, each with ssh's own failure: two fifty-five. The keeper reads that as the connection's fault, and not the job's.",
+   "what": "ssh's own exit code, 255, for every job that rode the closed connection, in the same second.",
+   "why": "calber and calber-cuda, saskatchewan and saskatchewan-2 go together every time. That is the master closing.",
+   "rule": "The machines' own logs say who closed it: Connection closed by 192.168.8.143, the Mac."
+  },
+  {
+   "id": "n3", "act": "night", "a": "lane", "b": "queue", "moves": "the job, put back",
+   "say": "So the lane puts the job back on the queue, three times at most, and starts it again. Two hundred and seventy-six times that night. And here is the fault. It did not stop the copy already running on the machine.",
+   "what": "The job, back in queue/, to be started again. 276 times from 18:42 to 01:36.",
+   "why": "255 is read as \"ssh failed, not the job's fault\". The fourth time, the job is filed as failed.",
+   "rule": "THE FAULT: stop_remote was called on a timeout, on Stop and on Remove. Not on 255."
+  },
+  {
+   "id": "n4", "act": "night", "a": "job", "b": "left", "moves": "a copy nobody waits for",
+   "say": "A closed connection does not stop the job. Each drop left one more copy running. By one fifty-five columbia ran fifteen census jobs on eight cores, fourteen of them left behind. Its load was a hundred and twelve.",
+   "what": "The first copy of a job put back: still running, its result overwritten or ignored.",
+   "why": "A census job starts a game a core. Fifteen of them is fifteen times the cores: columbia's load was 112 of 8.",
+   "rule": "At 01:55: 14 left behind on columbia, 6 on calber, 2 on whitewolf. 22 census jobs."
+  },
+  {
+   "id": "n5", "act": "night", "a": "segment", "b": "gleft", "moves": "a copy of a segment",
+   "say": "On the cards it was the same. By one fifty-five boburner's one card ran six crucible processes at once, and only one was a segment the keeper was waiting for. The cards read a hundred percent busy, on work already written off.",
+   "what": "A segment put back or filed as failed, its process still on the card.",
+   "why": "Five on one card each run at a fifth of the speed: a 31-minute segment needs two and a half hours.",
+   "rule": "At 01:55: 11 leftover crucible processes. Five on boburner, three each on whitewolf and calber."
+  },
+  {
+   "id": "n6", "act": "night", "a": "gleft", "b": "state", "moves": "an older population",
+   "say": "Every copy writes the island's state when it ends. A copy that began from an older state can write over a newer one, and the island goes backwards. Whether that happened was not measured.",
+   "what": "The population a leftover copy began from, written over island.state when the copy ends.",
+   "why": "boburner's file was written at 01:42, and five processes begun from older states were still to write it.",
+   "rule": "NOT MEASURED. The islands' states were not read for damage."
+  },
+  {
+   "id": "n7", "act": "night", "a": "planner", "b": "lane", "moves": "a fresh chain",
+   "say": "One failed segment fails the five or six queued behind it. Then the card's lane stood idle about thirty-one minutes, until the planner asked a fresh chain, and lost that one to the next drop. On three cards, in seven and a half hours, not one segment was done.",
+   "what": "A new chain of segments, about 31 minutes after the last chain failed.",
+   "why": "Eight rounds on calber-cuda, seven on whitewolf-cuda, six on boburner-cuda. No GPU segment finished after 18:21.",
+   "rule": "This is what the cards waited on: half an hour for the planner, then a segment the next drop took."
+  },
+  {
+   "id": "b1", "act": "built", "a": "lane", "b": "job", "moves": "stop the copy",
+   "say": "The first change. On two fifty-five, the lane stops the copy on the machine before the job goes back. A machine that cannot be told is written down, and its copy is stopped when it answers. The check closes a real connection under a real job. Two writers before. One after.",
+   "what": "stop_remote, on 255, before the job goes back on the queue. The log says: its copy is stopped.",
+   "why": "A drop then costs the minutes a job had run, and not a machine's whole evening.",
+   "rule": "Where the machine cannot be told: leftover/LANE--ID, stopped by the lane before it takes anything.",
+   "border": "The Mac to a machine. tools/leftover-check.sh: 2 writers with the keeper as it was, 1 with the change."
+  },
+  {
+   "id": "b2", "act": "built", "a": "segment", "b": "lock", "moves": "the island's lock",
+   "say": "The second change. A segment holds its island's lock for its whole life. A newcomer that finds the lock held is the one the keeper is waiting for. It stops the holder, and takes the lock. One island, one writer.",
+   "what": "segment.lock in the island's home, held by flock for the segment's life; its group in segment.pgid.",
+   "why": "Two copies writing one population is wrong, whatever caused the second.",
+   "rule": "The newcomer stops the holder's group. If it cannot take the lock in two minutes it stands down, exit 75."
+  },
+  {
+   "id": "b3", "act": "built", "a": "sensor", "b": "heat", "moves": "a temperature",
+   "say": "The third. Nothing read a temperature before this. Now, each two minutes, the keeper reads every machine's sensors and its card, over a connection of its own, and never the one the jobs ride.",
+   "what": "Each hwmon sensor with the limit it gives itself, and the card's temperature from nvidia-smi.",
+   "why": "A night of fifteen censuses on eight cores and six processes on one card was a night of heat nobody saw.",
+   "border": "A machine to the Mac, on a connection of its own: ControlMaster=no. It is wanted most after a drop."
+  },
+  {
+   "id": "b4", "act": "built", "a": "heat", "b": "lane", "moves": "cooling, or a rest",
+   "pts": [[1230, 331], [800, 331], [690, 262]],
+   "say": "A machine at its limit finishes the job in hand and takes nothing new, until it reads eight degrees under. And after any drop, every lane of that machine rests sixty seconds, and the machine is read at once. No real machine has yet reached a limit.",
+   "what": "\"cooling\": the lanes of a machine at its limit take nothing new until every part reads 8 degrees under.",
+   "why": "After a 255 every lane of that machine rests 60 seconds and the machine is read at once.",
+   "rule": "NOT PROVED on a real machine: the hold has run only against a file standing for a sensor."
+  }
+ ]
+}

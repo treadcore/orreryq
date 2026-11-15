@@ -72,6 +72,7 @@ mod analysis;
 mod nets;
 mod boots;
 mod growth;
+mod heat;
 mod montage;
 mod videos;
 mod generations;
