@@ -12,7 +12,7 @@ This is the guide to what was built that day. It is not a lab report: the data i
 | `tools/telemetry.py QUEUE pull` | this Mac, by the keeper's housekeeping every 5 minutes | no | one connection a machine, of its own: puts the collector there if absent or old, starts it if it is not running (after a boot), brings the new lines to `QUEUE/telemetry/MACHINE/` |
 | `tools/fleet-sensors.sh` | each Linux machine, once | **yes** | the thermometers only root reads: see below |
 | `tools/telemetry.py QUEUE show` | this Mac | no | each machine's last sample, every channel |
-| `tools/telemetry.py QUEUE chart [HOURS]` | this Mac | no | `QUEUE/plan/telemetry.html`: every channel of every machine over time |
+| `tools/telemetry.py QUEUE chart [HOURS]` | this Mac, and at every pull | no | `QUEUE/plan/telemetry.html` (`tools/heat_page.py`): the fleet's watts a band a machine; a row a machine by its CPU (tau, R, C); a click opens the CPU with its fitted steps, the watts, and the soak: every other thermometer overlaid by kind, each with the lag at which it follows the machine's watts. `#whitewolf,calber` on the address opens those rows |
 | `tools/telemetry.py QUEUE fit [MACHINE] [HOURS]` | this Mac | no | time constants from the steps the queue made (`QUEUE/plan/telemetry-fits.json`) |
 
 The keeper's own two-minute reading (`take_heat`, the hold at a limit, the rest after a drop) is separate and unchanged: it decides; this records.

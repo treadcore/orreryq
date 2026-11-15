@@ -15,7 +15,7 @@ QUEUE/telemetry/MACHINE/YYYYMMDD.log. The keeper's housekeeping asks every five 
 
   pull [MACHINE...]   bring the new lines back; plan/telemetry.json says what each machine last read
   show                each machine's last sample, every channel
-  chart [HOURS] [OUT.html]   every channel of every machine over time, one page (default 6 hours)
+  chart [HOURS] [OUT.html]   the heat page (heat_page.py): the fleet's watts, a row a machine by its CPU, opened on a click (default 72 hours; made at every pull)
   model               the energy balance (thermal.py): each machine's watts, each fitted part's R, C
                       and where it settles, the fleet's heat; plan/thermal.json, for Orrery's Heat page
   fit [MACHINE] [HOURS]      first-order fits (a time constant and the level it settles at) to the
@@ -200,10 +200,11 @@ def main(argv):
     q = os.path.abspath(argv[1])
     if argv[2] == "pull":
         pull(q, set(argv[3:]))
-        # The energy balance Orrery's Heat page draws, from what is now here (thermal.py).
+        # The energy balance Orrery's Heat page draws (thermal.py), and the page of it (heat_page.py,
+        # which runs the model first), from what is now here.
         try:
-            import thermal
-            thermal.model(q)
+            import heat_page
+            heat_page.page(q, [])
         except Exception as e:  # a pull's lines are kept whatever the model makes of them
             print("the model failed: %r" % e)
     elif argv[2] == "model":
@@ -212,8 +213,8 @@ def main(argv):
     elif argv[2] == "show":
         show(q)
     elif argv[2] == "chart":
-        import telemetry_chart
-        return telemetry_chart.chart(q, argv[3:])
+        import heat_page
+        return heat_page.page(q, argv[3:])
     else:
         import telemetry_chart
         return telemetry_chart.fit(q, argv[3:])

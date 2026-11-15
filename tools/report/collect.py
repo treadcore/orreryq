@@ -50,6 +50,11 @@ CARDS = {
                         "Ceph for the recordings and builds at three copies on NVMe, rsync, sftp and the other ways to move files, the Mac "
                         "and Ceph, and copies by how replaceable the data is. Nothing decided: the space problem is already answered, 33.7 GB "
                         "in all, and no NVMe in the fleet is free."),
+    "hearth": ("Fleet · heat for the house",
+               "The fleet's 1.2 kW is the house's heater, and nothing in the house reads its air. Three mesh radios asked over USB: "
+               "the T-Echo's MeshCore lists a GPS and no thermometer, the second answers nothing, the T-Deck runs something else. "
+               "The CPUs' time constants from the queue's own steps, each disk's lag behind its machine's watts, the house as two "
+               "rooms and a fan, and what to buy. No room is read yet and no controller is built."),
     "orange-queue": ("Fleet · the orange queue",
                      "Seven hours in which the Mac closed its shared connection to each machine every few minutes: 276 jobs put back "
                      "and started again while the first copy ran on, columbia at thirteen censuses on eight cores, three cards at 100% "

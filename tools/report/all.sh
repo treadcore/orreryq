@@ -57,6 +57,7 @@ deployed|The First Morning|Orreryq · the search · the design of 13 November wa
 loop|The Loop Closed|Orreryq · the search · floors that give, the game's verdict back to the cards, the watch that flags, and what more cards speed
 seeds|Where the Seeds Went|Orreryq · the search · a proof held by one map, trials that read as noise, and a net shipped on one read
 orange-queue|The Orange Queue|Orreryq · the fleet · seven hours of dropped connections, jobs left running behind, and three cards busy with nothing
+hearth|The Fleet as the Hearth|Orreryq · the fleet · reading the house's air, what the mesh radios can tell, and what to buy
 film|A Film Beside Every Report|Orreryq · documentation · narration-timed film scripts, one storyboard drawn twice, recordings reenacted, and a standing directive
 LIST
 python3 ../tools/report/collect.py
