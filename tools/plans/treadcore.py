@@ -7602,7 +7602,10 @@ def chores(qdir, tools=None):
                                          ("nets.json", 300, 120, "nets.py", ["refresh"]),
                                          ("growth.json", 300, 600, "growth.py", ["refresh"]),
                                          # The fleet's watts (Paul, 5 November): each box's CPU use and GPU draw.
-                                         ("power-samples.jsonl", 300, 120, "power.py", ["sample"])):
+                                         ("power-samples.jsonl", 300, 120, "power.py", ["sample"]),
+                                         # Each machine's temperatures, written there every 5 seconds, brought back
+                                         # (Paul, 15 November: "setting up a system in orrery to receive telemetry back").
+                                         ("telemetry.json", 300, 240, "telemetry.py", ["pull"])):
         f = os.path.join(pd, doc)
         lock = f + ".lock"
         if age(f) > every and age(lock) > hold:

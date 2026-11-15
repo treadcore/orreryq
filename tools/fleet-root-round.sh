@@ -10,6 +10,8 @@
 #                               (Paul: "i would like to be able to reboot on command ... on every machine")
 #   2. fleet-auto-update.sh     the daily update, which now ends with the firmware and SMART scan
 #                               (fleet-firmware.sh, with smartmontools and nvme-cli)
+#   4. fleet-sensors.sh         the thermometers only root can read (each SATA disk, the board's chip, the
+#                               CPU's watts, a 10 GbE port), left where the telemetry picks them up
 #   3. fleet-microcode.sh       the CPU's microcode loaded at every boot (a machine that has it is left
 #                               as it is); it takes effect at the next boot, which Restart now gives
 #
@@ -22,7 +24,7 @@ T=$(cd "$(dirname "$0")" && pwd)
 DRY=0
 [ "${1:-}" = "--dry" ] && { DRY=1; shift; }
 [ $# -gt 0 ] || { sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
-FILES="fleet-poweroff-setup.sh fleet-auto-update.sh fleet-update.sh fleet-firmware.sh fleet-microcode.sh"
+FILES="fleet-poweroff-setup.sh fleet-auto-update.sh fleet-update.sh fleet-firmware.sh fleet-microcode.sh fleet-sensors.sh"
 SSH="ssh -o ConnectTimeout=8"
 ok= ; failed=
 for m in "$@"; do
@@ -30,7 +32,7 @@ for m in "$@"; do
     echo "== $m ($target)"
     if [ "$DRY" = 1 ]; then
         echo "   copy: $FILES -> ~/orrery-recipes/"
-        echo "   then: cd ~/orrery-recipes && doas|sudo sh -c 'sh fleet-poweroff-setup.sh && sh fleet-auto-update.sh && sh fleet-microcode.sh'"
+        echo "   then: cd ~/orrery-recipes && doas|sudo sh -c 'sh fleet-poweroff-setup.sh && sh fleet-auto-update.sh && sh fleet-microcode.sh && sh fleet-sensors.sh'"
         continue
     fi
     if ! $SSH -o BatchMode=yes "$target" 'mkdir -p ~/orrery-recipes' 2>/dev/null; then
@@ -41,7 +43,7 @@ for m in "$@"; do
     ( cd "$T" && scp -q -o ConnectTimeout=8 $FILES "$target:orrery-recipes/" ) || { echo "   copy failed: passed over"; failed="$failed $m"; continue; }
     root=$($SSH -o BatchMode=yes "$target" 'command -v doas >/dev/null 2>&1 && echo doas || echo sudo')
     echo "   $root asks for $m's password:"
-    if $SSH -t "$target" "cd ~/orrery-recipes && $root sh -c 'sh fleet-poweroff-setup.sh && sh fleet-auto-update.sh && sh fleet-microcode.sh'"; then
+    if $SSH -t "$target" "cd ~/orrery-recipes && $root sh -c 'sh fleet-poweroff-setup.sh && sh fleet-auto-update.sh && sh fleet-microcode.sh && sh fleet-sensors.sh'"; then
         ok="$ok $m"
     else
         echo "   something failed on $m: its lines above say what"

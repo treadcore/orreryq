@@ -101,6 +101,13 @@ RECIPES = [
      "does": ["Alpine and Copal: apk add intel-ucode (or amd-ucode), and each grub.cfg initrd line of the installed system loads its image first (the old grub.cfg kept as grub.cfg.pre-ucode)",
               "Ubuntu: apt installs intel-microcode (or amd64-microcode), into the initramfs",
               "loaded at the next boot, which this does not do: a running machine is not restarted"]},
+    {"id": "sensors", "title": "Read every thermometer",
+     "os": ["ubuntu", "alpine"],
+     "files": ["fleet-sensors.sh"], "run": "sh fleet-sensors.sh",
+     "does": ["the kernel's sensor drivers now and at every boot: drivetemp (each SATA disk) and the board's chip where the kernel has a driver (fans, the board's and chipset's thermometers)",
+              "lm-sensors, smartmontools, ethtool, and mstflint and ipmitool where the system offers them",
+              "a reader run as root from boot: every 15 seconds the CPU's watts (RAPL), a 10 GbE port's module and chip, a server board's own sensors, into /run/fleet-sensors/root.kv",
+              "the telemetry (tools/telemetry.py) then carries those beside what the user can read; fleet-sensors.sh --undo takes it away"]},
     {"id": "poweroff", "title": "Let the fleet power it off and restart it",
      "os": ["ubuntu", "alpine"],
      "files": ["fleet-poweroff-setup.sh"], "run": "sh fleet-poweroff-setup.sh",
@@ -159,6 +166,8 @@ else k reboot ""; fi
 # Kept up to date by itself (fleet-auto-update.sh), and its last run's line.
 k auto_update "$( ( [ -e /etc/periodic/daily/fleet-update ] || [ -e /etc/systemd/system/fleet-update.timer ] ) && echo yes)"
 k updated "$(tail -n1 /var/log/fleet-update.log 2>/dev/null)"
+# Root's sensor reader (fleet-sensors.sh), and whether the user's collector runs (fleet-telemetry.sh).
+k sensors "$( [ -x /usr/local/sbin/fleet-sensors-read.sh ] && echo yes)"
 k uptime "$(uptime | sed 's/.*up *//; s/, *[0-9]* user.*//')"
 # THE FIRMWARE is read by tools/fleet-firmware.sh, which probe() sends after this
 # script: one file for orrery's probe, the daily update's root scan and 'copal
@@ -591,6 +600,7 @@ class Machines:
             # The daily update and, since 8 November, its firmware and SMART scan: a machine set up
             # before has the first and not the second, and Apply puts the second there.
             "auto-update": bool(f.get("auto_update")) and bool(f.get("fw_auto")),
+            "sensors": bool(f.get("sensors")),
             "microcode": bool(f.get("ucode_boot")) or ("microcode" in f.get("ucode_pkg", "") and f.get("os_id") != "alpine"),
             "copal-node": bool(f.get("cargo") and f.get("treadcore") and f.get("tmux") and f.get("poweroff")),
             "cuda-node": bool(f.get("nvidia_smi") and f.get("cuda") and f.get("tmux") and f.get("copal_tm")),
