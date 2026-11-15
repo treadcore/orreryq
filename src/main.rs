@@ -1542,6 +1542,14 @@ fn gui_loop<S: surface::Surface>(
                         });
                     }
                 }
+                (None, nav::View::Heat) => {
+                    // The queue's document carries thermal.py's; the page is Queue, Heat, under the Machines' keys.
+                    let text = jobs_doc.lock().unwrap_or_else(|e| e.into_inner()).clone();
+                    let model = training::Model::parse(&text, &jobs_source);
+                    if let Some(v) = heat::draw_view(&mut u, model.thermal.as_ref()) {
+                        action = Some(lab::Action::Go(v));
+                    }
+                }
                 (None, v @ (nav::View::Queue | nav::View::Results | nav::View::Settings)) => {
                     let text = jobs_doc.lock().unwrap_or_else(|e| e.into_inner()).clone();
                     training_state.said = queue_said.lock().unwrap_or_else(|e| e.into_inner()).clone();

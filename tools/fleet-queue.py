@@ -61,6 +61,12 @@ a keeper that keeps it all running, and two ways to stop.
     tools/fleet-queue.py DIR status [--json]
     tools/fleet-queue.py DIR health         is it running as it should: the keeper, its code,
                                              its planning and syncing, the lanes, the jobs waiting
+    tools/fleet-queue.py DIR restart-all     finish all, then reboot: every machine with the restart
+                                             rule restarts after its jobs in hand and takes work again
+                                             when it is back; the queue runs throughout
+    tools/fleet-queue.py DIR auto-restart on|off
+                                             a machine whose update waits for a boot is restarted by
+                                             the keeper after its job in hand, one machine at a time
     tools/fleet-queue.py DIR temps [now]     each machine's temperature against its limit, as last
                                              read by the keeper; with now, read here
     tools/fleet-queue.py DIR plan-now        the keeper asks the planner for work at its next beat
@@ -509,7 +515,13 @@ def stop_leftovers(q, host):
 # it gives itself, and the card's own. A Mac tells nothing without root, and so reads as no sensor.
 HEAT_PROBE = ('for h in /sys/class/hwmon/hwmon*; do n=$(cat $h/name 2>/dev/null); for f in $h/temp*_input; do '
               'v=$(cat $f 2>/dev/null) || continue; [ -n "$v" ] && echo "$n $v $(cat ${f%_input}_max 2>/dev/null)"; done; done; '
-              'command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits | sed "s/^/gpu /"; true')
+              'command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits | sed "s/^/gpu /"; '
+              # And whether a boot waits (auto_restart): the packages ask for one, a kernel newer than the one
+              # running is installed (by version, not by date), or the running kernel's modules are gone.
+              'r=$(uname -r); n=$(ls /lib/modules 2>/dev/null | sort -V 2>/dev/null | tail -n1); '
+              'if [ -f /var/run/reboot-required ]; then echo "reboot the packages ask for a boot"; '
+              'elif [ -n "$n" ] && [ "$n" != "$r" ]; then echo "reboot kernel $n is installed, $r runs"; '
+              'elif [ -d /lib/modules ] && [ ! -d "/lib/modules/$r" ]; then echo "reboot the running kernel has no modules left"; fi; true')
 HEAT_CPU = ("coretemp", "k10temp", "zenpower", "cpu_thermal")
 # A CONNECTION OF ITS OWN, never the shared one the jobs ride (~/.ssh/config's ControlMaster): the
 # reading is wanted most just after that one dropped, and must not be one more thing on it.
@@ -522,9 +534,9 @@ def machine_of(host):
 
 def read_heat(cfg, host):
     """One reading of a machine, degrees C: its hottest CPU sensor and the limit the sensor gives
-    itself, its hottest card, its hottest disk. None if it did not answer. `heat_probe` in
-    config.json is a command run in the probe's place (a box with a meter of its own; the check)."""
-    probe = cfg.get("heat_probe") or HEAT_PROBE
+    itself, its hottest card, its hottest disk. None if it did not answer. `heat_probe`, a host's
+    or config.json's, is a command run in the probe's place (a box with a meter of its own; the check)."""
+    probe = host.get("heat_probe") or cfg.get("heat_probe") or HEAT_PROBE
     b = b64encode(probe.encode()).decode()
     cmd = ["bash", "-c", probe] if host["target"] == "-" else HEAT_SSH + [host["target"], 'exec bash -c "$(echo %s | base64 -d)"' % b]
     try:
@@ -534,10 +546,13 @@ def read_heat(cfg, host):
     if r.returncode != 0:
         return None
     cpu, cpu_max, gpu, disk = [], [], [], []
+    waits = None
     for line in r.stdout.splitlines():
         w = line.split()
         try:
-            if len(w) >= 2 and w[0] == "gpu":
+            if w and w[0] == "reboot":
+                waits = line[7:].strip() or "a boot waits"
+            elif len(w) >= 2 and w[0] == "gpu":
                 gpu.append(float(w[1]))
             elif len(w) >= 2 and w[0] in HEAT_CPU:
                 cpu.append(float(w[1]) / 1000)
@@ -548,7 +563,7 @@ def read_heat(cfg, host):
         except ValueError:
             pass
     return {"t": now(), "cpu": max(cpu) if cpu else None, "cpu_max": min(cpu_max) if cpu_max else None,
-            "gpu": max(gpu) if gpu else None, "disk": max(disk) if disk else None}
+            "gpu": max(gpu) if gpu else None, "disk": max(disk) if disk else None, "boot_waits": waits}
 
 
 def heat_limits(cfg, host, r):
@@ -1556,6 +1571,7 @@ def keeper(q):
             # A machine finishing leaves once its lanes are empty; then a job pinned to a machine
             # that left or paused moves where it may, or is flagged.
             leave_when_done(q)
+            auto_restart(q)
             restart_when_done(q)
             rehome(q, q.config())
             # Keep a lane alive for every host; one that died is started again.
@@ -1935,6 +1951,14 @@ def health(q):
             check("ok", "heat", "degrees C against each limit: " + said)
         else:
             check("warn", "heat", "no machine's temperature has been read in %s" % took(3 * temp_s + 60))
+    if pid and temp_s:
+        waits = sorted("%s (%s)" % (m, r["boot_waits"]) for m, r in read.items() if r.get("boot_waits"))
+        if waits and cfg.get("auto_restart"):
+            check("ok", "boots", "a boot waits, and each is restarted in turn after its job in hand: %s" % "; ".join(waits))
+        elif waits:
+            check("warn", "boots", "a boot waits on %d: %s. Restart each on the Queue page, or `auto-restart on`" % (len(waits), "; ".join(waits)))
+        else:
+            check("ok", "boots", "no machine waits for a boot%s" % ("" if cfg.get("auto_restart") else " (auto restart is off)"))
     aside = sorted({h.get("lane_of", h["name"]) for h in cfg["hosts"] if h.get("paused")})
     if aside:
         check("ok", "paused", "set aside by a person, until Resume: %s" % ", ".join(aside))
@@ -2305,6 +2329,110 @@ def restart_when_done(q):
                          % (name, RESTART_WAIT_S // 60), key="restart:%s:%s" % (name, r.get("sent")))
     if changed:
         save_config(q, cfg)
+
+
+def auto_restart(q):
+    """THE RESTART AFTER AN UPGRADE, BY ITSELF (Paul, 15 November: "design an auto restart after a
+    upgrade happens and we are adding a new item to the machine from the queue. sequence the events.
+    such that the machine can update"). On 15 November every machine had a kernel installed that it
+    was not running, each up seven days: the nightly update installs and nothing boots.
+
+    THE SEQUENCE, a machine:
+      1. the nightly update installs (fleet-update.sh --auto); nothing is restarted by it.
+      2. the keeper's reading of the machine (take_heat, each temp_s) says a boot waits, and why.
+      3. at the next beat, if the rules below hold, Restart is pressed for it, as a person presses
+         it: its lanes take nothing new. This is the moment a new item would have been added.
+      4. its jobs in hand finish (restart_when_done); the reboot is sent; the boot id is watched.
+      5. it boots on the new kernel; its own boot run brings the packages up to date again, the
+         telemetry's collector is started by the next pull, the checks after a boot are asked.
+      6. another boot id answers: its lanes take work again. The next reading no longer says a boot
+         waits; if it still does, that is flagged and it is not restarted again for the same reason.
+      7. every lane of it finishes a job; a job failed there instead turns this off and raises a flag.
+      8. then, and only then, the next machine: ONE AT A TIME, so the fleet keeps its other lanes.
+
+    THE RULES: "auto_restart" is on in config.json (off unless set: `auto-restart on`); the machine
+    has the restart rule; no machine is restarting, nothing is draining or shutting down; none of its
+    lanes is set aside by a person (a restart ends by taking every lane back); it was not restarted
+    by this within auto_restart_gap_h (20); and a card's segment in hand has run auto_restart_cuda_s
+    (1500) or more, so the CPU lane beside it does not stand idle a whole segment waiting."""
+    cfg = q.config()
+    if not cfg.get("auto_restart") or q.flag("STOP_ADDING") or q.flag("SHUTDOWN") or q.flag("STOP_NOW"):
+        return
+    if any(h.get("restarting") or h.get("leaving") for h in cfg["hosts"]):
+        return
+    record = load_json(q.p("auto-restart.json")) or {}
+    # THE ONE BEFORE MUST HAVE WORKED SINCE: every lane of the machine restarted last has finished a
+    # job after it came back, and failed none. A kernel that came up without its card's driver fails
+    # its first segment; the next machine is then not sent the same way, and a flag says why.
+    prev = record.get("_last")
+    if prev and any(h["name"] == prev for h in cfg["hosts"]):
+        lanes = {h["name"] for h in cfg["hosts"] if prev in (h["name"], h.get("lane_of")) and not h.get("paused")}
+        ok, bad, back, back_t = set(), None, False, 0.0
+        try:
+            with open(q.p("events.jsonl"), "rb") as f:
+                f.seek(max(0, os.path.getsize(q.p("events.jsonl")) - 400000))
+                tail = f.read().decode("utf-8", "replace").splitlines()[1:]
+        except OSError:
+            tail = []
+        for line in tail:
+            try:
+                e = json.loads(line)
+            except ValueError:
+                continue
+            if e.get("event") == "machine back from restart" and e.get("host") == prev:
+                ok, bad, back = set(), None, True
+                try:
+                    back_t = time.mktime(time.strptime(e.get("t", ""), "%Y-%m-%dT%H:%M:%S"))
+                except ValueError:
+                    back_t = 0.0
+            elif back and e.get("host") in lanes and e.get("event") == "done":
+                ok.add(e["host"])
+            elif back and e.get("host") in lanes and e.get("event") == "failed":
+                bad = e.get("job")
+        if bad:
+            q.notice("restart", "%s failed a job (%s) after its restart: no other machine is restarted by itself until this is acknowledged and `auto-restart on` is given again"
+                     % (prev, bad), key="auto-restart-failed:%s:%s" % (prev, record.get(prev, {}).get("t")))
+            cfg["auto_restart"] = False
+            save_config(q, cfg)
+            q.event("auto-restart", on=False, why="%s failed %s after its restart" % (prev, bad))
+            return
+        # A lane with nothing to take proves nothing either way: after auto_restart_settle_h (2) it is
+        # no longer waited for.
+        if back and lanes - ok and now() - back_t < 3600 * cfg.get("auto_restart_settle_h", 2):
+            return
+        if not back and now() - record.get(prev, {}).get("t", 0) < 86400:
+            return  # not back yet, or its return is older than the events read: a day at most
+    for main in cfg["hosts"]:
+        m = main["name"]
+        if main.get("lane_of") or not main.get("reboot") or main.get("target") == "-" and not main.get("boot_id_cmd"):
+            continue
+        ls = [h for h in cfg["hosts"] if m in (h["name"], h.get("lane_of"))]
+        r = q.heat.get(m)
+        why = r and now() - r["t"] < 600 and r.get("boot_waits")
+        if not why or any(h.get("paused") for h in ls):
+            continue
+        last = record.get(m) or {}
+        if last.get("why") == why:
+            q.notice("restart", "%s was restarted because %s, and it still says so: it is not restarted again for that (read /var/log/fleet-update.log there)"
+                     % (m, why), key="auto-restart:%s:%s" % (m, why))
+            continue
+        if now() - last.get("t", 0) < 3600 * cfg.get("auto_restart_gap_h", 20):
+            continue
+        young = [h["name"] for h in ls if "cuda" in h.get("caps", []) and lane_file(q, h["name"]).get("job")
+                 and now() - lane_file(q, h["name"]).get("since", now()) < cfg.get("auto_restart_cuda_s", 1500)]
+        if young:
+            continue
+        for h in ls:
+            h["paused"] = True
+        main["restarting"] = {"stage": "finishing", "since": time.strftime("%Y-%m-%dT%H:%M:%S"), "auto": why}
+        save_config(q, cfg)
+        record[m] = {"why": why, "t": now(), "at": time.strftime("%Y-%m-%dT%H:%M:%S")}
+        record["_last"] = m
+        with open(q.p(".auto-restart.json.tmp"), "w") as f:
+            json.dump(record, f)
+        os.replace(q.p(".auto-restart.json.tmp"), q.p("auto-restart.json"))
+        q.event("machine restarting", host=m, auto=why)
+        return  # one at a time
 
 
 def leave_when_done(q):
@@ -2692,6 +2820,30 @@ def main(argv):
         else:
             for f in fl:
                 print("%s %s %-10s %s%s" % (f["id"], f["t"], f["kind"], f["text"], "  (acknowledged by %s)" % f["ack"]["by"] if f.get("ack") else ""))
+    elif cmd == "restart-all":
+        # FINISH ALL, THEN REBOOT (Paul, 15 November: "lets organize future finish all then reboot. or
+        # finish all then shutdown"): Restart pressed for every machine that has the rule and is not set
+        # aside, all at once; each reboots after its own jobs in hand and takes work again when it is
+        # back, the queue and the keeper running throughout. Finish all, then shut down, is `shutdown`.
+        cfg = q.config()
+        names = [h["name"] for h in cfg["hosts"] if not h.get("lane_of") and h.get("reboot") and h.get("target") != "-"
+                 and not any(x.get("paused") for x in cfg["hosts"] if h["name"] in (x["name"], x.get("lane_of")))]
+        for n in names:
+            machine(q, n, "restart")
+        left = [h["name"] for h in cfg["hosts"] if not h.get("lane_of") and h["name"] not in names]
+        if left:
+            print("not restarted (no restart rule, this Mac, or set aside): %s" % ", ".join(left))
+    elif cmd == "auto-restart":
+        # auto-restart on|off: whether a machine with a boot waiting is restarted by the keeper, after
+        # its job in hand, one machine at a time (auto_restart). Off unless set.
+        if len(argv) < 3 or argv[2] not in ("on", "off"):
+            print("auto-restart is %s" % ("on" if q.config().get("auto_restart") else "off"))
+        else:
+            cfg = q.config()
+            cfg["auto_restart"] = argv[2] == "on"
+            save_config(q, cfg)
+            q.event("auto-restart", on=cfg["auto_restart"])
+            print("auto-restart is %s" % argv[2])
     elif cmd in ("auto", "rotation"):
         # auto on|off: whether candidates promote themselves; rotation on|off:
         # whether auto mode asks one of each kind of run in turn. The plan

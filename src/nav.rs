@@ -43,6 +43,9 @@ pub enum View {
     /// Every part's firmware on every machine, against what its maker
     /// publishes (firmware.rs).
     Firmware,
+    /// The fleet's heat: every machine's temperatures against its limits, its watts, and what the
+    /// steps the queue made say of each part (heat.rs; the same page as Queue, Heat).
+    Heat,
     /// What the fleet works on -- treadcore, crucible -- and which machine
     /// runs which (projects.rs).
     Projects,
@@ -85,6 +88,7 @@ impl View {
             View::Storage => "Storage",
             View::Bench => "Bench",
             View::Firmware => "Firmware",
+            View::Heat => "Heat",
             View::Projects => "Projects",
             View::Queue => "Queue",
             View::Pipeline => "Pipeline",
@@ -100,11 +104,11 @@ impl View {
     /// Every view, chapter by chapter. Only the tests walk it.
     #[cfg(test)]
     pub const ALL: &'static [View] =
-        &[View::Machines, View::Media, View::Storage, View::Bench, View::Firmware, View::Projects, View::Queue, View::Pipeline, View::Results, View::Lab, View::Sessions, View::Fleet, View::Chat, View::Settings];
+        &[View::Machines, View::Media, View::Storage, View::Bench, View::Firmware, View::Heat, View::Projects, View::Queue, View::Pipeline, View::Results, View::Lab, View::Sessions, View::Fleet, View::Chat, View::Settings];
 
     pub fn chapter(&self) -> Chapter {
         match self {
-            View::Machines | View::Media | View::Storage | View::Bench | View::Firmware => Chapter::Machines,
+            View::Machines | View::Media | View::Storage | View::Bench | View::Firmware | View::Heat => Chapter::Machines,
             View::Projects => Chapter::Projects,
             View::Queue | View::Pipeline => Chapter::Queue,
             View::Results => Chapter::Results,
@@ -146,7 +150,7 @@ impl Chapter {
     /// Its views, the first where the strip goes.
     pub fn views(&self) -> &'static [View] {
         match self {
-            Chapter::Machines => &[View::Machines, View::Media, View::Storage, View::Bench, View::Firmware],
+            Chapter::Machines => &[View::Machines, View::Media, View::Storage, View::Bench, View::Firmware, View::Heat],
             Chapter::Projects => &[View::Projects],
             Chapter::Queue => &[View::Queue, View::Pipeline],
             Chapter::Results => &[View::Results],

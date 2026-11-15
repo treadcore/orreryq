@@ -1030,6 +1030,15 @@
    "helps": "Indirectly: a CPU on old microcode or a disk on a faulty firmware stops the fleet's work in ways no log explains."
   },
   {
+   "key": "Heat",
+   "does": "The fleet's heat as an energy balance: the watts every machine draws, each machine's temperatures against its limits over time, and what the steps the queue made say of each part: its time constant, its degrees a watt, its joules a degree.",
+   "ties": "tools/fleet-telemetry.sh writes each machine's sensors every 5 seconds; tools/telemetry.py brings them back each five minutes; tools/thermal.py fits the steps and writes plan/thermal.json; the keeper's own reading (fleet-queue.py, take_heat) holds a machine at its limit. Queue, Heat is the same page.",
+   "drawn": "A row a machine on one clock, the CPU and the card on one scale with the limit ruled across, because the question is how close each runs to its limit and how fast it gets there. Never two scales on one chart.",
+   "look": "A line riding its red limit, an amber reading (within five degrees), a part that settles above its limit at the watts it draws now, and a part no step has measured.",
+   "sim": "Nothing: these are the machines' own sensors. The watts are the power model's at the CPUs' use measured, or the CPU's own counter where root's reader gives it; the room's temperature is read by nothing, and the page says what stands in for it.",
+   "helps": "A machine too hot is switched off by a person and its lanes are lost for the night. Knowing each part's time constant and where it settles is how the queue can hold a machine under its limit instead."
+  },
+  {
    "key": "Projects",
    "does": "Says which machine works on what: treadcore or crucible.",
    "ties": "Sets which lanes feed the dial track and which feed the GPU track.",

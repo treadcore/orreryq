@@ -108,6 +108,13 @@ fn span(vs: &[&[Value]]) -> Option<(f64, f64)> {
     if lo.is_finite() { Some((lo, hi)) } else { None }
 }
 
+/// The page under the Machines' keys: the header, then the same drawing as Queue, Heat.
+pub fn draw_view(ui: &mut Ui, doc: Option<&Value>) -> Option<crate::nav::View> {
+    let (rest, go, _) = crate::nav::header(ui, crate::nav::View::Heat, true, "the fleet's heat: temperatures, watts, and what each part's steps say", None);
+    draw(ui, rest.inset(10), doc);
+    go
+}
+
 pub fn draw(ui: &mut Ui, at: Rect, doc: Option<&Value>) {
     let t = ui.t;
     let Some(doc) = doc.filter(|d| d.get("machines").is_some()) else {
