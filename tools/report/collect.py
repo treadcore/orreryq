@@ -50,6 +50,10 @@ CARDS = {
                         "Ceph for the recordings and builds at three copies on NVMe, rsync, sftp and the other ways to move files, the Mac "
                         "and Ceph, and copies by how replaceable the data is. Nothing decided: the space problem is already answered, 33.7 GB "
                         "in all, and no NVMe in the fleet is free."),
+    "orange-queue": ("Fleet · the orange queue",
+                     "Seven hours in which the Mac closed its shared connection to each machine every few minutes: 276 jobs put back "
+                     "and started again while the first copy ran on, columbia at thirteen censuses on eight cores, three cards at 100% "
+                     "on segments already written off and none finished. The cause not found; seven recommendations, none built."),
     "idle-fleet": ("Fleet · an hour idle",
                    "Eight CPU machines idle for 54 minutes: the line replayed twice, by the keeper and by a report that only reads, "
                    "two records of one commit that disagreed, and a failed build never asked again. Three guards now; and what "

@@ -61,6 +61,8 @@ a keeper that keeps it all running, and two ways to stop.
     tools/fleet-queue.py DIR status [--json]
     tools/fleet-queue.py DIR health         is it running as it should: the keeper, its code,
                                              its planning and syncing, the lanes, the jobs waiting
+    tools/fleet-queue.py DIR temps [now]     each machine's temperature against its limit, as last
+                                             read by the keeper; with now, read here
     tools/fleet-queue.py DIR plan-now        the keeper asks the planner for work at its next beat
     tools/fleet-queue.py DIR restart         the keeper restarts on the code on disk; the jobs
                                              running carry on, handed over to the new keeper
@@ -87,6 +89,14 @@ job marked "replan" comes back: a chain's step, whose next only the
 planner can ask for. A pass holds the keeper's beat; health calls the loop
 stuck after heartbeat_s (60, or 6 poll_s) with no beat, unless a planner pass
 began since the last beat.
+
+THE HEAT. Each temp_s (120) every machine's temperature is read over a connection
+of its own: its hottest CPU sensor, its card (temps.json; a week in plan/temps.jsonl;
+`temps` prints them). A machine at its limit -- a host's "hot_c", else what its
+sensor calls high and never above 90, else 85; a card's "gpu_hot_c", 85 -- finishes
+the job in hand and takes nothing new, its lanes saying "cooling", until it reads
+cool_by_c (8) under. A machine whose connection dropped under a job rests
+cool_off_s (60) the same way while it is read at once.
 
 CPU lanes idle idle_flag_s (900) with nothing they can start raise a flag
 saying why, as far as the keeper can see: a build failed (its first error
@@ -161,6 +171,12 @@ class Queue:
         self.handing = False
         self.parked = set()
         self.started = {}
+        # THE HEAT (take_heat): each machine's last reading, the machines held because one read hot,
+        # and until when a machine rests after its connection dropped.
+        self.heat = {}
+        self.cooling = {}
+        self.rest = {}
+        self.heat_lock = threading.Lock()
         self.adopt = {}
 
     # ---- files ---------------------------------------------------------
@@ -406,12 +422,16 @@ def run_job(q, host, job, log, t0=None, adopted=None):
     deadline = t0 + job.get("timeout_s", 4 * 3600)
     # A host's "nice" (config.json) lowers the whole job, its children too.
     nice = "renice -n %d -p $$ >/dev/null 2>&1\n" % host["nice"] if host.get("nice") else ""
+    # ONE COPY OF A JOB ON A MACHINE. A pid file already there is an earlier copy of this job whose
+    # connection closed under it (14 November: 276 jobs put back, each first copy left running;
+    # columbia at fifteen censuses on eight cores): it is stopped before this one starts.
     wrapper = nice + limiter(host) + (
         "mkdir -p ~/.fleet-queue; cd ~; set -m\n"
+        "f=~/.fleet-queue/%s.pid; if [ -f $f ]; then kill -TERM -$(cat $f) 2>/dev/null; sleep 2; kill -KILL -$(cat $f) 2>/dev/null; rm -f $f; fi\n"
         "( %s ) &\n"
         "echo $! > ~/.fleet-queue/%s.pid\n"
         "wait $!; rc=$?; rm -f ~/.fleet-queue/%s.pid; exit $rc\n"
-    ) % (body, jid, jid)
+    ) % (jid, body, jid, jid)
     b = b64encode(wrapper.encode()).decode()
     cmd = ["bash", "-c", wrapper] if host["target"] == "-" else SSH + [host["target"], 'exec bash -c "$(echo %s | base64 -d)"' % b]
     with open(log, "a") as out:
@@ -464,9 +484,148 @@ def sent_back(q, jid):
 def stop_remote(host, jid):
     script = "f=~/.fleet-queue/%s.pid; [ -f $f ] && kill -TERM -$(cat $f) 2>/dev/null; sleep 2; [ -f $f ] && kill -KILL -$(cat $f) 2>/dev/null; rm -f $f; true" % jid
     try:
-        remote(host["target"], script, timeout=30)
+        return remote(host["target"], script, timeout=30).returncode == 0
     except (subprocess.TimeoutExpired, OSError):
+        return False
+
+
+def stop_leftovers(q, host):
+    """A job put back while its machine could not be told to stop it is written down
+    (leftover/LANE--ID); the lane, when the machine answers, stops it before it takes anything."""
+    name = host["name"]
+    d = q.p("leftover")
+    for f in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+        if f.startswith(name + "--") and stop_remote(host, f[len(name) + 2:]):
+            try:
+                os.remove(os.path.join(d, f))
+            except OSError:
+                pass
+            q.event("leftover stopped", host=name, job=f[len(name) + 2:])
+
+
+# ---- the heat ---------------------------------------------------------------------
+
+# Every temperature a Linux box will tell without root: each hwmon sensor with its name and the limit
+# it gives itself, and the card's own. A Mac tells nothing without root, and so reads as no sensor.
+HEAT_PROBE = ('for h in /sys/class/hwmon/hwmon*; do n=$(cat $h/name 2>/dev/null); for f in $h/temp*_input; do '
+              'v=$(cat $f 2>/dev/null) || continue; [ -n "$v" ] && echo "$n $v $(cat ${f%_input}_max 2>/dev/null)"; done; done; '
+              'command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits | sed "s/^/gpu /"; true')
+HEAT_CPU = ("coretemp", "k10temp", "zenpower", "cpu_thermal")
+# A CONNECTION OF ITS OWN, never the shared one the jobs ride (~/.ssh/config's ControlMaster): the
+# reading is wanted most just after that one dropped, and must not be one more thing on it.
+HEAT_SSH = SSH + ["-o", "ControlMaster=no", "-o", "ControlPath=none"]
+
+
+def machine_of(host):
+    return host.get("lane_of", host["name"])
+
+
+def read_heat(cfg, host):
+    """One reading of a machine, degrees C: its hottest CPU sensor and the limit the sensor gives
+    itself, its hottest card, its hottest disk. None if it did not answer. `heat_probe` in
+    config.json is a command run in the probe's place (a box with a meter of its own; the check)."""
+    probe = cfg.get("heat_probe") or HEAT_PROBE
+    b = b64encode(probe.encode()).decode()
+    cmd = ["bash", "-c", probe] if host["target"] == "-" else HEAT_SSH + [host["target"], 'exec bash -c "$(echo %s | base64 -d)"' % b]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=25, stdin=subprocess.DEVNULL)
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+    if r.returncode != 0:
+        return None
+    cpu, cpu_max, gpu, disk = [], [], [], []
+    for line in r.stdout.splitlines():
+        w = line.split()
+        try:
+            if len(w) >= 2 and w[0] == "gpu":
+                gpu.append(float(w[1]))
+            elif len(w) >= 2 and w[0] in HEAT_CPU:
+                cpu.append(float(w[1]) / 1000)
+                if len(w) >= 3 and 40000 <= float(w[2]) <= 110000:
+                    cpu_max.append(float(w[2]) / 1000)
+            elif len(w) >= 2 and w[0] == "nvme":
+                disk.append(float(w[1]) / 1000)
+        except ValueError:
+            pass
+    return {"t": now(), "cpu": max(cpu) if cpu else None, "cpu_max": min(cpu_max) if cpu_max else None,
+            "gpu": max(gpu) if gpu else None, "disk": max(disk) if disk else None}
+
+
+def heat_limits(cfg, host, r):
+    """The limits a reading is held against, written into it."""
+    main = next((h for h in cfg["hosts"] if h["name"] == machine_of(host)), host)
+    r["cpu_hot"] = main.get("hot_c") or cfg.get("hot_c") or (min(r["cpu_max"], 90) if r.get("cpu_max") else 85)
+    r["gpu_hot"] = main.get("gpu_hot_c") or cfg.get("gpu_hot_c", 85)
+    return r
+
+
+def take_heat(q, cfg, host):
+    """THE TEMPERATURE MONITOR (Paul, 15 November, the morning after two machines were switched off
+    hot: "create a temperature monitor every so often, and if the ssh client drops off ... some sort
+    of cool off period (or reduction of new tasks for a moment while measuring the temperature").
+
+    One reading of host's machine, kept (temps.json, plan/temps.jsonl), and the machine's hot spell
+    begun or ended by it. HOT is a CPU at its limit -- the host's "hot_c", else config.json's, else
+    what the sensor calls high (never above 90), else 85 -- or a card at "gpu_hot_c" (85). A hot
+    machine's lanes finish the job in hand and take nothing new (the lane says "cooling") until
+    every part reads cool_by_c (8) under its limit: the gap is what keeps a machine at its limit
+    from taking a job a reading and dropping it the next."""
+    m = machine_of(host)
+    r = read_heat(cfg, host)
+    if r is None:
+        return None
+    heat_limits(cfg, host, r)
+    by = cfg.get("cool_by_c", 8)
+    parts = [(what, r[k], r[k + "_hot"]) for what, k in (("CPU", "cpu"), ("card", "gpu")) if r.get(k) is not None]
+    over = ["%s %.0f C, its limit %.0f" % p for p in parts if p[1] >= p[2]]
+    with q.heat_lock:
+        was = q.cooling.get(m)
+        if over and not was:
+            q.cooling[m] = {"since": now(), "why": "; ".join(over)}
+        elif was and all(v <= hot - by for _, v, hot in parts):
+            del q.cooling[m]
+        r["cooling"] = m in q.cooling
+        q.heat[m] = r
+        every = dict(q.heat)
+    if over and not was:
+        q.event("hot", host=m, why="; ".join(over))
+        q.notice("heat", "%s is hot (%s): its lanes finish the job in hand and take nothing new until it reads %d degrees under" % (
+            m, "; ".join(over), by), key="heat:%s:%s" % (m, time.strftime("%Y-%m-%d %H")))
+    elif was and not r["cooling"]:
+        q.event("cooled", host=m, minutes=round((now() - was["since"]) / 60, 1),
+                detail=", ".join("%s %.0f C" % (w, v) for w, v, _ in parts))
+    try:
+        with open(q.p(".temps.json.tmp"), "w") as f:
+            json.dump(every, f)
+        os.replace(q.p(".temps.json.tmp"), q.p("temps.json"))
+        os.makedirs(q.p("plan"), exist_ok=True)
+        with q.lock, open(q.p("plan", "temps.jsonl"), "a") as f:
+            f.write(json.dumps(dict(r, host=m)) + "\n")
+    except OSError:
         pass
+    return r
+
+
+def held(q, cfg, host):
+    """Why this lane takes nothing new just now, or None: its machine read hot and has not read cool,
+    or its connection dropped and it rests cool_off_s (60) while its temperature is read. A hot spell
+    with no reading in ten minutes lapses: a sensor that stopped answering must not hold a lane."""
+    m = machine_of(host)
+    with q.heat_lock:
+        c, r = q.cooling.get(m), q.heat.get(m)
+        if c and (r is None or now() - r["t"] > max(600, 3 * cfg.get("temp_s", 120))):
+            del q.cooling[m]
+            c = None
+            lapsed = True
+        else:
+            lapsed = False
+    if lapsed:
+        q.event("cooled", host=m, detail="no reading in ten minutes: the hold lapses")
+    if c:
+        return "hot: " + c["why"]
+    if now() < q.rest.get(m, 0):
+        return "resting after its connection dropped"
+    return None
 
 
 def send(q, host, job, log):
@@ -855,6 +1014,12 @@ def lane(q, host, alive):
                 # A machine back from dark may be back from a boot: read it soon.
                 q.boots_at = q.boots_at or now() + 20
             continue
+        stop_leftovers(q, host)
+        # A machine that read hot, or whose connection has just dropped, takes nothing new for now.
+        if held(q, cfg, host):
+            say("cooling")
+            time.sleep(3)
+            continue
         done, failed = q.ids_in("done"), q.ids_in("failed") | q.ids_in("stopped")
         picked = None
         for j in q.jobs_in("queue"):
@@ -996,14 +1161,31 @@ def work(q, host, j, say, adopted=None):
         elif not ok and rc == 255 and j.get("ssh_tries", 0) < 3:
             # ssh's own failure: not the job's fault, whether or not the host answers a moment
             # later. It goes back on the queue for any host, its log kept, three times at most.
+            # STOPPED WHERE IT RAN, FIRST: the connection closed, the job did not. Put back without
+            # this, its first copy ran on beside the second (14 November, docs/orange-queue-lab-report.md).
+            stopped = host["target"] == "-" or stop_remote(host, j["id"])
+            if not stopped:
+                os.makedirs(q.p("leftover"), exist_ok=True)
+                open(q.p("leftover", "%s--%s" % (name, j["id"])), "w").close()
             with open(log, "a") as out:
-                out.write("ssh failed (255): the job goes back on the queue\n")
+                out.write("ssh failed (255): the job goes back on the queue; its copy on %s %s\n" % (
+                    name, "is stopped" if stopped else "could not be stopped yet: the lane stops it when the machine answers"))
             j2 = {k: v for k, v in j.items() if k != "_file"}
             j2["ssh_tries"] = j.get("ssh_tries", 0) + 1
             with open(j["_file"], "w") as f:
                 json.dump(j2, f, indent=1)
             os.rename(j["_file"], q.p("queue", os.path.basename(j["_file"])))
             q.event("requeued", job=j["id"], host=name, why="host unreachable")
+            # A COOL-OFF (Paul, 15 November): every lane of this machine takes nothing new for
+            # cool_off_s (60) from the drop, and its temperature is read now, over a connection of its
+            # own: a machine found hot stays held until it reads cool (take_heat).
+            cfg = q.config()
+            rest = cfg.get("cool_off_s", 60)
+            if rest:
+                q.rest[machine_of(host)] = now() + rest
+                r = take_heat(q, cfg, host)
+                q.event("cool-off", host=name, seconds=rest, detail="no reading" if r is None else ", ".join(
+                    "%s %.0f C" % (w, r[k]) for w, k in (("CPU", "cpu"), ("card", "gpu")) if r.get(k) is not None) or "no sensor")
             return
         else:
             dest = "done" if ok else "failed"
@@ -1245,6 +1427,39 @@ def keeper(q):
         finally:
             boots_lock.release()
 
+    heat_lock = threading.Lock()
+
+    def heat():
+        # Each machine once, all at once, each over a connection of its own (take_heat). A machine
+        # set aside is read too: it may be aside because it was hot.
+        if not heat_lock.acquire(blocking=False):
+            return
+        try:
+            c = q.config()
+            seen, ts = set(), []
+            for h in c["hosts"]:
+                if machine_of(h) not in seen:
+                    seen.add(machine_of(h))
+                    ts.append(threading.Thread(target=take_heat, args=(q, c, working(c, h)), daemon=True))
+            for t in ts:
+                t.start()
+            for t in ts:
+                t.join(40)
+            life["last_heat"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+        finally:
+            heat_lock.release()
+
+    # A week of readings is kept.
+    try:
+        tf = q.p("plan", "temps.jsonl")
+        keep = [l for l in open(tf) if '"t": ' in l and float(l.split('"t": ')[1].split(",")[0].rstrip("}")) > now() - 7 * 86400]
+        with open(tf + ".tmp", "w") as f:
+            f.writelines(keep)
+        os.replace(tf + ".tmp", tf)
+    except (OSError, ValueError, IndexError):
+        pass
+    temp_s = cfg.get("temp_s", 120)
+    last_heat = 0.0
     boots_s = cfg.get("boots_s", 600)
     last_boots = 0.0
     chores_s = cfg.get("chores_s", 60)
@@ -1331,6 +1546,9 @@ def keeper(q):
             if planner and chores_s and now() - last_chores > chores_s:
                 last_chores = now()
                 threading.Thread(target=chores, daemon=True).start()
+            if temp_s and now() - last_heat > temp_s:
+                last_heat = now()
+                threading.Thread(target=heat, daemon=True).start()
             if boots_s and (now() - last_boots > boots_s or (q.boots_at is not None and now() >= q.boots_at)):
                 last_boots = now()
                 q.boots_at = None
@@ -1564,6 +1782,12 @@ def stamp_age(t):
         return None
 
 
+def heat_words(r):
+    """A reading in a few words: CPU 64 of 86, card 65 of 85."""
+    return ", ".join("%s %.0f of %.0f" % (w, r[k], r[k + "_hot"]) for w, k in (("CPU", "cpu"), ("card", "gpu"))
+                     if r.get(k) is not None and r.get(k + "_hot")) or "no sensor"
+
+
 def health(q):
     """Is it running as it should? Each check a level (ok, warn, bad), a name
     and a sentence, for the console's Settings page and `health`. Nothing is
@@ -1696,6 +1920,21 @@ def health(q):
         check("bad", "machines", "cannot be reached, its lane waiting: %s" % ", ".join(down))
     else:
         check("ok", "machines", "every machine answers")
+    temps = load_json(q.p("temps.json")) or {}
+    temp_s = cfg.get("temp_s", 120)
+    if pid and temp_s:
+        read = {m: r for m, r in temps.items() if now() - r.get("t", 0) < 3 * temp_s + 60 and any(h["name"] == m for h in cfg["hosts"])}
+        said = ", ".join("%s %s" % (m, heat_words(r)) for m, r in sorted(read.items()) if r.get("cpu") is not None or r.get("gpu") is not None)
+        hot = sorted(m for m, r in read.items() if r.get("cooling"))
+        resting = sorted(n for n, l in lanes.items() if l.get("state") == "cooling" and machine_of(next(h for h in cfg["hosts"] if h["name"] == n)) not in hot)
+        if hot:
+            check("warn", "heat", "hot, taking nothing new until it reads cool: %s (%s)" % (", ".join(hot), said))
+        elif resting:
+            check("warn", "heat", "resting a minute after a dropped connection: %s (%s)" % (", ".join(resting), said))
+        elif said:
+            check("ok", "heat", "degrees C against each limit: " + said)
+        else:
+            check("warn", "heat", "no machine's temperature has been read in %s" % took(3 * temp_s + 60))
     aside = sorted({h.get("lane_of", h["name"]) for h in cfg["hosts"] if h.get("paused")})
     if aside:
         check("ok", "paused", "set aside by a person, until Resume: %s" % ", ".join(aside))
@@ -1826,6 +2065,7 @@ def roster(q, cfg, pid):
     except (OSError, ValueError):
         reg = {}
     ps = projects_of(cfg)
+    temps = load_json(q.p("temps.json")) or {}
     rows, seen = [], set()
     for h in cfg["hosts"] + cfg.get("bench", []) + [{"name": n, "target": m.get("target", "")} for n, m in reg.items()]:
         name = h.get("lane_of", h["name"])
@@ -1849,6 +2089,7 @@ def roster(q, cfg, pid):
                 "stopping" if paused and jobs else
                 "paused" if paused else
                 "no keeper" if not pid else
+                "cooling" if "cooling" in states else
                 "running" if jobs else
                 "cannot be reached" if "unreachable" in states else
                 "idle")
@@ -1863,6 +2104,9 @@ def roster(q, cfg, pid):
                      # Whether Restart can reboot it: its restart rule, copied from the probe.
                      "can_restart": any(x.get("reboot") for x in ls if not x.get("lane_of")),
                      "jobs": jobs, "on": on,
+                     # Its last temperatures, if read in the last ten minutes (take_heat).
+                     "temp": (lambda r: {k: r.get(k) for k in ("cpu", "cpu_hot", "gpu", "gpu_hot", "disk", "cooling")}
+                              if r and now() - r.get("t", 0) < 600 else None)(temps.get(name)),
                      "cpus": next((x["cpus"] for x in cpu_lanes if x.get("cpus")), None),
                      "cores": int(((reg.get(name) or {}).get("facts") or {}).get("cpus") or 0) or None})
     return rows
@@ -2329,6 +2573,24 @@ def main(argv):
         if len(argv) < 4:
             sys.exit("project NAME pause|stop|resume")
         project(q, argv[2], argv[3])
+    elif cmd == "temps":
+        # Each machine's last reading (the keeper reads them each temp_s); `temps now` reads them here
+        # and keeps nothing: the hot spells are the keeper's.
+        cfg = q.config()
+        if "now" in argv[2:]:
+            seen = set()
+            for h in cfg["hosts"]:
+                if machine_of(h) not in seen:
+                    seen.add(machine_of(h))
+                    r = read_heat(cfg, working(cfg, h))
+                    if r:
+                        q.heat[machine_of(h)] = heat_limits(cfg, h, r)
+            temps = q.heat
+        else:
+            temps = load_json(q.p("temps.json")) or {}
+        for m, r in sorted(temps.items()):
+            print("%-14s %-34s %s%s" % (m, heat_words(r), "disk %.0f  " % r["disk"] if r.get("disk") is not None else "",
+                                        "HOT, cooling" if r.get("cooling") else "read %s ago" % took(now() - r["t"])))
     elif cmd == "plan-now":
         # The keeper plans when runs/ changes: every keeper, this one and
         # those from before the button.

@@ -5871,6 +5871,13 @@ class Plan:
                 seed = 1000 + 97 * (sum(map(ord, name)) % 1000)
                 cmd = (
                     "set -e; H=~/%s; O=~/%s/out/%s; mkdir -p $O $H/in\n"
+                    # ONE SEGMENT AN ISLAND. Every segment loads island.state and writes it back; on 14 November a
+                    # card ran six at once, each from an older state (docs/orange-queue-lab-report.md). A segment
+                    # holds the island's lock for its whole life; a new one finding it held is the one the keeper
+                    # waits for, so it stops the holder's whole group, takes the lock, and stands down if it cannot.
+                    "exec 9>$H/segment.lock; if ! flock -n 9; then g=$(cat $H/segment.pgid 2>/dev/null || true); "
+                    "if [ -n \"$g\" ]; then echo \"# another segment (group $g) holds this island: stopping it\"; kill -TERM -$g 2>/dev/null || true; sleep 3; kill -KILL -$g 2>/dev/null || true; fi; "
+                    "flock -w 120 9 || { echo '# the island is still held by another segment: this one stands down'; exit 75; }; fi; echo $BASHPID > $H/segment.pgid\n"
                     # make rebuilds when the source changes, not when the flags do: a stamp of them does.
                     "cd $H && F='FLAGS_NOW'; [ \"$(cat .flags 2>/dev/null)\" = \"$F\" ] || { rm -f crucible; echo \"$F\" > .flags; }\n"
                     "make -s FLAGS_NOW NVCC=${NVCC:-/usr/local/cuda/bin/nvcc} >/dev/null 2>&1 || make FLAGS_NOW NVCC=${NVCC:-/usr/local/cuda/bin/nvcc}\n"

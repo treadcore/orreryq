@@ -216,6 +216,10 @@ pub struct Roster {
     /// The CPUs its jobs are told it has (a power of two), if limited; and the cores it has.
     pub cpus: Option<i64>,
     pub cores: Option<i64>,
+    /// Its temperatures as the keeper last read them, degrees C against the limit of each: the
+    /// CPU's (reading, limit), the card's. None where a machine has no sensor or was not read.
+    pub cpu_temp: Option<(f64, f64)>,
+    pub gpu_temp: Option<(f64, f64)>,
 }
 
 /// The fleet-queue (orrery's tools/fleet-queue.py) as its status said.
@@ -1221,9 +1225,17 @@ pub fn roster_lamp(ui: &Ui, r: &Roster) -> (Rgb, Light) {
         "running" => (t.up, Light::Full),
         "stopping" | "leaving" | "restarting" | "restarting after its job" => (t.warn, Light::Half),
         "paused" => (t.warn, Light::Hollow),
+        "cooling" => (t.warn, Light::Half),
         "cannot be reached" => (t.alarm, Light::Hollow),
         _ => (t.dim, Light::Hollow),
     }
+}
+
+/// A machine's temperatures against their limits, in words; None if it has none.
+pub fn temps_line(r: &Roster) -> Option<String> {
+    let v: Vec<String> = [("CPU", r.cpu_temp), ("card", r.gpu_temp)].iter()
+        .filter_map(|(w, t)| t.map(|(c, hot)| format!("{} {:.0} C of {:.0}", w, c, hot))).collect();
+    if v.is_empty() { None } else { Some(v.join(", ")) }
 }
 
 /// What a machine is doing, in a sentence that can be acted on.
@@ -1238,6 +1250,8 @@ pub fn roster_line(r: &Roster) -> String {
         "restarting after its job" => format!("Restarting after its job in hand: {}", doing),
         "restarting" => "Restarting: rebooted; takes work again when it answers".to_string(),
         "paused" => "Paused: takes nothing until Resume".to_string(),
+        "cooling" if r.jobs.is_empty() => format!("Cooling: takes nothing new until it reads cool{}", temps_line(r).map(|s| format!(" ({})", s)).unwrap_or_default()),
+        "cooling" => format!("Cooling, finishing: {}", doing),
         "idle" => "Idle: nothing queued it can start".to_string(),
         "cannot be reached" => "Cannot be reached: its lane waits, and takes work when it answers".to_string(),
         "no keeper" => "Ready: waits for Resume the queue".to_string(),
@@ -1284,7 +1298,14 @@ fn draw_roster(ui: &mut Ui, at: Rect, q: &Queue, m: &Model, st: &mut State) {
             let w = 110.min(bx - x - 130);
             if w > 20 {
                 bar(ui, rect(x, y1 + 2, w, 9), frac, if frac > 0.9 { t.warn } else { t.up });
-                ui.label(x + w + 6, y1, &format!("{:.1} of {} cores", mc.load, mc.cores), &F8X13, t.dim);
+                let cores = format!("{:.1} of {} cores", mc.load, mc.cores);
+                ui.label(x + w + 6, y1, &cores, &F8X13, t.dim);
+                // Its temperatures beside its load: amber within five degrees of a limit.
+                if let Some(say) = temps_line(r) {
+                    let near = [r.cpu_temp, r.gpu_temp].iter().flatten().any(|(c, hot)| *c >= hot - 5.0);
+                    let tx = x + w + 6 + F8X13.measure(&cores) as i32 + 16;
+                    ui.label_in(tx, y1, bx - tx - 8, &say, &F8X13, if near { t.warn } else { t.dim });
+                }
             }
         } else if !r.target.is_empty() && r.target != "-" {
             ui.label_in(x, y1, bx - x - 8, &r.target, &F8X13, t.dim);
@@ -1295,6 +1316,9 @@ fn draw_roster(ui: &mut Ui, at: Rect, q: &Queue, m: &Model, st: &mut State) {
             let mut v = vec![format!("{}: {}", display(&r.name), r.state)];
             if let Some(mc) = mc {
                 v.push(format!("{:.1} of {} cores in use{}. Above 90% is amber.", mc.load, mc.cores, mc.gpu.as_ref().map(|g| format!("; GPU {} at {}%", g.name, g.busy_pct)).unwrap_or_default()));
+            }
+            if let Some(say) = temps_line(r) {
+                v.push(format!("{}: read every two minutes. At a limit it finishes its job and takes nothing new until it reads 8 degrees under.", say));
             }
             if !r.target.is_empty() && r.target != "-" {
                 v.push(format!("Reached as {}", r.target));
@@ -2277,6 +2301,11 @@ fn draw_queue(ui: &mut Ui, at: Rect, q: &Queue, st: &mut State) -> i32 {
 
 fn parse_roster(r: &json::Value) -> Roster {
     let flag = |k: &str| r.get(k).and_then(|b| b.as_bool()).unwrap_or(false);
+    // A reading and its limit (temp.cpu and temp.cpu_hot), where the keeper has both.
+    let temp = |k: &str| {
+        let t = r.get("temp")?;
+        Some((t.get(k)?.as_num()?, t.get(&format!("{}_hot", k))?.as_num()?))
+    };
     Roster {
         name: s(r, "name"),
         target: s(r, "target"),
@@ -2294,6 +2323,8 @@ fn parse_roster(r: &json::Value) -> Roster {
         },
         cpus: r.get("cpus").and_then(|x| x.as_num()).map(|x| x as i64),
         cores: r.get("cores").and_then(|x| x.as_num()).map(|x| x as i64),
+        cpu_temp: temp("cpu"),
+        gpu_temp: temp("gpu"),
     }
 }
 
@@ -3046,6 +3077,8 @@ mod tests {
     fn a_machine_says_what_can_be_done_about_it() {
         let r = |state: &str, bench: bool| Roster { state: state.to_string(), bench, ..Roster::default() };
         assert!(roster_line(&r("paused", false)).contains("Resume"));
+        let hot = Roster { state: "cooling".to_string(), cpu_temp: Some((88.0, 86.0)), ..Roster::default() };
+        assert!(roster_line(&hot).contains("CPU 88 C of 86"));
         assert!(roster_line(&r("leaving", false)).contains("Leaving"));
         let busy = Roster { state: "leaving".to_string(), leaving: true, jobs: vec![("crucible".to_string(), "segment 3342".to_string(), 60)], ..Roster::default() };
         assert!(roster_line(&busy).starts_with("Finishing, then out"));
