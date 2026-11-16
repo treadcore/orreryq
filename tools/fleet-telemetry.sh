@@ -24,6 +24,7 @@
 #   w.NAME   watts from the CPU's own energy counter (RAPL), where the user may read it
 #   gpu.c gpu.w gpu.use gpu.fan   the card: degrees, watts, percent busy, fan percent (nvidia-smi)
 #   rad.ID.cpm   a Geiger counter's counts a minute over five minutes, where radbeeper logs one
+#   room.radID.c   that counter's own thermometer, degrees C, where radbeeper logs it
 #   and whatever root's own readings say in /run/fleet-sensors/*.kv (fleet-sensors.sh: the 10 GbE
 #   card's module, a disk's SMART temperature), a `key value` a line.
 # Nothing here needs a program the smallest Alpine lacks: the shell reads the files itself, so a
@@ -123,6 +124,16 @@ E
         id=${x##*/cpm-}; id=${id%%-*}
         v=$(tail -n 1 "$x" | cut -f 7)
         case "$v" in ''|*[!0-9.]*) ;; *) line="$line rad.${id#??????????}.cpm=$v" ;; esac
+    done
+    # The same counters' own thermometers, where radbeeper asks them (a GMC-320, and a radbeeper that
+    # writes temp-ID-YYYY-MM.tsv): degrees C from that log's last line, if it is under two minutes
+    # old. It is inside the counter's case, and it is the nearest thing here to the room's air.
+    for x in /var/lib/radbeeper/temp-[0-9A-F]*-"$(date +%Y-%m)".tsv; do
+        [ -r "$x" ] || continue
+        [ $(( now - $(stat -c %Y "$x" 2>/dev/null || echo 0) )) -lt 120 ] || continue
+        id=${x##*/temp-}; id=${id%%-*}
+        v=$(tail -n 1 "$x" | cut -f 2)
+        case "$v" in ''|*[!0-9.-]*) ;; *) line="$line room.rad${id#??????????}.c=$v" ;; esac
     done
     for x in /run/fleet-sensors/*.kv; do
         [ -r "$x" ] || continue

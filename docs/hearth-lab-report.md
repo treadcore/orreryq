@@ -184,6 +184,16 @@ P1 and P2 are the watts of the machines in each room. R12 is the fan: small when
 - The Heat panels were checked as pictures, not used.
 - No controller, dial or throttle is built.
 
+## Addendum, 16 November 2026: the Geiger counters read the room
+
+The report above says nothing on USB reads the room's air. That was wrong by one day. The two GQ GMC-320 Geiger counters each carry a thermometer, and it can be read.
+
+- **What misled.** On 15 November each counter was asked its temperature once and answered 85.0 °C. That is the answer the counter gives before its thermometer has a reading; the next answer is real.
+- **What was measured.** On 16 November the GMC-320Re 4.26, plugged into the Mac, answered 85.0 °C once after being plugged in and then 26.1 °C for ten readings over five minutes, with its own screen showing 26.1 °C. Asked in the middle of its count stream, it answered nine times in forty seconds, each within 55 ms, and every second of counts still arrived.
+- **What was built.** radbeeper's service now asks each GMC-320 once a log interval, between two seconds of counts, and writes `temp-SERIAL-YYYY-MM.tsv` beside the count log. `radbeeper now` gives another program the counts a minute and the temperature from the running service. The fleet's collector (`tools/fleet-telemetry.sh`) reports the newest reading as `room.radXXXX.c`. radbeeper's own report is `docs/the-thermometer.md` in its repository.
+- **What it is and is not.** It is one thermometer per counter, inside the counter's case, wherever the counter sits. It has not been compared with a thermometer in the air. It gives no humidity. A second room and the outside still need probes of their own.
+- **Not yet in use.** The services on saskatchewan and the VM still run the radbeeper from before this; until they are updated and restarted no machine writes the temperature file, and the collector has nothing to report. The other counter, a GMC-320+V4Re 4.83, has been asked once and has not yet been seen to give a real reading.
+
 ## References
 
 [1] Meshtastic, "LILYGO TTGO T-Echo devices." https://meshtastic.org/docs/hardware/devices/lilygo/techo/
