@@ -1,0 +1,631 @@
+WEBVTT
+
+00:00:00.800 --> 00:00:04.400
+Yesterday's report ended with no thermometer in the room.
+
+00:00:04.400 --> 00:00:06.000
+Today there are two:
+
+00:00:06.000 --> 00:00:08.800
+one in each Geiger counter on saskatchewan.
+
+00:00:08.800 --> 00:00:11.600
+Twenty-six point eight, and twenty-six point zero.
+
+00:00:11.600 --> 00:00:15.600
+Both are inside a counter's case, on the same machine.
+
+00:00:15.600 --> 00:00:19.600
+Neither has been compared with a thermometer in the air.
+
+00:00:19.600 --> 00:00:24.400
+And a counter can say two things that are not a temperature:
+
+00:00:24.400 --> 00:00:26.800
+eighty-five point zero, and minus zero.
+
+00:00:26.800 --> 00:00:30.400
+Both mean its thermometer has no reading to give.
+
+00:00:33.000 --> 00:00:39.400
+With a room temperature to hold, the fleet can be told how many watts to burn.
+
+00:00:39.400 --> 00:00:47.000
+The first pass on the live fleet read the room at twenty-six point four, against a target of twenty-one.
+
+00:00:47.000 --> 00:00:50.200
+The fleet drew seven hundred and four watts.
+
+00:00:50.200 --> 00:00:55.800
+The pass said to shed four hundred and forty-six, beginning with columbia's CPU lanes:
+
+00:00:55.800 --> 00:00:57.000
+about five watts.
+
+00:00:57.000 --> 00:00:59.000
+And then it did nothing.
+
+00:00:59.000 --> 00:01:01.000
+It was in advise mode.
+
+00:01:03.600 --> 00:01:06.800
+That is as far as it has gone.
+
+00:01:06.800 --> 00:01:10.000
+The controller has never changed a real machine.
+
+00:01:10.000 --> 00:01:12.000
+Wake-on-LAN has not been tried.
+
+00:01:12.000 --> 00:01:20.800
+The house's loss for each degree is unknown, so SeaTac's temperature is read and shown, and not yet used in the law.
+
+00:01:20.800 --> 00:01:26.800
+And the target of twenty-one was set to give the first pass something to say.
+
+00:01:26.800 --> 00:01:28.800
+Paul has not chosen it.
+
+00:01:28.800 --> 00:01:29.200
+So:
+
+00:01:29.200 --> 00:01:32.000
+how many watts does a room want?
+
+00:01:32.000 --> 00:01:36.000
+How does the fleet get there without throwing work away?
+
+00:01:36.000 --> 00:01:39.200
+And what must stay in a person's hands?
+
+00:01:41.800 --> 00:01:43.000
+Holding the Room.
+
+00:01:43.000 --> 00:01:48.200
+The fleet's watts set by a target, the room's thermometers, and SeaTac's air.
+
+00:01:50.800 --> 00:01:52.400
+Begin from far away.
+
+00:01:52.400 --> 00:01:54.000
+There are five territories.
+
+00:01:54.000 --> 00:01:54.800
+The probes:
+
+00:01:54.800 --> 00:01:57.600
+what reads the room, and the outside.
+
+00:01:57.600 --> 00:02:01.200
+They feed the controller, one program on the Mac.
+
+00:02:01.200 --> 00:02:02.800
+Below it, the fleet.
+
+00:02:02.800 --> 00:02:11.600
+The controller would give it one step at a time, and every watt the fleet draws goes into the room as heat.
+
+00:02:11.600 --> 00:02:15.600
+In Orrery, two screens set the target and the mode.
+
+00:02:15.600 --> 00:02:18.400
+And a proof, on a scratch queue:
+
+00:02:18.400 --> 00:02:21.200
+the only place the controller has acted.
+
+00:02:23.800 --> 00:02:24.600
+Four borders.
+
+00:02:24.600 --> 00:02:27.000
+From the probes to the controller:
+
+00:02:27.000 --> 00:02:30.200
+a median of five minutes, never one sample.
+
+00:02:30.200 --> 00:02:32.600
+From the controller to the fleet:
+
+00:02:32.600 --> 00:02:35.800
+the queue's own commands, one step a pass.
+
+00:02:35.800 --> 00:02:38.200
+From a person to the controller:
+
+00:02:38.200 --> 00:02:40.200
+four words, and no others.
+
+00:02:40.200 --> 00:02:43.000
+And from the fleet to the room:
+
+00:02:43.000 --> 00:02:43.400
+heat.
+
+00:02:46.000 --> 00:02:48.000
+First, what reads the room.
+
+00:02:50.600 --> 00:02:57.400
+Each counter's reading arrives every five seconds, and it is not believed one sample at a time.
+
+00:02:57.400 --> 00:03:01.800
+The controller takes the median of a probe's last five minutes.
+
+00:03:01.800 --> 00:03:05.400
+Eighty-five point zero and minus zero are thrown out.
+
+00:03:05.400 --> 00:03:10.200
+The second counter sent minus zero forty-two times in the first day.
+
+00:03:12.800 --> 00:03:17.600
+The temperature that is held is the mean of the room probes:
+
+00:03:17.600 --> 00:03:18.800
+twenty-six point four.
+
+00:03:18.800 --> 00:03:26.400
+A probe that moves more than three degrees in five minutes is left out of that pass, and named.
+
+00:03:26.400 --> 00:03:30.800
+With no fresh room probe, the pass does nothing at all.
+
+00:03:33.400 --> 00:03:34.600
+Now the law:
+
+00:03:34.600 --> 00:03:37.000
+how many watts the room wants.
+
+00:03:39.600 --> 00:03:42.000
+The law starts from the error:
+
+00:03:42.000 --> 00:03:44.000
+the target less the room.
+
+00:03:44.000 --> 00:03:50.800
+Each degree asks three hundred watts, so four degrees asks for the whole one point two kilowatts.
+
+00:03:50.800 --> 00:03:55.600
+A slow integral adds twenty-five watts for each hour a degree stands.
+
+00:03:55.600 --> 00:03:58.800
+Within three tenths of a degree, nothing changes.
+
+00:04:01.400 --> 00:04:04.200
+The second term is for the outside.
+
+00:04:04.200 --> 00:04:09.000
+A house loses heat by how far it is above the outside:
+
+00:04:09.000 --> 00:04:11.000
+UA, in watts a degree.
+
+00:04:11.000 --> 00:04:13.000
+The outside is SeaTac airport's:
+
+00:04:13.000 --> 00:04:13.800
+nine degrees.
+
+00:04:13.800 --> 00:04:15.400
+But UA is unknown.
+
+00:04:15.400 --> 00:04:21.400
+So the outside temperature is read and shown, and not yet used in the law.
+
+00:04:21.400 --> 00:04:26.200
+How it will be measured comes at the end of this act.
+
+00:04:28.800 --> 00:04:30.400
+Out comes one number:
+
+00:04:30.400 --> 00:04:32.400
+the watts the room wants.
+
+00:04:32.400 --> 00:04:34.800
+The gains are slow on purpose.
+
+00:04:34.800 --> 00:04:41.600
+The room's time constant is not measured, and a controller faster than the thing it controls oscillates.
+
+00:04:41.600 --> 00:04:44.800
+And no step is taken against the room.
+
+00:04:47.400 --> 00:04:53.000
+The other side of the balance is what the fleet draws at the wall.
+
+00:04:53.000 --> 00:04:57.800
+Every watt a computer draws leaves it as heat into the room.
+
+00:04:57.800 --> 00:05:02.200
+The difference, wanted against drawn, becomes one step on a ladder.
+
+00:05:04.800 --> 00:05:11.600
+Now the house's side of it, on the first evening with the house's own heating switched off.
+
+00:05:11.600 --> 00:05:13.200
+One line of physics:
+
+00:05:13.200 --> 00:05:18.400
+what the room gets, less what it loses, is how fast it warms.
+
+00:05:18.400 --> 00:05:30.400
+At half past eight the room read twenty-six, the outside eight, the fleet seven hundred and forty-nine watts, and the room was falling a quarter of a degree an hour.
+
+00:05:30.400 --> 00:05:34.400
+It is cooling, so it loses more than it gets.
+
+00:05:34.400 --> 00:05:36.400
+That bounds UA from below:
+
+00:05:36.400 --> 00:05:38.800
+more than forty-two watts a degree.
+
+00:05:38.800 --> 00:05:44.000
+And where the room settles is the outside, plus the watts over UA.
+
+00:05:44.000 --> 00:05:46.000
+What the next days give.
+
+00:05:46.000 --> 00:05:48.000
+The record is already kept:
+
+00:05:48.000 --> 00:05:50.800
+the room, the watts, and SeaTac's air.
+
+00:05:50.800 --> 00:05:59.600
+Two days with the watts level give the time constant, and how far over the outside the room settles at these watts.
+
+00:05:59.600 --> 00:06:04.400
+A step in the fleet's watts, held a day, gives UA itself:
+
+00:06:04.400 --> 00:06:08.400
+the watts changed, over the degrees the settled level moved.
+
+00:06:08.400 --> 00:06:14.000
+Then the heat capacity, the house's other watts, and the controller's gains all follow.
+
+00:06:14.000 --> 00:06:16.400
+None of that is measured yet.
+
+00:06:19.000 --> 00:06:21.800
+Then the ladder, and the three modes.
+
+00:06:21.800 --> 00:06:26.200
+None of its arrows has been walked on a real machine.
+
+00:06:28.800 --> 00:06:32.400
+What becomes of the difference depends on the mode.
+
+00:06:32.400 --> 00:06:33.600
+Off does nothing.
+
+00:06:33.600 --> 00:06:38.400
+Advise, the default, works everything out, writes it down, and changes nothing.
+
+00:06:38.400 --> 00:06:42.000
+Act carries out at most one step a pass.
+
+00:06:42.000 --> 00:06:46.000
+Against the live fleet, it has run in advise only.
+
+00:06:48.600 --> 00:06:49.800
+The first rungs:
+
+00:06:49.800 --> 00:06:53.000
+a machine's CPU lanes take no new jobs.
+
+00:06:53.000 --> 00:06:58.200
+A paused lane finishes the job in hand, so nothing is thrown away.
+
+00:06:58.200 --> 00:06:59.800
+On the live ladder:
+
+00:06:59.800 --> 00:07:03.400
+columbia five watts, boburner sixty-four, calber sixty-seven, whitewolf seventy-two.
+
+00:07:06.000 --> 00:07:09.600
+Then a machine's card lane, after its CPU lanes.
+
+00:07:09.600 --> 00:07:12.400
+Calber's is a hundred and fifty-one watts.
+
+00:07:12.400 --> 00:07:14.000
+The pace is slow:
+
+00:07:14.000 --> 00:07:21.200
+one step a pass, fifteen minutes between any two changes, thirty before the same machine is touched again.
+
+00:07:21.200 --> 00:07:28.800
+The seven lane rungs take at least an hour and a half; with the power rungs, about three hours.
+
+00:07:31.400 --> 00:07:34.200
+The last rung powers a machine off.
+
+00:07:34.200 --> 00:07:38.600
+It sits behind a second switch, and that switch is off.
+
+00:07:38.600 --> 00:07:43.400
+With it off, act pauses and resumes lanes and does nothing else.
+
+00:07:43.400 --> 00:07:48.200
+And a machine that carries a room probe is never powered off.
+
+00:07:48.200 --> 00:07:49.800
+Today that means saskatchewan.
+
+00:07:52.400 --> 00:07:56.800
+When the room is cold the ladder runs the other way.
+
+00:07:56.800 --> 00:07:58.400
+Lanes are resumed first.
+
+00:07:58.400 --> 00:08:07.200
+Then a machine that was powered off is sent a wake-on-LAN packet, a hundred and two bytes, and given its lanes back.
+
+00:08:07.200 --> 00:08:09.200
+It has not been tried.
+
+00:08:09.200 --> 00:08:11.200
+No machine's BIOS was read.
+
+00:08:11.200 --> 00:08:17.600
+And on whitewolf and boburner, whether the ten gigabit cards wake their machines is not known.
+
+00:08:20.200 --> 00:08:24.200
+Here is that first pass, in the plan's own words.
+
+00:08:24.200 --> 00:08:27.400
+The fleet draws seven hundred and four watts.
+
+00:08:27.400 --> 00:08:27.800
+Wanted:
+
+00:08:27.800 --> 00:08:31.800
+two hundred and fifty-seven, the least it can shed to.
+
+00:08:31.800 --> 00:08:34.600
+The first rung is columbia's CPU lanes.
+
+00:08:34.600 --> 00:08:35.000
+Advise:
+
+00:08:35.000 --> 00:08:36.200
+nothing was done.
+
+00:08:36.200 --> 00:08:39.400
+Four things in it are worth a decision.
+
+00:08:39.400 --> 00:08:43.800
+The target was set to give the pass something to say.
+
+00:08:43.800 --> 00:08:47.400
+The room is read from inside two counters' cases.
+
+00:08:47.400 --> 00:08:54.600
+A target meant for the air of a room will ask the fleet to shed everything against that.
+
+00:08:54.600 --> 00:08:58.600
+The fleet drew about seven hundred watts, not twelve hundred.
+
+00:08:58.600 --> 00:09:03.000
+Without the power switch, its whole range is about five hundred.
+
+00:09:03.000 --> 00:09:07.400
+And cheapest first sheds columbia's five watts, for almost no heat.
+
+00:09:10.000 --> 00:09:10.800
+The proof.
+
+00:09:13.400 --> 00:09:16.200
+Everything that acts was proved somewhere else:
+
+00:09:16.200 --> 00:09:21.800
+on a scratch queue, with fabricated telemetry and a stand-in for the queue's command.
+
+00:09:21.800 --> 00:09:23.800
+Sixty claims, and it ends:
+
+00:09:23.800 --> 00:09:24.200
+passed.
+
+00:09:24.200 --> 00:09:28.200
+It asserts that the live queue's files were not written.
+
+00:09:28.200 --> 00:09:35.400
+There, a warm room shed in order, from twelve hundred and twenty watts to two hundred and thirty-two.
+
+00:09:38.000 --> 00:09:46.400
+With UA at eighty and the outside five degrees colder, four hundred watts more is asked before the room has moved.
+
+00:09:46.400 --> 00:09:50.800
+Held eight hours at a limit, the integral stays at nothing.
+
+00:09:50.800 --> 00:09:56.800
+And with every rung used and the room still cold, the plan names another computer.
+
+00:09:56.800 --> 00:09:60.000
+A line in the plan, and nothing more.
+
+00:10:02.600 --> 00:10:05.800
+Then a simulated room, begun at twenty-four degrees.
+
+00:10:05.800 --> 00:10:13.800
+With a time constant of six hours, its third day stays within point four five of a degree of twenty-one.
+
+00:10:13.800 --> 00:10:16.600
+With twenty-four hours, within point one seven.
+
+00:10:16.600 --> 00:10:21.000
+With the outside swinging from ten to eighteen, and UA set:
+
+00:10:21.000 --> 00:10:22.200
+point five three.
+
+00:10:22.200 --> 00:10:24.200
+The same with no feedforward:
+
+00:10:24.200 --> 00:10:25.800
+one point three five.
+
+00:10:25.800 --> 00:10:30.200
+Once UA is known, the outside more than halves the error.
+
+00:10:30.200 --> 00:10:38.200
+But the simulated room has no delay, an ideal thermometer, and watts that fall the moment a lane is paused.
+
+00:10:38.200 --> 00:10:40.600
+The house has none of those.
+
+00:10:43.200 --> 00:10:44.800
+Last, the two screens.
+
+00:10:47.400 --> 00:10:53.400
+Both screens run the queue's hearth verb, which passes on four things and no others:
+
+00:10:53.400 --> 00:10:55.400
+target, mode, step and status.
+
+00:10:55.400 --> 00:11:02.200
+The power switch, the gains, the probes and the machines' addresses are not reachable from a button.
+
+00:11:04.800 --> 00:11:09.600
+The Fleet screen's one button turns regulation off, or on to advise.
+
+00:11:09.600 --> 00:11:13.600
+Going to act is done only on the Heat screen.
+
+00:11:13.600 --> 00:11:14.800
+Now the pictures.
+
+00:11:17.400 --> 00:11:23.800
+This is the Heat screen's Hearth panel, with the live plan of the sixteenth, in advise.
+
+00:11:23.800 --> 00:11:28.200
+At the top, the target, and three chips for the mode.
+
+00:11:28.200 --> 00:11:30.600
+Act asks to be pressed twice.
+
+00:11:30.600 --> 00:11:31.800
+Then the room:
+
+00:11:31.800 --> 00:11:34.600
+each probe, its reading and its age.
+
+00:11:34.600 --> 00:11:35.800
+And the balance:
+
+00:11:35.800 --> 00:11:41.000
+the fleet's watts as a bar, with a mark at the watts wanted.
+
+00:11:41.000 --> 00:11:44.600
+On the right, the ladder, the next rung marked.
+
+00:11:44.600 --> 00:11:48.600
+The power switch shows its state, and has no button.
+
+00:11:51.200 --> 00:11:52.800
+And the Fleet screen.
+
+00:11:52.800 --> 00:12:01.200
+Above the machines it would pause, one line says the mode, the room, the target, and the watts now and wanted.
+
+00:12:01.200 --> 00:12:02.400
+And one button:
+
+00:12:02.400 --> 00:12:05.200
+turn regulation off, or on to advise.
+
+00:12:05.200 --> 00:12:09.200
+Going to act is done only on the Heat screen.
+
+00:12:09.200 --> 00:12:11.600
+Both screens were checked as pictures.
+
+00:12:11.600 --> 00:12:13.200
+No button was pressed.
+
+00:12:15.800 --> 00:12:19.000
+This last picture is not the live fleet.
+
+00:12:19.000 --> 00:12:26.200
+It is a made-up plan, in a scratch queue, to show states the fleet has not been in.
+
+00:12:26.200 --> 00:12:29.400
+Act in force, and the power switch on.
+
+00:12:29.400 --> 00:12:31.800
+One probe suspect, and one stale.
+
+00:12:31.800 --> 00:12:33.000
+Four rungs taken.
+
+00:12:33.000 --> 00:12:41.800
+And across the top, the line that says every rung is used, the room is still cold, and which machine would help.
+
+00:12:44.400 --> 00:12:47.200
+What was done, and what was not.
+
+00:12:47.200 --> 00:12:50.400
+Two room probes are read, and SeaTac's air.
+
+00:12:50.400 --> 00:12:52.000
+The controller is written.
+
+00:12:52.000 --> 00:12:56.400
+Sixty claims pass, on a scratch queue and a simulated room.
+
+00:12:56.400 --> 00:12:59.200
+One live pass was run, in advise.
+
+00:12:59.200 --> 00:13:02.400
+Two screens are in Orrery, checked as pictures.
+
+00:13:02.400 --> 00:13:09.200
+The house's loss is bounded from one evening, and the tool that will fit it is written.
+
+00:13:09.200 --> 00:13:12.400
+Act has never run against the real queue.
+
+00:13:12.400 --> 00:13:17.200
+No lane was paused, no machine powered off, no wake packet sent.
+
+00:13:17.200 --> 00:13:18.400
+Wake-on-LAN is untried.
+
+00:13:18.400 --> 00:13:20.000
+UA is not measured:
+
+00:13:20.000 --> 00:13:24.400
+more than forty-two watts a degree, and no more is known.
+
+00:13:24.400 --> 00:13:27.600
+So SeaTac's air is not yet in use.
+
+00:13:27.600 --> 00:13:30.400
+The house's time constant is not measured.
+
+00:13:30.400 --> 00:13:33.200
+The gains are a guess made slow.
+
+00:13:33.200 --> 00:13:35.200
+The controller is not scheduled.
+
+00:13:35.200 --> 00:13:40.800
+The target is not Paul's choice, and the probes sit inside two counters' cases.
+
+00:13:40.800 --> 00:13:44.800
+The recipes that need root are written, and not run.
+
+00:13:47.400 --> 00:13:49.400
+The room is read now.
+
+00:13:49.400 --> 00:13:52.200
+No machine has been changed by it.
+
+00:13:52.200 --> 00:13:58.600
+The controller works out the watts the room wants, and says which step it would take.
+
+00:13:58.600 --> 00:14:01.800
+It has acted only on a scratch queue.
+
+00:14:01.800 --> 00:14:08.200
+When it runs on the live fleet, and when act is set, are Paul's to decide.

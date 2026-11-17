@@ -55,6 +55,12 @@ CARDS = {
                "the T-Echo's MeshCore lists a GPS and no thermometer, the second answers nothing, the T-Deck runs something else. "
                "The CPUs' time constants from the queue's own steps, each disk's lag behind its machine's watts, the house as two "
                "rooms and a fan, and what to buy. No room is read yet and no controller is built."),
+    "hearth-auto": ("Fleet · holding the room",
+                    "The room has thermometers now: two Geiger counters on saskatchewan. A controller turns a target, their "
+                    "reading and SeaTac's outside air into the watts the fleet should burn, and one step a pass on a ladder: a "
+                    "machine's CPU lanes take nothing new, then its card's, then power, and back with a wake packet. Off, advise "
+                    "and act; proved on a scratch queue and a simulated room, run on the live fleet in advise only. It has never "
+                    "changed a machine, and the house's loss per degree is not yet known."),
     "orange-queue": ("Fleet · the orange queue",
                      "Seven hours in which the Mac closed its shared connection to each machine every few minutes: 276 jobs put back "
                      "and started again while the first copy ran on, columbia at thirteen censuses on eight cores, three cards at 100% "

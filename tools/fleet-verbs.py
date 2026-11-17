@@ -176,4 +176,24 @@ def boots(q, argv):
     delegate(q, "boots.py", argv[2:])
 
 
-VERBS = {"boots": boots, "nets": nets, "growth": growth, "recordings": recordings, "bridge": bridge, "montage": montage, "videos": videos, "crucible": crucible, "forget": forget}
+def hearth(q, argv):
+    # Regulate temperature (tools/hearth.py; Paul, 16 November: "the auto method on the fleet screen with a
+    # regulate temperature, configurable on the heat screen, for target temp"). The Heat page's Hearth panel and
+    # the Fleet page's switch run these and no other: target C, mode off|advise|act, step, status.
+    # NOT `set`: the switch that lets act power a machine off and wake it is hearth.py's own, from the command
+    # line, and so are the gains, the probes and the machines' addresses. A target or a mode that was taken is
+    # an event of the queue's, so that who set act, and when, is in the record the keeper's own doings are in.
+    a = argv[2:]
+    ok = a in (["step"], ["status"]) or (len(a) == 2 and (a[0] == "target" or (a[0] == "mode" and a[1] in ("off", "advise", "act"))))
+    if not ok:
+        print("hearth target C | mode off|advise|act | step | status: the Heat page's buttons, and no other")
+        sys.exit(2)
+    r = subprocess.run([sys.executable, "-I", os.path.join(HERE, "hearth.py"), q.d] + a, capture_output=True, text=True)
+    if r.returncode == 0 and a[0] in ("target", "mode"):
+        q.event("hearth " + a[0], value=a[1], said=r.stdout.strip().splitlines()[-1:])
+    sys.stdout.write(r.stdout)
+    sys.stderr.write(r.stderr)
+    sys.exit(r.returncode)
+
+
+VERBS = {"hearth": hearth, "boots": boots, "nets": nets, "growth": growth, "recordings": recordings, "bridge": bridge, "montage": montage, "videos": videos, "crucible": crucible, "forget": forget}

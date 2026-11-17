@@ -1190,6 +1190,8 @@ fn gui_loop<S: surface::Surface>(
     let mut pipeline_model = pipeline::Model::default();
     let mut pipeline_state = pipeline::State::default();
     if let Some(dir) = queue_dir_of(queue_ctl) {
+        // The hearth's plan and state are files of the queue's, read by the Heat page itself.
+        heat::set_queue(&dir);
         let doc = Arc::clone(&pipeline_doc);
         thread::spawn(move || loop {
             if let Ok(text) = std::fs::read_to_string(format!("{}/plan/pipeline.json", dir)) {
@@ -1546,8 +1548,15 @@ fn gui_loop<S: surface::Surface>(
                     // The queue's document carries thermal.py's; the page is Queue, Heat, under the Machines' keys.
                     let text = jobs_doc.lock().unwrap_or_else(|e| e.into_inner()).clone();
                     let model = training::Model::parse(&text, &jobs_source);
-                    if let Some(v) = heat::draw_view(&mut u, model.thermal.as_ref()) {
+                    // The Hearth's buttons are the queue's verbs, run and answered as the Queue's are.
+                    let said = queue_said.lock().unwrap_or_else(|e| e.into_inner()).clone();
+                    let mut ask = None;
+                    if let Some(v) = heat::draw_view(&mut u, model.thermal.as_ref(), training_state.operator, &said, &mut ask) {
                         action = Some(lab::Action::Go(v));
+                    }
+                    if let Some(verb) = ask {
+                        *queue_said.lock().unwrap_or_else(|e| e.into_inner()) = format!("{}...", verb);
+                        run_said(format!("{} {}", queue_ctl, verb), Arc::clone(&queue_said));
                     }
                 }
                 (None, v @ (nav::View::Queue | nav::View::Results | nav::View::Settings)) => {

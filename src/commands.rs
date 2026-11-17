@@ -102,6 +102,10 @@ pub const MENU: &[(&str, &str, &str, Cmd)] = &[
     ("Fleet", "Auto Mode Off", "", Cmd::Queue("auto off")),
     ("Fleet", "Rotation On", "", Cmd::Queue("rotation on")),
     ("Fleet", "Rotation Off", "", Cmd::Queue("rotation off")),
+    // Regulate temperature (heat.rs, the Hearth): off and advise from here, as from the Fleet page.
+    // Act is not a menu item: it is set on Heat, Hearth, beside what it does.
+    ("Fleet", "Regulate Temperature: Advise", "", Cmd::Queue("hearth mode advise")),
+    ("Fleet", "Regulate Temperature: Off", "", Cmd::Queue("hearth mode off")),
     ("Fleet", "-", "", Cmd::Separator),
     ("Fleet", "Acknowledge All Flags", "", Cmd::Queue("ack all --by operator")),
     ("Fleet", "-", "", Cmd::Separator),

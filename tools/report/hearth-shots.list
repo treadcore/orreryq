@@ -1,0 +1,8 @@
+# The Hearth panel and the Fleet page's regulation line, from the queue's own hearth/plan.json and
+# state.json (ORRERY_HEARTH names the queue for a picture; HQ another queue's hearth, for a made-up plan):
+#   SHOTS=tools/report/hearth-shots.list OUT=docs/hearth ORRERY_BIN=target/release/orrery sh tools/report/double-shots.sh QUEUE
+# JDOC: a saved document of treadcore-view.py's, for when the Mac is busy and the view's read of the
+# queue's status passes its 20 seconds (the document then has no queue, and the picture is the wrong page).
+J=${JDOC:-$J}
+shot ${HN:-hearth-panel} queue $J ORRERY_FRAME_PAGE=20 ORRERY_HEAT=hearth ORRERY_HEARTH=${HQ:-$Q}
+shot ${FN:-fleet-auto} queue $J ORRERY_FRAME_PAGE=0 ORRERY_HEARTH=${HQ:-$Q}

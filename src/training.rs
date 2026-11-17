@@ -776,7 +776,7 @@ const SETTINGS_PAGES: [usize; 5] = [6, 19, 9, 11, 7];
 /// keeps the number 5, so ORRERY_FRAME_PAGE and a saved page mean what they
 /// meant. Personas (10), Ranges (11) and Gauntlet (12) came on 2 November.
 const PAGES: [(usize, &str, &str); 21] = [
-    (20, "Heat", "the fleet's heat as an energy balance: each machine's watts and temperatures against its limits, six hours of them, and what the steps the queue made say of each part: its time constant, degrees a watt, joules a degree"),
+    (20, "Heat", "the hearth (a target for the room, the watts wanted, the ladder) and the fleet's heat as an energy balance: each machine's watts and temperatures against its limits, six hours of them, and what the steps the queue made say of each part: its time constant, degrees a watt, joules a degree"),
     (19, "After a cut", "after a power cut: when the fleet went quiet and came back, each machine's boot against the one before, the islands' saves, the jobs it cut"),
     (18, "Generations", "the lab report Outgrowing Yourself, live, a tab a figure: the roads to main, the days, every generation's turnaround, what a generation claims and keeps, the GPU's ladder and its elections on the CUDA gauntlet, the hours and what they bought"),
     (15, "Recordings", "the behaviour-cloning recordings: each run's size on its store, its recipe, who reads it; keep, drop, re-record, and a seed read a tank at a time"),
@@ -941,7 +941,10 @@ pub fn draw(ui: &mut Ui, m: &Model, st: &mut State, view: nav::View) -> Option<n
             10 => draw_personas(ui, page, m),
             11 => draw_ranges(ui, page, m, st),
             12 => draw_gauntlet(ui, page, m),
-            20 => crate::heat::draw(ui, page, m.thermal.as_ref()),
+            20 => {
+                let (operator, said) = (st.operator, st.said.clone());
+                crate::heat::draw(ui, page, m.thermal.as_ref(), operator, &said, &mut st.ctl)
+            }
             13 => {
                 let operator = st.operator;
                 crate::nets::draw(ui, page, m.nets.as_ref(), &mut st.nets, operator, &mut st.ctl)
@@ -1276,6 +1279,11 @@ fn draw_roster(ui: &mut Ui, at: Rect, q: &Queue, m: &Model, st: &mut State) {
     let name_w = F8X13.measure("saskatchewan  ") as i32;
     let mut rows: Vec<&Roster> = q.roster.iter().filter(|r| r.joined).collect();
     rows.extend(q.roster.iter().filter(|r| !r.joined));
+    // Regulate temperature, above the machines it pauses and resumes (Paul, 16 November: "the auto
+    // method on the fleet screen with a regulate temperature, configurable on the heat screen"):
+    // its state in a line and its switch between off and advise, as auto mode has its line and its
+    // switch on the Candidates page. Act is set on Heat, Hearth (heat.rs).
+    y += crate::heat::fleet_switch(ui, rect(at.x, y, at.w, 22), st.operator, &mut st.ctl);
     for r in rows {
         if y + row_h > at.bottom() {
             break;

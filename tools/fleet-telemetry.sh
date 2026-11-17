@@ -116,9 +116,10 @@ E
             case "$gf" in ''|*[!0-9]*) ;; *) line="$line gpu.fan=$gf" ;; esac
         fi
     fi
-    # The Geiger counters radbeeper logs, where it runs (saskatchewan): each counter's five-minute
+    # The Geiger counters radbeeper logs, where it runs (fleet-probes.sh finds them): each counter's five-minute
     # counts a minute, from the last line of this month's log, if that line is under two minutes old.
-    for x in /var/lib/radbeeper/cpm-[0-9A-F]*-"$(date +%Y-%m)".tsv; do
+    # (A service the user started, with no root, logs in ~/.local/share/radbeeper: read there too.)
+    for x in /var/lib/radbeeper/cpm-[0-9A-F]*-"$(date +%Y-%m)".tsv "$HOME"/.local/share/radbeeper/cpm-[0-9A-F]*-"$(date +%Y-%m)".tsv; do
         [ -r "$x" ] || continue
         [ $(( now - $(stat -c %Y "$x" 2>/dev/null || echo 0) )) -lt 120 ] || continue
         id=${x##*/cpm-}; id=${id%%-*}
@@ -128,12 +129,14 @@ E
     # The same counters' own thermometers, where radbeeper asks them (a GMC-320, and a radbeeper that
     # writes temp-ID-YYYY-MM.tsv): degrees C from that log's last line, if it is under two minutes
     # old. It is inside the counter's case, and it is the nearest thing here to the room's air.
-    for x in /var/lib/radbeeper/temp-[0-9A-F]*-"$(date +%Y-%m)".tsv; do
+    for x in /var/lib/radbeeper/temp-[0-9A-F]*-"$(date +%Y-%m)".tsv "$HOME"/.local/share/radbeeper/temp-[0-9A-F]*-"$(date +%Y-%m)".tsv; do
         [ -r "$x" ] || continue
         [ $(( now - $(stat -c %Y "$x" 2>/dev/null || echo 0) )) -lt 120 ] || continue
         id=${x##*/temp-}; id=${id%%-*}
         v=$(tail -n 1 "$x" | cut -f 2)
-        case "$v" in ''|*[!0-9.-]*) ;; *) line="$line room.rad${id#??????????}.c=$v" ;; esac
+        # -0.0 and 85.0 are the counter having no reading to give, which a radbeeper from before
+        # 16 November wrote down as though they were; neither is passed on as the room's air.
+        case "$v" in ''|*[!0-9.-]*|-0.0|85.0) ;; *) line="$line room.rad${id#??????????}.c=$v" ;; esac
     done
     for x in /run/fleet-sensors/*.kv; do
         [ -r "$x" ] || continue

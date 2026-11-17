@@ -1,0 +1,1160 @@
+{
+ "title": "Holding the Room",
+ "subtitle": "the fleet's watts set by a target, the room's thermometers and SeaTac's air",
+ "byline": "treadcore and the Orrery fleet  ·  16 November 2026",
+ "slug": "hearth-auto",
+ "report": "hearth-auto-lab-report",
+ "drawn_by": "tools/report/hearth-auto_film.py",
+ "youtube_title": "Holding the Room: the fleet's watts set by a target",
+ "blurb": "A small fleet of computers heats one house. On 16 November 2026 the room got two thermometers, inside two Geiger counters on one machine, and a controller was written that works out how many watts the room wants from a target and steps the fleet toward it: a machine's CPU lanes take no new jobs, then its card's lane, then, behind a second switch that is off, the machine is powered off. The film walks one block diagram arrow by arrow: the probes, the law, the ladder and its three modes, the proof on a scratch queue, and the two screens in Orrery. The controller has run on the live fleet in advise mode only and has never changed a machine. Wake-on-LAN is untried. The house's loss per degree is unknown, so SeaTac's temperature is read and shown and not yet used. The room's time constant is not measured. The 21.0 C target was set to give the first pass something to say. The film says so. The narration scrolls in the corner at 150 words a minute.",
+ "closing": [
+  "The room is read now.",
+  "No machine has been changed by it."
+ ],
+ "credits": [
+  "Orrery  ·  treadcore.org",
+  "Paul Richeson: producer, animator, writer, coder, implementer, developer, founder",
+  "Team pair: Claude Code (Claude Fable 5.2)",
+  "MIT License  ·  Copyright (c) 2026 Paul Richeson"
+ ],
+ "wpm": 150,
+ "chapter_names": {
+  "hook1": "Two thermometers, inside two counters",
+  "hook2": "The first pass: shed 446 W, and nothing done",
+  "hook3": "What it has not done",
+  "whole": "The whole, in one picture",
+  "borders": "The four borders",
+  "house": "What the house loses: the balance, and a bound",
+  "pass": "The first live pass, in its own words",
+  "sim": "The simulated room",
+  "panel": "The Heat screen: the Hearth panel",
+  "fleetline": "The Fleet screen: the switch",
+  "cold": "A made-up plan: act, and a cold room",
+  "pattern": "What was done, and what was not",
+  "end": "The close, and the credits"
+ },
+ "after": {
+  "law": [
+   "house"
+  ],
+  "ladder": [
+   "pass"
+  ],
+  "proof": [
+   "sim"
+  ],
+  "screens": [
+   "panel",
+   "fleetline",
+   "cold"
+  ]
+ },
+ "regions": {
+  "probes": {
+   "x": 40,
+   "y": 100,
+   "w": 560,
+   "h": 340,
+   "col": "#58c4dd",
+   "name": "THE PROBES",
+   "sub": "what reads the room, and outside",
+   "cue": null
+  },
+  "ctl": {
+   "x": 640,
+   "y": 100,
+   "w": 840,
+   "h": 340,
+   "col": "#83c167",
+   "name": "THE CONTROLLER",
+   "sub": "one program on the Mac, in three modes",
+   "cue": 0
+  },
+  "screens": {
+   "x": 1520,
+   "y": 100,
+   "w": 360,
+   "h": 340,
+   "col": "#b189c6",
+   "name": "ORRERY",
+   "sub": "two screens",
+   "cue": 3
+  },
+  "fleet": {
+   "x": 40,
+   "y": 470,
+   "w": 1060,
+   "h": 315,
+   "col": "#ff8c5a",
+   "name": "THE FLEET",
+   "sub": "every watt it draws is heat into the room",
+   "cue": 1
+  },
+  "proof": {
+   "x": 1140,
+   "y": 470,
+   "w": 740,
+   "h": 315,
+   "quiet": true,
+   "col": "#5cd0b3",
+   "name": "THE PROOF",
+   "sub": "a scratch queue and a simulated room",
+   "cue": 4
+  }
+ },
+ "nodes": {
+  "counters": {
+   "region": "probes",
+   "x": 60,
+   "y": 160,
+   "w": 245,
+   "h": 90,
+   "title": "two counters",
+   "sub": "GMC-320s, on saskatchewan"
+  },
+  "median": {
+   "region": "probes",
+   "x": 325,
+   "y": 160,
+   "w": 245,
+   "h": 90,
+   "title": "the median",
+   "sub": "of a probe's five minutes"
+  },
+  "outside": {
+   "region": "probes",
+   "x": 325,
+   "y": 330,
+   "w": 245,
+   "h": 90,
+   "title": "SeaTac's air",
+   "sub": "station KSEA, the outside"
+  },
+  "room": {
+   "region": "ctl",
+   "x": 665,
+   "y": 160,
+   "w": 220,
+   "h": 90,
+   "title": "the room",
+   "sub": "the mean of its probes"
+  },
+  "target": {
+   "region": "ctl",
+   "x": 665,
+   "y": 330,
+   "w": 220,
+   "h": 90,
+   "title": "the target",
+   "sub": "a temperature to hold"
+  },
+  "law": {
+   "region": "ctl",
+   "x": 960,
+   "y": 245,
+   "w": 220,
+   "h": 90,
+   "title": "the law",
+   "sub": "watts the room wants"
+  },
+  "balance": {
+   "region": "ctl",
+   "x": 1240,
+   "y": 160,
+   "w": 220,
+   "h": 90,
+   "title": "the balance",
+   "sub": "wanted against drawn"
+  },
+  "mode": {
+   "region": "ctl",
+   "x": 1240,
+   "y": 330,
+   "w": 220,
+   "h": 90,
+   "title": "the mode",
+   "sub": "off, advise, act"
+  },
+  "hearthpanel": {
+   "region": "screens",
+   "x": 1540,
+   "y": 160,
+   "w": 320,
+   "h": 90,
+   "title": "Heat: the Hearth panel",
+   "sub": "the target, the mode, the plan"
+  },
+  "fleetsw": {
+   "region": "screens",
+   "x": 1540,
+   "y": 330,
+   "w": 320,
+   "h": 90,
+   "title": "Fleet: the switch",
+   "sub": "off, or on to advise"
+  },
+  "watts": {
+   "region": "fleet",
+   "x": 80,
+   "y": 530,
+   "w": 270,
+   "h": 90,
+   "title": "the wall watts",
+   "sub": "all of it heat into the room"
+  },
+  "wake": {
+   "region": "fleet",
+   "x": 430,
+   "y": 530,
+   "w": 270,
+   "h": 90,
+   "title": "wake-on-LAN",
+   "sub": "a 102-byte packet: untried"
+  },
+  "cpul": {
+   "region": "fleet",
+   "x": 790,
+   "y": 530,
+   "w": 270,
+   "h": 90,
+   "title": "CPU lanes",
+   "sub": "take nothing new"
+  },
+  "power": {
+   "region": "fleet",
+   "x": 430,
+   "y": 680,
+   "w": 270,
+   "h": 90,
+   "title": "power off",
+   "sub": "a second switch, which is off"
+  },
+  "card": {
+   "region": "fleet",
+   "x": 790,
+   "y": 680,
+   "w": 270,
+   "h": 90,
+   "title": "a card's lane",
+   "sub": "after its CPU lanes"
+  },
+  "scratch": {
+   "region": "proof",
+   "x": 1180,
+   "y": 605,
+   "w": 300,
+   "h": 90,
+   "title": "a scratch queue",
+   "sub": "stand-in commands, sixty claims"
+  },
+  "simroom": {
+   "region": "proof",
+   "x": 1540,
+   "y": 605,
+   "w": 300,
+   "h": 90,
+   "title": "a simulated room",
+   "sub": "first order, 0.008 °C a watt"
+  }
+ },
+ "acts": {
+  "probes": {
+   "name": "THE ROOM'S THERMOMETERS",
+   "sub": "two, inside two Geiger counters on one machine",
+   "col": "#58c4dd"
+  },
+  "law": {
+   "name": "THE LAW",
+   "sub": "how many watts the room wants",
+   "col": "#83c167"
+  },
+  "ladder": {
+   "name": "THE LADDER",
+   "sub": "every step the fleet has, and the three modes",
+   "col": "#ff8c5a"
+  },
+  "proof": {
+   "name": "THE PROOF",
+   "sub": "sixty claims, on a scratch queue and a simulated room",
+   "col": "#5cd0b3"
+  },
+  "screens": {
+   "name": "THE TWO SCREENS",
+   "sub": "checked as rendered pictures; no button was pressed",
+   "col": "#b189c6"
+  }
+ },
+ "whole": {
+  "head": "THE WHOLE, IN ONE PICTURE",
+  "arrows": [
+   {
+    "a": [
+     500,
+     396
+    ],
+    "b": [
+     760,
+     396
+    ],
+    "col": "#58c4dd",
+    "words": "temperatures",
+    "off": 0,
+    "cue": 0,
+    "lag": 1.0
+   },
+   {
+    "a": [
+     900,
+     392
+    ],
+    "b": [
+     900,
+     532
+    ],
+    "col": "#83c167",
+    "words": "one step at a time",
+    "off": -26,
+    "cue": 1,
+    "lag": 2.0
+   },
+   {
+    "a": [
+     300,
+     532
+    ],
+    "b": [
+     300,
+     392
+    ],
+    "col": "#ff8c5a",
+    "words": "heat",
+    "off": 26,
+    "cue": 2,
+    "lag": 0.4
+   },
+   {
+    "a": [
+     1620,
+     396
+    ],
+    "b": [
+     1380,
+     396
+    ],
+    "col": "#b189c6",
+    "words": "target, mode",
+    "off": 0,
+    "cue": 3,
+    "lag": 1.6
+   },
+   {
+    "a": [
+     1330,
+     392
+    ],
+    "b": [
+     1330,
+     532
+    ],
+    "col": "#5cd0b3",
+    "words": "act, here only",
+    "off": 26,
+    "cue": 4,
+    "lag": 2.0
+   }
+  ]
+ },
+ "borders": {
+  "head": "THE FOUR BORDERS",
+  "rows": [
+   {
+    "col": "#58c4dd",
+    "name": "probes to controller",
+    "need": "a median of five minutes, never one sample",
+    "pts": [
+     [
+      620,
+      100
+     ],
+     [
+      620,
+      440
+     ]
+    ]
+   },
+   {
+    "col": "#83c167",
+    "name": "controller to fleet",
+    "need": "the queue's own commands, one step a pass",
+    "pts": [
+     [
+      640,
+      455
+     ],
+     [
+      1100,
+      455
+     ]
+    ]
+   },
+   {
+    "col": "#b189c6",
+    "name": "person to controller",
+    "need": "four words: target, mode, step, status",
+    "pts": [
+     [
+      1500,
+      100
+     ],
+     [
+      1500,
+      440
+     ]
+    ]
+   },
+   {
+    "col": "#ff8c5a",
+    "name": "fleet to room",
+    "need": "every watt it draws, as heat",
+    "pts": [
+     [
+      40,
+      455
+     ],
+     [
+      600,
+      455
+     ]
+    ]
+   }
+  ]
+ },
+ "hook": {
+  "at": "16 NOVEMBER 2026",
+  "probes": [
+   {
+    "key": "room.rad7F7E.c",
+    "c": "26.8",
+    "from": "GMC-320 Re 4.26, on saskatchewan"
+   },
+   {
+    "key": "room.radC2EA.c",
+    "c": "26.0",
+    "from": "GMC-320+V4 Re 4.83, on saskatchewan"
+   }
+  ],
+  "mean": "26.4",
+  "apart": "0.8",
+  "non": [
+   "85.0",
+   "-0.0"
+  ],
+  "non_times": "forty-two",
+  "pass_at": "17:37, 16 NOVEMBER 2026",
+  "room": "26.4",
+  "target": "21.0",
+  "error": "-5.4",
+  "drawn": 704,
+  "wanted": 257,
+  "shed": 446,
+  "first": "columbia: its CPU lanes take nothing new, about 5 W",
+  "nots": [
+   {
+    "head": "THE CONTROLLER",
+    "big": "never",
+    "words": "has it changed a real machine. On the live fleet it has run in advise only."
+   },
+   {
+    "head": "WAKE-ON-LAN",
+    "big": "untried",
+    "words": "No machine's BIOS was read."
+   },
+   {
+    "head": "THE HOUSE'S LOSS, UA",
+    "big": "unknown",
+    "words": "So SeaTac's air is read and shown, and not yet used in the law."
+   },
+   {
+    "head": "THE TARGET, 21.0 °C",
+    "big": "not chosen",
+    "words": "It was set to give the first pass something to say."
+   }
+  ],
+  "questions": [
+   "How many watts does a room want?",
+   "How does the fleet get there without throwing work away?",
+   "And what must stay in a person's hands?"
+  ]
+ },
+ "pass": {
+  "head": "THE FIRST PASS ON THE LIVE FLEET  ·  ADVISE MODE, 16 NOVEMBER, 17:37",
+  "lines": [
+   {
+    "cue": -1,
+    "words": "the room is 26.4 C (79.5 F), the mean of room.rad7F7E.c, room.radC2EA.c; the target is 21.0 C (69.8 F); the error is -5.4"
+   },
+   {
+    "cue": -1,
+    "words": "outside 9.0 C (48.2 F) by outside.ksea.c, 37 min old; no feedforward: UA is unknown (`fit-ua`, then `set ua N`)"
+   },
+   {
+    "cue": 0,
+    "words": "the fleet draws 704 W (boburner, calber, columbia, saskatchewan, whitewolf read; not read and not counted: bosporus, jaguaribe, mac, macmini); wanted 257 W (bias 704, P -1529, I +0), held at the least it can shed to (the law alone asks -825 W; the integral stands)"
+   },
+   {
+    "cue": 1,
+    "words": "to shed 446 W: columbia: its CPU lanes take nothing new, about 5 W (the CPU's watts read now, less its idle (an estimate))"
+   },
+   {
+    "cue": 1,
+    "words": "    fleet-queue.py QUEUE machine columbia pause"
+   },
+   {
+    "cue": 1,
+    "words": "advise: nothing was done",
+    "lit": true
+   }
+  ],
+  "tiles": [
+   [
+    "the room",
+    "26.4 °C"
+   ],
+   [
+    "the target",
+    "21.0 °C"
+   ],
+   [
+    "drawn",
+    "704 W"
+   ],
+   [
+    "wanted",
+    "257 W"
+   ]
+  ],
+  "shed": "to shed 446 W: columbia's CPU lanes first, about 5 W",
+  "decisions": [
+   {
+    "head": "THE TARGET",
+    "words": "21.0 °C was set to give the first pass something to say. Paul has not chosen it."
+   },
+   {
+    "head": "THE PROBES",
+    "words": "26.4 °C is read from inside two counters' cases on one machine. The probes want places, and probably an offset or a probe in the air."
+   },
+   {
+    "head": "THE RANGE",
+    "words": "The fleet drew about 700 W, not 1.2 kW. Without the power switch, the whole range it can shed is about 500 W."
+   },
+   {
+    "head": "THE ORDER",
+    "words": "Cheapest first sheds columbia's 5 W first, for almost no heat. An order can be set for each machine."
+   }
+  ],
+  "big": "advise: nothing was done",
+  "ask": "Four things in it are worth a decision."
+ },
+ "sim": {
+  "head": "THE SIMULATED ROOM  ·  FIRST ORDER, 0.008 °C/W, OUTSIDE AT 14 °C, BEGUN AT 24 °C, THE FLEET AT 1,220 W",
+  "ask": "How close to 21 °C does its third day stay?",
+  "rows": [
+   {
+    "name": "time constant 6 h",
+    "within": 0.45,
+    "changes": 5,
+    "col": "#83c167"
+   },
+   {
+    "name": "time constant 24 h",
+    "within": 0.17,
+    "changes": 0,
+    "col": "#83c167"
+   },
+   {
+    "name": "6 h, the outside swinging 10 to 18 °C, UA set to 125",
+    "within": 0.53,
+    "changes": 14,
+    "col": "#83c167"
+   },
+   {
+    "name": "the same, no feedforward",
+    "within": 1.35,
+    "changes": 12,
+    "col": "#fc6255"
+   }
+  ],
+  "gain": "Once UA is known, the outside temperature more than halves the error in a room that follows the weather.",
+  "caveat": "The simulated room has no delay, an ideal thermometer, and watts that fall the moment a lane is paused.",
+  "caveat2": "The house has none of those."
+ },
+ "pictures": {
+  "panel": {
+   "file": "../hearth/hearth-panel.png",
+   "head": "ORRERY, QUEUE, HEAT, THE HEARTH PANEL  ·  THE LIVE PLAN OF 16 NOVEMBER, IN ADVISE",
+   "boxes": [
+    {
+     "cue": 0,
+     "r": [
+      154,
+      268,
+      965,
+      36
+     ]
+    },
+    {
+     "cue": 1,
+     "r": [
+      154,
+      376,
+      612,
+      92
+     ]
+    },
+    {
+     "cue": 1,
+     "r": [
+      154,
+      518,
+      612,
+      46
+     ],
+     "lag": 4.2
+    },
+    {
+     "cue": 2,
+     "r": [
+      770,
+      378,
+      618,
+      392
+     ]
+    }
+   ],
+   "plates": [
+    {
+     "cue": 0,
+     "col": "#83c167",
+     "head": "the target, the mode",
+     "words": "Minus 0.5, plus 0.5, and a field. Three chips: off, advise, act. Act asks to be pressed twice."
+    },
+    {
+     "cue": 1,
+     "col": "#58c4dd",
+     "head": "the room, the balance",
+     "words": "Each probe, its reading and its age. The fleet's watts as a bar, with a mark at the watts wanted."
+    },
+    {
+     "cue": 2,
+     "col": "#ff8c5a",
+     "head": "the ladder",
+     "words": "Every rung in order, the next to be taken marked. The power switch: its state, and no button."
+    }
+   ],
+   "foot": [
+    "The live plan, in advise mode.",
+    "Checked as a rendered picture. No button was pressed."
+   ]
+  },
+  "fleetline": {
+   "file": "../hearth/fleet-auto.png",
+   "head": "ORRERY, QUEUE, FLEET  ·  THE REGULATE-TEMPERATURE LINE ABOVE THE MACHINES",
+   "boxes": [
+    {
+     "cue": 0,
+     "r": [
+      154,
+      230,
+      830,
+      38
+     ]
+    },
+    {
+     "cue": 1,
+     "r": [
+      1188,
+      232,
+      200,
+      32
+     ]
+    }
+   ],
+   "plates": [
+    {
+     "cue": 0,
+     "col": "#83c167",
+     "head": "one line",
+     "words": "The mode, the room, the target, and the watts now and wanted."
+    },
+    {
+     "cue": 1,
+     "col": "#b189c6",
+     "head": "one button",
+     "words": "Turn regulation off, or on to advise."
+    },
+    {
+     "cue": 2,
+     "col": "#fc6255",
+     "head": "act",
+     "words": "Set only on the Heat screen, where the consequences are written out."
+    }
+   ],
+   "foot": [
+    "Both screens were checked as rendered pictures.",
+    "No button was pressed."
+   ]
+  },
+  "cold": {
+   "file": "../hearth/hearth-panel-act-cold.png",
+   "head": "A MADE-UP PLAN, IN A SCRATCH QUEUE  ·  NOT THE LIVE FLEET",
+   "stamp": true,
+   "boxes": [
+    {
+     "cue": 0,
+     "r": [
+      908,
+      268,
+      480,
+      36
+     ]
+    },
+    {
+     "cue": 1,
+     "r": [
+      156,
+      488,
+      606,
+      72
+     ]
+    },
+    {
+     "cue": 1,
+     "r": [
+      774,
+      760,
+      614,
+      80
+     ],
+     "lag": 2.6
+    },
+    {
+     "cue": 2,
+     "r": [
+      156,
+      378,
+      1232,
+      62
+     ]
+    }
+   ],
+   "plates": [
+    {
+     "cue": -1,
+     "col": "#f7d96f",
+     "head": "made up",
+     "words": "A plan in a scratch queue, to show states the live fleet has not been in."
+    },
+    {
+     "cue": 0,
+     "col": "#fc6255",
+     "head": "act, and power on",
+     "words": "One probe suspect, one stale. The feedforward in use. Four rungs taken."
+    },
+    {
+     "cue": 2,
+     "col": "#fc6255",
+     "head": "the line across the top",
+     "words": "Every rung is used, the room is still cold, and which machine would help."
+    }
+   ],
+   "foot": [
+    "None of this has happened on the live fleet.",
+    "It is a picture of what the panel would say."
+   ]
+  }
+ },
+ "pattern": [
+  {
+   "name": "measured",
+   "sub": "Two room probes read: 26.8 and 26.0 °C at 17:37. SeaTac airport: 9.0 °C."
+  },
+  {
+   "name": "built",
+   "sub": "tools/hearth.py, the controller: the law, the ladder, three modes."
+  },
+  {
+   "name": "proved",
+   "sub": "Sixty claims, on a scratch queue and a simulated room. It ends PASSED. Run twice."
+  },
+  {
+   "name": "run",
+   "sub": "One live pass, in advise: shed 446 W, columbia's CPU lanes first. Nothing was done."
+  },
+  {
+   "name": "built",
+   "sub": "Two screens in Orrery, checked as rendered pictures. No button was pressed."
+  },
+  {
+   "name": "measured",
+   "sub": "One evening, the heating off: the room cooled with the fleet at 749 W, so UA is more than 42 W/°C."
+  },
+  {
+   "name": "not done",
+   "sub": "Act has never run on the real queue: no lane paused, no machine powered off, no wake packet sent."
+  },
+  {
+   "name": "not done",
+   "sub": "Wake-on-LAN is untried. It needs enabling in each machine's BIOS, and none was read."
+  },
+  {
+   "name": "not done",
+   "sub": "UA is not measured: more than 42 W/°C and no more is known. SeaTac's air is read and shown, and not in use."
+  },
+  {
+   "name": "not done",
+   "sub": "The house's time constant is not measured. The gains are a guess made slow."
+  },
+  {
+   "name": "not done",
+   "sub": "The controller is not scheduled. It runs when asked."
+  },
+  {
+   "name": "not done",
+   "sub": "The 21.0 °C target is not Paul's choice. The probes sit inside two counters' cases, on one machine."
+  },
+  {
+   "name": "not done",
+   "sub": "The CPU cap and radbeeper boot-service recipes are written and not run. There are no zones."
+  }
+ ],
+ "narration": {
+  "hook1": "Yesterday's report ended with no thermometer in the room. | Today there are two: one in each Geiger counter on saskatchewan. | Twenty-six point eight, and twenty-six point zero. | Both are inside a counter's case, on the same machine. Neither has been compared with a thermometer in the air. | And a counter can say two things that are not a temperature: eighty-five point zero, and minus zero. Both mean its thermometer has no reading to give.",
+  "hook2": "With a room temperature to hold, the fleet can be told how many watts to burn. | The first pass on the live fleet read the room at twenty-six point four, against a target of twenty-one. | The fleet drew seven hundred and four watts. The pass said to shed four hundred and forty-six, | beginning with columbia's CPU lanes: about five watts. | And then it did nothing. It was in advise mode.",
+  "hook3": "That is as far as it has gone. The controller has never changed a real machine. | Wake-on-LAN has not been tried. | The house's loss for each degree is unknown, so SeaTac's temperature is read and shown, and not yet used in the law. | And the target of twenty-one was set to give the first pass something to say. Paul has not chosen it. | So: how many watts does a room want? How does the fleet get there without throwing work away? And what must stay in a person's hands?",
+  "title": "Holding the Room. The fleet's watts set by a target, the room's thermometers, and SeaTac's air.",
+  "whole": "Begin from far away. There are five territories. The probes: what reads the room, and the outside. | They feed the controller, one program on the Mac. | Below it, the fleet. The controller would give it one step at a time, | and every watt the fleet draws goes into the room as heat. | In Orrery, two screens set the target and the mode. | And a proof, on a scratch queue: the only place the controller has acted.",
+  "borders": "Four borders. | From the probes to the controller: a median of five minutes, never one sample. | From the controller to the fleet: the queue's own commands, one step a pass. | From a person to the controller: four words, and no others. | And from the fleet to the room: heat.",
+  "act:probes": "First, what reads the room.",
+  "act:law": "Now the law: how many watts the room wants.",
+  "house": "Now the house's side of it, on the first evening with the house's own heating switched off. | One line of physics: what the room gets, less what it loses, is how fast it warms. At half past eight the room read twenty-six, the outside eight, the fleet seven hundred and forty-nine watts, and the room was falling a quarter of a degree an hour. | It is cooling, so it loses more than it gets. That bounds UA from below: more than forty-two watts a degree. And where the room settles is the outside, plus the watts over UA. | What the next days give. The record is already kept: the room, the watts, and SeaTac's air. | Two days with the watts level give the time constant, and how far over the outside the room settles at these watts. | A step in the fleet's watts, held a day, gives UA itself: the watts changed, over the degrees the settled level moved. | Then the heat capacity, the house's other watts, and the controller's gains all follow. None of that is measured yet.",
+  "act:ladder": "Then the ladder, and the three modes. None of its arrows has been walked on a real machine.",
+  "act:proof": "The proof.",
+  "act:screens": "Last, the two screens.",
+  "pass": "Here is that first pass, in the plan's own words. | The fleet draws seven hundred and four watts. Wanted: two hundred and fifty-seven, the least it can shed to. | The first rung is columbia's CPU lanes. Advise: nothing was done. | Four things in it are worth a decision. The target was set to give the pass something to say. | The room is read from inside two counters' cases. A target meant for the air of a room will ask the fleet to shed everything against that. | The fleet drew about seven hundred watts, not twelve hundred. Without the power switch, its whole range is about five hundred. | And cheapest first sheds columbia's five watts, for almost no heat.",
+  "sim": "Then a simulated room, begun at twenty-four degrees. | With a time constant of six hours, its third day stays within point four five of a degree of twenty-one. | With twenty-four hours, within point one seven. | With the outside swinging from ten to eighteen, and UA set: point five three. | The same with no feedforward: one point three five. Once UA is known, the outside more than halves the error. | But the simulated room has no delay, an ideal thermometer, and watts that fall the moment a lane is paused. The house has none of those.",
+  "panel": "This is the Heat screen's Hearth panel, with the live plan of the sixteenth, in advise. | At the top, the target, and three chips for the mode. Act asks to be pressed twice. | Then the room: each probe, its reading and its age. And the balance: the fleet's watts as a bar, with a mark at the watts wanted. | On the right, the ladder, the next rung marked. The power switch shows its state, and has no button.",
+  "fleetline": "And the Fleet screen. | Above the machines it would pause, one line says the mode, the room, the target, and the watts now and wanted. | And one button: turn regulation off, or on to advise. | Going to act is done only on the Heat screen. Both screens were checked as pictures. No button was pressed.",
+  "cold": "This last picture is not the live fleet. It is a made-up plan, in a scratch queue, to show states the fleet has not been in. | Act in force, and the power switch on. | One probe suspect, and one stale. Four rungs taken. | And across the top, the line that says every rung is used, the room is still cold, and which machine would help.",
+  "pattern": "What was done, and what was not. | Two room probes are read, and SeaTac's air. | The controller is written. | Sixty claims pass, on a scratch queue and a simulated room. | One live pass was run, in advise. | Two screens are in Orrery, checked as pictures. | The house's loss is bounded from one evening, and the tool that will fit it is written. | Act has never run against the real queue. No lane was paused, no machine powered off, no wake packet sent. | Wake-on-LAN is untried. | UA is not measured: more than forty-two watts a degree, and no more is known. So SeaTac's air is not yet in use. | The house's time constant is not measured. The gains are a guess made slow. | The controller is not scheduled. | The target is not Paul's choice, and the probes sit inside two counters' cases. | The recipes that need root are written, and not run.",
+  "end": "The room is read now. No machine has been changed by it. The controller works out the watts the room wants, and says which step it would take. It has acted only on a scratch queue. When it runs on the live fleet, and when act is set, are Paul's to decide."
+ },
+ "steps": [
+  {
+   "id": "p1",
+   "act": "probes",
+   "a": "counters",
+   "b": "median",
+   "moves": "a reading every 5 s",
+   "say": "Each counter's reading arrives every five seconds, and it is not believed one sample at a time. The controller takes the median of a probe's last five minutes. Eighty-five point zero and minus zero are thrown out. The second counter sent minus zero forty-two times in the first day.",
+   "what": "room.rad7F7E.c and room.radC2EA.c in saskatchewan's telemetry: a reading every five seconds.",
+   "why": "A probe is not believed one sample at a time. The controller takes the median of its last five minutes.",
+   "rule": "85.0 and -0.0 are discarded outright: what a counter says with no reading to give. The +V4 counter sent -0.0 forty-two times in the first day."
+  },
+  {
+   "id": "p2",
+   "act": "probes",
+   "a": "median",
+   "b": "room",
+   "moves": "26.8 and 26.0",
+   "say": "The temperature that is held is the mean of the room probes: twenty-six point four. A probe that moves more than three degrees in five minutes is left out of that pass, and named. With no fresh room probe, the pass does nothing at all.",
+   "what": "Each probe's median: 26.8 °C and 26.0 °C at 17:37. The controlled temperature is their mean.",
+   "why": "Both are inside a counter's case, on the same machine, 0.8 °C apart. Neither has a place named yet.",
+   "rule": "Moved more than 3 °C in five minutes: left out of that pass and named. Not heard from in ten minutes: stale. No fresh room probe: the pass does nothing.",
+   "border": "The probes to the controller. Neither probe has been compared with a thermometer in the air."
+  },
+  {
+   "id": "l1",
+   "act": "law",
+   "a": "target",
+   "b": "law",
+   "moves": "the error",
+   "label": [
+    -40,
+    -60
+   ],
+   "say": "The law starts from the error: the target less the room. Each degree asks three hundred watts, so four degrees asks for the whole one point two kilowatts. A slow integral adds twenty-five watts for each hour a degree stands. Within three tenths of a degree, nothing changes.",
+   "what": "e = target - room, in degrees.  W = bias + UA x (target - outside) + Kp x e + Ki x the integral of e.",
+   "why": "Kp 300 W/°C: four degrees of error asks for the whole 1.2 kW. Ki 25 W/°C per hour: an integral time of twelve hours. Kd 0.",
+   "rule": "Deadband 0.3 °C: inside it nothing changes and the integral stands. The target of 21.0 °C was set for the first pass. Paul has not chosen it."
+  },
+  {
+   "id": "l2",
+   "act": "law",
+   "a": "outside",
+   "b": "law",
+   "moves": "9.0 °C",
+   "pts": [
+    [
+     570,
+     375
+    ],
+    [
+     620,
+     375
+    ],
+    [
+     620,
+     318
+    ],
+    [
+     960,
+     318
+    ]
+   ],
+   "label": [
+    -50,
+    -54
+   ],
+   "say": "The second term is for the outside. A house loses heat by how far it is above the outside: UA, in watts a degree. The outside is SeaTac airport's: nine degrees. But UA is unknown. So the outside temperature is read and shown, and not yet used in the law. How it will be measured comes at the end of this act.",
+   "what": "outside.ksea.c: the latest observation at SeaTac airport, station KSEA. One request returned 9.0 °C. Fetched at most every twenty minutes.",
+   "why": "UA x (target - outside). A house at 21 °C with 9 °C outside and a UA of 100 W/°C loses 1,200 W.",
+   "rule": "UA IS UNKNOWN, so this term is zero. One evening bounds it: more than 42 W/°C. The measurement is planned and not made.",
+   "border": "The probes to the controller. The airport is not the house's own wall: it is the nearest reading that needs no hardware."
+  },
+  {
+   "id": "l3",
+   "act": "law",
+   "a": "law",
+   "b": "balance",
+   "moves": "watts wanted",
+   "label": [
+    110,
+    48
+   ],
+   "say": "Out comes one number: the watts the room wants. The gains are slow on purpose. The room's time constant is not measured, and a controller faster than the thing it controls oscillates. And no step is taken against the room.",
+   "what": "The watts wanted, in one number.",
+   "why": "The gains are slow on purpose. The room's time constant is not measured, and a controller faster than the thing it controls oscillates.",
+   "rule": "The integral does not grow at a limit. No step against the room: heat is not added above the target nor shed below it. Without that, the simulated room shed one rung and gave it back half an hour later, for days."
+  },
+  {
+   "id": "l4",
+   "act": "law",
+   "a": "watts",
+   "b": "balance",
+   "moves": "704 W",
+   "frame": {
+    "x1": 1900
+   },
+   "pts": [
+    [
+     215,
+     530
+    ],
+    [
+     215,
+     455
+    ],
+    [
+     1500,
+     455
+    ],
+    [
+     1500,
+     205
+    ],
+    [
+     1460,
+     205
+    ]
+   ],
+   "label": [
+    0,
+    0
+   ],
+   "say": "The other side of the balance is what the fleet draws at the wall. Every watt a computer draws leaves it as heat into the room. The difference, wanted against drawn, becomes one step on a ladder.",
+   "what": "The fleet's wall watts: 704 W at 17:37, from five machines read. Not read and not counted: bosporus, jaguaribe, this Mac, the Mac mini.",
+   "why": "A machine is a heater. Every watt a computer draws leaves it as heat into the room.",
+   "rule": "The bias starts at the watts the fleet draws, and absorbs the feedforward when the outside reading comes or goes: losing the airport does not move the fleet."
+  },
+  {
+   "id": "d1",
+   "act": "ladder",
+   "a": "balance",
+   "b": "mode",
+   "moves": "the difference",
+   "say": "What becomes of the difference depends on the mode. Off does nothing. Advise, the default, works everything out, writes it down, and changes nothing. Act carries out at most one step a pass. Against the live fleet, it has run in advise only.",
+   "what": "Wanted less drawn, to one of three modes: off, advise, act.",
+   "why": "Advise is the default: it works everything out, writes it down and changes nothing.",
+   "rule": "ACT HAS NEVER RUN AGAINST THE REAL QUEUE. In the proof it carries out at most one step a pass, through the queue's own commands."
+  },
+  {
+   "id": "d2",
+   "act": "ladder",
+   "a": "mode",
+   "b": "cpul",
+   "moves": "take nothing new",
+   "dash": true,
+   "label": [
+    -110,
+    -20
+   ],
+   "say": "The first rungs: a machine's CPU lanes take no new jobs. A paused lane finishes the job in hand, so nothing is thrown away. On the live ladder: columbia five watts, boburner sixty-four, calber sixty-seven, whitewolf seventy-two.",
+   "what": "A machine's CPU lanes take nothing new. The live ladder at 17:44: columbia 5 W, boburner 64 W, calber 67 W, whitewolf 72 W.",
+   "why": "A paused lane finishes the job in hand and takes no new one. It is the queue's own verb and it throws nothing away.",
+   "rule": "A rung's watts: what the part draws now, less an idle figure that is an estimate. A real cap on a CPU needs root: a recipe, written and not run.",
+   "border": "The controller to the fleet. No lane on the real fleet has been paused by it."
+  },
+  {
+   "id": "d3",
+   "act": "ladder",
+   "a": "cpul",
+   "b": "card",
+   "moves": "then the card",
+   "dash": true,
+   "say": "Then a machine's card lane, after its CPU lanes. Calber's is a hundred and fifty-one watts. The pace is slow: one step a pass, fifteen minutes between any two changes, thirty before the same machine is touched again. The seven lane rungs take at least an hour and a half; with the power rungs, about three hours.",
+   "what": "The card's lane takes nothing new, after its CPU lanes: boburner 0 W, whitewolf 37 W, calber 151 W.",
+   "why": "The ladder is every such step the fleet has, in order of how little each disturbs.",
+   "rule": "One step a pass; fifteen minutes between any two changes; thirty minutes before the same machine is touched again. The seven lane rungs: an hour and a half at least. With the power rungs: about three hours."
+  },
+  {
+   "id": "d4",
+   "act": "ladder",
+   "a": "card",
+   "b": "power",
+   "moves": "not allowed",
+   "dash": true,
+   "say": "The last rung powers a machine off. It sits behind a second switch, and that switch is off. With it off, act pauses and resumes lanes and does nothing else. And a machine that carries a room probe is never powered off. Today that means saskatchewan.",
+   "what": "columbia, whitewolf, calber, boburner powered off: 9 to 73 W each. Not allowed: the power switch is off.",
+   "why": "The queue has no command to power off one machine. This rung sends the machine's own power-off rule over ssh, and only when it has no job in hand.",
+   "rule": "NEVER TOUCHED: a machine marked keep; this Mac; one a person paused, or restarting or leaving; one on the bench; one whose watts are not read. A machine with a room probe is never powered off."
+  },
+  {
+   "id": "d5",
+   "act": "ladder",
+   "a": "power",
+   "b": "wake",
+   "moves": "102 bytes",
+   "dash": true,
+   "say": "When the room is cold the ladder runs the other way. Lanes are resumed first. Then a machine that was powered off is sent a wake-on-LAN packet, a hundred and two bytes, and given its lanes back. It has not been tried. No machine's BIOS was read. And on whitewolf and boburner, whether the ten gigabit cards wake their machines is not known.",
+   "what": "The usual 102-byte packet, to the address learn-macs read from each machine.",
+   "why": "When the room is cold the ladder runs the other way: lanes are resumed first, then a powered-off machine is sent a wake-on-LAN packet and given its lanes back.",
+   "rule": "UNTRIED. Wake-on-LAN needs enabling in each machine's BIOS; none was read. On whitewolf and boburner the address is the 10 GbE card; whether those cards wake their machines is not known."
+  },
+  {
+   "id": "c1",
+   "act": "proof",
+   "a": "mode",
+   "b": "scratch",
+   "moves": "act",
+   "say": "Everything that acts was proved somewhere else: on a scratch queue, with fabricated telemetry and a stand-in for the queue's command. Sixty claims, and it ends: passed. It asserts that the live queue's files were not written. There, a warm room shed in order, from twelve hundred and twenty watts to two hundred and thirty-two.",
+   "what": "hearth-check.sh: a scratch queue, fabricated telemetry and a stand-in for the queue's command. Sixty claims. It ends PASSED.",
+   "why": "Off writes nothing; advise plans and runs nothing. A stale probe, no probe or unknown watts: the pass does nothing.",
+   "rule": "A warm room sheds in order, one a pass, dwell kept: 1,220 W to 232 W. A machine a person paused, and a keep machine, are never touched.",
+   "border": "The controller to the proof. The script asserts that the live queue's files were not written."
+  },
+  {
+   "id": "c2",
+   "act": "proof",
+   "a": "scratch",
+   "b": "simroom",
+   "moves": "watts",
+   "say": "With UA at eighty and the outside five degrees colder, four hundred watts more is asked before the room has moved. Held eight hours at a limit, the integral stays at nothing. And with every rung used and the room still cold, the plan names another computer. A line in the plan, and nothing more.",
+   "what": "UA 80 and the outside five degrees colder: 400 W more is asked before the room has moved.",
+   "why": "Eight hours held at a limit: the integral stays at 0 W. Unbounded it would reach 979 W.",
+   "rule": "Every rung used and the room still cold: in the proof, 1,410 W short, the plan names bosporus at about 249 W. A line in the plan and nothing more."
+  },
+  {
+   "id": "s1",
+   "act": "screens",
+   "a": "hearthpanel",
+   "b": "mode",
+   "moves": "target, mode",
+   "label": [
+    -120,
+    -40
+   ],
+   "say": "Both screens run the queue's hearth verb, which passes on four things and no others: target, mode, step and status. The power switch, the gains, the probes and the machines' addresses are not reachable from a button.",
+   "what": "hearth target: minus 0.5, plus 0.5, or a field that takes 21.5, 21 C or 70 F. And the mode: three chips.",
+   "why": "Both screens run the queue's hearth verb, which passes four things on to hearth.py and no others: target, mode, step and status.",
+   "rule": "The power switch, the gains, the probes and the machines' addresses are not reachable from a button.",
+   "border": "A person to the controller. Act is framed in the alarm colour and asks to be pressed twice."
+  },
+  {
+   "id": "s2",
+   "act": "screens",
+   "a": "fleetsw",
+   "b": "mode",
+   "moves": "off, or advise",
+   "say": "The Fleet screen's one button turns regulation off, or on to advise. Going to act is done only on the Heat screen. Now the pictures.",
+   "what": "One button: turn regulation off, or on to advise. The same two choices are in the Fleet menu.",
+   "why": "Going to act is done only on the Heat screen, where the consequences are written out.",
+   "rule": "Both screens were checked as rendered pictures. No button was pressed.",
+   "border": "A person to the controller."
+  }
+ ],
+ "house": {
+  "head": "WHAT THE HOUSE LOSES  ·  THE HOUSE'S OWN HEATING OFF, 16 NOVEMBER, 15:00 TO 21:15",
+  "lines": [
+   {
+    "cue": -1,
+    "words": "C dT/dt = P + P0 - UA (T - To)"
+   },
+   {
+    "cue": -1,
+    "words": "T the room, To the outside, P the fleet's watts, P0 every other watt the house gets, UA the watts lost for each degree, C the joules that warm the room a degree"
+   },
+   {
+    "cue": 0,
+    "words": "20:30:  T = 26.0 C,  To = 8.0 C,  P = 749 W,  dT/dt = -0.24 C an hour"
+   },
+   {
+    "cue": 1,
+    "words": "it is cooling, so the loss is more than the heat:  UA x 18.0 > 749 + P0"
+   },
+   {
+    "cue": 1,
+    "words": "UA > 749 / 18.0 = 42 W/C",
+    "lit": true
+   }
+  ],
+  "tiles": [
+   [
+    "the room",
+    "26.0 °C"
+   ],
+   [
+    "outside",
+    "8.0 °C"
+   ],
+   [
+    "the fleet",
+    "749 W"
+   ],
+   [
+    "an hour",
+    "−0.24 °C"
+   ]
+  ],
+  "shed": "where it settles:   T = To + (P + P0) / UA",
+  "big": "UA: more than 42 W/°C",
+  "ask": "What the next days give.",
+  "decisions": [
+   {
+    "head": "THE RECORD",
+    "words": "Already kept: the room every five seconds, the fleet's watts, SeaTac's air. Nothing has to be switched on."
+   },
+   {
+    "head": "TWO DAYS, THE WATTS LEVEL",
+    "words": "The outside moves by itself. That gives the time constant, and how far over the outside the room settles at these watts."
+   },
+   {
+    "head": "A STEP IN THE WATTS",
+    "words": "About 300 W, held a day. UA is the watts changed over the degrees the settled level moved."
+   },
+   {
+    "head": "THEN",
+    "words": "C = tau x UA.  P0 = UA x rise - P.  And the gains: Kp = UA, Ki = UA / tau. None of it is measured yet."
+   }
+  ]
+ }
+}

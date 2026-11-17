@@ -100,6 +100,53 @@ A card cools more slowly than it heats on both machines where both were measured
 
 Columbia's CPU fell from 44 to 33 inside one 5-second sample when its job ended: the passive case, not the silicon, is its slow part (its NVMe, 3 degrees over a quarter hour). Bosporus's memory, switched on from cold and idle, climbs with a tau near a quarter hour; that hold was 1.4 tau, so its end is a projection. No CPU has had a held step under load yet: the CPU lanes have not been paused long enough, and the two servers' CPU channels began after they were already working.
 
+## Room probes: the Geiger counters
+
+Paul, 16 November 2026: "add the concept of thermal probes. allow orrery copal fleet machines to look and install rad beeper if the usb tty device is a GMC 300, 500, 600, or anything matching the spec of" GQ's protocol document, GQ-RFC1201.
+
+A probe here is a thermometer that reads a room and not a part of a machine. The fleet has one kind: the thermometer inside a GQ Geiger counter. The energy balance above says nothing reads the room and that radbeeper does not ask a counter its temperature; that was the 15th. Since the 16th radbeeper asks a GMC-320 once a log interval and writes `temp-SERIAL-YYYY-MM.tsv` beside its count log, and the collector reports that file's last line, if it is under two minutes old, as `room.radXXXX.c` (XXXX is the serial's last four characters). It is one thermometer inside the counter's case, not the air.
+
+**Which counter gives a temperature.** GQ-RFC1201 gives `<GETTEMP>>` to "GMC-320 Re.3.01 or later" and to no other model. A GMC-300, 500 or 600 is found, installed for and served the same way and is read for its counts (`rad.XXXX.cpm`); it gives no temperature and is not asked for one.
+
+| Piece | Where | Root | What it does |
+|---|---|---|---|
+| `tools/fleet-probes.sh` | each Linux machine, `~/.fleet-queue/` | no | `look`, `ask PORT`, `install`, `serve`, `status`: below |
+| `tools/fleet-probes.py QUEUE look\|status\|install\|serve [MACHINE...]` | this Mac | no | copies the script over one connection a machine, of its own, runs the verb, prints the fleet's table, and writes `QUEUE/hearth/counters.json` |
+| `tools/fleet-radbeeper-root.sh` | a machine with a counter, once | **yes** | the group, the log directory, the boot service: below |
+
+**How a machine is checked.** `look` lists every USB serial port (`ttyUSB*`, `ttyACM*`) with the vendor and product of the USB device behind it, read from sysfs. No port is opened: opening a serial port raises its control lines, and a radio board restarts on that. A port is marked `counter=possible` only where its identity is on the list at the top of `fleet-probes.sh`, which holds one entry, `1a86:7523`, the CH340 bridge both of Paul's counters have. Copal's udev rule also names CP210x (`10c4:ea60`) and PL2303 (`067b:2303`) as bridges GQ has shipped behind; they are left off the list, because CP210x is the bridge on most ESP32 radio boards and no counter here has either. Who holds a port is asked of radbeeper's socket (`radbeeper now`) and read from `/proc`; where a radbeeper of root's is running and does not say what it holds, the port is "maybe" held and is not opened.
+
+`ask PORT` opens one port, and only one that `look` marks possible, held by nothing and openable by the user. It says `<HEARTBEAT0>>`, then `<GETVER>>`, at 115200 and then 57600, as radbeeper does (`radbeeper probe --device PORT` where radbeeper is installed, otherwise the same sequence in Python's standard library, the port locked as radbeeper locks it). It prints the model, the firmware and whether the document gives that firmware a thermometer.
+
+**How it is installed.** `install` leaves a radbeeper that logs temperature as it is (it is told by `--no-temp` in its help: the version number, 0.6.0, did not change). Otherwise it runs `cargo install --git https://github.com/vonglurt/radbeeper --locked radbeeper` as the user, at the lowest priority, which builds in cargo's own scratch and puts the program in `~/.cargo/bin`. No checkout a running service uses is built in. Where there is no cargo, or no C compiler, it says which is missing and stops; it downloads no toolchain.
+
+**How it is served.** `serve` starts `radbeeper service` as the user, detached, for the ports that answered `ask` and that nothing holds, naming those ports to it (a service left to look for itself opens every port) and logging to `~/.local/share/radbeeper`, which the collector now also reads. This does not survive a reboot. Where the user cannot open the port it names the group that owns it (`dialout`) and stops: adding the user to it is root's. Where a boot service is installed and is not serving the port, it says so and does not start a second one.
+
+**The root recipe**, `fleet-radbeeper-root.sh`, once a machine, with its password: the user into `dialout`; `/var/lib/radbeeper` as root:dialout, mode 2775; the user's build copied to `/usr/local/bin/radbeeper`; a starter that gives radbeeper only the ports with a counter's identity; the boot service (OpenRC on Alpine, after Copal's own init script; systemd on Ubuntu) and a udev rule that starts it when such a port appears. A machine that has Copal's own radbeeper service is left with it. It is not yet in `fleet-root-round.sh`'s list: its header gives the two lines that run it by hand and the change to the round.
+
+**What was found, 16 November** (`fleet-probes.py QUEUE look` and `status`):
+
+| Machine | USB serial ports | Counter | Served by | radbeeper |
+|---|---|---|---|---|
+| saskatchewan | `/dev/ttyUSB0`, `/dev/ttyUSB1`, both `1a86:7523` | GMC-320+V4 Re 4.83 (`room.radC2EA.c`), GMC-320 Re 4.26 (`room.rad7F7E.c`) | Copal's boot service, as root | 0.6.0, logs temperature |
+| columbia | none | | | Copal's 0.6.0, from before the thermometer |
+| whitewolf | none | | | 0.6.0 in `~/.cargo/bin`, built by `install` in 44 seconds as the test |
+| calber, boburner | none | | | none; cargo is there |
+| bosporus, jaguaribe | not asked: the names did not resolve | | | |
+| macmini | not Linux: not looked at | | | |
+
+What was tried and what was not:
+
+- **Read:** only saskatchewan's two counters, and those by their running service, not by this tool opening a port. Both give a temperature, 26.0 and 26.8 that afternoon.
+- **The +V4 Re 4.83 logged -0.0 seven times that afternoon** (of some 375 readings), between readings of 26.0 to 26.2, and the collector passed it on as `room.radC2EA.c=-0.0`. It is a reading that is not a temperature, as 85.0 is, and radbeeper does not yet discard it. Nothing here filters it.
+- **`install`:** run on whitewolf, which had no counter and no radbeeper: built and installed; run again, it changed nothing. With cargo hidden from it, it stopped and named cargo.
+- **`ask`:** not run against a counter. The Python sequence was run against a fake counter on a pseudo-terminal, on this Mac and on columbia, for a GMC-320, a GMC-320+V4, a GMC-300 and a GMC-500 answer and for silence. On saskatchewan it refused both ports, as held. The `radbeeper probe --device` path was not run.
+- **`serve`:** not run where there is a counter to serve. On whitewolf it found no port and started nothing; on saskatchewan it found both ports held and started nothing.
+- **The root recipe:** not run. Its syntax was checked, and what it would write was printed as the user on saskatchewan and whitewolf (`--show`); its starter named saskatchewan's two ports from sysfs and none on whitewolf.
+- **The collector's reading of `~/.local/share/radbeeper`:** run by hand on whitewolf against a made-up file: `room.rad1234.c=24.3`, and a file ten minutes old gave nothing. No machine has a user's service writing there.
+- **A GMC-300, 500 or 600:** none is here. That one is found and gives counts and no temperature is from the document and from radbeeper's own rule, not from a unit.
+- **A second counter plugged in beside a running service:** not taken up until the service is restarted, in both the user's service and the root recipe's.
+
 ## What is not built
 
 - The dial in Orrery (a history and sliders that set a machine's target and throttle its part in the queue). The data it needs is what this collects; Paul: "There is not a single number, this will take some thinking and analysis of logs."
