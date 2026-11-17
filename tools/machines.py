@@ -721,7 +721,21 @@ class Machines:
         if f.get("reboot"):
             host["reboot"] = f["reboot"]
         cfg = load(os.path.join(self.q, "config.json"), {})
-        cfg["hosts"].append(host)
+        # A machine that was removed stands on the bench with its lanes as they were: a second CPU
+        # lane, what it is fast at, what a person set. Those come back, not a fresh single lane beside
+        # them (17 November: saskatchewan joined here stood twice, in the queue with one lane and on
+        # the bench with two). What the probe says of power-off and reboot is newer and is kept.
+        mine = lambda h: name in (h["name"], h.get("lane_of"))
+        back = [h for h in cfg.get("bench", []) if mine(h)]
+        if back:
+            cfg["bench"] = [h for h in cfg["bench"] if not mine(h)]
+            for h in back:
+                h.pop("paused", None)
+                if not h.get("lane_of"):
+                    h.update({k: host[k] for k in ("poweroff", "reboot") if k in host})
+            cfg["hosts"] += back
+        else:
+            cfg["hosts"].append(host)
         save(os.path.join(self.q, "config.json"), cfg)
         nodes = os.path.expanduser("~/.copal/fleets/%s/nodes" % self.fleet)
         addr = m["target"].split("@", 1)[-1]
