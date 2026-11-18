@@ -629,7 +629,7 @@ CACHE = os.path.expanduser("~/.cache/orrery-bench")
 
 
 def remote(host, cmd, timeout=20):
-    r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", host, cmd], capture_output=True, text=True, timeout=timeout)
+    r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ControlMaster=auto", "-o", "ControlPath=~/.ssh/hk-%C", "-o", "ControlPersist=10m", "-o", "ConnectTimeout=5", host, cmd], capture_output=True, text=True, timeout=timeout)
     return r.stdout if r.returncode == 0 else None
 
 
@@ -716,7 +716,7 @@ def stage(host, what):
     if what not in ("inspect", "run"):
         sys.exit("stage HOST inspect|run")
     src = os.path.join(ROOT, "tools", "disk-bench.py")
-    subprocess.run(["ssh", "-o", "BatchMode=yes", host, "mkdir -p ~/fleet/disk-bench"], check=True, capture_output=True)
+    subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ControlMaster=auto", "-o", "ControlPath=~/.ssh/hk-%C", "-o", "ControlPersist=10m", host, "mkdir -p ~/fleet/disk-bench"], check=True, capture_output=True)
     subprocess.run(["scp", "-q", src, "%s:fleet/disk-bench/disk-bench.py" % host], check=True)
     if not remote(host, "test -s ~/fleet/disk-bench/disks.txt && echo yes"):
         print(json.dumps({"error": "%s has no ~/fleet/disk-bench/disks.txt: write the serials of the disks it may erase there first "

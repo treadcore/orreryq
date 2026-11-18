@@ -22,6 +22,7 @@ temperature'."
     hearth.py QUEUE step                           one pass of the controller: QUEUE/hearth/plan.json
     hearth.py QUEUE status                         one screen, and nothing changed
     hearth.py QUEUE wake NAME                      send the wake-on-LAN packet for one machine
+    hearth.py QUEUE steady [backfill]              the stretches the room stood still, and the house's loss from them
     hearth.py QUEUE power-on NAME                  a person's order: wake it, wait for it to answer (a server
                                                    board tests its memory first: minutes), put it in the queue
     hearth.py QUEUE power-off NAME                 a person's order: it takes nothing new, and when its jobs
@@ -1236,6 +1237,22 @@ def main(argv):
             a[0], rec["mac"], rec.get("broadcast", "255.255.255.255"), rec.get("port", 9)))
     elif cmd == "learn-macs" and not a:
         return learn_macs(q)
+    elif cmd == "steady" and a in ([], ["backfill"]):
+        import hearth_regulator as R
+        me = sys.modules[__name__]
+        if a:
+            print("%d stretches added to steady.tsv from hold.tsv" % R.backfill(me, q))
+        rows = R.steady_rows(me, q)
+        for r in rows:
+            print("  %s to %s: room %.2f C, weather %.1f C, over it by %.2f C, fleet %.0f W: %.0f W a degree" % (
+                time.strftime("%d %b %H:%M", time.localtime(r[0])), time.strftime("%H:%M", time.localtime(r[1])), r[2], r[3], r[4], r[5], r[5] / r[4]))
+        fit = R.steady_fit(rows)
+        if fit:
+            print("the line through them: P = %.0f x (T - To) - %.0f. UA = %.0f W/C, the other heat P0 = %.0f W (%d stretches, %.1f C between the lowest and the highest)" % (
+                fit[0], fit[1], fit[0], fit[1], fit[2], fit[3]))
+            print("the hold takes it for its budget by itself once there are four stretches standing 3 C apart; `set ua N` overrides it")
+        else:
+            print("%d steady stretches: a line wants three, with 2 C between the lowest and the highest height over the weather" % len(rows))
     elif cmd in ("power-on", "power-off") and len(a) == 1:
         return power_order(q, a[0], cmd[6:])
     elif cmd == "power-wait" and len(a) == 2 and a[1] in ("on", "off"):

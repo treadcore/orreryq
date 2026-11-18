@@ -1,0 +1,2076 @@
+{
+ "title": "Keeping the Room",
+ "subtitle": "how to use, read and look after Orrery's thermal regulation",
+ "byline": "treadcore and the Orrery fleet  ·  18 November 2026",
+ "slug": "hearth-regulation",
+ "report": "hearth-regulation-lab-report",
+ "drawn_by": "tools/report/hearth-regulation_film.py",
+ "youtube_title": "Keeping the Room: how to use, read and look after a fleet that heats an apartment",
+ "blurb": "A fleet of eight computers heats an apartment whose own heating is switched off. Since 16:44 on 17 November 2026 Orrery holds the room the fleet stands in at 80 °F by itself. This film follows the lab report of 18 November and starts as a how-to: where the panels are, the target, the three modes, the power row, and the Hearth and Diagram panels mark by mark. Then the science: one heat balance, the budget, and five calculations on the fleet's own numbers. Then the first fifteen hours, with one excursion to about 81.6 °F and eight faults, seven corrected. Then how the heat is drawn, and its upkeep. The house's loss per degree, UA, is not measured: 120 W/°C is a figure in use. The other heat is implied. Zone 2 has no thermometer. The hold has no proof of its own. The film has no sound; its narration scrolls in the corner.",
+ "closing": [
+  "The fleet holds the room at 80 °F.",
+  "Its loss per degree is still not measured."
+ ],
+ "credits": [
+  "Orrery  ·  treadcore.org",
+  "Paul Richeson: producer, animator, writer, coder, implementer, developer, founder",
+  "Team pair: Claude Code (Claude Fable 5.2)",
+  "MIT License  ·  Copyright (c) 2026 Paul Richeson"
+ ],
+ "wpm": 150,
+ "poster": "balance",
+ "scenes": [
+  {
+   "id": "cold1",
+   "kind": "cards",
+   "name": "A fleet heats an apartment",
+   "say": "A fleet of eight computers heats an apartment whose own heating is switched off. | Every five minutes Orrery reads two thermometers in the room and the weather at the airport, | works out how many watts the room wants moved, | and takes one step: a lane of work paused or resumed, or a machine powered off and later woken.",
+   "head": "18 NOVEMBER 2026  ·  AN APARTMENT WITH ITS HEATING SWITCHED OFF",
+   "title": "Eight computers heat an apartment.",
+   "rows": [
+    {
+     "h": 300,
+     "cards": [
+      {
+       "cue": 0,
+       "col": "gpu",
+       "head": "every five minutes, it reads",
+       "big": "2 thermometers",
+       "words": "in the room, and the weather at the airport."
+      },
+      {
+       "cue": 1,
+       "col": "line",
+       "head": "it works out",
+       "big": "watts",
+       "words": "how many the room wants moved."
+      },
+      {
+       "cue": 2,
+       "col": "cpu",
+       "head": "it takes",
+       "big": "one step",
+       "words": "A lane of work paused or resumed, or a whole machine finished, powered off and later woken by a network packet."
+      }
+     ]
+    }
+   ],
+   "foot": [
+    {
+     "cue": 2,
+     "lag": 5.0,
+     "words": "Nobody presses anything."
+    }
+   ]
+  },
+  {
+   "id": "cold2",
+   "kind": "cold2",
+   "name": "80 °F, and under 81 °F",
+   "say": "Since 16:44 on the seventeenth of November it holds that room at eighty degrees Fahrenheit, by itself. | The ceiling is eighty-one. | In the first fifteen hours the room went to about eighty-one point six, once, and a person had to end it. | How is it used? What is it calculating? Did it hold the room? What does it need from a person?",
+   "head": "SINCE 16:44 ON 17 NOVEMBER  ·  ORRERY HOLDS THE ROOM BY ITSELF",
+   "lo": 78.1,
+   "hi": 81.3,
+   "target": 80.0,
+   "ceiling": 81.0,
+   "peak": 81.6,
+   "questions": [
+    "How is it used?",
+    "What is it calculating?",
+    "Did it hold the room?",
+    "What does it need from a person?"
+   ]
+  },
+  {
+   "id": "title",
+   "kind": "title",
+   "name": "Title",
+   "say": "Keeping the Room. How to use, read and look after Orrery's thermal regulation."
+  },
+  {
+   "id": "act1",
+   "kind": "act",
+   "name": "Part one: how to use it",
+   "say": "Part one. How to use it.",
+   "part": "PART ONE",
+   "big": "HOW TO USE IT",
+   "sub": "where the panels are, what each control does, the orders a person can give",
+   "col": "main"
+  },
+  {
+   "id": "where",
+   "kind": "cards",
+   "name": "Where the panels are",
+   "say": "In Orrery: Queue, then Heat. | The Heat page has six panels. The first two are for this. | Hearth is the controls. | Diagram is the picture: where the heat comes from, where it goes, and the thermometers.",
+   "head": "THE FIVE-MINUTE GUIDE  ·  WHERE",
+   "title": "Queue, then Heat.",
+   "rows": [
+    {
+     "h": 150,
+     "cards": [
+      {
+       "cue": -1,
+       "col": "main",
+       "head": "in orrery",
+       "big": "Queue  ›  Heat",
+       "bigsize": 54
+      },
+      {
+       "cue": 0,
+       "col": "dim",
+       "head": "six panels, a row of chips",
+       "big": "Hearth · Diagram · Machines · Parts · Watts · Steps",
+       "bigsize": 34
+      }
+     ]
+    },
+    {
+     "h": 330,
+     "cards": [
+      {
+       "cue": 1,
+       "col": "line",
+       "head": "the first panel",
+       "big": "Hearth",
+       "words": "The controls: the target, the mode, the power buttons, and the controller's own account of what it is doing.",
+       "size": 30
+      },
+      {
+       "cue": 2,
+       "col": "gpu",
+       "head": "the second panel",
+       "big": "Diagram",
+       "words": "The picture: where the heat comes from, where it goes, and the thermometers.",
+       "size": 30
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "target",
+   "kind": "cards",
+   "name": "Setting the temperature",
+   "say": "To set the temperature, press minus or plus zero point five, | or type a number and press Return. | Too warm right now? Lower the target by a degree. | A door opened is faster.",
+   "head": "THE FIVE-MINUTE GUIDE  ·  THE TARGET",
+   "title": "To set the temperature.",
+   "rows": [
+    {
+     "h": 250,
+     "cards": [
+      {
+       "cue": -1,
+       "col": "main",
+       "head": "half a degree at a press",
+       "big": "− 0.5 or + 0.5",
+       "words": "Two buttons on the Hearth panel."
+      },
+      {
+       "cue": 0,
+       "col": "main",
+       "head": "or a number typed, and return",
+       "big": "26.7 or 26.7 C or 80 F",
+       "bigsize": 54,
+       "words": "The field takes any of the three."
+      }
+     ]
+    },
+    {
+     "h": 250,
+     "cards": [
+      {
+       "cue": 1,
+       "col": "cpu",
+       "head": "if the room is too warm right now",
+       "big": "Lower the target by a degree.",
+       "bigsize": 46,
+       "words": "That sheds heat at the next pass."
+      },
+      {
+       "cue": 2,
+       "col": "gpu",
+       "head": "faster than that",
+       "big": "A door opened.",
+       "bigsize": 46
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "modes",
+   "kind": "cards",
+   "name": "The three modes",
+   "say": "Three modes. Off: nothing is read and nothing is done. | Advise: every five minutes it says what it would do, and changes no machine. | Act: it does it. The button is framed in red and must be pressed twice. | To take over, press advise. Lanes it paused stay paused.",
+   "head": "THE FIVE-MINUTE GUIDE  ·  THE MODE",
+   "title": "To switch regulation on or off.",
+   "rows": [
+    {
+     "h": 330,
+     "cards": [
+      {
+       "cue": -1,
+       "col": "dim",
+       "head": "mode",
+       "big": "off",
+       "bigsize": 84,
+       "words": "Nothing is read and nothing is done.",
+       "size": 28
+      },
+      {
+       "cue": 0,
+       "col": "gpu",
+       "head": "mode",
+       "big": "advise",
+       "bigsize": 84,
+       "words": "Every five minutes it works everything out and says what it would do. It changes no machine.",
+       "size": 28
+      },
+      {
+       "cue": 1,
+       "col": "red",
+       "head": "mode  ·  framed in red, pressed twice",
+       "big": "act",
+       "bigsize": 84,
+       "words": "It does it.",
+       "size": 28
+      }
+     ]
+    }
+   ],
+   "foot": [
+    {
+     "cue": 2,
+     "words": "To stop it and take over: press advise."
+    },
+    {
+     "cue": 2,
+     "lag": 1.6,
+     "col": "dim",
+     "words": "Lanes it paused stay paused until you resume them or set act again."
+    }
+   ]
+  },
+  {
+   "id": "power",
+   "kind": "cards",
+   "name": "The power row",
+   "say": "The power row has a cell for each machine, and one button. | On sends the wake packet. | Off, pressed twice: the machine finishes its job, leaves the queue, and is powered off. | The machine that carries the thermometers has no Off. | The controller powers off only a machine known to come back. Three are proved.",
+   "head": "THE FIVE-MINUTE GUIDE  ·  THE POWER ROW",
+   "title": "To take a machine in hand.",
+   "rows": [
+    {
+     "h": 250,
+     "cards": [
+      {
+       "cue": 0,
+       "col": "main",
+       "head": "button",
+       "big": "On",
+       "words": "Sends the wake packet. When the machine answers it is put to work."
+      },
+      {
+       "cue": 1,
+       "col": "red",
+       "head": "button, pressed twice",
+       "big": "Off",
+       "words": "The machine finishes its job, leaves the queue and is powered off."
+      },
+      {
+       "cue": 2,
+       "col": "line",
+       "head": "saskatchewan",
+       "big": "no Off",
+       "words": "It carries the room's thermometers, and is never switched off."
+      }
+     ]
+    },
+    {
+     "h": 250,
+     "cards": [
+      {
+       "cue": 3,
+       "col": "main",
+       "head": "wakes by the packet",
+       "words": "calber: 32 and 52 seconds to answer. bosporus: 112 to 286 seconds, one of 602. jaguaribe: about 120 seconds.",
+       "size": 27,
+       "lag": 1.6
+      },
+      {
+       "cue": 3,
+       "lag": 3.0,
+       "col": "dim",
+       "head": "untried",
+       "words": "boburner, whitewolf: their only cable is in a 10 GbE card. columbia: its card is not armed.",
+       "size": 27
+      },
+      {
+       "cue": 3,
+       "lag": 0.0,
+       "col": "cpu",
+       "head": "the rule",
+       "words": "A machine is powered off by the controller only if it is known to come back.",
+       "size": 27
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "hearth1",
+   "kind": "picture",
+   "name": "The Hearth panel, marks 1 to 5",
+   "say": "The Hearth panel, at 08:19 on the eighteenth, in act. | One: the target, in both scales. | Two: changing it. | Three: the mode. | Four: the power switch. It has no button; it is set from the command line. | Five: the hold: the law in force, its budget in watts, and its last words.",
+   "head": "ORRERY, QUEUE, HEAT, THE HEARTH PANEL  ·  08:19 ON 18 NOVEMBER, IN ACT",
+   "file": "hearth.png",
+   "size": [
+    1400,
+    860
+   ],
+   "marks": [
+    {
+     "n": 1,
+     "cue": 0,
+     "r": [
+      [
+       156,
+       272,
+       218,
+       31
+      ]
+     ],
+     "head": "the target",
+     "words": "The temperature being held, in both scales. Here 26.7 °C, 80.1 °F."
+    },
+    {
+     "n": 2,
+     "cue": 1,
+     "r": [
+      [
+       379,
+       272,
+       343,
+       31
+      ]
+     ],
+     "head": "changing it",
+     "words": "Half a degree down, half a degree up, or a number typed and Return."
+    },
+    {
+     "n": 3,
+     "cue": 2,
+     "r": [
+      [
+       736,
+       270,
+       230,
+       35
+      ]
+     ],
+     "head": "the mode",
+     "words": "The one in force is underlined. Act is red-framed and asks twice."
+    },
+    {
+     "n": 4,
+     "cue": 3,
+     "r": [
+      [
+       1244,
+       273,
+       142,
+       29
+      ]
+     ],
+     "head": "the power switch",
+     "words": "Whether act may power machines off and wake them. No button: hearth.py QUEUE set power on."
+    },
+    {
+     "n": 5,
+     "cue": 4,
+     "r": [
+      [
+       156,
+       369,
+       1232,
+       38
+      ]
+     ],
+     "head": "the hold",
+     "words": "The law in force, its budget in watts, the room and its slope, the ceiling, and its last words."
+    }
+   ],
+   "foot": [
+    "A frame of the program, drawn from the live plan."
+   ]
+  },
+  {
+   "id": "hearth2",
+   "kind": "picture",
+   "name": "The Hearth panel, marks 6 to 10",
+   "say": "| Six: the power row, a cell a machine. | Seven: the plan's age. Over fifteen minutes old, something has stopped. | Eight: the room and its probes. | Nine: the balance. Green is the watts drawn now; the mark is the watts wanted. | Ten: the ladder, the older law. It does not act while the law is hold. | The red paragraph says what act will do. Read it before pressing act.",
+   "head": "ORRERY, QUEUE, HEAT, THE HEARTH PANEL  ·  08:19 ON 18 NOVEMBER, IN ACT",
+   "file": "hearth.png",
+   "size": [
+    1400,
+    860
+   ],
+   "marks": [
+    {
+     "n": 6,
+     "cue": 0,
+     "r": [
+      [
+       156,
+       407,
+       862,
+       102
+      ]
+     ],
+     "head": "the power row",
+     "words": "A cell a machine: what it is doing, whether it wakes by the packet, its On or Off."
+    },
+    {
+     "n": 7,
+     "cue": 1,
+     "r": [
+      [
+       156,
+       513,
+       442,
+       23
+      ]
+     ],
+     "head": "the plan's age",
+     "words": "When the controller last looked. Over fifteen minutes old, something has stopped."
+    },
+    {
+     "n": 8,
+     "cue": 2,
+     "r": [
+      [
+       156,
+       538,
+       584,
+       88
+      ]
+     ],
+     "head": "the room and its probes",
+     "words": "Each thermometer, what it reads, how old the reading is, and whether it is believed."
+    },
+    {
+     "n": 9,
+     "cue": 3,
+     "r": [
+      [
+       156,
+       678,
+       584,
+       108
+      ]
+     ],
+     "head": "the balance",
+     "words": "Green: the watts the fleet draws now. The mark: the watts wanted."
+    },
+    {
+     "n": 10,
+     "cue": 4,
+     "r": [
+      [
+       772,
+       538,
+       616,
+       296
+      ]
+     ],
+     "head": "the ladder",
+     "words": "The older law's steps, for comparison. It does not act while the law is hold."
+    }
+   ],
+   "extra": [
+    {
+     "cue": 5,
+     "r": [
+      156,
+      304,
+      1232,
+      66
+     ],
+     "col": "red"
+    }
+   ],
+   "foot": [
+    "The red paragraph says what act will do.",
+    "Read it before pressing act."
+   ],
+   "foot_cue": 5
+  },
+  {
+   "id": "diagram1",
+   "kind": "picture",
+   "name": "The Diagram panel, marks 1 to 5",
+   "say": "The Diagram panel, two minutes later. | One: the weather, the outer frame. | Two: the walls, the hatched band. The heat that leaves crosses it. | Three: zone one, the fleet's room. | Four: the machines, a tile each. | Five: the collector. A pipe's thickness is its watts.",
+   "head": "ORRERY, QUEUE, HEAT, THE DIAGRAM PANEL  ·  08:21 ON 18 NOVEMBER",
+   "file": "diagram.png",
+   "size": [
+    1400,
+    860
+   ],
+   "marks": [
+    {
+     "n": 1,
+     "cue": 0,
+     "r": [
+      [
+       160,
+       276,
+       962,
+       572
+      ]
+     ],
+     "head": "the weather",
+     "words": "The outer frame is the outside air. The reading is the airport's, with its age."
+    },
+    {
+     "n": 2,
+     "cue": 1,
+     "r": [
+      [
+       171,
+       302,
+       942,
+       480
+      ]
+     ],
+     "head": "the walls",
+     "words": "The hatched band round the apartment. The heat that leaves crosses it."
+    },
+    {
+     "n": 3,
+     "cue": 2,
+     "r": [
+      [
+       186,
+       316,
+       686,
+       452
+      ]
+     ],
+     "head": "zone 1, the fleet's room",
+     "words": "The room the thermometers are in, its temperature, how far from the target."
+    },
+    {
+     "n": 4,
+     "cue": 3,
+     "r": [
+      [
+       194,
+       341,
+       670,
+       150
+      ]
+     ],
+     "head": "the machines",
+     "words": "A tile each: watts, CPU temperature and tau, the drives' temperature and lag."
+    },
+    {
+     "n": 5,
+     "cue": 4,
+     "r": [
+      [
+       192,
+       495,
+       684,
+       18
+      ]
+     ],
+     "head": "the collector",
+     "words": "Every machine's heat runs to this bar. A pipe's thickness is its watts."
+    }
+   ],
+   "foot": [
+    "A frame of the program, drawn from the live plan."
+   ]
+  },
+  {
+   "id": "diagram2",
+   "kind": "picture",
+   "name": "The Diagram panel, marks 6 to 10",
+   "say": "| Six: heat in, the fleet's total watts. | Seven: the same, over six hours. | Eight: the air and the thermal mass, a tank. It says soaking up when the room is warming, giving back when it is cooling. | Nine: the room over three hours. | Ten: other heat, everything that is not the fleet. It is implied, not read.",
+   "head": "ORRERY, QUEUE, HEAT, THE DIAGRAM PANEL  ·  08:21 ON 18 NOVEMBER",
+   "file": "diagram.png",
+   "size": [
+    1400,
+    860
+   ],
+   "marks": [
+    {
+     "n": 6,
+     "cue": 0,
+     "r": [
+      [
+       478,
+       507,
+       242,
+       42
+      ]
+     ],
+     "head": "heat in",
+     "words": "The fleet's total watts: the heat going into the room. JI is a power reading."
+    },
+    {
+     "n": 7,
+     "cue": 1,
+     "r": [
+      [
+       194,
+       547,
+       184,
+       214
+      ]
+     ],
+     "head": "heat in, six hours",
+     "words": "The same number as a trend."
+    },
+    {
+     "n": 8,
+     "cue": 2,
+     "r": [
+      [
+       388,
+       556,
+       282,
+       194
+      ]
+     ],
+     "head": "the air and the thermal mass",
+     "words": "A tank. SOAKING UP as the room warms, GIVING BACK as it cools, HOLDING when still."
+    },
+    {
+     "n": 9,
+     "cue": 3,
+     "r": [
+      [
+       680,
+       546,
+       184,
+       120
+      ]
+     ],
+     "head": "the room, three hours",
+     "words": "The room's trend, with the target in green dots and the ceiling in red dots."
+    },
+    {
+     "n": 10,
+     "cue": 4,
+     "r": [
+      [
+       878,
+       452,
+       96,
+       42
+      ],
+      [
+       668,
+       664,
+       350,
+       100
+      ]
+     ],
+     "head": "other heat",
+     "words": "Everything that warms the room and is not the fleet. IMPLIED, not read."
+    }
+   ],
+   "foot": [
+    "The other heat is not a reading.",
+    "It is what is left over."
+   ],
+   "foot_cue": 4
+  },
+  {
+   "id": "diagram3",
+   "kind": "picture",
+   "name": "The Diagram panel, marks 11 to 14",
+   "say": "| Eleven: zone two, the rest of the apartment, in dashes. There is no thermometer there. | Twelve: through the walls, the watts leaving to the weather. Under it: U A is a figure in use, not a measurement. | Thirteen: the thermometers. | Fourteen: the balance, in one line. | The numbers change at each pass, about every five minutes.",
+   "head": "ORRERY, QUEUE, HEAT, THE DIAGRAM PANEL  ·  08:21 ON 18 NOVEMBER",
+   "file": "diagram.png",
+   "size": [
+    1400,
+    860
+   ],
+   "marks": [
+    {
+     "n": 11,
+     "cue": 0,
+     "r": [
+      [
+       876,
+       318,
+       222,
+       450
+      ]
+     ],
+     "head": "zone 2, the rest",
+     "words": "Drawn in dashes, with an empty TI bubble: there is no thermometer there."
+    },
+    {
+     "n": 12,
+     "cue": 1,
+     "r": [
+      [
+       400,
+       746,
+       562,
+       80
+      ]
+     ],
+     "head": "through the walls",
+     "words": "The watts leaving to the weather. UA IS A FIGURE IN USE, NOT A MEASUREMENT."
+    },
+    {
+     "n": 13,
+     "cue": 2,
+     "r": [
+      [
+       1136,
+       274,
+       250,
+       570
+      ]
+     ],
+     "head": "the thermometers",
+     "words": "The room, with target and ceiling, and the weather, on one scale. Every probe listed."
+    },
+    {
+     "n": 14,
+     "cue": 3,
+     "r": [
+      [
+       164,
+       824,
+       800,
+       20
+      ]
+     ],
+     "head": "the balance",
+     "words": "In equals out, in one line, with the equation."
+    }
+   ],
+   "foot": [
+    "The numbers change at each pass,",
+    "about every five minutes."
+   ],
+   "foot_cue": 4
+  },
+  {
+   "id": "act2",
+   "kind": "act",
+   "name": "Part two: the science",
+   "say": "Part two. The science.",
+   "part": "PART TWO",
+   "big": "THE SCIENCE",
+   "sub": "one heat balance, and calculations done on the fleet's own numbers",
+   "col": "line"
+  },
+  {
+   "id": "balance",
+   "kind": "balance",
+   "name": "One balance",
+   "say": "The room is treated as one lump of heat. | C times the room's slope equals the fleet's watts, plus every other watt, less what the walls lose. | The room and the weather are read. | So are the fleet's watts, with a model where a machine has no counter. | C is measured: four point two megajoules a degree. | U A, the watts lost for each degree over the weather, is not measured. One hundred and twenty is the figure in use. | P nought, every watt that is not the fleet's, is not measured either. It is what is left over.",
+   "head": "ONE BALANCE  ·  EQUATION (1)",
+   "formula": [
+    [
+     "C dT/dt",
+     "cpu"
+    ],
+    [
+     "  =  ",
+     "ink"
+    ],
+    [
+     "P",
+     "line"
+    ],
+    [
+     "  +  ",
+     "ink"
+    ],
+    [
+     "P0",
+     "violet"
+    ],
+    [
+     "  −  ",
+     "ink"
+    ],
+    [
+     "UA (T − To)",
+     "gpu"
+    ]
+   ],
+   "rows": [
+    {
+     "cue": 1,
+     "sym": "T",
+     "col": "cpu",
+     "what": "the room",
+     "unit": "°C",
+     "from": "two thermometers, read every five seconds",
+     "tag": "read"
+    },
+    {
+     "cue": 1,
+     "lag": 1.2,
+     "sym": "To",
+     "col": "gpu",
+     "what": "the weather",
+     "unit": "°C",
+     "from": "the airport's observation",
+     "tag": "read"
+    },
+    {
+     "cue": 2,
+     "sym": "P",
+     "col": "line",
+     "what": "the fleet's watts at the wall",
+     "unit": "W",
+     "from": "each machine's energy counter and card; a model where there is none",
+     "tag": "read"
+    },
+    {
+     "cue": 2,
+     "lag": 2.5,
+     "sym": "dT/dt",
+     "col": "cpu",
+     "what": "the room's slope",
+     "unit": "°C/h",
+     "from": "a line through the last hour's looks",
+     "tag": "read"
+    },
+    {
+     "cue": 3,
+     "sym": "C",
+     "col": "cpu",
+     "what": "the joules that warm the room one degree",
+     "unit": "J/°C",
+     "from": "4.2 MJ/°C, by the step of 17 November",
+     "tag": "measured"
+    },
+    {
+     "cue": 4,
+     "sym": "UA",
+     "col": "gpu",
+     "what": "watts lost for each degree over the weather",
+     "unit": "W/°C",
+     "from": "120 is in use",
+     "tag": "not measured"
+    },
+    {
+     "cue": 5,
+     "sym": "P0",
+     "col": "violet",
+     "what": "every watt that is not the fleet's",
+     "unit": "W",
+     "from": "what is left over",
+     "tag": "not measured"
+    }
+   ],
+   "foot": [
+    {
+     "cue": 5,
+     "lag": 3.0,
+     "words": "Measured: C.  Not measured: UA and P0."
+    }
+   ]
+  },
+  {
+   "id": "flows",
+   "kind": "cards",
+   "name": "Three things follow",
+   "say": "Three things follow. | Where the room settles: the weather, plus all the watts over U A. | How fast: C over U A. Nine point seven hours, if U A is one hundred and twenty. | And the three flows on the Diagram. Through the walls: U A times the gap to the weather. | Soak: C times the slope. | Other heat: walls plus soak, less the fleet. It is as wrong as U A is.",
+   "head": "WHAT FOLLOWS FROM THE BALANCE  ·  EQUATIONS (2) TO (6)",
+   "title": "Three things follow from it.",
+   "rows": [
+    {
+     "h": 240,
+     "cards": [
+      {
+       "cue": 0,
+       "col": "cpu",
+       "head": "where the room settles",
+       "big": "Tss = To + (P + P0) / UA",
+       "bigsize": 56
+      },
+      {
+       "cue": 1,
+       "col": "ink",
+       "head": "how fast it gets there",
+       "big": "τ = C / UA",
+       "bigsize": 56,
+       "words": "4.2×10⁶ / 120 = 35,000 s = 9.7 hours, if UA is 120."
+      }
+     ]
+    },
+    {
+     "h": 270,
+     "cards": [
+      {
+       "cue": 2,
+       "col": "gpu",
+       "head": "through the walls",
+       "big": "UA (T − To)",
+       "bigsize": 52,
+       "words": "The watts leaving to the weather."
+      },
+      {
+       "cue": 3,
+       "col": "cpu",
+       "head": "soak",
+       "big": "C dT/dt",
+       "bigsize": 52,
+       "words": "What the walls, floor and furniture take up or give back."
+      },
+      {
+       "cue": 4,
+       "col": "violet",
+       "head": "other heat",
+       "big": "walls + soak − P",
+       "bigsize": 52,
+       "words": "Implied, not read. As wrong as UA is."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "budget",
+   "kind": "cards",
+   "name": "The budget",
+   "say": "The controller does not use gains. It asks how many watts must be added or taken away for the room to stop where it is wanted. | The first term is what the walls will lose once the room is at the target. | The second is what the room is storing as it moves now. | It is held within six hundred watts. | Then one step. Graphics machines are kept, and the machine that spends most energy on a job goes first. | Forty minutes between changes, because the room answers about an hour late.",
+   "head": "THE BUDGET  ·  EQUATION (7)",
+   "title": "It does not use gains.",
+   "rows": [
+    {
+     "h": 134,
+     "cards": [
+      {
+       "cue": -1,
+       "lag": 2.4,
+       "col": "line",
+       "head": "watts to add or take away, for the room to stop where it is wanted",
+       "big": "budget = −( UA (T − target)  +  C dT/dt )",
+       "bigsize": 56
+      }
+     ]
+    },
+    {
+     "h": 178,
+     "cards": [
+      {
+       "cue": 0,
+       "col": "gpu",
+       "head": "the first term",
+       "words": "What the walls will lose more or less of once the room is at the target."
+      },
+      {
+       "cue": 1,
+       "col": "cpu",
+       "head": "the second term",
+       "words": "What the room is storing or giving up as it moves now."
+      },
+      {
+       "cue": 2,
+       "col": "red",
+       "head": "held within 600 W either way",
+       "words": "A thermometer that reads in tenths cannot justify more."
+      }
+     ]
+    },
+    {
+     "h": 192,
+     "cards": [
+      {
+       "cue": 3,
+       "col": "main",
+       "head": "one step  ·  graphics machines are kept",
+       "words": "The first, in the order of preference, whose watts are no more than twice the budget."
+      },
+      {
+       "cue": 3,
+       "lag": 3.0,
+       "col": "main",
+       "head": "work for the joule",
+       "words": "Among equals, the machine that spends most energy on a job goes first and comes back last."
+      },
+      {
+       "cue": 4,
+       "col": "line",
+       "head": "the pace",
+       "words": "40 minutes between changes. 15 when the budget is 400 W or more. 10 at the ceiling."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "calc1",
+   "kind": "calc",
+   "name": "Calculation 1: a budget on a quiet morning",
+   "say": "A budget, on a quiet morning. The room at twenty-six point zero, the target twenty-six point seven, falling seven hundredths of a degree an hour. | The U A term: minus eighty-four watts. | The C term: minus eighty-two. | The budget: plus one hundred and sixty-six watts. | Every machine was already on, so nothing was done.",
+   "head": "CALCULATION 1  ·  06:37, 18 NOVEMBER",
+   "title": "A budget, on a quiet morning.",
+   "given": [
+    [
+     "the room",
+     "26.00 °C",
+     "cpu"
+    ],
+    [
+     "the target",
+     "26.7 °C",
+     "main"
+    ],
+    [
+     "the slope",
+     "−0.07 °C/h",
+     "cpu"
+    ]
+   ],
+   "lines": [
+    {
+     "cue": 0,
+     "label": "UA term",
+     "expr": "120 × (26.00 − 26.7)",
+     "result": "= −84 W",
+     "col": "gpu"
+    },
+    {
+     "cue": 1,
+     "label": "C term",
+     "expr": "4.2×10⁶ × (−0.07) / 3600",
+     "result": "= −82 W",
+     "col": "cpu"
+    },
+    {
+     "cue": 2,
+     "label": "budget",
+     "expr": "−(−84 − 82)",
+     "result": "= +166 W",
+     "col": "line",
+     "note": "the log says +164"
+    }
+   ],
+   "foot": [
+    {
+     "cue": 3,
+     "words": "The room wants 166 W more."
+    },
+    {
+     "cue": 3,
+     "lag": 0.4,
+     "col": "dim",
+     "words": "Every machine was already on, so nothing was done."
+    }
+   ]
+  },
+  {
+   "id": "calc2",
+   "kind": "calc",
+   "name": "Calculation 2: a budget at its limit",
+   "say": "A budget at its limit. The room at twenty-seven point one, rising zero point six nine degrees an hour. | The U A term is only forty-eight watts. | The C term is eight hundred and five. | Minus eight hundred and fifty-three, held at minus six hundred. | Not far over its target, but rising fast. A law that looked only at the error would have done almost nothing.",
+   "head": "CALCULATION 2  ·  18:37, 17 NOVEMBER",
+   "title": "A budget at its limit.",
+   "given": [
+    [
+     "the room",
+     "27.10 °C",
+     "cpu"
+    ],
+    [
+     "the target",
+     "26.7 °C",
+     "main"
+    ],
+    [
+     "the slope",
+     "+0.69 °C/h",
+     "cpu"
+    ]
+   ],
+   "lines": [
+    {
+     "cue": 0,
+     "label": "UA term",
+     "expr": "120 × (27.10 − 26.7)",
+     "result": "= +48 W",
+     "col": "gpu"
+    },
+    {
+     "cue": 1,
+     "label": "C term",
+     "expr": "4.2×10⁶ × 0.69 / 3600",
+     "result": "= +805 W",
+     "col": "cpu"
+    },
+    {
+     "cue": 2,
+     "label": "budget",
+     "expr": "−(48 + 805) = −853 W",
+     "result": "held at −600 W",
+     "col": "red"
+    }
+   ],
+   "foot": [
+    {
+     "cue": 3,
+     "words": "Not far over its target. Rising fast."
+    },
+    {
+     "cue": 3,
+     "lag": 5.0,
+     "col": "dim",
+     "words": "A law that looked only at the error would have done almost nothing."
+    }
+   ]
+  },
+  {
+   "id": "calc3",
+   "kind": "calc",
+   "name": "Calculation 3: the three flows at 08:21",
+   "say": "The three flows on the Diagram, at 08:21. | Through the walls: one hundred and twenty times fifteen point eight. Eighteen hundred and ninety-six watts. | Soak: seven hundred watts. | Other heat: thirteen hundred and eighty-seven watts. | It is implied, and it rests on a U A that is not measured.",
+   "head": "CALCULATION 3  ·  08:21, 18 NOVEMBER  ·  THE PICTURE OF THE DIAGRAM",
+   "title": "The three flows on the Diagram.",
+   "given": [
+    [
+     "the fleet",
+     "1,209 W",
+     "line"
+    ],
+    [
+     "the room",
+     "26.8 °C",
+     "cpu"
+    ],
+    [
+     "the weather",
+     "11.0 °C",
+     "gpu"
+    ],
+    [
+     "the slope",
+     "+0.60 °C/h",
+     "cpu"
+    ]
+   ],
+   "lines": [
+    {
+     "cue": 0,
+     "label": "through the walls",
+     "expr": "120 × (26.8 − 11.0)",
+     "result": "= 1,896 W",
+     "col": "gpu"
+    },
+    {
+     "cue": 1,
+     "label": "soak",
+     "expr": "4.2×10⁶ × 0.60 / 3600",
+     "result": "= 700 W",
+     "col": "cpu",
+     "note": "drawn: 702"
+    },
+    {
+     "cue": 2,
+     "label": "other heat",
+     "expr": "1,896 + 700 − 1,209",
+     "result": "= 1,387 W",
+     "col": "violet",
+     "note": "drawn: 1,389"
+    }
+   ],
+   "foot": [
+    {
+     "cue": 3,
+     "words": "The other heat is implied."
+    },
+    {
+     "cue": 3,
+     "lag": 1.6,
+     "col": "red",
+     "words": "It rests on a UA that is not measured."
+    }
+   ]
+  },
+  {
+   "id": "calc5",
+   "kind": "calc",
+   "name": "Calculation 5: a night with every machine on",
+   "say": "A night with every machine on. From two to seven the room stood at twenty-six point zero, the weather averaged five point seven, the fleet twelve hundred and eighty watts. | So all the watts over U A are twenty point three degrees. | If the other heat were nothing, U A would be sixty-three. That is a floor. | If U A is one hundred and twenty, the other heat is eleven hundred and fifty-six watts. | One steady night gives one equation in two unknowns.",
+   "head": "CALCULATION 5  ·  02:00 TO 07:00, 18 NOVEMBER  ·  NOTHING WAS CHANGED",
+   "title": "What a night with every machine on says.",
+   "given": [
+    [
+     "the room stood at",
+     "26.00 °C",
+     "cpu"
+    ],
+    [
+     "the weather averaged",
+     "5.7 °C",
+     "gpu"
+    ],
+    [
+     "the fleet",
+     "1,280 W",
+     "line"
+    ]
+   ],
+   "lines": [
+    {
+     "cue": 0,
+     "label": "(P + P0) / UA",
+     "expr": "26.00 − 5.7",
+     "result": "= 20.3 °C",
+     "col": "line"
+    },
+    {
+     "cue": 1,
+     "label": "if P0 were nothing",
+     "expr": "UA = 1,280 / 20.3",
+     "result": "= 63 W/°C",
+     "col": "gpu",
+     "note": "a floor"
+    },
+    {
+     "cue": 2,
+     "label": "if UA is 120",
+     "expr": "P0 = 120 × 20.3 − 1,280",
+     "result": "= 1,156 W",
+     "col": "violet"
+    }
+   ],
+   "foot": [
+    {
+     "cue": 3,
+     "words": "One steady night: one equation, two unknowns."
+    },
+    {
+     "cue": 3,
+     "lag": 1.2,
+     "col": "dim",
+     "words": "A second night at a different weather gives the second."
+    }
+   ]
+  },
+  {
+   "id": "calc6",
+   "kind": "calc",
+   "name": "Calculation 6: how cold it can be",
+   "say": "How cold can it be? The fleet's most is about thirteen hundred watts. | The coldest weather at which eighty can be held | is about six degrees Celsius, whatever the other heat. | That night it went to three, and the room stood under its target with every machine working.",
+   "head": "CALCULATION 6  ·  FROM THE SAME NIGHT",
+   "title": "How cold can it be, and 80 °F still be held?",
+   "given": [
+    [
+     "the fleet's most",
+     "about 1,300 W",
+     "line"
+    ],
+    [
+     "the target",
+     "26.7 °C",
+     "main"
+    ],
+    [
+     "from the night",
+     "20.3 °C at 1,280 W",
+     "cpu"
+    ]
+   ],
+   "lines": [
+    {
+     "cue": 0,
+     "label": "the coldest To",
+     "expr": "26.7 − 20.3 × (1,300 + P0) / (1,280 + P0)",
+     "result": "",
+     "col": "gpu"
+    },
+    {
+     "cue": 1,
+     "label": "",
+     "expr": "≈ 6.1 to 6.2 °C  (43 °F)",
+     "result": "",
+     "col": "gpu",
+     "big": true,
+     "note": "and this hardly depends on P0"
+    }
+   ],
+   "foot": [
+    {
+     "cue": 2,
+     "words": "That night it went to 3 °C."
+    },
+    {
+     "cue": 2,
+     "lag": 2.0,
+     "col": "dim",
+     "words": "The room stood 0.7 °C under its target with every machine working."
+    }
+   ]
+  },
+  {
+   "id": "act3",
+   "kind": "act",
+   "name": "Part three: the first fifteen hours",
+   "say": "Part three. The first fifteen hours.",
+   "part": "PART THREE",
+   "big": "WHAT HAPPENED",
+   "sub": "16:44 on 17 November to 08:20 on 18 November",
+   "col": "cpu"
+  },
+  {
+   "id": "record",
+   "kind": "table",
+   "name": "The record",
+   "say": "Orrery took over at 16:44. | Until 18:20 it held on target. | Then the room rose zero point six degrees an hour. The law shed one hundred and forty-three watts, then seventy-three. A person shed the rest. The peak was about eighty-one point six. | It fell back under the ceiling by 19:36. | Overnight heat was added a step at a time, and the weather fell faster. | From two to seven every machine was on, and the room stood under its target. | Then the morning warmed. | Seventy-eight point one to eighty-one point three by the controller's own reading.",
+   "head": "THE RECORD  ·  ORRERY TOOK OVER AT 16:44 ON 17 NOVEMBER, THE ROOM AT 80.1 °F",
+   "size": 24,
+   "cols": [
+    {
+     "x": 60,
+     "w": 250,
+     "head": "stretch"
+    },
+    {
+     "x": 320,
+     "w": 240,
+     "head": "room, °C"
+    },
+    {
+     "x": 570,
+     "w": 190,
+     "head": "weather, °C"
+    },
+    {
+     "x": 770,
+     "w": 1090,
+     "head": "what happened"
+    }
+   ],
+   "rows": [
+    {
+     "cue": 0,
+     "col": "main",
+     "cells": [
+      "16:44 to 18:20",
+      "26.5 to 26.9",
+      "9 to 10",
+      "Held on target. Connections to the machines were dropping, and lanes stood idle."
+     ]
+    },
+    {
+     "cue": 1,
+     "col": "red",
+     "cells": [
+      "18:20 to 19:10",
+      "26.7 to 27.4",
+      "9 to 7",
+      "The room rose 0.6 °C an hour. The law shed 143 W, then 73 W. A person shed the rest at 18:39. Peak about 27.55 °C (81.6 °F) by the plain mean at 18:44."
+     ]
+    },
+    {
+     "cue": 2,
+     "col": "main",
+     "cells": [
+      "19:10 to 21:25",
+      "27.2 to 26.4",
+      "7 to 8",
+      "Fell back under the ceiling by 19:36; nothing added until the room reached the band's foot."
+     ]
+    },
+    {
+     "cue": 3,
+     "col": "gpu",
+     "cells": [
+      "21:25 to 02:00",
+      "26.4 to 25.6",
+      "7 to 4",
+      "Heat added a step at a time; the weather fell faster than the steps. A person woke the last machine at 01:39."
+     ]
+    },
+    {
+     "cue": 4,
+     "col": "gpu",
+     "cells": [
+      "02:00 to 07:00",
+      "25.75 to 26.10",
+      "3 to 9",
+      "Every machine on, nothing left to add. The room stood still, 0.7 °C under its target."
+     ]
+    },
+    {
+     "cue": 5,
+     "col": "main",
+     "cells": [
+      "07:00 to 08:20",
+      "26.0 to 26.8",
+      "9 to 11",
+      "The morning warmed; rising 0.5 °C an hour; calber shed at 08:08."
+     ]
+    }
+   ],
+   "foot": [
+    {
+     "cue": 6,
+     "words": "78.1 to 81.3 °F by the controller's own reading."
+    },
+    {
+     "cue": 6,
+     "lag": 1.6,
+     "col": "dim",
+     "words": "13 changes by the controller. 6 by a person."
+    }
+   ]
+  },
+  {
+   "id": "faults",
+   "kind": "cards",
+   "name": "Eight faults, seven corrected",
+   "say": "Eight faults were found by watching it run. | One probe jumps a degree by itself, and a machine was switched off for it. | A switch-off did not count as a change until the machine was down. | Only named spares could be woken. | Asked for six hundred watts, it shed one hundred and forty-three. | At the ceiling, a spiking probe was not believed. | The machine with the thermometers was paused. | A large budget reached past small steps. Those seven were corrected the same day. | The eighth is open: it should act on where the room is heading.",
+   "head": "EIGHT FAULTS, AND WHAT WAS DONE ABOUT EACH  ·  EVERY ONE FOUND BY WATCHING IT RUN",
+   "y": 120,
+   "rows": [
+    {
+     "h": 312,
+     "cards": [
+      {
+       "cue": 0,
+       "col": "main",
+       "head": "1  ·  corrected",
+       "words": "One probe jumps a degree by itself for ten minutes. A machine was switched off for it. Now a probe that moves alone is left out, an hour at most.",
+       "size": 25
+      },
+      {
+       "cue": 1,
+       "col": "main",
+       "head": "2  ·  corrected",
+       "words": "An order to switch a machine off did not count as a change until the machine was down. Two steps a minute apart.",
+       "size": 25
+      },
+      {
+       "cue": 2,
+       "col": "main",
+       "head": "3  ·  corrected",
+       "words": "Only named spares could be woken. calber was stranded. Now a machine the law switched off is the law's to wake.",
+       "size": 25
+      },
+      {
+       "cue": 3,
+       "col": "main",
+       "head": "4  ·  corrected",
+       "words": "Steps chosen by preference alone, forty minutes apart. Asked for 600 W, it shed 143 W, then 73 W. Now, at the ceiling, the largest step.",
+       "size": 25
+      }
+     ]
+    },
+    {
+     "h": 312,
+     "cards": [
+      {
+       "cue": 4,
+       "col": "main",
+       "head": "5  ·  corrected",
+       "words": "At the ceiling, a probe left out as a spike was not believed. Now, for the ceiling, the hotter reading is believed.",
+       "size": 25
+      },
+      {
+       "cue": 5,
+       "col": "main",
+       "head": "6  ·  corrected",
+       "words": "The machine that carries the thermometers was paused, and its corner cooled. Paul: \"it got hot\". Now it is left working.",
+       "size": 25
+      },
+      {
+       "cue": 6,
+       "col": "main",
+       "head": "7  ·  corrected",
+       "words": "A large budget reached past small steps for a large one. Now the order of preference is kept whatever the size.",
+       "size": 25
+      },
+      {
+       "cue": 7,
+       "col": "red",
+       "head": "8  ·  open",
+       "words": "Heat is added only when the room reaches the foot of the band. The room dipped to 78.1 °F overnight. It should act on where the room is heading.",
+       "size": 25
+      }
+     ]
+    }
+   ],
+   "foot": [
+    {
+     "cue": 6,
+     "lag": 2.8,
+     "words": "Seven corrected the same day."
+    },
+    {
+     "cue": 7,
+     "col": "red",
+     "words": "One open."
+    }
+   ]
+  },
+  {
+   "id": "act4",
+   "kind": "act",
+   "name": "Part four: how the heat is drawn",
+   "say": "Part four. How the heat is drawn.",
+   "part": "PART FOUR",
+   "big": "HOW THE HEAT IS DRAWN",
+   "sub": "a process diagram, in the palette of a mathematics film",
+   "col": "gpu"
+  },
+  {
+   "id": "draw1",
+   "kind": "picture",
+   "name": "Nesting, colour, width, movement, a tank",
+   "say": "The Diagram is a process diagram, of the kind a control room uses. | Nesting: the weather encloses the walls, the walls the apartment. Heat can only go outward. | One colour, one meaning: yellow the fleet, orange the room, blue the weather, violet the other heat. | Width is watts: a pixel for each seventy. | Movement is direction. | And a tank for what is stored, the term people forget.",
+   "head": "THE TECHNIQUES, AND THE REASON FOR EACH",
+   "file": "diagram.png",
+   "size": [
+    1400,
+    860
+   ],
+   "marks": [
+    {
+     "cue": 0,
+     "r": [
+      [
+       160,
+       276,
+       962,
+       572
+      ],
+      [
+       171,
+       302,
+       942,
+       480
+      ],
+      [
+       186,
+       316,
+       686,
+       452
+      ],
+      [
+       876,
+       318,
+       222,
+       450
+      ]
+     ],
+     "head": "nesting",
+     "words": "The geometry is the physics: heat can only go outward through each frame."
+    },
+    {
+     "cue": 1,
+     "r": [
+      [
+       478,
+       507,
+       242,
+       42
+      ],
+      [
+       388,
+       556,
+       282,
+       194
+      ],
+      [
+       400,
+       746,
+       562,
+       80
+      ],
+      [
+       668,
+       664,
+       350,
+       100
+      ]
+     ],
+     "head": "one colour, one meaning",
+     "words": "Yellow the fleet, orange the room, blue the weather, violet the other heat. Never reused."
+    },
+    {
+     "cue": 2,
+     "r": [
+      [
+       512,
+       504,
+       34,
+       54
+      ],
+      [
+       440,
+       746,
+       44,
+       72
+      ]
+     ],
+     "head": "width is watts",
+     "words": "A pipe is a pixel thick for each 70 W, so the flows compare without a number."
+    },
+    {
+     "cue": 3,
+     "r": [
+      [
+       668,
+       664,
+       350,
+       62
+      ]
+     ],
+     "head": "movement is direction",
+     "words": "Bright marks walk along each pipe. Which way the heat goes is seen, not read."
+    },
+    {
+     "cue": 4,
+     "r": [
+      [
+       388,
+       556,
+       282,
+       194
+      ]
+     ],
+     "head": "a tank for what is stored",
+     "words": "A level and a word: SOAKING UP, GIVING BACK. The sign of dT/dt, happening."
+    }
+   ],
+   "foot": [
+    "A dark ground, and one colour for each kind of thing."
+   ]
+  },
+  {
+   "id": "draw2",
+   "kind": "picture",
+   "name": "Hatching, dashes, bubbles, words, thermometers",
+   "say": "| Hatching for the walls, dashes for what is not measured. | Instrument bubbles: a ring is a thing that is read. | The two numbers that rest on a guess say so, in the warning colour. | Thermometers drawn as thermometers, on one scale. | Trends beside the numbers, and clocks on every machine: three time scales are why the controller waits.",
+   "head": "THE TECHNIQUES, AND THE REASON FOR EACH",
+   "file": "diagram.png",
+   "size": [
+    1400,
+    860
+   ],
+   "marks": [
+    {
+     "cue": 0,
+     "r": [
+      [
+       171,
+       302,
+       942,
+       16
+      ],
+      [
+       876,
+       318,
+       222,
+       450
+      ]
+     ],
+     "head": "hatching, and dashes",
+     "words": "Hatching where the heat crosses. Dashes for what is not measured: a guess is told from a reading."
+    },
+    {
+     "cue": 1,
+     "r": [
+      [
+       474,
+       510,
+       40,
+       34
+      ],
+      [
+       968,
+       360,
+       40,
+       36
+      ],
+      [
+       632,
+       710,
+       38,
+       38
+      ],
+      [
+       404,
+       784,
+       38,
+       36
+      ]
+     ],
+     "head": "instrument bubbles",
+     "words": "JI on a power, TI on a temperature. A ring is a thing that is read."
+    },
+    {
+     "cue": 2,
+     "r": [
+      [
+       482,
+       806,
+       476,
+       20
+      ],
+      [
+       878,
+       722,
+       140,
+       44
+      ]
+     ],
+     "head": "said in words",
+     "words": "The two numbers that rest on a guess say so beside themselves, in the warning colour."
+    },
+    {
+     "cue": 3,
+     "r": [
+      [
+       1136,
+       274,
+       250,
+       570
+      ]
+     ],
+     "head": "thermometers as thermometers",
+     "words": "Glass, mercury, a scale; target and ceiling as marks. The gap is a height."
+    },
+    {
+     "cue": 4,
+     "r": [
+      [
+       194,
+       547,
+       184,
+       214
+      ],
+      [
+       680,
+       546,
+       184,
+       120
+      ],
+      [
+       198,
+       372,
+       156,
+       36
+      ]
+     ],
+     "head": "trends, and clocks",
+     "words": "A trend says where a number is going. Tau and lag: a minute, an hour, a day."
+    }
+   ],
+   "foot": [
+    "The Hearth panel is plainer: words, buttons, one bar.",
+    "It is where things are changed."
+   ],
+   "foot_cue": 4
+  },
+  {
+   "id": "paper",
+   "kind": "picture",
+   "name": "The same rules on paper",
+   "say": "The report before this one uses the same rules on paper: | one time axis, | one scale a chart, | every line named at its end.",
+   "head": "FROM THE REPORT BEFORE THIS ONE, THE ROOM TURNS  ·  17 NOVEMBER",
+   "file": "../hearth-response/step.png",
+   "size": [
+    2360,
+    1600
+   ],
+   "marks": [
+    {
+     "cue": 0,
+     "r": [
+      [
+       220,
+       590,
+       1690,
+       20
+      ],
+      [
+       220,
+       1170,
+       1690,
+       20
+      ],
+      [
+       220,
+       1530,
+       1690,
+       20
+      ]
+     ],
+     "head": "one time axis",
+     "words": "Small panels, one above another, on the same hours."
+    },
+    {
+     "cue": 1,
+     "r": [
+      [
+       100,
+       320,
+       110,
+       250
+      ],
+      [
+       100,
+       700,
+       110,
+       440
+      ],
+      [
+       100,
+       1300,
+       110,
+       200
+      ]
+     ],
+     "head": "one scale a chart",
+     "words": "Never two scales on one chart."
+    },
+    {
+     "cue": 2,
+     "r": [
+      [
+       1905,
+       285,
+       190,
+       50
+      ],
+      [
+       1905,
+       500,
+       200,
+       50
+      ],
+      [
+       1905,
+       860,
+       180,
+       130
+      ],
+      [
+       1905,
+       1375,
+       120,
+       50
+      ]
+     ],
+     "head": "named at its end",
+     "words": "Every line carries its own name. No legend to look up."
+    }
+   ],
+   "foot": [
+    "The fleet's watts, the room's two probes with the fitted balance, the weather."
+   ]
+  },
+  {
+   "id": "act5",
+   "kind": "act",
+   "name": "Part five: upkeep",
+   "say": "Part five. Upkeep.",
+   "part": "PART FIVE",
+   "big": "UPKEEP",
+   "sub": "what it needs from a person, daily and weekly",
+   "col": "violet"
+  },
+  {
+   "id": "upkeep",
+   "kind": "cards",
+   "name": "Daily and weekly",
+   "say": "Daily, look at the hold line: its plan under fifteen minutes old, its last words making sense. | Weekly, save the weather and read the house's fit. A week missed is a week lost. | After a power cut there is nothing to set. | When a machine is added, prove it wakes.",
+   "head": "WHAT IT NEEDS FROM A PERSON",
+   "y": 120,
+   "rows": [
+    {
+     "h": 312,
+     "cards": [
+      {
+       "cue": -1,
+       "col": "main",
+       "head": "daily",
+       "words": "Look at the hold line: its plan under fifteen minutes old, its last words making sense. Read the day's changes.",
+       "size": 28,
+       "mono": [
+        "grep -E 'takes|switched|woken' QUEUE/hearth/hold.log | tail"
+       ]
+      },
+      {
+       "cue": 0,
+       "col": "gpu",
+       "head": "weekly",
+       "words": "Save the weather and read the house's fit. The weather service keeps seven days. Read the energy.",
+       "size": 28,
+       "mono": [
+        "python3 tools/hearth-house.py QUEUE --table",
+        "python3 tools/hearth-energy.py QUEUE"
+       ]
+      }
+     ]
+    },
+    {
+     "h": 312,
+     "cards": [
+      {
+       "cue": 1,
+       "col": "line",
+       "head": "after a power cut",
+       "words": "Nothing to set. The mode, the target and the list of what is paused are files and survive. A machine that was off stays off until the room wants it.",
+       "size": 28
+      },
+      {
+       "cue": 2,
+       "col": "cpu",
+       "head": "when a machine is added, or a probe moved",
+       "words": "Prove the machine wakes: arm its card, press Off twice, press On. A moved probe's usual place is learned again within the hour.",
+       "size": 28
+      }
+     ]
+    }
+   ],
+   "foot": [
+    {
+     "cue": 0,
+     "lag": 3.0,
+     "words": "A week missed is a week lost."
+    }
+   ]
+  },
+  {
+   "id": "wrong",
+   "kind": "table",
+   "name": "When something is wrong",
+   "say": "When something is wrong. | The plan is twenty minutes old: is the keeper running? | No room probe is fresh: restart radbeeper on saskatchewan. | Over eighty-one and rising: lower the target, open a door, press Off on a Supermicro. | Too cold and nothing left: every machine is on. Nothing to do. | Jobs sent back every few minutes: close the app. The cause is not found.",
+   "head": "WHEN SOMETHING IS WRONG",
+   "size": 25,
+   "cols": [
+    {
+     "x": 60,
+     "w": 520,
+     "head": "what you see"
+    },
+    {
+     "x": 600,
+     "w": 560,
+     "head": "what it means"
+    },
+    {
+     "x": 1180,
+     "w": 680,
+     "head": "what to do"
+    }
+   ],
+   "rows": [
+    {
+     "cue": 0,
+     "col": "line",
+     "cells": [
+      "\"the plan is 20 min old\"",
+      "The passes have stopped: the keeper is down, or the telemetry pull is failing.",
+      "Queue page: is the keeper running? Then hearth.py QUEUE step."
+     ]
+    },
+    {
+     "cue": 1,
+     "col": "line",
+     "cells": [
+      "\"NO ROOM PROBE IS FRESH\"",
+      "radbeeper is not running on the probes' machine.",
+      "On saskatchewan: doas rc-service radbeeper restart. It changes nothing while it is blind."
+     ]
+    },
+    {
+     "cue": 2,
+     "col": "red",
+     "cells": [
+      "The room over 81 °F and rising",
+      "The fleet's heat plus something else.",
+      "Lower the target; open a door; press Off on a Supermicro."
+     ]
+    },
+    {
+     "cue": 3,
+     "col": "gpu",
+     "cells": [
+      "\"too cold, and nothing is left\"",
+      "Every machine is on. The fleet has no more to give.",
+      "Nothing. See calculation 6."
+     ]
+    },
+    {
+     "cue": 4,
+     "col": "cpu",
+     "cells": [
+      "Jobs \"sent back: host unreachable\"",
+      "The queue's shared connections are being closed. Three times it began when the app was opened.",
+      "Close the app when not looking. The cause is not found."
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ledger",
+   "kind": "ledger",
+   "name": "Done, and not done",
+   "say": "What is done, and what is not. | The hold runs on the live fleet, in act, and held the room with one excursion. | Seven of eight faults are corrected. | Three machines are proved to wake. | Not done. U A is not measured, and so neither is the other heat. | Zone two has no thermometer. | The eighth fault is open. | The hold has no proof of its own: two days of running. | And On and Off have not been pressed in the app.",
+   "done": [
+    {
+     "cue": 0,
+     "words": "The hold runs on the live fleet, in act. The room was held between 78.1 and 81.3 °F, with one excursion to about 81.6 °F that a person had to end."
+    },
+    {
+     "cue": 1,
+     "words": "Eight faults found by watching it run. Seven corrected the same day."
+    },
+    {
+     "cue": 2,
+     "words": "calber, bosporus and jaguaribe are proved to wake by the packet."
+    },
+    {
+     "cue": 2,
+     "lag": 1.6,
+     "words": "C is measured: 4.2 MJ/°C, by the step of 17 November."
+    }
+   ],
+   "not": [
+    {
+     "cue": 3,
+     "words": "UA is not measured, and so neither is the other heat. 120 W/°C is a figure in use."
+    },
+    {
+     "cue": 4,
+     "words": "Zone 2 has no thermometer. Zone 1 has both in one corner, on one machine."
+    },
+    {
+     "cue": 5,
+     "words": "The eighth fault, acting on where the room is heading, is open."
+    },
+    {
+     "cue": 6,
+     "words": "The hold has no proof script. The ladder has sixty checked claims; the hold has two days of running."
+    },
+    {
+     "cue": 7,
+     "words": "On and Off have been pressed on the command line and not in the app. Why opening the app closes the queue's connections is not found."
+    }
+   ]
+  },
+  {
+   "id": "end",
+   "kind": "end",
+   "name": "The close, and the credits",
+   "say": "The fleet holds the room at eighty degrees. The house's loss per degree is still not measured, and everything that rests on it says so."
+  }
+ ]
+}

@@ -14,7 +14,7 @@ import sys
 
 PROJECTS = ["treadcore", "orrery", "crucible", "copal-tm"]
 NODES = os.path.expanduser("~/.copal/fleets/grove/nodes")
-SSH = ["ssh", "-n", "-o", "BatchMode=yes", "-o", "ConnectTimeout=6"]
+SSH = ["ssh", "-n", "-o", "BatchMode=yes", "-o", "ControlMaster=auto", "-o", "ControlPath=~/.ssh/hk-%C", "-o", "ControlPersist=10m", "-o", "ConnectTimeout=6"]
 SCRIPT = "for p in %s; do d=$HOME/code/$p; if [ -d $d/.git ]; then echo \"$p $(git -C $d log -1 --format=%%h) $(git -C $d log -1 --format=%%cs) $(git -C $d status --short | grep -vc '^??')\"; fi; done" % " ".join(PROJECTS)
 
 

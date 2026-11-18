@@ -589,7 +589,7 @@ def read(q, name, seed):
                         "threads": "$(nproc 2>/dev/null || sysctl -n hw.ncpu)", "bin": binp.replace("~", "$HOME")}
         cmd = "%s; %s %s %d; rm -f %s" % (rec, script, tmp, seed, tmp)
         t = tg.get(host)
-        r = subprocess.run(["ssh", "-o", "BatchMode=yes", t, cmd] if t else ["sh", "-c", cmd], capture_output=True, timeout=3600)
+        r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ControlMaster=auto", "-o", "ControlPath=~/.ssh/hk-%C", "-o", "ControlPersist=10m", t, cmd] if t else ["sh", "-c", cmd], capture_output=True, timeout=3600)
         where = "shard %d re-recorded on %s from the recipe, read, and deleted" % (row["seed0"], host)
     b = r.stdout
     if len(b) < 16 or not b.startswith(b"TCBC"):

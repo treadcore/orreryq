@@ -245,7 +245,7 @@ def sample(q):
                 ps = subprocess.run(["ps", "-Ao", "pid=,pcpu=,command="], capture_output=True, text=True, timeout=10)
                 orch[box] = orch_of(ps.stdout, os.getpid())
             else:
-                r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=6", target, PROBE],
+                r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ControlMaster=auto", "-o", "ControlPath=~/.ssh/hk-%C", "-o", "ControlPersist=10m", "-o", "ConnectTimeout=6", target, PROBE],
                                    capture_output=True, text=True, timeout=30)
             got[box] = parse(r.stdout)
         except (subprocess.TimeoutExpired, OSError):

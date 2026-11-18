@@ -38,7 +38,7 @@ import sys
 import threading
 import time
 
-SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", "-o", "ServerAliveInterval=15"]
+SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ControlMaster=auto", "-o", "ControlPath=~/.ssh/hk-%C", "-o", "ControlPersist=10m", "-o", "ConnectTimeout=8", "-o", "ServerAliveInterval=15"]
 # Flagged when they change between boots; the rest are shown.
 FLAGGED = ("firmware", "board", "uefi", "csm", "secure_boot", "boot_entry", "boot_entries", "gpu")
 NAMES = {"firmware": "firmware", "board": "board", "uefi": "UEFI", "csm": "CSM", "secure_boot": "Secure Boot",

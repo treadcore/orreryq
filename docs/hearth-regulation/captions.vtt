@@ -1,0 +1,769 @@
+WEBVTT
+
+00:00:00.800 --> 00:00:06.400
+A fleet of eight computers heats an apartment whose own heating is switched off.
+
+00:00:06.400 --> 00:00:18.000
+Every five minutes Orrery reads two thermometers in the room and the weather at the airport, works out how many watts the room wants moved, and takes one step:
+
+00:00:18.000 --> 00:00:24.000
+a lane of work paused or resumed, or a machine powered off and later woken.
+
+00:00:26.600 --> 00:00:33.400
+Since 16:44 on the seventeenth of November it holds that room at eighty degrees Fahrenheit, by itself.
+
+00:00:33.400 --> 00:00:35.000
+The ceiling is eighty-one.
+
+00:00:35.000 --> 00:00:43.400
+In the first fifteen hours the room went to about eighty-one point six, once, and a person had to end it.
+
+00:00:43.400 --> 00:00:45.000
+How is it used?
+
+00:00:45.000 --> 00:00:46.600
+What is it calculating?
+
+00:00:46.600 --> 00:00:48.600
+Did it hold the room?
+
+00:00:48.600 --> 00:00:51.400
+What does it need from a person?
+
+00:00:54.000 --> 00:00:55.200
+Keeping the Room.
+
+00:00:55.200 --> 00:00:59.200
+How to use, read and look after Orrery's thermal regulation.
+
+00:01:01.800 --> 00:01:02.600
+Part one.
+
+00:01:02.600 --> 00:01:04.200
+How to use it.
+
+00:01:06.800 --> 00:01:07.600
+In Orrery:
+
+00:01:07.600 --> 00:01:08.800
+Queue, then Heat.
+
+00:01:08.800 --> 00:01:11.200
+The Heat page has six panels.
+
+00:01:11.200 --> 00:01:13.600
+The first two are for this.
+
+00:01:13.600 --> 00:01:15.200
+Hearth is the controls.
+
+00:01:15.200 --> 00:01:16.800
+Diagram is the picture:
+
+00:01:16.800 --> 00:01:21.200
+where the heat comes from, where it goes, and the thermometers.
+
+00:01:23.800 --> 00:01:31.000
+To set the temperature, press minus or plus zero point five, or type a number and press Return.
+
+00:01:31.000 --> 00:01:32.600
+Too warm right now?
+
+00:01:32.600 --> 00:01:35.000
+Lower the target by a degree.
+
+00:01:35.000 --> 00:01:37.000
+A door opened is faster.
+
+00:01:39.600 --> 00:01:40.400
+Three modes.
+
+00:01:40.400 --> 00:01:40.800
+Off:
+
+00:01:40.800 --> 00:01:43.600
+nothing is read and nothing is done.
+
+00:01:43.600 --> 00:01:44.000
+Advise:
+
+00:01:44.000 --> 00:01:49.200
+every five minutes it says what it would do, and changes no machine.
+
+00:01:49.200 --> 00:01:49.600
+Act:
+
+00:01:49.600 --> 00:01:50.800
+it does it.
+
+00:01:50.800 --> 00:01:55.200
+The button is framed in red and must be pressed twice.
+
+00:01:55.200 --> 00:01:57.200
+To take over, press advise.
+
+00:01:57.200 --> 00:01:59.200
+Lanes it paused stay paused.
+
+00:02:01.800 --> 00:02:06.600
+The power row has a cell for each machine, and one button.
+
+00:02:06.600 --> 00:02:08.600
+On sends the wake packet.
+
+00:02:08.600 --> 00:02:09.800
+Off, pressed twice:
+
+00:02:09.800 --> 00:02:14.600
+the machine finishes its job, leaves the queue, and is powered off.
+
+00:02:14.600 --> 00:02:18.200
+The machine that carries the thermometers has no Off.
+
+00:02:18.200 --> 00:02:22.600
+The controller powers off only a machine known to come back.
+
+00:02:22.600 --> 00:02:23.800
+Three are proved.
+
+00:02:26.400 --> 00:02:30.400
+The Hearth panel, at 08:19 on the eighteenth, in act.
+
+00:02:30.400 --> 00:02:30.800
+One:
+
+00:02:30.800 --> 00:02:32.800
+the target, in both scales.
+
+00:02:32.800 --> 00:02:33.200
+Two:
+
+00:02:33.200 --> 00:02:34.000
+changing it.
+
+00:02:34.000 --> 00:02:34.400
+Three:
+
+00:02:34.400 --> 00:02:35.200
+the mode.
+
+00:02:35.200 --> 00:02:35.600
+Four:
+
+00:02:35.600 --> 00:02:36.800
+the power switch.
+
+00:02:36.800 --> 00:02:41.200
+It has no button; it is set from the command line.
+
+00:02:41.200 --> 00:02:41.600
+Five:
+
+00:02:41.600 --> 00:02:42.400
+the hold:
+
+00:02:42.400 --> 00:02:47.200
+the law in force, its budget in watts, and its last words.
+
+00:02:49.800 --> 00:02:50.200
+Six:
+
+00:02:50.200 --> 00:02:53.000
+the power row, a cell a machine.
+
+00:02:53.000 --> 00:02:53.400
+Seven:
+
+00:02:53.400 --> 00:02:54.600
+the plan's age.
+
+00:02:54.600 --> 00:02:57.400
+Over fifteen minutes old, something has stopped.
+
+00:02:57.400 --> 00:02:57.800
+Eight:
+
+00:02:57.800 --> 00:02:59.800
+the room and its probes.
+
+00:02:59.800 --> 00:03:00.200
+Nine:
+
+00:03:00.200 --> 00:03:01.000
+the balance.
+
+00:03:01.000 --> 00:03:05.800
+Green is the watts drawn now; the mark is the watts wanted.
+
+00:03:05.800 --> 00:03:06.200
+Ten:
+
+00:03:06.200 --> 00:03:08.200
+the ladder, the older law.
+
+00:03:08.200 --> 00:03:11.800
+It does not act while the law is hold.
+
+00:03:11.800 --> 00:03:15.000
+The red paragraph says what act will do.
+
+00:03:15.000 --> 00:03:17.000
+Read it before pressing act.
+
+00:03:19.600 --> 00:03:22.000
+The Diagram panel, two minutes later.
+
+00:03:22.000 --> 00:03:22.400
+One:
+
+00:03:22.400 --> 00:03:24.400
+the weather, the outer frame.
+
+00:03:24.400 --> 00:03:24.800
+Two:
+
+00:03:24.800 --> 00:03:26.800
+the walls, the hatched band.
+
+00:03:26.800 --> 00:03:29.200
+The heat that leaves crosses it.
+
+00:03:29.200 --> 00:03:29.600
+Three:
+
+00:03:29.600 --> 00:03:31.600
+zone one, the fleet's room.
+
+00:03:31.600 --> 00:03:32.000
+Four:
+
+00:03:32.000 --> 00:03:34.000
+the machines, a tile each.
+
+00:03:34.000 --> 00:03:34.400
+Five:
+
+00:03:34.400 --> 00:03:35.200
+the collector.
+
+00:03:35.200 --> 00:03:37.600
+A pipe's thickness is its watts.
+
+00:03:40.200 --> 00:03:40.600
+Six:
+
+00:03:40.600 --> 00:03:43.000
+heat in, the fleet's total watts.
+
+00:03:43.000 --> 00:03:43.400
+Seven:
+
+00:03:43.400 --> 00:03:45.400
+the same, over six hours.
+
+00:03:45.400 --> 00:03:45.800
+Eight:
+
+00:03:45.800 --> 00:03:49.000
+the air and the thermal mass, a tank.
+
+00:03:49.000 --> 00:03:55.000
+It says soaking up when the room is warming, giving back when it is cooling.
+
+00:03:55.000 --> 00:03:55.400
+Nine:
+
+00:03:55.400 --> 00:03:57.400
+the room over three hours.
+
+00:03:57.400 --> 00:03:57.800
+Ten:
+
+00:03:57.800 --> 00:04:01.000
+other heat, everything that is not the fleet.
+
+00:04:01.000 --> 00:04:03.000
+It is implied, not read.
+
+00:04:05.600 --> 00:04:06.000
+Eleven:
+
+00:04:06.000 --> 00:04:09.600
+zone two, the rest of the apartment, in dashes.
+
+00:04:09.600 --> 00:04:11.600
+There is no thermometer there.
+
+00:04:11.600 --> 00:04:12.000
+Twelve:
+
+00:04:12.000 --> 00:04:15.600
+through the walls, the watts leaving to the weather.
+
+00:04:15.600 --> 00:04:16.400
+Under it:
+
+00:04:16.400 --> 00:04:20.400
+U A is a figure in use, not a measurement.
+
+00:04:20.400 --> 00:04:20.800
+Thirteen:
+
+00:04:20.800 --> 00:04:21.600
+the thermometers.
+
+00:04:21.600 --> 00:04:22.000
+Fourteen:
+
+00:04:22.000 --> 00:04:24.000
+the balance, in one line.
+
+00:04:24.000 --> 00:04:28.000
+The numbers change at each pass, about every five minutes.
+
+00:04:30.600 --> 00:04:31.400
+Part two.
+
+00:04:31.400 --> 00:04:32.200
+The science.
+
+00:04:34.800 --> 00:04:38.400
+The room is treated as one lump of heat.
+
+00:04:38.400 --> 00:04:45.600
+C times the room's slope equals the fleet's watts, plus every other watt, less what the walls lose.
+
+00:04:45.600 --> 00:04:48.400
+The room and the weather are read.
+
+00:04:48.400 --> 00:04:54.000
+So are the fleet's watts, with a model where a machine has no counter.
+
+00:04:54.000 --> 00:04:55.200
+C is measured:
+
+00:04:55.200 --> 00:04:57.600
+four point two megajoules a degree.
+
+00:04:57.600 --> 00:05:03.200
+U A, the watts lost for each degree over the weather, is not measured.
+
+00:05:03.200 --> 00:05:06.800
+One hundred and twenty is the figure in use.
+
+00:05:06.800 --> 00:05:12.000
+P nought, every watt that is not the fleet's, is not measured either.
+
+00:05:12.000 --> 00:05:14.400
+It is what is left over.
+
+00:05:17.000 --> 00:05:18.200
+Three things follow.
+
+00:05:18.200 --> 00:05:19.800
+Where the room settles:
+
+00:05:19.800 --> 00:05:23.400
+the weather, plus all the watts over U A.
+
+00:05:23.400 --> 00:05:24.200
+How fast:
+
+00:05:24.200 --> 00:05:25.800
+C over U A.
+
+00:05:25.800 --> 00:05:30.600
+Nine point seven hours, if U A is one hundred and twenty.
+
+00:05:30.600 --> 00:05:33.400
+And the three flows on the Diagram.
+
+00:05:33.400 --> 00:05:34.600
+Through the walls:
+
+00:05:34.600 --> 00:05:37.800
+U A times the gap to the weather.
+
+00:05:37.800 --> 00:05:38.200
+Soak:
+
+00:05:38.200 --> 00:05:39.800
+C times the slope.
+
+00:05:39.800 --> 00:05:40.600
+Other heat:
+
+00:05:40.600 --> 00:05:43.000
+walls plus soak, less the fleet.
+
+00:05:43.000 --> 00:05:46.200
+It is as wrong as U A is.
+
+00:05:48.800 --> 00:05:51.200
+The controller does not use gains.
+
+00:05:51.200 --> 00:05:59.200
+It asks how many watts must be added or taken away for the room to stop where it is wanted.
+
+00:05:59.200 --> 00:06:05.600
+The first term is what the walls will lose once the room is at the target.
+
+00:06:05.600 --> 00:06:10.400
+The second is what the room is storing as it moves now.
+
+00:06:10.400 --> 00:06:13.200
+It is held within six hundred watts.
+
+00:06:13.200 --> 00:06:14.400
+Then one step.
+
+00:06:14.400 --> 00:06:20.800
+Graphics machines are kept, and the machine that spends most energy on a job goes first.
+
+00:06:20.800 --> 00:06:25.600
+Forty minutes between changes, because the room answers about an hour late.
+
+00:06:28.200 --> 00:06:30.600
+A budget, on a quiet morning.
+
+00:06:30.600 --> 00:06:38.200
+The room at twenty-six point zero, the target twenty-six point seven, falling seven hundredths of a degree an hour.
+
+00:06:38.200 --> 00:06:39.800
+The U A term:
+
+00:06:39.800 --> 00:06:41.000
+minus eighty-four watts.
+
+00:06:41.000 --> 00:06:42.200
+The C term:
+
+00:06:42.200 --> 00:06:43.000
+minus eighty-two.
+
+00:06:43.000 --> 00:06:43.800
+The budget:
+
+00:06:43.800 --> 00:06:46.200
+plus one hundred and sixty-six watts.
+
+00:06:46.200 --> 00:06:49.800
+Every machine was already on, so nothing was done.
+
+00:06:52.400 --> 00:06:54.400
+A budget at its limit.
+
+00:06:54.400 --> 00:07:00.000
+The room at twenty-seven point one, rising zero point six nine degrees an hour.
+
+00:07:00.000 --> 00:07:03.200
+The U A term is only forty-eight watts.
+
+00:07:03.200 --> 00:07:06.400
+The C term is eight hundred and five.
+
+00:07:06.400 --> 00:07:10.400
+Minus eight hundred and fifty-three, held at minus six hundred.
+
+00:07:10.400 --> 00:07:13.600
+Not far over its target, but rising fast.
+
+00:07:13.600 --> 00:07:18.800
+A law that looked only at the error would have done almost nothing.
+
+00:07:21.400 --> 00:07:24.600
+The three flows on the Diagram, at 08:21.
+
+00:07:24.600 --> 00:07:25.800
+Through the walls:
+
+00:07:25.800 --> 00:07:29.000
+one hundred and twenty times fifteen point eight.
+
+00:07:29.000 --> 00:07:31.000
+Eighteen hundred and ninety-six watts.
+
+00:07:31.000 --> 00:07:31.400
+Soak:
+
+00:07:31.400 --> 00:07:32.600
+seven hundred watts.
+
+00:07:32.600 --> 00:07:33.400
+Other heat:
+
+00:07:33.400 --> 00:07:35.400
+thirteen hundred and eighty-seven watts.
+
+00:07:35.400 --> 00:07:41.000
+It is implied, and it rests on a U A that is not measured.
+
+00:07:43.600 --> 00:07:46.000
+A night with every machine on.
+
+00:07:46.000 --> 00:07:55.600
+From two to seven the room stood at twenty-six point zero, the weather averaged five point seven, the fleet twelve hundred and eighty watts.
+
+00:07:55.600 --> 00:08:00.400
+So all the watts over U A are twenty point three degrees.
+
+00:08:00.400 --> 00:08:04.800
+If the other heat were nothing, U A would be sixty-three.
+
+00:08:04.800 --> 00:08:06.400
+That is a floor.
+
+00:08:06.400 --> 00:08:13.200
+If U A is one hundred and twenty, the other heat is eleven hundred and fifty-six watts.
+
+00:08:13.200 --> 00:08:16.800
+One steady night gives one equation in two unknowns.
+
+00:08:19.400 --> 00:08:21.400
+How cold can it be?
+
+00:08:21.400 --> 00:08:24.600
+The fleet's most is about thirteen hundred watts.
+
+00:08:24.600 --> 00:08:31.800
+The coldest weather at which eighty can be held is about six degrees Celsius, whatever the other heat.
+
+00:08:31.800 --> 00:08:38.600
+That night it went to three, and the room stood under its target with every machine working.
+
+00:08:41.200 --> 00:08:42.000
+Part three.
+
+00:08:42.000 --> 00:08:43.600
+The first fifteen hours.
+
+00:08:46.200 --> 00:08:48.200
+Orrery took over at 16:44.
+
+00:08:48.200 --> 00:08:50.600
+Until 18:20 it held on target.
+
+00:08:50.600 --> 00:08:54.600
+Then the room rose zero point six degrees an hour.
+
+00:08:54.600 --> 00:08:58.600
+The law shed one hundred and forty-three watts, then seventy-three.
+
+00:08:58.600 --> 00:09:00.600
+A person shed the rest.
+
+00:09:00.600 --> 00:09:03.400
+The peak was about eighty-one point six.
+
+00:09:03.400 --> 00:09:06.600
+It fell back under the ceiling by 19:36.
+
+00:09:06.600 --> 00:09:12.200
+Overnight heat was added a step at a time, and the weather fell faster.
+
+00:09:12.200 --> 00:09:18.200
+From two to seven every machine was on, and the room stood under its target.
+
+00:09:18.200 --> 00:09:19.800
+Then the morning warmed.
+
+00:09:19.800 --> 00:09:24.600
+Seventy-eight point one to eighty-one point three by the controller's own reading.
+
+00:09:27.200 --> 00:09:30.400
+Eight faults were found by watching it run.
+
+00:09:30.400 --> 00:09:36.400
+One probe jumps a degree by itself, and a machine was switched off for it.
+
+00:09:36.400 --> 00:09:41.600
+A switch-off did not count as a change until the machine was down.
+
+00:09:41.600 --> 00:09:44.000
+Only named spares could be woken.
+
+00:09:44.000 --> 00:09:48.400
+Asked for six hundred watts, it shed one hundred and forty-three.
+
+00:09:48.400 --> 00:09:52.000
+At the ceiling, a spiking probe was not believed.
+
+00:09:52.000 --> 00:09:54.800
+The machine with the thermometers was paused.
+
+00:09:54.800 --> 00:09:57.600
+A large budget reached past small steps.
+
+00:09:57.600 --> 00:10:00.400
+Those seven were corrected the same day.
+
+00:10:00.400 --> 00:10:02.000
+The eighth is open:
+
+00:10:02.000 --> 00:10:05.600
+it should act on where the room is heading.
+
+00:10:08.200 --> 00:10:09.000
+Part four.
+
+00:10:09.000 --> 00:10:11.000
+How the heat is drawn.
+
+00:10:13.600 --> 00:10:18.800
+The Diagram is a process diagram, of the kind a control room uses.
+
+00:10:18.800 --> 00:10:19.200
+Nesting:
+
+00:10:19.200 --> 00:10:22.800
+the weather encloses the walls, the walls the apartment.
+
+00:10:22.800 --> 00:10:24.800
+Heat can only go outward.
+
+00:10:24.800 --> 00:10:26.400
+One colour, one meaning:
+
+00:10:26.400 --> 00:10:31.600
+yellow the fleet, orange the room, blue the weather, violet the other heat.
+
+00:10:31.600 --> 00:10:32.800
+Width is watts:
+
+00:10:32.800 --> 00:10:34.800
+a pixel for each seventy.
+
+00:10:34.800 --> 00:10:36.000
+Movement is direction.
+
+00:10:36.000 --> 00:10:40.400
+And a tank for what is stored, the term people forget.
+
+00:10:43.000 --> 00:10:47.000
+Hatching for the walls, dashes for what is not measured.
+
+00:10:47.000 --> 00:10:47.800
+Instrument bubbles:
+
+00:10:47.800 --> 00:10:51.000
+a ring is a thing that is read.
+
+00:10:51.000 --> 00:10:56.600
+The two numbers that rest on a guess say so, in the warning colour.
+
+00:10:56.600 --> 00:10:59.400
+Thermometers drawn as thermometers, on one scale.
+
+00:10:59.400 --> 00:11:03.000
+Trends beside the numbers, and clocks on every machine:
+
+00:11:03.000 --> 00:11:06.200
+three time scales are why the controller waits.
+
+00:11:08.800 --> 00:11:13.200
+The report before this one uses the same rules on paper:
+
+00:11:13.200 --> 00:11:18.400
+one time axis, one scale a chart, every line named at its end.
+
+00:11:21.000 --> 00:11:21.800
+Part five.
+
+00:11:21.800 --> 00:11:22.200
+Upkeep.
+
+00:11:24.800 --> 00:11:27.200
+Daily, look at the hold line:
+
+00:11:27.200 --> 00:11:31.600
+its plan under fifteen minutes old, its last words making sense.
+
+00:11:31.600 --> 00:11:35.200
+Weekly, save the weather and read the house's fit.
+
+00:11:35.200 --> 00:11:38.000
+A week missed is a week lost.
+
+00:11:38.000 --> 00:11:41.600
+After a power cut there is nothing to set.
+
+00:11:41.600 --> 00:11:44.800
+When a machine is added, prove it wakes.
+
+00:11:47.400 --> 00:11:49.000
+When something is wrong.
+
+00:11:49.000 --> 00:11:51.400
+The plan is twenty minutes old:
+
+00:11:51.400 --> 00:11:53.000
+is the keeper running?
+
+00:11:53.000 --> 00:11:55.000
+No room probe is fresh:
+
+00:11:55.000 --> 00:11:56.600
+restart radbeeper on saskatchewan.
+
+00:11:56.600 --> 00:11:58.200
+Over eighty-one and rising:
+
+00:11:58.200 --> 00:12:02.600
+lower the target, open a door, press Off on a Supermicro.
+
+00:12:02.600 --> 00:12:04.600
+Too cold and nothing left:
+
+00:12:04.600 --> 00:12:06.200
+every machine is on.
+
+00:12:06.200 --> 00:12:07.400
+Nothing to do.
+
+00:12:07.400 --> 00:12:09.800
+Jobs sent back every few minutes:
+
+00:12:09.800 --> 00:12:11.000
+close the app.
+
+00:12:11.000 --> 00:12:13.000
+The cause is not found.
+
+00:12:15.600 --> 00:12:18.400
+What is done, and what is not.
+
+00:12:18.400 --> 00:12:24.800
+The hold runs on the live fleet, in act, and held the room with one excursion.
+
+00:12:24.800 --> 00:12:27.200
+Seven of eight faults are corrected.
+
+00:12:27.200 --> 00:12:29.600
+Three machines are proved to wake.
+
+00:12:29.600 --> 00:12:30.400
+Not done.
+
+00:12:30.400 --> 00:12:35.200
+U A is not measured, and so neither is the other heat.
+
+00:12:35.200 --> 00:12:37.200
+Zone two has no thermometer.
+
+00:12:37.200 --> 00:12:39.200
+The eighth fault is open.
+
+00:12:39.200 --> 00:12:42.400
+The hold has no proof of its own:
+
+00:12:42.400 --> 00:12:44.000
+two days of running.
+
+00:12:44.000 --> 00:12:48.400
+And On and Off have not been pressed in the app.
+
+00:12:51.000 --> 00:12:54.200
+The fleet holds the room at eighty degrees.
+
+00:12:54.200 --> 00:13:01.000
+The house's loss per degree is still not measured, and everything that rests on it says so.

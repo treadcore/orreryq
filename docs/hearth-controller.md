@@ -241,3 +241,11 @@ The controller's own power-off rung is closed for a machine not marked `wol on`.
     hearth.py QUEUE set ceiling 27.2           the hold's ceiling, degrees C
 
 Since 17 November the live controller is in act with the law `hold` (`tools/hearth_regulator.py`), the power switch on, and the pass run by the keeper after every telemetry pull. Section 5 of `docs/hearth-power.md` says what that law does. The ladder described above still proves and still shows on the panel; it does not act while the law is hold.
+
+## The Diagram panel (18 November)
+
+Queue, Heat, **Diagram** draws the balance as one picture (`ORRERY_HEAT=diagram` for a frame of it): the weather round the apartment, two zones in it, every machine as a tile with its watts, its CPU's temperature and time constant, its drives' temperature and lag and its count of sensors, all collected on one bus as HEAT IN; the room's air and thermal mass as a tank that soaks heat up or gives it back (C times the room's slope); the flow THROUGH THE WALLS (UA times the room's height over the weather); and the OTHER HEAT from zone 2's side, which is what is left over (walls + soak - fleet). Two thermometers stand at the right, the room's with its target and ceiling marked, and the weather's, with every probe listed under them.
+
+What is read, and what is not: the fleet's watts, the room, the weather and the slope are read; C was measured by the step of 17 November; **UA is a figure in use and not a measurement, and the picture says so; the other heat is implied by it and is as wrong as it is; zone 2 has no thermometer.** The numbers are the plan's, so they move at each pass, every five minutes; the marks along the flows move with the clock.
+
+![The Diagram panel: the weather, the apartment's two zones, the machines on one bus, the tank, the walls and the thermometers](hearth/heat-diagram.png)

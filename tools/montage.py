@@ -234,7 +234,7 @@ def trace(q, chapters, opps, cfg, duels, seed, want_host, work):
     if re.match(r"^[\w.= -]*$", rules):
         flags = (flags.strip() + " " + rules).strip()
     for name, target in hosts:
-        r = run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", target, "mkdir -p ~/%s/src ~/%s/in && rm -f ~/%s/in/*.bin" % (home, home, home)], 60)
+        r = run(["ssh", "-o", "BatchMode=yes", "-o", "ControlMaster=auto", "-o", "ControlPath=~/.ssh/hk-%C", "-o", "ControlPersist=10m", "-o", "ConnectTimeout=8", target, "mkdir -p ~/%s/src ~/%s/in && rm -f ~/%s/in/*.bin" % (home, home, home)], 60)
         if r.returncode != 0:
             continue
         sc = run(["scp", "-q", "-o", "BatchMode=yes", os.path.join(CRUCIBLE, "src", "crucible.cu"), "%s:%s/src/" % (target, home)], 120)
@@ -255,13 +255,13 @@ def trace(q, chapters, opps, cfg, duels, seed, want_host, work):
         ) % {"h": home, "f": flags.strip(), "ren": ren, "d": duels, "s": seed, "sp": SPREAD,
              "c": ",".join("in/c%02d.bin" % i for i in range(len(chapters))),
              "o": ("--opponents " + ",".join("in/o%02d.bin" % i for i in range(len(opps)))) if opps else ""}
-        r = run(["ssh", "-o", "BatchMode=yes", target, "sh -c %s" % shlex.quote(cmd)], 1800)
+        r = run(["ssh", "-o", "BatchMode=yes", "-o", "ControlMaster=auto", "-o", "ControlPath=~/.ssh/hk-%C", "-o", "ControlPersist=10m", target, "sh -c %s" % shlex.quote(cmd)], 1800)
         if r.returncode != 0 or sc.returncode or sc2.returncode or sc3.returncode:
             state(q, said="the trace on %s failed: %s" % (name, (r.stderr or r.stdout).strip()[-300:]))
             continue
         out = os.path.join(work, "trace.bin")
         g = run(["scp", "-q", "-o", "BatchMode=yes", "%s:%s/trace.bin" % (target, home), out], 600)
-        run(["ssh", "-o", "BatchMode=yes", target, "rm -f ~/%s/trace.bin ~/%s/in/*.bin" % (home, home)], 60)
+        run(["ssh", "-o", "BatchMode=yes", "-o", "ControlMaster=auto", "-o", "ControlPath=~/.ssh/hk-%C", "-o", "ControlPersist=10m", target, "rm -f ~/%s/trace.bin ~/%s/in/*.bin" % (home, home)], 60)
         if g.returncode == 0:
             return out, name, r.stdout.strip().splitlines()
     raise RuntimeError("no GPU island could run the trace (%s)" % ", ".join(n for n, _ in hosts))

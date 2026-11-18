@@ -6,3 +6,5 @@
 J=${JDOC:-$J}
 shot ${HN:-hearth-panel} queue $J ORRERY_FRAME_PAGE=20 ORRERY_HEAT=hearth ORRERY_HEARTH=${HQ:-$Q}
 shot ${FN:-fleet-auto} queue $J ORRERY_FRAME_PAGE=0 ORRERY_HEARTH=${HQ:-$Q}
+# The Diagram panel: the heat flow as one picture (ORRERY_HEAT=diagram).
+shot ${DN:-heat-diagram} queue $J ORRERY_FRAME_PAGE=20 ORRERY_HEAT=diagram ORRERY_HEARTH=${HQ:-$Q}

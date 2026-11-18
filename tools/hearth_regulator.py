@@ -9,8 +9,8 @@ and the script is gone.
 
 WHAT IT HOLDS. The target is the controller's (the Hearth panel's). Inside a band of 0.25 C either side
 nothing is changed. THE CEILING (`set ceiling C`, half a degree over the target unless set: 80 F and
-81 F) is not to be stood above: within 0.15 C of it and not falling, heat is shed at once, without
-waiting out the dwell.
+81 F) is not to be stood above: within 0.05 C of it and not falling, heat is shed at once, without
+waiting out the dwell, and the largest step is taken.
 
 THE BUDGET, in watts, is an energy calculation and not a gain:
 
@@ -43,7 +43,8 @@ person could bring it back. Never the machine that carries the room's probes (it
 never this Mac, never a lane a person paused, never a machine a person removed that this law did not
 switch off itself (except the spares named in hearth/hold.json).
 
-FORTY MINUTES BETWEEN CHANGES: the room answers about an hour late.
+FORTY MINUTES BETWEEN CHANGES: the room answers about an hour late. Fifteen when the budget is 400 W or
+more, ten at the ceiling.
 
 ONE PROBE'S SPIKE IS LEFT OUT. Each probe has a usual place about the mean of them all; one that moves
 0.4 C in a quarter of an hour while the others move less than half of that, and stands 0.3 C from its
@@ -51,11 +52,12 @@ usual place, is left out for as long as it stands there and no longer than an ho
 
 Its memory is QUEUE/hearth/hold.json (what it holds paused, what it switched off, the probes' usual
 places, when it last changed anything), its record hold.tsv (a line a look), its words hold.log, and
-steady.tsv, a line for each two hours the room stood inside the band with nothing changed: the fleet's
+steady.tsv, a line for each two hours the room did not move (within 0.35 C, no slope) with nothing changed: the fleet's
 watts against the room's height over the outside, which is the house's loss being measured.
 """
 import contextlib
 import io
+import math
 import os
 import subprocess
 import sys
@@ -64,6 +66,12 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 NEVER = ("mac",)
 BAND_C, DWELL_S, URGENT_GAP_S, STEADY_S = 0.25, 2400.0, 600.0, 7200.0
+# How near the ceiling counts as at it. It was 0.15: with the target at 26.7, the band's top at 26.95 and the
+# ceiling at 27.2, that left a tenth of a degree in which the order of preference applied at all, and on the
+# morning of 18 November the first machine shed was calber, a card machine, "at the ceiling" at 27.05.
+CEILING_NEAR_C = 0.05
+AHEAD_SLOPE, AHEAD_H = 0.15, 0.75     # act on where the room will be in three quarters of an hour, if it is moving this fast
+HASTE_W, HASTE_S = 400.0, 900.0       # a budget this large does not wait forty minutes for its next step: fifteen
 UA_W_C, C_MJ_C, BUDGET_MAX_W = 120.0, 4.2, 600.0
 
 
@@ -131,6 +139,108 @@ def seed(H, q, hs, used):
             without_spikes(hs, b * 300.0, byt[b], sum(byt[b].values()) / len(byt[b]), lambda w: None)
 
 
+def lagged(looks, t, tau_h=9.7):
+    """THE WEATHER THE ROOM HAS FELT. A room with a time constant of ten hours does not stand against the
+    weather of this minute but against the weather of the last half day, the newest hours counting most.
+    Two stretches of the night of 17 November had the same watts and the same room while the weather went
+    from 4.3 to 7.0 C between them: taken at the minute, they said the house lost 58 and then 68 W a
+    degree. So the weather for a steady stretch is its mean over the hours before, each weighted
+    exp(-age / tau), tau the room's own (C / UA, 9.7 h at the figure in use). `looks` is (t, weather)."""
+    num = den = 0.0
+    for tt, o in looks:
+        if tt <= t and t - tt < 4 * tau_h * 3600:
+            w = math.exp(-(t - tt) / (tau_h * 3600))
+            num, den = num + w * o, den + w
+    return num / den if den else None
+
+
+def weather_looks(H, q):
+    out = []
+    try:
+        for l in open(H.hp(q, "hold.tsv")):
+            w = l.split("\t")
+            if l[:1].isdigit() and len(w) >= 3 and w[2]:
+                out.append((float(w[0]), float(w[2])))
+    except (OSError, ValueError):
+        pass
+    return out
+
+
+def steady_rows(H, q):
+    """steady.tsv as rows: [from, to, room, outside, over, watts]."""
+    rows = []
+    try:
+        for l in open(H.hp(q, "steady.tsv")):
+            w = l.split("\t")
+            if len(w) >= 6:
+                rows.append([float(x) for x in w[:6]])
+    except (OSError, ValueError):
+        pass
+    return rows
+
+
+def steady_fit(rows):
+    """THE HOUSE'S LOSS FROM THE STRETCHES THE ROOM STOOD STILL. In a room that is not moving what goes in
+    goes out, P + P0 = UA (T - To), so each stretch is a point, the fleet's watts against the room's height
+    over the weather, and as the weather moves the points lie on the line P = UA (T - To) - P0. Its slope
+    is UA and its foot the other heat. (UA, P0, how many stretches, how far apart their heights stand), or
+    None with fewer than three stretches or less than 2 C between the lowest and the highest."""
+    if len(rows) < 3:
+        return None
+    over, w = [r[4] for r in rows], [r[5] for r in rows]
+    spread = max(over) - min(over)
+    if spread < 2.0:
+        return None
+    ua = slope_of(over, w)
+    p0 = ua * sum(over) / len(over) - sum(w) / len(w)
+    return ua, p0, len(rows), spread
+
+
+def backfill(H, q):
+    """Read hold.tsv again for stretches the room stood still and nothing was changed, and write the ones
+    steady.tsv does not have. For the hours before 18 November, when a stretch was counted only inside
+    the target's band. Returns how many were added."""
+    looks, changes = [], []
+    try:
+        for l in open(H.hp(q, "hold.tsv")):
+            if l.startswith("# 20"):
+                try:
+                    changes.append(time.mktime(time.strptime(l[2:21], "%Y-%m-%dT%H:%M:%S")))
+                except ValueError:
+                    pass
+            elif l[:1].isdigit():
+                w = l.rstrip("\n").split("\t")
+                if len(w) >= 5 and w[2]:
+                    looks.append((float(w[0]), float(w[1]), float(w[2]), float(w[4])))
+    except OSError:
+        return 0
+    have = {int(r[0]) for r in steady_rows(H, q)}
+    added, i = 0, 0
+    while i < len(looks):
+        j = i
+        while j < len(looks) and looks[j][0] - looks[i][0] < STEADY_S:
+            j += 1
+        if j >= len(looks):
+            break
+        span = looks[i:j + 1]
+        t0, t1 = span[0][0], span[-1][0]
+        rooms, watts = [r[1] for r in span], [r[3] for r in span]
+        still = (max(rooms) - min(rooms) <= 0.35 and abs(slope_of([r[0] / 3600 for r in span], rooms)) <= 0.1
+                 and len(span) >= 12 and max(b[0] - a[0] for a, b in zip(span, span[1:])) <= 1500
+                 and not any(t0 - 1800 <= c <= t1 for c in changes)
+                 and max(watts) - min(watts) <= 0.35 * (sum(watts) / len(watts)))      # the watts level too: a change made shows as a step in them
+        if still and int(t0) not in have:
+            rm, p = sum(rooms) / len(span), sum(watts) / len(span)
+            o = lagged([(r[0], r[2]) for r in looks], (t0 + t1) / 2) or sum(r[2] for r in span) / len(span)
+            with open(H.hp(q, "steady.tsv"), "a") as f:
+                f.write("%d\t%d\t%.2f\t%.1f\t%.2f\t%.0f\n" % (t0, t1, rm, o, rm - o, p))
+            added += 1
+            i = j + 1
+        else:
+            i += 1 if not still else j - i + 1
+    return added
+
+
 def look(H, q, st, t, cfg, ms, ps, plan, said, act):
     """One look. Fills the plan's `hold`, `would`, `wanted_w`, `diff_w` and `budget`, says what it sees first
     in `said`, and, where `act`, does the one thing it decided."""
@@ -172,14 +282,24 @@ def look(H, q, st, t, cfg, ms, ps, plan, said, act):
     vals = {p["key"]: p["c"] for p in used}
     if not hs.get("pdevs"):
         seed(H, q, hs, used)
-    room = without_spikes(hs, t, vals, sum(vals.values()) / len(vals), note)
+    plain = sum(vals.values()) / len(vals)
+    room = without_spikes(hs, t, vals, plain, note)
     out_c, watts, tgt = plan.get("outside_c"), plan["now_w"], st["target_c"]
     ceiling = H.setting(st, "ceiling") or tgt + 0.5
     hs["rows"].append([t, round(room, 3)])
     hs["rows"] = [r for r in hs["rows"] if t - r[0] < 3 * 3600]
     hour = [r for r in hs["rows"] if t - r[0] <= 3900]
     slope = slope_of([r[0] / 3600 for r in hour], [r[1] for r in hour]) if len(hour) >= 4 and hour[-1][0] - hour[0][0] >= 1200 else 0.0
-    ua, c_j = st["set"].get("ua") or UA_W_C, C_MJ_C * 1e6
+    # UA: what a person set; else the line through the steady stretches, once there are four of them standing
+    # 3 C apart and it is a house's figure; else the figure in use.
+    fit = steady_fit(steady_rows(H, q))
+    if st["set"].get("ua"):
+        ua, ua_from = st["set"]["ua"], "set by a person"
+    elif fit and fit[2] >= 4 and fit[3] >= 3.0 and 40 <= fit[0] <= 400:
+        ua, ua_from = fit[0], "%d steady stretches, %.1f C apart" % (fit[2], fit[3])
+    else:
+        ua, ua_from = UA_W_C, "a figure in use, not a measurement"
+    c_j = C_MJ_C * 1e6
     need = max(-BUDGET_MAX_W, min(BUDGET_MAX_W, -(ua * (room - tgt) + c_j * slope / 3600)))
     new = not os.path.exists(H.hp(q, "hold.tsv"))
     with open(H.hp(q, "hold.tsv"), "a") as f:
@@ -190,7 +310,10 @@ def look(H, q, st, t, cfg, ms, ps, plan, said, act):
     since = t - hs["last_change_t"]
     note("room %.2f C (%.1f F), target %.1f F, ceiling %.1f F; outside %s, over it by %s; fleet %.0f W; the room moving %+.2f C an hour; budget %+.0f W" % (
         room, f_of(room), f_of(tgt), f_of(ceiling), "%.1f C" % out_c if out_c is not None else "?", "%.1f C" % (room - out_c) if out_c is not None else "?", watts, slope, need))
-    plan.update(budget={"w": round(need), "ua_w_c": ua, "c_mj_c": C_MJ_C, "slope_c_h": round(slope, 3), "room_c": round(room, 2), "ceiling_c": ceiling},
+    plan.update(budget={"w": round(need), "ua_w_c": ua, "c_mj_c": C_MJ_C, "slope_c_h": round(slope, 3), "room_c": round(room, 2), "ceiling_c": ceiling,
+                        "ua_from": ua_from, "ua_measured": not ua_from.startswith("a figure"),
+                        "fit": {"ua_w_c": round(fit[0]), "p0_w": round(fit[1]), "stretches": fit[2], "spread_c": round(fit[3], 1)} if fit else None,
+                        "trend": [r[1] for r in hs["rows"]]},      # the room over the last three hours, for the Diagram panel's strip
                 wanted_w=round(watts + need), diff_w=round(need), temp_c=round(room, 2))
 
     # ---- what there is to take
@@ -224,7 +347,11 @@ def look(H, q, st, t, cfg, ms, ps, plan, said, act):
             if whole and running and m["fresh"] and m["wall_w"] is not None and not any(h.get("paused") and h["name"] not in hs["held"] for h in lanes):
                 shed.append({"do": "off", "name": name, "w": m["wall_w"], "key": (has_card(name), False, -spend(name)),
                              "what": "%s finishes its task and is switched off (it wakes by the packet)" % name})
-            elif not whole and m["fresh"] and m["wall_w"] is not None:      # a machine whose watts are not read is no heat this law can count
+            # THE MACHINE THAT CARRIES THE PROBES IS LEFT WORKING. Its own heat is part of what the probes
+            # read: paused, its corner cools, the probes read low, and heat is added somewhere the probes
+            # are not (the evening of 17 November: saskatchewan paused, two machines woken elsewhere, the
+            # probes at 79.5 F and Paul saying "it got hot").
+            elif not whole and name not in carriers and m["fresh"] and m["wall_w"] is not None:      # a machine whose watts are not read is no heat this law can count
                 for h in running:
                     w = lane_w(m, h)
                     if w >= 10:
@@ -249,27 +376,55 @@ def look(H, q, st, t, cfg, ms, ps, plan, said, act):
                             "what": "%s is woken, and computes as soon as it is up%s" % (name, " (it took %s last time)" % H.ago(mine[name]["boot_s"]) if mine.get(name, {}).get("boot_s") else "")})
     hs["held"] = [l for l in hs["held"] if any(h["name"] == l and h.get("paused") for m in ms.values() for h in m["cpu"] + m["card"])]
 
-    def pick(opts, want):
+    def pick(opts, want, biggest=False):
+        """The step for a budget: the first in the order of preference that is no more than twice it (or
+        250 W); failing that the smallest.
+        AT THE CEILING the preference gives way: the largest that is no more than twice the budget,
+        whatever machine it is on (17 November, 18:22 to 18:37: asked for 600 W, the order of preference
+        gave an idle machine's 143 W and then one lane's 73 W, and the room went through 81 F)."""
         opts = sorted(opts, key=lambda o: o["key"])
-        fit = [o for o in opts if o["w"] <= max(2.0 * want, 250.0)]
-        return fit[0] if fit else min(opts, key=lambda o: o["w"]) if opts else None
+        under = [o for o in opts if o["w"] <= max(2.0 * want, 350.0)]      # 350: the largest single machine at work is a step that may be taken
+        if not opts:
+            return None
+        if biggest:
+            # The largest, but among the machines without a card first where one of them is a real step
+            # (150 W or more): the card machines are kept even at the ceiling while something else will do.
+            plain = [o for o in under if not o["key"][0] and o["w"] >= 150.0]
+            return max(plain or under, key=lambda o: o["w"]) if under else min(opts, key=lambda o: o["w"])
+        # THE ORDER OF PREFERENCE IS KEPT, whatever the size: a large budget is met by the shorter wait
+        # between steps, not by reaching past a card's lane for a machine that spends its energy badly
+        # (21:47 on 17 November: asked for 415 W, it woke bosporus, 249 W, over four paused lanes of the
+        # card machines that were each too small to be "a fair share").
+        return under[0] if under else min(opts, key=lambda o: o["w"])
 
-    urgent = room >= ceiling - 0.15 and slope > -0.05
+    # FOR THE CEILING A PROBE LEFT OUT IS STILL BELIEVED: if it is a spike, a lane is paused for nothing and
+    # given back; if it is the room (18:37 on 17 November it was), the ceiling is kept.
+    urgent = max(room, plain) >= ceiling - CEILING_NEAR_C and slope > -0.05
     choice, why = None, ""
     idle = [o for o in add + shed if o.get("idle")]
     if urgent and since >= URGENT_GAP_S:
-        choice, why = pick(shed, max(-need, 250.0)), "AT THE CEILING and not falling"
-    elif since < DWELL_S:
-        note("%d min since the last change; it waits %d more%s" % (since / 60, (DWELL_S - since) / 60, " (AT THE CEILING: it waits %d min only)" % ((URGENT_GAP_S - since) / 60) if urgent else ""))
+        choice, why = pick(shed, max(-need, 250.0), biggest=True), "AT THE CEILING and not falling"
+    elif since < (HASTE_S if abs(need) >= HASTE_W else DWELL_S):
+        note("%d min since the last change; it waits %d more%s" % (since / 60, ((HASTE_S if abs(need) >= HASTE_W else DWELL_S) - since) / 60, " (AT THE CEILING: it waits %d min only)" % ((URGENT_GAP_S - since) / 60) if urgent else ""))
     elif idle and (need > -100 or any(o["do"] == "off" for o in idle)):
         # A machine on and idle is settled before anything else: to work if the room has room for it, off if not.
         choice = next((o for o in idle if o["do"] == ("add" if need > -100 else "off")), None)
         why = "a machine that is on computes"
     elif room >= tgt + BAND_C and slope > -0.1:
         choice, why = pick(shed, -need), "too warm and not falling"
+    # WHERE THE ROOM IS HEADING. The room answers an hour late, so a law that waits for it to leave the band
+    # has already lost that hour (the night of 17 November: it fell a third of a degree an hour for an hour
+    # in plain sight, and heat was added only at the band's foot; it reached 78.1 F). If the slope is clear,
+    # 0.15 C an hour or more, and carries the room out of the band within three quarters of an hour, the step
+    # is taken now.
+    elif slope >= AHEAD_SLOPE and room + slope * AHEAD_H >= tgt + BAND_C:
+        choice, why = pick(shed, -need), "heading over the band (%.2f C in %d min at %+.2f C an hour)" % (room + slope * AHEAD_H, AHEAD_H * 60, slope)
     elif room <= tgt - BAND_C and slope < 0.1:
         choice, why = pick(add, need), "too cold and not rising"
-        if choice is None:
+    elif slope <= -AHEAD_SLOPE and room + slope * AHEAD_H <= tgt - BAND_C:
+        choice, why = pick(add, need), "heading under the band (%.2f C in %d min at %+.2f C an hour)" % (room + slope * AHEAD_H, AHEAD_H * 60, slope)
+    if why.startswith("too cold") or why.startswith("heading under"):
+        if choice is None and room <= tgt - BAND_C:
             cold = [n for n in spares() if not (ms.get(n) or {}).get("fresh") and n not in flying]
             note("too cold, and nothing is left that this law may add." + (" SWITCH ON %s: it is put to work when it answers" % cold[0].upper() if cold else " The fleet has no more to give"))
     plan["would"] = None
@@ -295,16 +450,21 @@ def look(H, q, st, t, cfg, ms, ps, plan, said, act):
             plan["did"] = dict(st["last_action"], ran=[{"cmd": cmds, "ok": ok, "said": heard[-300:]}])
 
     # ---- a stretch standing still: the house's loss being measured
-    if abs(room - tgt) > BAND_C + 0.1 or flying:
+    # Standing still is the room not moving, wherever it stands: the night of 17 November it stood five
+    # hours at 26.0 C with every machine on, 0.7 under its target, and under the first rule (inside the
+    # band) none of it was written down.
+    if flying:
         hs["steady_from"] = None
     elif hs["steady_from"] is None:
         hs["steady_from"] = max(t, hs["last_change_t"] + 1800)
     elif t - hs["steady_from"] >= STEADY_S and out_c is not None:
         span = [r for r in hs["rows"] if r[0] >= hs["steady_from"]]
-        if len(span) >= 6 and abs(slope_of([r[0] / 3600 for r in span], [r[1] for r in span])) <= 0.1:
+        if len(span) >= 6 and abs(slope_of([r[0] / 3600 for r in span], [r[1] for r in span])) <= 0.1 and max(r[1] for r in span) - min(r[1] for r in span) <= 0.35:
             rm = sum(r[1] for r in span) / len(span)
+            felt = lagged(weather_looks(H, q), (span[0][0] + span[-1][0]) / 2) or out_c       # the weather the room has felt, not this minute's
             with open(H.hp(q, "steady.tsv"), "a") as f:
-                f.write("%d\t%d\t%.2f\t%.1f\t%.2f\t%.0f\n" % (span[0][0], span[-1][0], rm, out_c, rm - out_c, watts))
+                f.write("%d\t%d\t%.2f\t%.1f\t%.2f\t%.0f\n" % (span[0][0], span[-1][0], rm, felt, rm - felt, watts))
+            out_c = felt
             note("STEADY: the room stood at %.2f C for %.1f h on about %.0f W, %.1f C over the outside: %.0f W for each degree, the house's other heat left out (steady.tsv)" % (
                 rm, (span[-1][0] - span[0][0]) / 3600, watts, rm - out_c, watts / (rm - out_c)))
         hs["steady_from"] = t
@@ -321,8 +481,19 @@ def look(H, q, st, t, cfg, ms, ps, plan, said, act):
 
 def carry(H, q, choice):
     """Do the one thing. (whether it was taken, what was said.)"""
-    if choice["do"] in ("pause", "resume", "add"):
-        return H.run_queue(q, "machine", choice["name"], choice["do"])
+    if choice["do"] == "add":
+        return H.run_queue(q, "machine", choice["name"], "add")
+    if choice["do"] in ("pause", "resume"):
+        # THE QUEUE'S PAUSE OF A MACHINE'S FIRST LANE IS A PAUSE OF THE MACHINE: `machine saskatchewan
+        # pause` pauses saskatchewan-2 and a card's lane with it, and resume resumes them all. This law's
+        # step is one lane, so the others are put back as they were.
+        cfg = H.load(os.path.join(q, "config.json"), {}) or {}
+        was = {h["name"]: bool(h.get("paused")) for h in cfg.get("hosts", []) if h.get("lane_of") == choice["name"]}
+        ok, heard = H.run_queue(q, "machine", choice["name"], choice["do"])
+        for lane, paused in was.items():
+            if ok and paused != (choice["do"] == "pause"):
+                H.run_queue(q, "machine", lane, "pause" if paused else "resume")
+        return ok, heard
     buf = io.StringIO()
     try:
         with contextlib.redirect_stdout(buf):

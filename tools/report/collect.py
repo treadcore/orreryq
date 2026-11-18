@@ -61,6 +61,12 @@ CARDS = {
                     "machine's CPU lanes take nothing new, then its card's, then power, and back with a wake packet. Off, advise "
                     "and act; proved on a scratch queue and a simulated room, run on the live fleet in advise only. It has never "
                     "changed a machine, and the house's loss per degree is not yet known."),
+    "hearth-regulation": ("Fleet · keeping the room",
+                          "A how-to and a lab report on the fleet's thermal regulation. How to set a temperature, read the Hearth and "
+                          "Diagram panels mark by mark, and switch a machine by hand; the one heat balance behind it, with seven "
+                          "calculations done on the fleet's own numbers; the first fifteen hours of Orrery holding the room at 80 F, "
+                          "with eight faults found and seven corrected; how the heat is drawn and why; and its upkeep. The house's loss "
+                          "per degree is still not measured."),
     "hearth-response": ("Fleet · the room turns",
                         "The house's heating was switched off and the room fell all night. Two machines switched on at 06:00 on 17 "
                         "November stepped the fleet by 428 W, and the room turned 85 minutes later and rose 0.34 C an hour. The step "

@@ -38,7 +38,7 @@ import threading
 import time
 
 TOOLS = os.path.dirname(os.path.abspath(__file__))
-SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8"]
+SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ControlMaster=auto", "-o", "ControlPath=~/.ssh/hk-%C", "-o", "ControlPersist=10m", "-o", "ConnectTimeout=8"]
 NET = "192.168.8.0/24"
 
 # Read on the machine as the user: plain sh (busybox on Alpine), key=value

@@ -44,7 +44,17 @@ import tempfile
 import time
 
 TOOLS = os.path.dirname(os.path.abspath(__file__))
-SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8"]
+# A CONNECTION OF THEIR OWN FOR THE HOUSEKEEPING (18 November). ~/.ssh/config shares one connection a
+# machine (ControlMaster auto, ~/.ssh/cm-%C), and the queue's jobs ride it. An ssh server allows ten
+# sessions on one connection (MaxSessions) and refuses the eleventh: "no more sessions" in its log, exit
+# 255 here, and the queue reads 255 as the host being unreachable and sends the job back. Every tool
+# that asked a machine anything used to ride the same connection, so with Orrery open and asking, the
+# jobs were refused: 255 requeues on 14 November, 60 more on the 17th and 18th, each time beginning
+# just after the app was opened. whitewolf's log has "no more sessions" in exactly those hours and no
+# others. So this tool, and storage, growth, boots, power, fleet-versions, montage, recordings and the
+# rest that are not the queue's jobs, share a second connection, ~/.ssh/hk-%C. If the housekeeping ever
+# asks for more than ten at once it is the housekeeping that is refused, and no job.
+SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ControlMaster=auto", "-o", "ControlPath=~/.ssh/hk-%C", "-o", "ControlPersist=10m", "-o", "ConnectTimeout=8"]
 
 # Each recipe: what it is, on which systems, what it needs, its files (from
 # tools/), the command run on the machine as root, and what it does.

@@ -147,10 +147,10 @@ pub fn draw_view(ui: &mut Ui, doc: Option<&Value>, operator: bool, said: &str, c
 #[derive(Default)]
 struct St {
     panel: usize,
-    sort: [usize; 5],
+    sort: [usize; 6],
     open: Option<String>,
     pick: Option<String>,
-    off: [usize; 5],
+    off: [usize; 6],
     /// The Hearth: a target being typed, act pressed once, and the last thing its buttons asked.
     typed: Field,
     arm_act: bool,
@@ -169,23 +169,27 @@ fn from_env() -> St {
     let mut st = St::default();
     if let Ok(v) = std::env::var("ORRERY_HEAT") {
         let mut it = v.split(',');
-        st.panel = it.next().and_then(|p| if p == "hearth" { Some(HEARTH) } else { p.parse().ok() }).unwrap_or(0);
+        st.panel = it.next().and_then(|p| if p == "hearth" { Some(HEARTH) } else if p == "diagram" { Some(DIAGRAM) } else { p.parse().ok() }).unwrap_or(0);
         st.arm_act = std::env::var("ORRERY_HEAT_ARM").is_ok();
         st.open = it.next().filter(|m| !m.is_empty()).map(String::from);
     }
     st
 }
 
-const PANELS: [&str; 5] = ["Machines", "Parts", "Watts", "Steps", "Hearth"];
+const PANELS: [&str; 6] = ["Machines", "Parts", "Watts", "Steps", "Hearth", "Diagram"];
 /// The Hearth's number, and the row as it is drawn: the Hearth first, because it is the one panel
 /// that is set and not only read; the other four keep the numbers a picture was asked by.
 const HEARTH: usize = 4;
-const ORDER: [usize; 5] = [HEARTH, 0, 1, 2, 3];
-const SORTS: [&[&str]; 5] = [
+/// The heat's flow as one picture: the weather, the apartment's two zones, every machine, the walls,
+/// the thermal mass and the thermometers (18 November).
+const DIAGRAM: usize = 5;
+const ORDER: [usize; 6] = [HEARTH, DIAGRAM, 0, 1, 2, 3];
+const SORTS: [&[&str]; 6] = [
     &["name", "nearest its limit", "watts", "CPU's tau", "slowest part"],
     &["hottest", "widest swing", "slowest to follow", "machine"],
     &["watts", "share of its limit", "name"],
     &["newest", "longest tau", "machine"],
+    &[],
     &[],
 ];
 
@@ -281,7 +285,7 @@ pub fn draw(ui: &mut Ui, at: Rect, doc: Option<&Value>, operator: bool, said: &s
     }
     // The panels, the Hearth first, and how the one shown is sorted.
     let names: Vec<&str> = ORDER.iter().map(|i| PANELS[*i]).collect();
-    let mut chip = ORDER.iter().position(|i| *i == st.panel.min(HEARTH)).unwrap_or(1);
+    let mut chip = ORDER.iter().position(|i| *i == st.panel.min(DIAGRAM)).unwrap_or(1);
     let x = chips(ui, at.x, y, &names, &mut chip);
     st.panel = ORDER[chip];
     let p = st.panel;
@@ -297,6 +301,7 @@ pub fn draw(ui: &mut Ui, at: Rect, doc: Option<&Value>, operator: bool, said: &s
     }
     match (p, doc) {
         (HEARTH, _) => hearth_panel(ui, body, &mut st, operator, said, ctl),
+        (DIAGRAM, _) => diagram(ui, body, doc),
         (_, None) => {
             ui.label_in(body.x, body.y, body.w, "No record yet: tools/telemetry.py QUEUE pull writes plan/thermal.json (the keeper's housekeeping asks each five minutes).", &F8X13, t.dim);
         }
@@ -947,6 +952,532 @@ pub fn fleet_switch(ui: &mut Ui, at: Rect, operator: bool, ctl: &mut Option<Stri
     44
 }
 
+// ---- the diagram: the heat's flow as one picture ------------------------------------------------
+// Paul, 18 November: "draw a model of the heat flow in orrery. in a new diagram heat tab. In it we have
+// two zones inside the weather. Draw a thermo heat flow process diagram like 3blue1brown. Show the
+// time constant of each computer case and their HDs and sensors, collect them together, show
+// graphically like a SCADA-like display of Heat in, Heat flow through walls, Heat soak in thermal mass
+// (it's an apartment). These numbers dynamically update. Also show thermometers on screen prominently."
+//
+// One balance, the same one tools/hearth_regulator.py works its budget from:
+//     C dT/dt = P + P0 - UA (T - To)
+// P is read (the fleet's watts), T and To are read (the probes, the airport), dT/dt is the last
+// hour's slope. C was measured by a step; UA is a figure in use and NOT a measurement, and is said to
+// be so on the picture. P0, the heat that is not the fleet's, is what is left over: it is drawn as
+// implied, never as read. Zone 2, the rest of the apartment, has no thermometer and says so.
+
+const SKY: Rgb = 0x58c4dd;
+const SUN: Rgb = 0xf7d96f;
+const LEAF: Rgb = 0x83c167;
+const EMBER: Rgb = 0xff8c5a;
+const ROSE: Rgb = 0xfc6255;
+const DUSK: Rgb = 0xb9a6e8;
+
+/// The four flows of the balance, in watts, from a plan; None where the plan cannot give them.
+#[derive(Debug, PartialEq)]
+pub struct Flows {
+    pub fleet_w: f64,
+    pub walls_w: f64,
+    pub soak_w: f64,
+    pub other_w: f64,
+    pub over_c: f64,
+}
+
+pub fn flows(plan: &Value) -> Option<Flows> {
+    let b = plan.get("budget").filter(|b| !matches!(b, Value::Null))?;
+    let (room, out, fleet) = (n(b, "room_c").or(n(plan, "temp_c"))?, n(plan, "outside_c")?, n(plan, "now_w")?);
+    let walls = n(b, "ua_w_c")? * (room - out);
+    let soak = n(b, "c_mj_c")? * 1e6 * n(b, "slope_c_h")? / 3600.0;
+    Some(Flows { fleet_w: fleet, walls_w: walls, soak_w: soak, other_w: walls + soak - fleet, over_c: room - out })
+}
+
+/// A machine's line of the diagram: its watts, its CPU and its time constant, its drives and theirs.
+struct Box7 {
+    name: String,
+    on: bool,
+    wall_w: f64,
+    cpu_c: Option<f64>,
+    cpu_tau_s: Option<f64>,
+    card_c: Option<f64>,
+    drives: usize,
+    drive_c: Option<f64>,
+    drive_lag_s: Option<f64>,
+    sensors: usize,
+}
+
+fn boxes_of(doc: &Value) -> Vec<Box7> {
+    let mut out: Vec<Box7> = arr(doc, "machines")
+        .iter()
+        .map(|m| {
+            let mut taus: Vec<f64> = arr(m, "steps").iter().filter_map(|x| n(x, "tau_s")).collect();
+            taus.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            let drives: Vec<f64> = arr(m, "parts").iter().filter(|p| matches!(s(p, "kind"), "disk" | "nvme")).filter_map(|p| n(p, "now")).collect();
+            Box7 {
+                name: s(m, "name").to_string(),
+                on: n(m, "age_s").map(|a| a < 900.0).unwrap_or(false) && n(m, "wall_w").is_some(),
+                wall_w: n(m, "wall_w").unwrap_or(0.0),
+                cpu_c: n(m, "cpu_c"),
+                cpu_tau_s: taus.get(taus.len() / 2).copied(),
+                card_c: n(m, "gpu_c"),
+                drives: drives.len(),
+                drive_c: if drives.is_empty() { None } else { Some(drives.iter().sum::<f64>() / drives.len() as f64) },
+                drive_lag_s: m.get("slow").and_then(|z| n(z, "tau_s")),
+                sensors: arr(m, "channels").len(),
+            }
+        })
+        .collect();
+    out.sort_by(|a, b| b.on.cmp(&a.on).then(b.wall_w.partial_cmp(&a.wall_w).unwrap_or(std::cmp::Ordering::Equal)));
+    out
+}
+
+/// How thick a flow of so many watts is drawn: a pixel for each 70 W, never less than 2 nor more than 26.
+fn thick(w: f64) -> i32 {
+    ((w.abs() / 70.0).round() as i32).clamp(2, 26)
+}
+
+fn minutes(sec: f64) -> String {
+    if sec < 90.0 {
+        format!("{:.0} s", sec)
+    } else if sec < 5400.0 {
+        format!("{:.0} min", sec / 60.0)
+    } else {
+        format!("{:.1} h", sec / 3600.0)
+    }
+}
+
+/// Lettering k times its size: the page's fonts are bitmaps of one size, and on a wide screen a
+/// diagram drawn at that size is a postage stamp in a field. Returns the x after the last letter.
+fn tx(ui: &mut Ui, x: i32, y: i32, text: &str, font: &crate::font::Font, k: i32, c: Rgb) -> i32 {
+    if k <= 1 {
+        return ui.c.text(x, y, text, font, c);
+    }
+    let mut at = x;
+    for ch in text.chars() {
+        if ch != ' ' {
+            for (dy, bits) in font.glyph(ch).iter().enumerate() {
+                for dx in 0..font.width {
+                    if (bits >> dx) & 1 == 1 {
+                        ui.c.rect(at + dx as i32 * k, y + dy as i32 * k, k, k, c);
+                    }
+                }
+            }
+        }
+        at += font.width as i32 * k;
+    }
+    at
+}
+
+/// The same, cut to a width with two dots where it had to be.
+fn tx_in(ui: &mut Ui, x: i32, y: i32, max_w: i32, text: &str, font: &crate::font::Font, k: i32, c: Rgb) -> i32 {
+    let fit = (max_w / (font.width as i32 * k)).max(0) as usize;
+    if text.chars().count() <= fit {
+        return tx(ui, x, y, text, font, k, c);
+    }
+    let cut: String = text.chars().take(fit.saturating_sub(2)).collect();
+    tx(ui, x, y, &format!("{}..", cut), font, k, c)
+}
+
+fn tx_w(text: &str, font: &crate::font::Font, k: i32) -> i32 {
+    text.chars().count() as i32 * font.width as i32 * k
+}
+
+/// A pipe through its corners: a dark casing, the flow's colour inside, bright marks that walk along
+/// it the way it flows, and a head at its end. Each leg runs along one axis.
+fn pipe(ui: &mut Ui, pts: &[(i32, i32)], th: i32, c: Rgb) {
+    let case = crate::draw::mix(c, 0x000000, 150);
+    let lit = crate::draw::mix(c, 0xffffff, 110);
+    let phase = ((epoch() * 40.0) as i64 % 28) as i32;
+    let h = th / 2;
+    for (i, w) in pts.windows(2).enumerate() {
+        let ((x0, y0), (x1, y1)) = (w[0], w[1]);
+        let last = i + 2 == pts.len();
+        let head = if last { th + 8 } else { 0 };
+        if y0 == y1 {
+            let (a, b, dir) = if x1 >= x0 { (x0, x1, 1) } else { (x1, x0, -1) };
+            let (bx, bw) = if dir > 0 { (a - if i > 0 { h } else { 0 }, b - a - head + if i > 0 { h } else { 0 }) } else { (a + head, b - a - head + if i > 0 { h } else { 0 }) };
+            ui.c.rect(bx, y0 - h - 1, bw.max(0), th + 2, case);
+            ui.c.rect(bx, y0 - h, bw.max(0), th, c);
+            let mut k = phase;
+            while k < bw - 5 {
+                let x = if dir > 0 { bx + k } else { bx + bw - k - 5 };
+                ui.c.rect(x, y0 - (h - 1).max(0), 5, (th - 2).max(1), lit);
+                k += 28;
+            }
+            for j in 0..head {
+                let half = (h + 6) * (head - j) / head.max(1);
+                ui.c.vline(if dir > 0 { b - head + j } else { a + head - j }, y0 - half, 2 * half + 1, c);
+            }
+        } else {
+            let (a, b, dir) = if y1 >= y0 { (y0, y1, 1) } else { (y1, y0, -1) };
+            let (by, bh) = if dir > 0 { (a - if i > 0 { h } else { 0 }, b - a - head + if i > 0 { h } else { 0 }) } else { (a + head, b - a - head + if i > 0 { h } else { 0 }) };
+            ui.c.rect(x0 - h - 1, by, th + 2, bh.max(0), case);
+            ui.c.rect(x0 - h, by, th, bh.max(0), c);
+            let mut k = phase;
+            while k < bh - 5 {
+                let y = if dir > 0 { by + k } else { by + bh - k - 5 };
+                ui.c.rect(x0 - (h - 1).max(0), y, (th - 2).max(1), 5, lit);
+                k += 28;
+            }
+            for j in 0..head {
+                let half = (h + 6) * (head - j) / head.max(1);
+                ui.c.hline(x0 - half, if dir > 0 { b - head + j } else { a + head - j }, 2 * half + 1, c);
+            }
+        }
+    }
+}
+
+/// An instrument, as a process diagram draws one: a ring with its two letters (TI a temperature, JI a
+/// power), and beside it what it reads. Dashed where nothing reads it.
+fn bubble(ui: &mut Ui, cx: i32, cy: i32, k: i32, tag: &str, c: Rgb, read: bool) {
+    let r = 11 * k;
+    ui.c.disc(cx, cy, r, ui.t.base);
+    ui.c.ring(cx, cy, r, c);
+    if read {
+        ui.c.ring(cx, cy, r - 1, c);
+    }
+    tx(ui, cx - tx_w(tag, &F6X10, k) / 2, cy - 5 * k, tag, &F6X10, k, c);
+}
+
+/// A frame of dashes: the edge of something that is there and is not measured.
+fn dashed(ui: &mut Ui, r: Rect, c: Rgb) {
+    let mut x = r.x;
+    while x < r.right() {
+        ui.c.hline(x, r.y, 8.min(r.right() - x), c);
+        ui.c.hline(x, r.bottom() - 1, 8.min(r.right() - x), c);
+        x += 14;
+    }
+    let mut y = r.y;
+    while y < r.bottom() {
+        ui.c.vline(r.x, y, 8.min(r.bottom() - y), c);
+        ui.c.vline(r.right() - 1, y, 8.min(r.bottom() - y), c);
+        y += 14;
+    }
+}
+
+/// A wall, hatched: what the heat has to cross.
+fn hatch(ui: &mut Ui, r: Rect, c: Rgb) {
+    ui.c.rect(r.x, r.y, r.w, r.h, crate::draw::mix(ui.t.base, c, 60));
+    let mut x = r.x - r.h;
+    while x < r.right() {
+        for d in 0..r.h {
+            let px = x + d;
+            if px >= r.x && px < r.right() {
+                ui.c.set(px, r.bottom() - 1 - d, c);
+            }
+        }
+        x += 7;
+    }
+    ui.c.frame(r.x, r.y, r.w, r.h, c);
+}
+
+/// A trend: a strip of a series, its lowest and highest said, and lines across it at values to hold.
+#[allow(clippy::too_many_arguments)]
+fn trend(ui: &mut Ui, r: Rect, k: i32, title: &str, ys: &[f64], unit: &str, c: Rgb, lines: &[(f64, Rgb)]) {
+    let t = ui.t;
+    ui.c.frame(r.x, r.y, r.w, r.h, t.line);
+    tx_in(ui, r.x + 5 * k, r.y + 4 * k, r.w - 10 * k, title, &F6X10, k, t.dim);
+    if ys.len() < 3 {
+        tx_in(ui, r.x + 5 * k, r.y + r.h / 2, r.w - 10 * k, "no record yet", &F6X10, k, t.dim);
+        return;
+    }
+    let (mut lo, mut hi) = ys.iter().fold((f64::MAX, f64::MIN), |(a, b), v| (a.min(*v), b.max(*v)));
+    for (v, _) in lines {
+        lo = lo.min(*v);
+        hi = hi.max(*v);
+    }
+    let pad = ((hi - lo) * 0.1).max(1e-6);
+    let (lo, hi) = (lo - pad, hi + pad);
+    let plot = rect(r.x + 4 * k, r.y + 17 * k, r.w - 8 * k, r.h - 32 * k);
+    let yof = |v: f64| plot.bottom() - (((v - lo) / (hi - lo)) * plot.h as f64).round() as i32;
+    for (v, lc) in lines {
+        let mut x = plot.x;
+        while x < plot.right() {
+            ui.c.hline(x, yof(*v), 4, *lc);
+            x += 9;
+        }
+    }
+    let mut prev: Option<(i32, i32)> = None;
+    for (i, v) in ys.iter().enumerate() {
+        let p = (plot.x + (i as i32 * (plot.w - 1)) / (ys.len() as i32 - 1), yof(*v));
+        if let Some(q) = prev {
+            seg(ui, q, p, c);
+            if k > 1 {
+                seg(ui, (q.0, q.1 + 1), (p.0, p.1 + 1), c);
+            }
+        }
+        prev = Some(p);
+    }
+    if let Some(p) = prev {
+        ui.c.disc(p.0, p.1, 2 * k, c);
+    }
+    let (a, b) = (ys.iter().cloned().fold(f64::MAX, f64::min), ys.iter().cloned().fold(f64::MIN, f64::max));
+    tx_in(ui, r.x + 5 * k, r.bottom() - 13 * k, r.w - 10 * k, &if b - a < 20.0 { format!("{:.1}-{:.1} now {:.1} {}", a, b, ys[ys.len() - 1], unit) } else { format!("{:.0}-{:.0} now {:.0} {}", a, b, ys[ys.len() - 1], unit) }, &F6X10, k, t.ink);
+}
+
+/// A thermometer: a glass, its mercury, a scale in Fahrenheit, marks, and the reading large under it.
+#[allow(clippy::too_many_arguments)]
+fn thermometer(ui: &mut Ui, x: i32, top: i32, h: i32, k: i32, name: &str, c: Option<f64>, col: Rgb, lo_f: f64, hi_f: f64, marks: &[(f64, &str, Rgb)]) {
+    let t = ui.t;
+    let (gx, gw) = (x + 30 * k, 20 * k);
+    let yof = |f: f64| top + h - (((f - lo_f) / (hi_f - lo_f)).clamp(0.0, 1.0) * h as f64).round() as i32;
+    tx(ui, x, top - 26 * k, name, &F8X13, k, t.ink);
+    let mut f = lo_f;
+    while f <= hi_f + 0.01 {
+        let ten = (f as i32) % 10 == 0;
+        ui.c.rect(gx - if ten { 9 * k } else { 5 * k }, yof(f), if ten { 8 * k } else { 4 * k }, k, t.dim);
+        if ten {
+            let word = format!("{:.0}", f);
+            tx(ui, gx - 11 * k - tx_w(&word, &F6X10, k), yof(f) - 5 * k, &word, &F6X10, k, t.dim);
+        }
+        f += 5.0;
+    }
+    for i in 0..k {
+        ui.c.frame(gx - i, top - 6 * k - i, gw + 2 * i, h + 12 * k + 2 * i, t.dim);
+    }
+    let by = top + h + 6 * k + 15 * k;
+    ui.c.disc(gx + gw / 2, by, 17 * k, t.dim);
+    ui.c.disc(gx + gw / 2, by, 15 * k, col);
+    if let Some(c) = c {
+        let y = yof(f_of(c));
+        ui.c.rect(gx + 3 * k, y, gw - 6 * k, by - y, col);
+        ui.c.rect(gx - 2 * k, y, gw + 4 * k, k, 0xffffff);
+    }
+    let top_mark = marks.iter().map(|m| m.0).fold(f64::MIN, f64::max);
+    for (c, what, mc) in marks {
+        let y = yof(f_of(*c));
+        ui.c.rect(gx + gw + 2 * k, y, 10 * k, 2 * k, *mc);
+        tx(ui, gx + gw + 14 * k, if *c >= top_mark && marks.len() > 1 { y - 11 * k } else { y + 3 * k }, what, &F6X10, k, *mc);
+    }
+    let (big, small) = match c {
+        Some(c) => (format!("{:.1} F", f_of(c)), format!("{:.1} C", c)),
+        None => ("no reading".to_string(), String::new()),
+    };
+    tx(ui, x, by + 22 * k, &big, &crate::font::F10X20, k, if c.is_some() { col } else { t.dim });
+    tx(ui, x, by + 44 * k, &small, &F8X13, k, t.dim);
+}
+
+/// The diagram. Laid out in shares of the room it is given, and lettered twice or three times the
+/// size on a wide screen, so that it fills an iMac as it fills a laptop.
+fn diagram(ui: &mut Ui, at: Rect, doc: Option<&Value>) {
+    let t = ui.t;
+    let h = hearth();
+    let plan = h.as_ref().and_then(|h| h.plan.as_ref());
+    let Some(plan) = plan else {
+        ui.label_in(at.x, at.y, at.w, "No plan to draw from: the controller's pass writes hearth/plan.json (tools/hearth.py QUEUE step).", &F8X13, t.dim);
+        return;
+    };
+    let k = ((at.w / 1000).min(at.h / 470)).clamp(1, 3);
+    let big = &crate::font::F10X20;
+    let fl = flows(plan);
+    let bud = plan.get("budget").filter(|b| !matches!(b, Value::Null));
+    let room = bud.and_then(|b| n(b, "room_c")).or(n(plan, "temp_c"));
+    let out = n(plan, "outside_c");
+    let target = h.as_ref().and_then(|h| h.target());
+    let ceiling = bud.and_then(|b| n(b, "ceiling_c"));
+    let age = (epoch() - n(plan, "t").unwrap_or(0.0)).max(0.0);
+
+    // ---- the thermometers, on the right, as tall as the panel
+    let tw = (at.w * 20 / 100).max(250 * k);
+    let therm = rect(at.right() - tw, at.y, tw, at.h);
+    ui.c.frame(therm.x, therm.y, therm.w, therm.h, t.line);
+    tx(ui, therm.x + 10 * k, therm.y + 7 * k, "THERMOMETERS", &F8X13, k, t.dim);
+    let probes = arr(plan, "probes");
+    let list_h = (probes.len() as i32 + 1) * 12 * k + 8 * k;
+    let th = (therm.h - 60 * k - 110 * k - list_h).max(90 * k);
+    let mut marks: Vec<(f64, &str, Rgb)> = Vec::new();
+    if let Some(c) = target {
+        marks.push((c, "target", LEAF));
+    }
+    if let Some(c) = ceiling {
+        marks.push((c, "ceiling", ROSE));
+    }
+    let half = therm.w / 2;
+    thermometer(ui, therm.x + 12 * k, therm.y + 60 * k, th, k, "THE ROOM", room, EMBER, 30.0, 90.0, &marks);
+    thermometer(ui, therm.x + half + 6 * k, therm.y + 60 * k, th, k, "THE WEATHER", out, SKY, 30.0, 90.0, &[]);
+    let mut py = therm.bottom() - list_h;
+    for p in probes {
+        let (name, c) = (s(p, "key").trim_end_matches(".c"), n(p, "c"));
+        let ok = p.get("ok").and_then(|b| b.as_bool()).unwrap_or(false);
+        let line = match c {
+            Some(c) => format!("{:<14} {:>5.1} C {:>5.1} F", name, c, f_of(c)),
+            None => format!("{:<14} no reading", name),
+        };
+        tx_in(ui, therm.x + 10 * k, py, therm.w - 16 * k, &line, &F6X10, k, if ok { t.ink } else { t.warn });
+        py += 12 * k;
+    }
+    tx_in(ui, therm.x + 10 * k, py, therm.w - 16 * k, "zone 2: no thermometer", &F6X10, k, t.dim);
+
+    // ---- the weather round everything; the apartment in it behind its walls; two zones in the apartment
+    let main = rect(at.x, at.y, at.w - tw - 10 * k, at.h);
+    for i in 0..k {
+        ui.c.frame(main.x + i, main.y + i, main.w - 2 * i, main.h - 2 * i, SKY);
+    }
+    let wx = tx(ui, main.x + 10 * k, main.y + 7 * k, "THE WEATHER", &F8X13, k, SKY) + 10 * k;
+    let weather = match out {
+        Some(c) => format!("SeaTac airport, {}, observed {} ago", both(c), took(n(plan, "outside_age_s").unwrap_or(0.0))),
+        None => "no outside reading".to_string(),
+    };
+    let old = format!("the plan is {} old", took(age));
+    tx_in(ui, wx, main.y + 7 * k, main.right() - wx - tx_w(&old, &F8X13, k) - 20 * k, &weather, &F8X13, k, t.ink);
+    tx(ui, main.right() - 10 * k - tx_w(&old, &F8X13, k), main.y + 7 * k, &old, &F8X13, k, if age > 900.0 { t.warn } else { t.dim });
+    let wall = 9 * k;
+    let outer = rect(main.x + 12 * k, main.y + 28 * k, main.w - 24 * k, main.h - 28 * k - 62 * k);
+    // The walls: hatched, all the way round, which is where the loss is.
+    hatch(ui, rect(outer.x, outer.y, outer.w, wall), t.dim);
+    hatch(ui, rect(outer.x, outer.bottom() - wall, outer.w, wall), t.dim);
+    hatch(ui, rect(outer.x, outer.y, wall, outer.h), t.dim);
+    hatch(ui, rect(outer.right() - wall, outer.y, wall, outer.h), t.dim);
+    let apt = rect(outer.x + wall, outer.y + wall, outer.w - 2 * wall, outer.h - 2 * wall);
+    let z2w = (apt.w * 24 / 100).max(200 * k);
+    let z1 = rect(apt.x + 6 * k, apt.y + 6 * k, apt.w - z2w - 18 * k, apt.h - 12 * k);
+    let z2 = rect(z1.right() + 6 * k, apt.y + 6 * k, z2w, apt.h - 12 * k);
+    for i in 0..k {
+        ui.c.frame(z1.x + i, z1.y + i, z1.w - 2 * i, z1.h - 2 * i, EMBER);
+    }
+    dashed(ui, z2, DUSK);
+    let zx = tx(ui, z1.x + 8 * k, z1.y + 6 * k, "ZONE 1  THE FLEET'S ROOM", &F8X13, k, EMBER) + 10 * k;
+    let zline = match (room, target) {
+        (Some(c), Some(tg)) => format!("{}, {:+.1} C from its target", both(c), c - tg),
+        (Some(c), None) => both(c),
+        _ => "no fresh probe".to_string(),
+    };
+    tx_in(ui, zx, z1.y + 6 * k, z1.right() - zx - 6 * k, &zline, &F8X13, k, t.ink);
+
+    // The machines, each with its own clocks, on one collector.
+    let boxes = doc.map(boxes_of).unwrap_or_default();
+    let cols = 4.min(boxes.len().max(1)) as i32;
+    let rows = ((boxes.len() as i32 + cols - 1) / cols).max(1);
+    let gap = 10 * k;
+    let (tw_, thh) = ((z1.w - 16 * k - (cols - 1) * gap) / cols, 66 * k);
+    let top = z1.y + 26 * k;
+    let bus_y = top + rows * (thh + 12 * k) + 4 * k;
+    for (i, b) in boxes.iter().enumerate() {
+        let (cx, ry) = ((i as i32) % cols, (i as i32) / cols);
+        let r = rect(z1.x + 8 * k + cx * (tw_ + gap), top + ry * (thh + 12 * k), tw_, thh);
+        let col = if b.on { SUN } else { t.dim };
+        let ink = if b.on { t.ink } else { t.dim };
+        ui.c.rect(r.x, r.y, r.w, r.h, crate::draw::mix(t.base, col, if b.on { 26 } else { 10 }));
+        ui.c.frame(r.x, r.y, r.w, r.h, if b.on { col } else { t.dim });
+        // The name has the first row to itself; the watts, as a bar and a number, the second.
+        let watts = if b.on { format!("{:.0} W", b.wall_w) } else { "off".to_string() };
+        tx_in(ui, r.x + 6 * k, r.y + 3 * k, r.w - 10 * k, &b.name, &F8X13, k, ink);
+        tx(ui, r.right() - 6 * k - tx_w(&watts, &F6X10, k), r.y + 17 * k, &watts, &F6X10, k, col);
+        let bw = r.w - 18 * k - tx_w(&watts, &F6X10, k);
+        ui.c.rect(r.x + 6 * k, r.y + 20 * k, ((b.wall_w / 320.0).clamp(0.0, 1.0) * bw as f64) as i32, 4 * k, col);
+        let cpu = match (b.cpu_c, b.cpu_tau_s) {
+            (Some(c), Some(tau)) => format!("CPU {:.0}C tau {}", c, minutes(tau)),
+            (Some(c), None) => format!("CPU {:.0}C tau ?", c),
+            _ => "CPU not read".to_string(),
+        };
+        tx_in(ui, r.x + 6 * k, r.y + 30 * k, r.w - 10 * k, &cpu, &F6X10, k, ink);
+        let drv = match (b.drive_c, b.drive_lag_s) {
+            (Some(c), Some(lag)) => format!("HD {:.0}C lag {}", c, minutes(lag)),
+            (Some(c), None) => format!("HD {:.0}C lag ?", c),
+            _ => "no drive read".to_string(),
+        };
+        tx_in(ui, r.x + 6 * k, r.y + 41 * k, r.w - 10 * k, &drv, &F6X10, k, ink);
+        let rest = match b.card_c {
+            Some(c) => format!("card {:.0}C {}HD {}sens", c, b.drives, b.sensors),
+            None => format!("{} HD {} sensors", b.drives, b.sensors),
+        };
+        tx_in(ui, r.x + 6 * k, r.y + 52 * k, r.w - 10 * k, &rest, &F6X10, k, t.dim);
+        if b.on && b.wall_w > 1.0 {
+            // To the collector: straight down where nothing stands below, else out by the gap beside it.
+            let th_ = thick(b.wall_w).min(6) * k / 2 + 1;
+            if i + cols as usize >= boxes.len() {
+                pipe(ui, &[(r.x + r.w / 2, r.bottom()), (r.x + r.w / 2, bus_y - 2 * k)], th_, SUN);
+            } else {
+                let gx = r.right() + gap / 2;
+                pipe(ui, &[(r.right(), r.y + r.h / 2), (gx, r.y + r.h / 2), (gx, bus_y - 2 * k)], th_, SUN);
+            }
+        }
+    }
+    let fleet = fl.as_ref().map(|f| f.fleet_w).or(n(plan, "now_w")).unwrap_or(0.0);
+    ui.c.rect(z1.x + 8 * k, bus_y - 3 * k, z1.w - 16 * k, 6 * k, crate::draw::mix(SUN, 0x000000, 150));
+    ui.c.rect(z1.x + 8 * k, bus_y - 2 * k, z1.w - 16 * k, 4 * k, SUN);
+
+    // Below the collector: a trend, the tank, a trend.
+    let low = rect(z1.x + 8 * k, bus_y + 8 * k, z1.w - 16 * k, z1.bottom() - bus_y - 16 * k);
+    let side = low.w * 27 / 100;
+    let tank_h = (low.h - 46 * k).clamp(70 * k, 190 * k);
+    let tank = rect(low.x + side + 14 * k, low.y + 40 * k + (low.h - 46 * k - tank_h) / 2, low.w - 2 * side - 28 * k, tank_h);
+    let tcx = tank.x + tank.w / 2;
+    pipe(ui, &[(tcx, bus_y + 2 * k), (tcx, tank.y - k)], thick(fleet) * k.min(2), SUN);
+    bubble(ui, tcx - 34 * k, bus_y + 22 * k, k, "JI", SUN, true);
+    tx(ui, tcx + 24 * k, bus_y + 8 * k, &format!("HEAT IN  {:.0} W", fleet), big, k, SUN);
+    tx(ui, tcx + 24 * k, bus_y + 29 * k, "every watt the fleet draws", &F6X10, k, t.dim);
+    // The tank: the room's air and everything in it that warms with the air.
+    for i in 0..(2 * k) {
+        ui.c.frame(tank.x + i, tank.y + i, tank.w - 2 * i, tank.h - 2 * i, EMBER);
+    }
+    if let Some(c) = room {
+        // The level stands under the words, never through them.
+        let lev = (((f_of(c) - 60.0) / 30.0).clamp(0.05, 1.0) * (tank.h - 6 * k) as f64).min((tank.h - 76 * k).max(8) as f64) as i32;
+        ui.c.rect(tank.x + 3 * k, tank.bottom() - 3 * k - lev, tank.w - 6 * k, lev, crate::draw::mix(t.base, EMBER, 70));
+        ui.c.rect(tank.x + 3 * k, tank.bottom() - 3 * k - lev, tank.w - 6 * k, k, EMBER);
+    }
+    tx_in(ui, tank.x + 8 * k, tank.y + 7 * k, tank.w - 14 * k, "AIR AND THERMAL MASS", &F8X13, k, t.ink);
+    bubble(ui, tank.right() - 18 * k, tank.bottom() - 18 * k, k, "TI", EMBER, room.is_some());
+    let hist: Vec<f64> = bud.map(|b| arr(b, "trend")).unwrap_or(&[]).iter().filter_map(|v| v.as_num()).map(f_of).collect();
+    let mut lines: Vec<(f64, Rgb)> = Vec::new();
+    if let Some(c) = target {
+        lines.push((f_of(c), LEAF));
+    }
+    if let Some(c) = ceiling {
+        lines.push((f_of(c), ROSE));
+    }
+    // The room's strip stands above where the other heat's pipe comes across to the tank.
+    let other_y = tank.y + tank.h * 2 / 3;
+    trend(ui, rect(low.right() - side, low.y + 36 * k, side, (other_y - 20 * k - low.y - 36 * k).max(50 * k)), k, "THE ROOM, 3 HOURS, F", &hist, "F", EMBER, &lines);
+    let wser: Vec<f64> = doc.and_then(|d| d.get("fleet")).and_then(|f| f.get("series")).map(|z| arr(z, "w")).unwrap_or(&[]).iter().filter_map(|v| v.as_num()).collect();
+    trend(ui, rect(low.x, low.y + 36 * k, side, low.h - 36 * k), k, "HEAT IN, 6 HOURS, W", &wser, "W", SUN, &[]);
+
+    tx(ui, z2.x + 8 * k, z2.y + 6 * k, "ZONE 2  THE REST", &F8X13, k, DUSK);
+    tx_in(ui, z2.x + 8 * k, z2.y + 21 * k, z2.w - 14 * k, "of the apartment", &F6X10, k, t.dim);
+    bubble(ui, z2.x + z2.w / 2, z2.y + 58 * k, k, "TI", DUSK, false);
+    tx_in(ui, z2.x + 8 * k, z2.y + 76 * k, z2.w - 14 * k, "NO THERMOMETER", &F8X13, k, t.warn);
+    let mut ly = z2.y + 94 * k;
+    for l in ["people, cooking,", "appliances, the sun,", "the other rooms' air"] {
+        tx_in(ui, z2.x + 8 * k, ly, z2.w - 14 * k, l, &F6X10, k, t.dim);
+        ly += 11 * k;
+    }
+    if let Some(f) = &fl {
+        let (c_mj, slope, ua) = (bud.and_then(|b| n(b, "c_mj_c")).unwrap_or(0.0), bud.and_then(|b| n(b, "slope_c_h")).unwrap_or(0.0), bud.and_then(|b| n(b, "ua_w_c")).unwrap_or(0.0));
+        let word = if f.soak_w > 15.0 { "SOAKING UP" } else if f.soak_w < -15.0 { "GIVING BACK" } else { "HOLDING" };
+        tx_in(ui, tank.x + 8 * k, tank.y + 24 * k, tank.w - 14 * k, &format!("{}  {:.0} W", word, f.soak_w.abs()), big, k, EMBER);
+        tx_in(ui, tank.x + 8 * k, tank.y + 47 * k, tank.w - 14 * k, &format!("C {:.1} MJ/C (measured) x {:+.2} C/h", c_mj, slope), &F6X10, k, t.ink);
+        tx_in(ui, tank.x + 8 * k, tank.y + 59 * k, tank.w - 14 * k, "walls, floor, furniture", &F6X10, k, t.dim);
+        // Through the walls: down out of the tank, across the hatched wall, into the weather.
+        let wx0 = tank.x + tank.w / 4;
+        let wy = outer.bottom() + 34 * k;
+        pipe(ui, &[(wx0, tank.bottom()), (wx0, wy)], thick(f.walls_w) * k.min(2), SKY);
+        bubble(ui, wx0 - 36 * k, outer.bottom() + 20 * k, k, "JI", SKY, false);
+        tx(ui, wx0 + 26 * k, outer.bottom() + 8 * k, &format!("THROUGH THE WALLS  {:.0} W", f.walls_w), big, k, SKY);
+        // Where UA is from: a person, the steady stretches, or the figure in use. Only the last is a warning.
+        let measured = bud.and_then(|b| b.get("ua_measured")).and_then(|v| v.as_bool()).unwrap_or(false);
+        let from = bud.map(|b| s(b, "ua_from")).filter(|w| !w.is_empty()).unwrap_or("a figure in use, not a measurement");
+        let words = if measured { format!("UA {:.0} W/C x {:.1} C over the weather. UA is from {}", ua, f.over_c, from) } else { format!("UA {:.0} W/C x {:.1} C over the weather. UA IS A FIGURE IN USE, NOT A MEASUREMENT", ua, f.over_c) };
+        tx_in(ui, wx0 + 26 * k, outer.bottom() + 30 * k, main.right() - wx0 - 36 * k, &words, &F6X10, k, if measured { t.ink } else { t.warn });
+        // The other heat: from zone 2's side, through the partition, into the tank.
+        let oy = other_y;
+        pipe(ui, &[(z2.x + z2.w / 2, z2.bottom() - 46 * k), (z2.x + z2.w / 2, oy), (tank.right() + k, oy)], thick(f.other_w) * k.min(2), DUSK);
+        tx(ui, z2.x + 8 * k, ly + 10 * k, "OTHER HEAT", &F8X13, k, DUSK);
+        tx_in(ui, z2.x + 8 * k, ly + 26 * k, z2.w - 14 * k, &format!("{:+.0} W", f.other_w), big, k, DUSK);
+        let mut ny = z2.bottom() - 40 * k;
+        for l in ["IMPLIED, not read:", "walls + soak - fleet.", "As wrong as UA is."] {
+            tx_in(ui, z2.x + 8 * k, ny, z2.w - 14 * k, l, &F6X10, k, t.warn);
+            ny += 11 * k;
+        }
+        let line = format!(
+            "in: fleet {:.0} W + other {:+.0} W (implied)  =  out: walls {:.0} W + soak {:+.0} W      C dT/dt = P + P0 - UA (T - To)",
+            f.fleet_w, f.other_w, f.walls_w, f.soak_w
+        );
+        tx_in(ui, main.x + 10 * k, main.bottom() - 14 * k, main.w - 20 * k, &line, &F6X10, k, t.dim);
+    } else {
+        tx_in(ui, tank.x + 8 * k, tank.y + 26 * k, tank.w - 14 * k, "No balance: the law in force is the ladder, or the room or the weather is not read.", &F6X10, k, t.warn);
+    }
+}
+
 /// The hold's one line, and whether it is acting: its budget, what it holds paused, and the last
 /// thing it said. Without a budget in the plan the law is the ladder's, and the line says so.
 fn hold_line(plan: &Value) -> (String, bool) {
@@ -1498,6 +2029,13 @@ mod tests {
         let (line, on) = hold_line(&json::parse(&doc.replace("RUN", "true")).unwrap());
         assert!(on && line.contains("budget -120 W") && line.contains("27.2 C (81.0 F)") && line.contains("whitewolf-cuda") && line.ends_with("It last said: 12:00:00  room 26.90 C"));
         assert!(terms_line(&json::parse(&doc.replace("RUN", "true")).unwrap()).starts_with("the hold's budget"));
+        // The diagram's four flows: walls = UA x the room over the weather, soak = C x the slope, and the
+        // other heat is what is left over. No budget, no flows.
+        assert!(flows(&json::parse("{}").unwrap()).is_none());
+        let f = flows(&json::parse(r#"{"outside_c": 6.0, "now_w": 1400, "budget": {"room_c": 26.0, "ua_w_c": 120, "c_mj_c": 3.6, "slope_c_h": 0.1}}"#).unwrap()).unwrap();
+        assert_eq!(f, Flows { fleet_w: 1400.0, walls_w: 2400.0, soak_w: 100.0, other_w: 1100.0, over_c: 20.0 });
+        assert_eq!((thick(30.0), thick(700.0), thick(9000.0)), (2, 10, 26));
+        assert_eq!((minutes(64.0), minutes(2595.0), minutes(35776.0)), ("64 s".to_string(), "43 min".to_string(), "9.9 h".to_string()));
     }
 
     #[test]

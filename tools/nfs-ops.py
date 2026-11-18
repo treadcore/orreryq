@@ -79,7 +79,7 @@ print(round(time.time() - t, 3))
 
 
 def run(where, code, args=()):
-    cmd = (["python3", "-"] if where in (None, "mac") else ["ssh", "-o", "BatchMode=yes", where, "python3", "-"]) + [str(a) for a in args]
+    cmd = (["python3", "-"] if where in (None, "mac") else ["ssh", "-o", "BatchMode=yes", "-o", "ControlMaster=auto", "-o", "ControlPath=~/.ssh/hk-%C", "-o", "ControlPersist=10m", where, "python3", "-"]) + [str(a) for a in args]
     p = subprocess.run(cmd, input=code, capture_output=True, text=True, timeout=600)
     if p.returncode:
         raise SystemExit("%s: %s" % (where, (p.stderr or p.stdout).strip()[-300:]))

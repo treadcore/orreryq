@@ -139,7 +139,7 @@ s.close()
 
 def remote(name, code, args=(), timeout=120, popen=False):
     via = HOSTS[name][0]
-    cmd = (["python3", "-"] if via is None else ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", via, "python3", "-"]) + [str(a) for a in args]
+    cmd = (["python3", "-"] if via is None else ["ssh", "-o", "BatchMode=yes", "-o", "ControlMaster=auto", "-o", "ControlPath=~/.ssh/hk-%C", "-o", "ControlPersist=10m", "-o", "ConnectTimeout=8", via, "python3", "-"]) + [str(a) for a in args]
     if popen:
         p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         p.stdin.write(code)

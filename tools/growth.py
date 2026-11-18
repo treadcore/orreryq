@@ -62,7 +62,7 @@ import tarfile
 import threading
 import time
 
-SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8"]
+SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ControlMaster=auto", "-o", "ControlPath=~/.ssh/hk-%C", "-o", "ControlPersist=10m", "-o", "ConnectTimeout=8"]
 LIMIT_GB = 20.0
 KEEP_DAYS = 3
 PACK_KEEP_DAYS = 1
