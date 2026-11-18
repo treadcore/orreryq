@@ -16,12 +16,17 @@ temperature'."
     hearth.py QUEUE set KEY VALUE                  a gain or a rule (`set` alone lists them, with units)
     hearth.py QUEUE station KSEA                   which weather station's observation is the outside
     hearth.py QUEUE machine NAME keep on|off | mac AA:BB:.. | broadcast ADDR | port N
-                                  | busy_w W | idle_w W | order N      (QUEUE/hearth/machines.json)
+                                  | busy_w W | idle_w W | order N | wol on|off   (QUEUE/hearth/machines.json)
     hearth.py QUEUE outside                        fetch the outside temperature now (the airport's observation)
     hearth.py QUEUE fit-ua                         estimate the house's watts a degree from the record; adopts nothing
     hearth.py QUEUE step                           one pass of the controller: QUEUE/hearth/plan.json
     hearth.py QUEUE status                         one screen, and nothing changed
     hearth.py QUEUE wake NAME                      send the wake-on-LAN packet for one machine
+    hearth.py QUEUE power-on NAME                  a person's order: wake it, wait for it to answer (a server
+                                                   board tests its memory first: minutes), put it in the queue
+    hearth.py QUEUE power-off NAME                 a person's order: it takes nothing new, and when its jobs
+                                                   in hand end it leaves the queue and is powered off
+                                                   (both return at once and finish by themselves: QUEUE/hearth/power.json)
     hearth.py QUEUE learn-macs                     read each machine's address over ssh (read-only)
 
 A PROBE IS A KEY IN A MACHINE'S TELEMETRY THAT IS A TEMPERATURE OF AIR. `room.NAME.c` is found by
@@ -117,6 +122,8 @@ SETTINGS = {
     "outside_every": (1200.0, "s", "the least time between two fetches of the outside observation"),
     "floor": (0.0, "W", "the fleet's watts are never asked below this"),
     "power": ("off", "on|off", "whether act may power a machine off and wake it"),
+    "law": ("ladder", "ladder|hold", "which law acts: the ladder (a slow PI over lanes, then power) or the hold (tools/hearth_regulator.py)"),
+    "ceiling": (None, "C", "the hold's ceiling: the room is not to stand above it (unset: half a degree over the target)"),
 }
 
 
@@ -492,6 +499,7 @@ def ladder(q, st, t, cfg, ms, ps):
             r["state"] = (no or ("keep: it carries a room probe" if name in probe_hosts else "")
                           or ("absent: no power-off rule in config.json" if not m["poweroff"] else "")
                           or ("absent: no address recorded, so nothing could wake it (learn-macs)" if not m["mine"].get("mac") else "")
+                          or ("absent: it is not known to wake by the packet (try it, then `machine %s wol on`)" % name if m["mine"].get("wol") is not True else "")
                           or ("absent: %s" % src if w is None else "")
                           or ("not allowed: power is off (`set power on`)" if not power else "")
                           or ("wait: its lanes go first" if not all_held else "")
@@ -689,6 +697,118 @@ def reconcile(st, t, ms, said):
             del st["held"][name]
 
 
+# ---- a person's order to switch one machine on or off -------------------------------------------
+# Paul, 17 November, the day bosporus was first woken by a packet: "Add the buttons to turn on and off,
+# and have the heat manager schedule these." These two are the buttons: a PERSON'S order, whatever the
+# mode, as the queue's Pause is. The order returns at once; a process of its own, detached, sees it
+# through and writes where it has got to in QUEUE/hearth/power.json, which every plan carries.
+POWER_OFF_WAIT_S = 3 * 3600      # how long a machine's jobs in hand are waited for before the order is given up
+
+
+def power_note(q, name, **kv):
+    doc = load(hp(q, "power.json"), {}) or {}
+    doc[name] = dict(doc.get(name, {}), **kv)
+    save(q, "power.json", doc)
+
+
+def in_queue(q, name):
+    cfg = load(os.path.join(q, "config.json"), {}) or {}
+    return any(h.get("lane_of", h["name"]) == name for h in cfg.get("hosts", []))
+
+
+def where(q, name):
+    """(ssh target, power-off rule) of a machine in the queue, on the bench or only registered."""
+    cfg = load(os.path.join(q, "config.json"), {}) or {}
+    for h in cfg.get("hosts", []) + cfg.get("bench", []):
+        if h["name"] == name:
+            return h.get("target"), h.get("poweroff")
+    m = (load(os.path.join(q, "machines.json"), {}) or {}).get(name)
+    return (m.get("target"), (m.get("facts") or {}).get("poweroff")) if m else (None, None)
+
+
+def power_order(q, name, what):
+    target, rule = where(q, name)
+    st = state(q)
+    if not target or target == "-":
+        sys.exit("%s is not a machine of this queue that can be switched (this Mac is not)" % name)
+    rec = (load(hp(q, "machines.json"), {}) or {}).get(name, {})
+    if what == "off":
+        if any(p.get("machine") == name and p["role"] == "room" for p in probes(q, st, now(), write=False)):
+            sys.exit("%s carries a room probe: it is not powered off" % name)
+        if not rule:
+            sys.exit("%s has no power-off rule (fleet-poweroff-setup.sh on it, then probe it)" % name)
+        if in_queue(q, name):
+            ok, said = run_queue(q, "machine", name, "finish")
+            if not ok:
+                sys.exit("the queue would not finish %s: %s" % (name, said))
+        power_note(q, name, what="off", t=now(), state="its jobs in hand are finishing", ok=None)
+        print("%s takes nothing new; when its jobs in hand end it leaves the queue and is powered off%s" % (
+            name, "" if rec.get("wol") is True else ". IT IS NOT KNOWN TO WAKE BY THE PACKET: someone may have to press its button to bring it back"))
+    else:
+        if not rec.get("mac"):
+            sys.exit("%s has no address recorded: learn-macs while it is on, or machine %s mac AA:BB:CC:DD:EE:FF" % (name, name))
+        for port in (int(rec.get("port", 9)), 7):
+            send_wake(dict(rec, port=port))
+        power_note(q, name, what="on", t=now(), state="the wake packet was sent; waiting for it to answer", ok=None)
+        print("the wake packet went to %s (%s); when it answers it is put in the queue. A server board tests its memory first: %s" % (
+            name, rec["mac"], "it took %s last time" % ago(rec["boot_s"]) if rec.get("boot_s") else "allow some minutes"))
+    if not os.environ.get("HEARTH_NO_WAIT"):
+        subprocess.Popen([sys.executable, os.path.abspath(__file__), q, "power-wait", name, what], stdin=subprocess.DEVNULL,
+                         stdout=open(hp(q, "power.log"), "a"), stderr=subprocess.STDOUT, start_new_session=True)
+    return 0
+
+
+def power_wait(q, name, what):
+    """See one order through. Run detached by power_order; safe to run by hand."""
+    target, rule = where(q, name)
+    t0 = now()
+    stamp = lambda: time.strftime("%Y-%m-%dT%H:%M:%S")
+    if what == "off":
+        while in_queue(q, name):
+            if time.time() - t0 > POWER_OFF_WAIT_S:
+                power_note(q, name, state="its jobs did not end in %s: left on, still finishing" % ago(POWER_OFF_WAIT_S), ok=False)
+                return 1
+            time.sleep(20)
+        rc, out = run_ssh(target, "nohup sh -c 'sleep 2; %s' >/dev/null 2>&1 &" % rule, timeout=30)
+        power_note(q, name, state="out of the queue; its power-off was sent" if rc == 0 else "ITS POWER-OFF WAS REFUSED: %s" % out[-120:], ok=rc == 0, done=now())
+        print("%s %s off: rc %d %s" % (stamp(), name, rc, out[-120:]))
+        return 0 if rc == 0 else 1
+    wait = setting(state(q), "wake_wait")
+    while time.time() - t0 < wait:
+        rc, _ = run_ssh(target, "true", timeout=15)
+        if rc == 0:
+            took = time.time() - t0
+            mine = load(hp(q, "machines.json"), {}) or {}
+            mine.setdefault(name, {}).update(boot_s=round(took), wol=True)   # it came up from the packet: that is the proof
+            save(q, "machines.json", mine)
+            ok, said = (True, "it was in the queue already") if in_queue(q, name) else run_queue(q, "machine", name, "add")
+            power_note(q, name, state="it answered %s after the packet, and %s" % (ago(took), "is in the queue" if ok else "THE QUEUE WOULD NOT ADD IT: " + said[-120:]),
+                       ok=ok, done=now())
+            print("%s %s on: answered in %d s; %s" % (stamp(), name, took, said[-120:]))
+            return 0 if ok else 1
+        time.sleep(15)
+    power_note(q, name, state="it did not answer in %s: the packet did not wake it, or its button is wanted" % ago(wait), ok=False, done=now())
+    print("%s %s on: no answer in %d s" % (stamp(), name, wait))
+    return 1
+
+
+def power_list(q, ms, ps):
+    """Every machine a person could switch: what it is doing, whether it is known to wake, and the last order."""
+    mine = load(hp(q, "machines.json"), {}) or {}
+    orders = load(hp(q, "power.json"), {}) or {}
+    carriers = {p.get("machine") for p in ps if p["role"] == "room"}
+    cfg = load(os.path.join(q, "config.json"), {}) or {}
+    names = {h.get("lane_of", h["name"]) for h in cfg.get("hosts", []) + cfg.get("bench", []) if h.get("target", "-") != "-"}
+    out = []
+    for name in sorted(names):
+        m, rec = ms.get(name) or {}, mine.get(name, {})
+        queued = bool(m.get("cpu") or m.get("card"))
+        out.append({"name": name, "state": "in the queue" if queued else "on, not in the queue" if m.get("fresh") else "off, or not read",
+                    "on": bool(queued or m.get("fresh")), "mac": bool(rec.get("mac")), "wol": rec.get("wol"), "boot_s": rec.get("boot_s"),
+                    "carries_probe": name in carriers, "can_off": bool(where(q, name)[1]) and name not in carriers, "order": orders.get(name)})
+    return out
+
+
 def step(q, dry=False):
     """One pass. Returns the plan; unless dry, writes plan.json and state.json, and in act does
     at most one rung."""
@@ -701,10 +821,12 @@ def step(q, dry=False):
               "terms", "gains", "feedforward_w", "correction_w", "unclamped_w", "floor_w", "max_w", "wanted_w", "integral_held",
               "diff_w", "would", "did", "shortfall"):
         plan[k] = None
-    for k in ("temp_from", "outside_from", "probes", "ladder", "read", "not_read", "pending"):
+    for k in ("temp_from", "outside_from", "probes", "ladder", "read", "not_read", "pending", "power"):
         plan[k] = []
     for k in ("stopped", "feedforward_why", "clamped", "why_not"):
         plan[k] = ""
+    plan["hold"] = {"running": False, "by": "", "held": [], "last": "", "auto": True}
+    plan["budget"] = None
     said = plan["said"] = []
     if st["mode"] == "off":
         said.append("off: nothing is read, planned or done")
@@ -761,6 +883,7 @@ def step(q, dry=False):
     plan["now_w"] = round(now_w) if now_w is not None else None
     plan["read"] = sorted(m["name"] for m in fresh)
     plan["not_read"] = sorted(m["name"] for m in ms.values() if not m["fresh"])
+    plan["power"] = power_list(q, ms, ps)
     plan["pending"] = pending
     expected = now_w + sum(p["w"] for p in pending) if now_w is not None else None
     plan["expected_w"] = round(expected) if expected is not None else None
@@ -875,7 +998,13 @@ def step(q, dry=False):
                 "%s (about %d W at work, an estimate; %s)" % (n, w, how) for w, n, how in pick) if pick else "No machine on the bench is known that would cover it"))
 
     plan["did"] = None
-    if st["mode"] == "act" and would and not dry:
+    if setting(st, "law") == "hold" and not dry:
+        # THE HOLD IS THE LAW (17 November: "stop using the script. switch to orrery controlling"): what
+        # is done in act, and what is said in advise, is tools/hearth_regulator.py's. The ladder above
+        # is still worked out and shown, for comparison, and takes nothing.
+        import hearth_regulator
+        hearth_regulator.look(sys.modules[__name__], q, st, t, cfg, ms, ps, plan, said, st["mode"] == "act")
+    elif st["mode"] == "act" and would and not dry:
         rec = do(q, st, t, ms[r["machine"]], r)
         plan["did"] = rec
         said.append("done: " + rec["what"] if rec["ok"] else "FAILED, and not tried again in this pass: %s (%s)" % (rec["what"], rec["ran"][-1]["said"][:200]))
@@ -1043,6 +1172,10 @@ def main(argv):
             if a[1] not in ("on", "off"):
                 sys.exit("power is on or off")
             v = a[1]
+        elif a[0] == "law":
+            if a[1] not in ("ladder", "hold"):
+                sys.exit("law is ladder or hold")
+            v = a[1]
         else:
             try:
                 v = float(a[1])
@@ -1055,13 +1188,13 @@ def main(argv):
             st.update(bias_w=None, integral_w=0.0)  # the law begins again where the fleet is
         save(q, "state.json", st)
         print("%s is %s %s: %s" % (a[0], v, SETTINGS[a[0]][1], SETTINGS[a[0]][2]))
-    elif cmd == "machine" and len(a) == 3 and a[1] in ("keep", "mac", "broadcast", "port", "busy_w", "idle_w", "order"):
+    elif cmd == "machine" and len(a) == 3 and a[1] in ("keep", "mac", "broadcast", "port", "busy_w", "idle_w", "order", "wol"):
         mine = load(hp(q, "machines.json"), {}) or {}
         rec = mine.setdefault(a[0], {})
-        if a[1] == "keep":
+        if a[1] in ("keep", "wol"):
             if a[2] not in ("on", "off"):
-                sys.exit("keep is on or off")
-            rec["keep"] = a[2] == "on"
+                sys.exit("%s is on or off" % a[1])
+            rec[a[1]] = a[2] == "on"
         elif a[1] == "mac":
             magic_packet(a[2])
             rec["mac"] = a[2].lower()
@@ -1103,6 +1236,10 @@ def main(argv):
             a[0], rec["mac"], rec.get("broadcast", "255.255.255.255"), rec.get("port", 9)))
     elif cmd == "learn-macs" and not a:
         return learn_macs(q)
+    elif cmd in ("power-on", "power-off") and len(a) == 1:
+        return power_order(q, a[0], cmd[6:])
+    elif cmd == "power-wait" and len(a) == 2 and a[1] in ("on", "off"):
+        return power_wait(q, a[0], a[1])
     else:
         print(__doc__)
         return 2

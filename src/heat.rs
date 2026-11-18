@@ -154,6 +154,8 @@ struct St {
     /// The Hearth: a target being typed, act pressed once, and the last thing its buttons asked.
     typed: Field,
     arm_act: bool,
+    /// The machine whose Off was pressed once.
+    arm_off: Option<String>,
     asked: Option<String>,
 }
 thread_local! {
@@ -291,6 +293,7 @@ pub fn draw(ui: &mut Ui, at: Rect, doc: Option<&Value>, operator: bool, said: &s
     let body = rect(at.x, y, at.w, at.bottom() - y);
     if p != HEARTH {
         st.arm_act = false;
+        st.arm_off = None;
     }
     match (p, doc) {
         (HEARTH, _) => hearth_panel(ui, body, &mut st, operator, said, ctl),
@@ -813,6 +816,16 @@ pub fn rung_name(r: &Value) -> &'static str {
 
 /// The law's terms as the plan gives them, in one line of numbers.
 pub fn terms_line(plan: &Value) -> String {
+    // Where the hold is the law the watts wanted are its budget, an energy calculation and not gains.
+    if let Some(b) = plan.get("budget").filter(|b| !matches!(b, Value::Null)) {
+        return format!(
+            "the hold's budget: -(UA {:.0} W/C x the error + C {:.1} MJ/C x {:+.2} C an hour) = {:+.0} W",
+            n(b, "ua_w_c").unwrap_or(0.0),
+            n(b, "c_mj_c").unwrap_or(0.0),
+            n(b, "slope_c_h").unwrap_or(0.0),
+            n(b, "w").unwrap_or(0.0)
+        );
+    }
     let term = |k: &str| plan.get("terms").and_then(|z| n(z, k)).unwrap_or(0.0);
     let (ff, raw, wanted) = (n(plan, "feedforward_w").unwrap_or(0.0), n(plan, "unclamped_w").unwrap_or(0.0), n(plan, "wanted_w").unwrap_or(0.0));
     let mut out = format!(
@@ -934,6 +947,82 @@ pub fn fleet_switch(ui: &mut Ui, at: Rect, operator: bool, ctl: &mut Option<Stri
     44
 }
 
+/// The hold's one line, and whether it is acting: its budget, what it holds paused, and the last
+/// thing it said. Without a budget in the plan the law is the ladder's, and the line says so.
+fn hold_line(plan: &Value) -> (String, bool) {
+    let Some(b) = plan.get("budget").filter(|b| !matches!(b, Value::Null)) else {
+        return ("not the law in force: the ladder below is (tools/hearth.py QUEUE set law hold makes the hold the law).".to_string(), false);
+    };
+    let h = plan.get("hold");
+    let running = h.and_then(|h| h.get("running")).and_then(|b| b.as_bool()).unwrap_or(false);
+    let held: Vec<&str> = h.map(|h| arr(h, "held")).unwrap_or(&[]).iter().filter_map(|l| l.as_str()).collect();
+    let mut line = format!(
+        "{}: budget {:+.0} W (the room {:.2} C, moving {:+.2} C an hour; UA {:.0} W/C, C {:.1} MJ/C); ceiling {}; lanes it holds paused: {}",
+        if running { "the law, and acting" } else { "the law, and only saying (not in act)" },
+        n(b, "w").unwrap_or(0.0),
+        n(b, "room_c").unwrap_or(0.0),
+        n(b, "slope_c_h").unwrap_or(0.0),
+        n(b, "ua_w_c").unwrap_or(0.0),
+        n(b, "c_mj_c").unwrap_or(0.0),
+        n(b, "ceiling_c").map(both).unwrap_or_default(),
+        if held.is_empty() { "none".to_string() } else { held.join(", ") }
+    );
+    let last = h.map(|h| s(h, "last")).unwrap_or("");
+    if !last.is_empty() {
+        line.push_str(&format!(". It last said: {}", last));
+    }
+    (line, running)
+}
+
+/// One machine a person can switch, as the plan lists it.
+struct PowerCell {
+    name: String,
+    state: String,
+    note: &'static str,
+    on: bool,
+    can_on: bool,
+    can_off: bool,
+}
+
+/// The plan's `power` list as cells. A machine that carries a room probe, or has no power-off
+/// rule, has no Off; one with no address recorded has no On.
+fn power_cells(plan: &Value) -> Vec<PowerCell> {
+    let flag = |p: &Value, k: &str| p.get(k).and_then(|b| b.as_bool());
+    arr(plan, "power")
+        .iter()
+        .map(|p| {
+            let on = flag(p, "on").unwrap_or(false);
+            let mac = flag(p, "mac").unwrap_or(false);
+            let note = if flag(p, "carries_probe").unwrap_or(false) {
+                ", carries the room's probes"
+            } else {
+                match (flag(p, "wol"), mac) {
+                    (Some(true), _) => ", wakes by the packet",
+                    (Some(false), _) => ", did not wake by the packet",
+                    (None, true) => ", wake untried",
+                    (None, false) => ", no address",
+                }
+            };
+            PowerCell { name: s(p, "name").to_string(), state: s(p, "state").to_string(), note, on, can_on: !on && mac, can_off: on && flag(p, "can_off").unwrap_or(false) }
+        })
+        .collect()
+}
+
+/// The orders still on their way, or ended within the half hour: (the line, whether it failed).
+fn power_orders(plan: &Value, now: f64) -> Vec<(String, bool)> {
+    arr(plan, "power")
+        .iter()
+        .filter_map(|p| {
+            let o = p.get("order").filter(|o| !matches!(o, Value::Null))?;
+            if n(o, "done").map(|d| now - d > 1800.0).unwrap_or(false) {
+                return None;
+            }
+            let bad = o.get("ok").and_then(|b| b.as_bool()) == Some(false);
+            Some((format!("{}, asked {} {} ago: {}", s(p, "name"), s(o, "what"), took((now - n(o, "t").unwrap_or(now)).max(0.0)), s(o, "state")), bad))
+        })
+        .collect()
+}
+
 /// The Hearth: the target and the mode with their buttons, the room and its probes, the outside,
 /// the watts now against the watts wanted, the ladder, the last action, the plan's own account.
 fn hearth_panel(ui: &mut Ui, at: Rect, st: &mut St, operator: bool, said: &str, ctl: &mut Option<String>) {
@@ -1014,7 +1103,14 @@ fn hearth_panel(ui: &mut Ui, at: Rect, st: &mut St, operator: bool, said: &str, 
     y += 24 + 8;
 
     // What act does, in words, whatever the mode: read before the press, not after.
-    let does = if power {
+    let hold_law = h.plan.as_ref().and_then(|p| p.get("budget")).map(|b| !matches!(b, Value::Null)).unwrap_or(false);
+    let does = if hold_law {
+        if power {
+            "Act holds the room by the hold's law, one change a pass and no two within 40 minutes (at the ceiling, at once). Too warm: a machine known to wake by the packet finishes its task, leaves the queue and is POWERED OFF; any other has a lane take nothing new. Too cold: a paused lane works again, or a machine is woken and put in the queue. Machines without a card go first and come back last, and among equals the one that spends most energy on a job. The power switch is ON; it is set from the command line (tools/hearth.py QUEUE set power off)."
+        } else {
+            "Act holds the room by the hold's law, one change a pass and no two within 40 minutes (at the ceiling, at once): lanes take nothing new when it is too warm and work again when it is cold, machines without a card first. It does NOT power a machine off and does NOT wake one: the power switch is off (tools/hearth.py QUEUE set power on)."
+        }
+    } else if power {
         "Act changes the fleet, one rung a pass and no two within 15 minutes: a machine's CPU lanes, then its card's lane, take nothing new (the job in hand finishes), and are resumed when the room is cold. THE POWER SWITCH IS ON: with every lane of a machine held and nothing in hand, act also powers it off, and wakes it by a packet when the room is cold. The switch is set from the command line (tools/hearth.py QUEUE set power off) and has no button here."
     } else {
         "Act changes the fleet, one rung a pass and no two within 15 minutes: a machine's CPU lanes, then its card's lane, take nothing new (the job in hand finishes), and are resumed when the room is cold. It does NOT power a machine off and does NOT wake one: the power switch is off. That switch is set from the command line (tools/hearth.py QUEUE set power on) and has no button here. Off and advise change nothing; what act holds stays held through them."
@@ -1043,6 +1139,63 @@ fn hearth_panel(ui: &mut Ui, at: Rect, st: &mut St, operator: bool, said: &str, 
         para(ui, at.x, y + 4, at.w, how, t.dim);
         return;
     };
+
+    // The hold: the law that acts when the controller's law is `hold` (tools/hearth_regulator.py).
+    // It runs with the pass, so it has no button of its own: act above is its switch.
+    {
+        let (line, running) = hold_line(plan);
+        let mut x = ui.label(at.x, y + 5, "hold", &F8X13, t.dim) + 18;
+        if running {
+            ui.c.rect(x, y + 7, 8, 8, t.up);
+            x += 14;
+        }
+        y = para(ui, x, y + 5, at.right() - x, &line, if running { t.ink } else { t.dim }).max(y + 22) + 2;
+    }
+
+    // The machines a person can switch, a cell each, flowed across (17 November, the day bosporus
+    // first came up from a packet: "Add the buttons to turn on and off"). On sends the wake packet
+    // and, when the machine answers, puts it in the queue; Off lets it finish its jobs, leave the
+    // queue and power off, and asks twice. A person's order, whatever the mode.
+    let switches = power_cells(plan);
+    if !switches.is_empty() {
+        let x0 = ui.label(at.x, y + 5, "power", &F8X13, t.dim) + 10;
+        let mut x = x0;
+        for c in &switches {
+            let text = format!("{}: {}{}", c.name, c.state, c.note);
+            let armed = st.arm_off.as_deref() == Some(c.name.as_str());
+            let label = if !c.on { "On" } else if armed { "Press again: off" } else { "Off" };
+            let can = operator && if c.on { c.can_off } else { c.can_on };
+            let bw = if can { F8X13.measure(label) as i32 + 22 } else { 0 };
+            let w = F8X13.measure(&text) as i32 + 8 + bw + 20;
+            if x + w > at.right() && x > x0 {
+                x = x0;
+                y += 26;
+            }
+            let bx = ui.label(x, y + 5, &text, &F8X13, if c.on { t.ink } else { t.dim }) + 8;
+            if can {
+                let r = rect(bx, y + 1, bw, 22);
+                if c.on && armed {
+                    ui.c.frame(r.x - 2, r.y - 2, r.w + 4, r.h + 4, t.alarm);
+                }
+                if ui.button(r, label, true) {
+                    if c.on && !armed {
+                        st.arm_off = Some(c.name.clone());
+                    } else {
+                        let verb = format!("hearth power-{} {}", if c.on { "off" } else { "on" }, c.name);
+                        st.asked = Some(verb.clone());
+                        *ctl = Some(verb);
+                        st.arm_off = None;
+                    }
+                }
+            }
+            x += w;
+        }
+        y += 26;
+        for (line, bad) in power_orders(plan, epoch()) {
+            y = para(ui, x0, y, at.right() - x0, &line, if bad { t.alarm } else { t.accent });
+        }
+        y += 4;
+    }
 
     // The plan: when it was made, and a pass on request while a pass changes nothing.
     let age = (epoch() - n(plan, "t").unwrap_or(0.0)).max(0.0);
@@ -1312,6 +1465,39 @@ mod tests {
 
     fn hearth_of(plan: Option<&str>, state: Option<&str>) -> Hearth {
         Hearth { plan: plan.map(|p| json::parse(p).unwrap()), state: state.map(|p| json::parse(p).unwrap()) }
+    }
+
+    #[test]
+    fn a_machine_gets_the_button_it_can_use_and_an_order_is_said_until_half_an_hour_after() {
+        let plan = json::parse(
+            r#"{"power": [
+            {"name": "bosporus", "state": "off, or not read", "on": false, "mac": true, "wol": true, "can_off": true, "carries_probe": false,
+             "order": {"what": "on", "t": 1000, "state": "the wake packet was sent; waiting for it to answer", "ok": null}},
+            {"name": "jaguaribe", "state": "in the queue", "on": true, "mac": true, "wol": null, "can_off": true, "carries_probe": false,
+             "order": {"what": "off", "t": 100, "done": 200, "state": "out of the queue; its power-off was sent", "ok": true}},
+            {"name": "saskatchewan", "state": "in the queue", "on": true, "mac": true, "wol": null, "can_off": false, "carries_probe": true, "order": null},
+            {"name": "nasser", "state": "off, or not read", "on": false, "mac": false, "wol": null, "can_off": true, "carries_probe": false, "order": null}]}"#,
+        )
+        .unwrap();
+        let c = power_cells(&plan);
+        assert_eq!(c.len(), 4);
+        assert!(c[0].can_on && !c[0].can_off && c[0].note == ", wakes by the packet");
+        assert!(!c[1].can_on && c[1].can_off && c[1].note == ", wake untried");
+        assert!(!c[2].can_on && !c[2].can_off && c[2].note == ", carries the room's probes");
+        assert!(!c[3].can_on && !c[3].can_off && c[3].note == ", no address");
+        let o = power_orders(&plan, 1060.0);
+        assert_eq!(o.len(), 2);
+        assert_eq!(o[0], ("bosporus, asked on 60 s ago: the wake packet was sent; waiting for it to answer".to_string(), false));
+        assert_eq!(power_orders(&plan, 3000.0).len(), 1);
+        assert!(power_cells(&json::parse("{}").unwrap()).is_empty());
+        // The hold's line: the ladder's law; the hold saying; the hold acting, with what it holds and last said.
+        assert!(hold_line(&json::parse("{}").unwrap()).0.starts_with("not the law in force"));
+        let doc = r#"{"budget": {"w": -120, "room_c": 26.9, "slope_c_h": 0.1, "ua_w_c": 120, "c_mj_c": 4.2, "ceiling_c": 27.2}, "hold": {"running": RUN, "held": ["whitewolf-cuda"], "last": "12:00:00  room 26.90 C"}}"#;
+        let (line, on) = hold_line(&json::parse(&doc.replace("RUN", "false")).unwrap());
+        assert!(!on && line.starts_with("the law, and only saying"));
+        let (line, on) = hold_line(&json::parse(&doc.replace("RUN", "true")).unwrap());
+        assert!(on && line.contains("budget -120 W") && line.contains("27.2 C (81.0 F)") && line.contains("whitewolf-cuda") && line.ends_with("It last said: 12:00:00  room 26.90 C"));
+        assert!(terms_line(&json::parse(&doc.replace("RUN", "true")).unwrap()).starts_with("the hold's budget"));
     }
 
     #[test]

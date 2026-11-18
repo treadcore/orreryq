@@ -61,6 +61,12 @@ CARDS = {
                     "machine's CPU lanes take nothing new, then its card's, then power, and back with a wake packet. Off, advise "
                     "and act; proved on a scratch queue and a simulated room, run on the live fleet in advise only. It has never "
                     "changed a machine, and the house's loss per degree is not yet known."),
+    "hearth-response": ("Fleet · the room turns",
+                        "The house's heating was switched off and the room fell all night. Two machines switched on at 06:00 on 17 "
+                        "November stepped the fleet by 428 W, and the room turned 85 minutes later and rose 0.34 C an hour. The step "
+                        "gives the house's heat capacity, 3.4 to 4.9 MJ/C, and not yet its loss: 100 to 150 W/C fit alike. A CPU "
+                        "answers in a minute, a disk in half an hour, the room over hours; of the drives that did not make the step "
+                        "only saskatchewan's follow the room."),
     "orange-queue": ("Fleet · the orange queue",
                      "Seven hours in which the Mac closed its shared connection to each machine every few minutes: 276 jobs put back "
                      "and started again while the first copy ran on, columbia at thirteen censuses on eight cores, three cards at 100% "

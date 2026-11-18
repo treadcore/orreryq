@@ -207,6 +207,20 @@ def main(argv):
             heat_page.page(q, [])
         except Exception as e:  # a pull's lines are kept whatever the model makes of them
             print("the model failed: %r" % e)
+        # The hearth's pass, WHILE IT ONLY ADVISES (Paul, 17 November: "can you show the external
+        # temperature. can it update it every hour or so"): it fetches the airport's observation, at
+        # most every twenty minutes, reads the room and writes the plan Orrery's Hearth panel draws.
+        # In advise it changes no machine. In act it does, one step a pass: that is what act is, and
+        # since 17 November ("stop using the script. switch to orrery controlling") this pass is what
+        # holds the room. Off is passed over.
+        try:
+            import json
+            import subprocess
+            if json.load(open(os.path.join(q, "hearth", "state.json"))).get("mode") in ("advise", "act"):
+                subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "hearth.py"), q, "step"],
+                               capture_output=True, timeout=90)
+        except (OSError, ValueError, subprocess.SubprocessError):
+            pass
     elif argv[2] == "model":
         import thermal
         return thermal.main(q, argv[3:])

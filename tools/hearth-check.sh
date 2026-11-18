@@ -49,7 +49,11 @@ import hearth
 live = os.path.join(LIVE, "config.json")
 live_before = os.stat(live).st_mtime_ns if os.path.exists(live) else None
 live_hearth = os.path.join(LIVE, "hearth")
-live_hearth_before = sorted((f, os.stat(os.path.join(live_hearth, f)).st_mtime_ns) for f in os.listdir(live_hearth)) if os.path.isdir(live_hearth) else None
+# What only a command writes. Since 17 November the pass runs by itself after every pull while it advises, and a
+# hold may run in a terminal: both write the live hearth's plan, state, record and logs while this check runs,
+# so those cannot be held still. What a stray write by THIS check would touch that they do not is these three.
+KEPT = ("machines.json", "probes.json", "counters.json")
+live_hearth_before = sorted((f, os.stat(os.path.join(live_hearth, f)).st_mtime_ns) for f in os.listdir(live_hearth) if f in KEPT) if os.path.isdir(live_hearth) else None
 
 
 def claim(ok, text, detail=""):
@@ -109,6 +113,7 @@ def fresh():
         cli("machine", n, "mac", mac)
         cli("machine", n, "broadcast", "127.0.0.1")
         cli("machine", n, "port", PORT)
+        cli("machine", n, "wol", "on")      # known to wake: without it the controller powers nothing off
     cli("machine", "saskatchewan", "mac", "02:00:00:00:00:0d")
 
 
@@ -497,8 +502,8 @@ claim(g0 and g1 and w1 <= 1.0 and w1 <= w0,
 # ---- the live queue
 if live_before is not None:
     claim(os.stat(live).st_mtime_ns == live_before, "the live queue's config.json was not written (%s)" % live)
-    after = sorted((f, os.stat(os.path.join(live_hearth, f)).st_mtime_ns) for f in os.listdir(live_hearth)) if os.path.isdir(live_hearth) else None
-    claim(after == live_hearth_before, "nor anything in its hearth directory")
+    after = sorted((f, os.stat(os.path.join(live_hearth, f)).st_mtime_ns) for f in os.listdir(live_hearth) if f in KEPT) if os.path.isdir(live_hearth) else None
+    claim(after == live_hearth_before, "nor its hearth's machines.json, probes.json or counters.json (its own pass and a hold write the rest)")
 else:
     print("--  no live queue at %s to look at" % LIVE)
 shutil.rmtree(os.path.dirname(Q))

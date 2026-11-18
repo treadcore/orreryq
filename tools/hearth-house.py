@@ -53,6 +53,7 @@ SLOPE_H = 2            # hours either side over which a slope is taken
 WANT_HOURS = 48        # below this a fit is said and not believed
 WANT_SPREAD_W = 80     # the watts must have stood at levels this far apart (standard deviation)
 WANT_SPREAD_C = 1.5    # and the room's height over the outside this far
+LEVEL_C_H = 0.08       # a room moving less than this in an hour is held still
 
 
 def not_a_reading(v):
@@ -266,6 +267,26 @@ def fit(pts, name):
                 "the room's height over the outside stood only %.1f C apart where %.1f are wanted" % (so, WANT_SPREAD_C) if so < WANT_SPREAD_C else "") if x))
     else:
         print("    with the watts' own movement: no fit yet (the watts and the constant do not stand apart, or the signs are wrong)")
+    # THE ROOM HELD STILL (Paul, 17 November: "try to maintain 80, and calculate the outside temperature
+    # delta"). In an hour in which the room does not move, what goes in goes out: P + P0 = UA (T - To).
+    # So each level hour is a point, the fleet's watts against the degrees the room stands over the
+    # outside, and as the outside moves through a day and a night the points lie on a line:
+    #     P = UA x (T - To) - P0
+    # whose slope is UA and whose foot is the house's other heat. It needs no slope of a probe that
+    # reads in tenths, and no step: holding the room is the experiment.
+    level = [(o, x) for o, x, d in zip(over, w, dT) if abs(d) <= LEVEL_C_H]
+    doc["level_hours"] = len(level)
+    if level:
+        lo, lw = [p[0] for p in level], [p[1] for p in level]
+        print("    held still (within %.2f C an hour): %d hours; the room %.1f to %.1f C over the outside on %.0f to %.0f W; %.0f W for each degree of that, P0 left out" % (
+            LEVEL_C_H, len(level), min(lo), max(lo), min(lw), max(lw), sum(lw) / sum(lo)))
+        line = solve([[o, -1.0] for o in lo], lw) if len(level) >= 6 and sd(lo) >= 0.7 else None
+        if line and line[0] > 0:
+            doc.update(held_ua=line[0], held_p0=line[1])
+            print("    the line through them: P = %.0f x (T - To) - %.0f, so UA = %.0f W/C and P0 = %.0f W%s" % (
+                line[0], line[1], line[0], line[1], "" if len(level) >= 24 else "   (fewer than 24 level hours: a first look)"))
+        else:
+            print("    no line through them yet: it wants six level hours with the room's height over the outside standing 0.7 C apart")
     return doc
 
 

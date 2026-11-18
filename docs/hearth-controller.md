@@ -226,3 +226,18 @@ inside the same `try`, so a pass that fails costs the pull nothing. **It is not 
 - The Mac mini is not on the ladder (nothing reads its watts), and this Mac's own draw is not in the fleet's sum.
 - Orrery draws the plan and sets the target and the mode (the Heat page's Hearth panel, and a line on the Queue's Fleet page); it was checked as pictures and no button was pressed. Nothing in Orrery sets the power switch, the gains or a probe.
 - Humidity, the price of a kilowatt-hour and the house's other heating do not enter.
+
+## Switching a machine on and off (17 November)
+
+`docs/hearth-power.md` is the procedure: arming a card for wake-on-LAN (`tools/fleet-wol.sh`), the test that proves a machine wakes, and the two orders a person can give from the Hearth panel's power row or the command line:
+
+    hearth.py QUEUE power-on NAME      the wake packet; when it answers it is put in the queue
+    hearth.py QUEUE power-off NAME     it takes nothing new, leaves the queue when its jobs end, is powered off
+    hearth.py QUEUE machine NAME wol on|off    whether it is known to wake by the packet
+
+The controller's own power-off rung is closed for a machine not marked `wol on`. Since 17 November the pass runs after every telemetry pull in advise and in act (`tools/telemetry.py`).
+
+    hearth.py QUEUE set law hold|ladder        which law acts
+    hearth.py QUEUE set ceiling 27.2           the hold's ceiling, degrees C
+
+Since 17 November the live controller is in act with the law `hold` (`tools/hearth_regulator.py`), the power switch on, and the pass run by the keeper after every telemetry pull. Section 5 of `docs/hearth-power.md` says what that law does. The ladder described above still proves and still shows on the panel; it does not act while the law is hold.

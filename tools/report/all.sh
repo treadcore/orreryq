@@ -59,6 +59,7 @@ seeds|Where the Seeds Went|Orreryq · the search · a proof held by one map, tri
 orange-queue|The Orange Queue|Orreryq · the fleet · seven hours of dropped connections, jobs left running behind, and three cards busy with nothing
 hearth|The Fleet as the Hearth|Orreryq · the fleet · reading the house's air, what the mesh radios can tell, and what to buy
 hearth-auto|Holding the Room|Orreryq · the fleet · the watts set by a target, the room's thermometers and SeaTac's air, in three modes
+hearth-response|The Room Turns|Orreryq · the fleet · a step of 428 W, the room's answer, and every disk and CPU beside it
 film|A Film Beside Every Report|Orreryq · documentation · narration-timed film scripts, one storyboard drawn twice, recordings reenacted, and a standing directive
 LIST
 python3 ../tools/report/collect.py
