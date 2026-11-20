@@ -61,6 +61,17 @@ CARDS = {
                     "machine's CPU lanes take nothing new, then its card's, then power, and back with a wake packet. Off, advise "
                     "and act; proved on a scratch queue and a simulated room, run on the live fleet in advise only. It has never "
                     "changed a machine, and the house's loss per degree is not yet known."),
+    "local-signing": ("Console · the Mac's permission",
+                      "The queue called machines unreachable that answered a terminal at once: macOS was refusing the console's "
+                      "connections itself, 333 of 349 in three minutes. Two causes, separated by experiment: an ad hoc signature, "
+                      "which made each of 38 builds a different application, and a shell script as the bundle's executable, which "
+                      "left the bundle with no code on record. Orrery now signs with one self-signed identity of its own and names "
+                      "its binary as the executable; a grant given to one build was honoured by the next, with no question asked."),
+    "orreryq": ("The whole · the Orrery Q process",
+                "Orrery from the outside in: the centre and its orbits, the application as UML, every one of its 39 pages with what it "
+                "is for in a dataset's terms, then one CPU generation and one GPU generation followed from the first question to the "
+                "last verdict, with the seeds, the waiting, the paths not taken, the net around the tank, the yardsticks, the watts "
+                "and the room. The GPU side is locked by floors a refused milestone left; eleven places to step in, two faults fixed."),
     "hearth-regulation": ("Fleet · keeping the room",
                           "A how-to and a lab report on the fleet's thermal regulation. How to set a temperature, read the Hearth and "
                           "Diagram panels mark by mark, and switch a machine by hand; the one heat balance behind it, with seven "

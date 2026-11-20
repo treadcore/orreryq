@@ -1,0 +1,1428 @@
+{
+ "title": "The Orrery Q Process",
+ "subtitle": "a fleet, two learners and a warm room, traced from the outside in",
+ "byline": "treadcore and the Orrery fleet  ·  19 November 2026",
+ "slug": "orreryq",
+ "report": "orreryq-lab-report",
+ "drawn_by": "tools/report/orreryq_film.py",
+ "youtube_title": "The Orrery Q Process: one fleet, a CPU generation and a GPU generation traced from the first question to the last verdict",
+ "blurb": "Orrery is one Mac directing ten computers to improve a game's artificial players. This film follows the lab report of 19 November 2026 from the outside in: the orrery and its orbits, the two learning loops, the application, the pages of its window, then one CPU generation (trial w21532, one dial, 3 h 6 min from its first question to main) and one GPU generation (M0049, elected and refused by the game the same evening), the net around the tank, the yardsticks, the watts and the room, two faults found while it was written, and where to step in. The film has no sound; its narration scrolls in the corner.",
+ "closing": [
+  "A change is believed only on seeds it was not chosen on,",
+  "and kept only if it beats what stands."
+ ],
+ "credits": [
+  "Orrery  ·  treadcore.org",
+  "Paul Richeson: producer, animator, writer, coder, implementer, developer, founder",
+  "Team pair: Claude Code (Claude Opus 5.5)",
+  "MIT License  ·  Copyright (c) 2026 Paul Richeson"
+ ],
+ "wpm": 150,
+ "poster": "net",
+ "scenes": [
+  {
+   "id": "cold",
+   "kind": "cards",
+   "name": "One idea in a hundred and twenty",
+   "say": "On the fifteenth of November a fleet of computers asked one hundred and twenty questions of a game's brain. | One passed. | It took three hours and six minutes and forty-four jobs to be believed. | The same evening, the cards trained a net that passed every test but the last one. They have run two hundred and six hours since, and kept nothing.",
+   "head": "15 NOVEMBER 2026  ·  ONE FLEET, TWO LEARNERS",
+   "title": "One idea in a hundred and twenty.",
+   "rows": [
+    {
+     "h": 330,
+     "cards": [
+      {
+       "cue": 0,
+       "col": "cpu",
+       "head": "asked on one set of defaults",
+       "big": "120",
+       "words": "62 versions, 40 far trials, 12 draws from the fit, 6 carried or read again"
+      },
+      {
+       "cue": 1,
+       "col": "main",
+       "head": "believed",
+       "big": "1",
+       "words": "w21532: one dial, the ladder's order, 0 to 3"
+      },
+      {
+       "cue": 2,
+       "col": "line",
+       "head": "to be believed",
+       "big": "3 h 6 min",
+       "words": "44 jobs, 6 machines, 7,200 seeds of proof"
+      },
+      {
+       "cue": 3,
+       "col": "gpu",
+       "head": "the cards since",
+       "big": "206 h",
+       "words": "316 segments, none kept"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "title",
+   "kind": "title",
+   "name": "Title",
+   "say": "The Orrery Q process. A fleet, two learners and a warm room, traced from the outside in."
+  },
+  {
+   "id": "act1",
+   "kind": "act",
+   "name": "Part one: the whole",
+   "say": "Part one. The whole.",
+   "part": "PART ONE",
+   "big": "THE WHOLE",
+   "sub": "a centre, its orbits, two learning loops",
+   "col": "main"
+  },
+  {
+   "id": "orrery",
+   "kind": "orrery",
+   "name": "An orrery",
+   "head": "AN ORRERY  ·  ONE CENTRE, EVERYTHING ON AN ARM",
+   "names": [
+    [
+     "housekeeping",
+     "every 2 to 5 minutes: heat, power, sync"
+    ],
+    [
+     "CPU lanes",
+     "a job of minutes: the game's brain"
+    ],
+    [
+     "CUDA islands",
+     "a segment of 30 to 50 minutes: the nets"
+    ]
+   ],
+   "foot": "Every arrow is one ssh connection from the Mac. No machine speaks to another.",
+   "say": "An orrery is a clockwork model of the solar system: one sun, every planet on its own arm. This fleet is built the same way. One Mac asks every question. | Housekeeping turns on the inner orbit, every few minutes. | The CPU lanes on the middle one, a job of minutes. | The cards on the outer, half an hour or more. | Every arrow is one connection from the Mac. No machine speaks to another."
+  },
+  {
+   "id": "cycle",
+   "kind": "zoom",
+   "name": "Two learning loops",
+   "file": "fig-cycle.png",
+   "size": [
+    1600,
+    980
+   ],
+   "head": "FIG. 2  ·  TWO LEARNING LOOPS AND A BRIDGE",
+   "say": "What the orrery turns is two learning loops. | On the left, the game's hand-written brain: a dial is moved, read on seeds, read again on seeds it was never chosen on, and proved against what stands. | On the right, a population of nets evolves on each card, is examined against a ladder of old champions, and elected. | Between them, the bridge: a net the game accepts becomes a style the left loop plays.",
+   "stops": [
+    {
+     "cue": 0,
+     "r": [
+      0,
+      150,
+      830,
+      680
+     ],
+     "head": "the CPU loop",
+     "words": "Candidate, first read, read on, held-out read, promote, the line's proof, main. In a dataset's terms: a hyperparameter, validation batches, a held-out set, a final test.",
+     "col": "cpu",
+     "pad": 0.12
+    },
+    {
+     "cue": 1,
+     "r": [
+      850,
+      180,
+      750,
+      640
+     ],
+     "head": "the GPU loop",
+     "words": "A population, a segment of 100 generations, the exam, the gauntlet, the election, the bridge into the real game.",
+     "col": "gpu",
+     "pad": 0.12
+    },
+    {
+     "cue": 2,
+     "r": [
+      830,
+      120,
+      400,
+      300
+     ],
+     "head": "the bridge",
+     "words": "The one place the two learners meet.",
+     "col": "line",
+     "pad": 0.12
+    }
+   ],
+   "lede": ""
+  },
+  {
+   "id": "terms",
+   "kind": "table",
+   "name": "In a dataset's terms",
+   "head": "THE SAME THING, IN A DATASET'S TERMS",
+   "say": "Strip the tanks away and this is anyone's problem. | A trial is one setting to try. | A seed is one example, a game whose dice are fixed by a number. | A held-out read is the validation set. | The proof is the final test against what is deployed. | An island is one training run, a milestone a checkpoint, the bridge the deployment test.",
+   "cols": [
+    {
+     "x": 60,
+     "head": "orrery's word",
+     "w": 400
+    },
+    {
+     "x": 520,
+     "head": "in a dataset's terms",
+     "w": 640
+    },
+    {
+     "x": 1200,
+     "head": "in treadcore",
+     "w": 660
+    }
+   ],
+   "rows": [
+    {
+     "cue": 0,
+     "col": "cpu",
+     "cells": [
+      "a trial",
+      "one hyperparameter setting",
+      "one dial moved: ladder 0 to 3"
+     ]
+    },
+    {
+     "cue": 1,
+     "col": "cpu",
+     "cells": [
+      "a seed",
+      "one example",
+      "one game, its dice fixed; 13 maps"
+     ]
+    },
+    {
+     "cue": 2,
+     "col": "cpu",
+     "cells": [
+      "the held-out read",
+      "the validation set",
+      "400 seeds no trial has played"
+     ]
+    },
+    {
+     "cue": 3,
+     "col": "main",
+     "cells": [
+      "the line's proof",
+      "the final A/B test against production",
+      "400 seeds a job until z 3"
+     ]
+    },
+    {
+     "cue": 4,
+     "col": "gpu",
+     "cells": [
+      "an island, a milestone",
+      "a training run, a checkpoint",
+      "2,048 nets on a card; M0049"
+     ]
+    },
+    {
+     "cue": 4,
+     "col": "gpu",
+     "cells": [
+      "the bridge",
+      "the deployment test",
+      "192 seeds in the real game"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "uml",
+   "kind": "zoom",
+   "name": "The application",
+   "file": "fig-uml.png",
+   "size": [
+    1600,
+    1040
+   ],
+   "head": "FIG. 3  ·  THE APPLICATION, AS UML COMPONENTS",
+   "say": "The application, as components. | The window, forty-six thousand lines of Rust with no libraries, only reads. | The keeper runs a thread a lane and reaches each machine by ssh. | The planner decides what to ask next and what an answer means. | Everything is a file in one folder: the queue. | And the hearth reads the room and sets the fleet's watts.",
+   "stops": [
+    {
+     "cue": 0,
+     "r": [
+      40,
+      120,
+      430,
+      250
+     ],
+     "head": "Orrery.app",
+     "words": "A button is a command a script runs. The window never acts on a machine itself.",
+     "col": "line",
+     "pad": 0.45
+    },
+    {
+     "cue": 1,
+     "r": [
+      580,
+      120,
+      440,
+      230
+     ],
+     "head": "the keeper",
+     "words": "tools/fleet-queue.py: lanes, sync, chores, temperatures, health.",
+     "col": "cpu",
+     "pad": 0.45
+    },
+    {
+     "cue": 2,
+     "r": [
+      580,
+      410,
+      440,
+      210
+     ],
+     "head": "the planner",
+     "words": "tools/plans/treadcore.py: trials, held-out reads, promotion, proofs, islands. A pass every minute and a half, fifteen seconds long.",
+     "col": "cpu",
+     "pad": 0.45
+    },
+    {
+     "cue": 3,
+     "r": [
+      580,
+      680,
+      440,
+      200
+     ],
+     "head": "the queue",
+     "words": "queue, running, done, events.jsonl: every job's start and end, 160,000 lines. Every number in the report was read back from here.",
+     "col": "ink",
+     "pad": 0.45
+    },
+    {
+     "cue": 4,
+     "r": [
+      1130,
+      410,
+      430,
+      210
+     ],
+     "head": "the hearth",
+     "words": "telemetry every five minutes; the hold law; wake-on-LAN.",
+     "col": "red",
+     "pad": 0.45
+    }
+   ],
+   "lede": ""
+  },
+  {
+   "id": "act2",
+   "kind": "act",
+   "name": "Part two: the window",
+   "say": "Part two. The window, page by page.",
+   "part": "PART TWO",
+   "big": "THE WINDOW",
+   "sub": "39 pages, each drawn by the program itself",
+   "col": "line"
+  },
+  {
+   "id": "fleet",
+   "kind": "zoom",
+   "name": "The Fleet page",
+   "file": "live/3-fleet.png",
+   "size": [
+    1600,
+    1000
+   ],
+   "head": "QUEUE, FLEET  ·  17:00, 19 NOVEMBER",
+   "say": "The Queue's Fleet page: the scheduler's live view. | Sixty-five thousand six hundred jobs done since the twenty-eighth of October. | Four hundred and sixty-three failed: seven in a thousand. | The newest read: a guess inside its error, as most are. | The room's line: twenty-six point four degrees, a hundred and seventy watts short. | And a machine: its load, its temperatures against their limits, and its buttons.",
+   "stops": [
+    {
+     "cue": 0,
+     "r": [
+      155,
+      66,
+      760,
+      30
+     ],
+     "head": "30 queued, 5 running, 65,601 done",
+     "words": "About 2,900 jobs a day since 28 October.",
+     "col": "line",
+     "pad": 0.12
+    },
+    {
+     "cue": 1,
+     "r": [
+      155,
+      110,
+      640,
+      22
+     ],
+     "head": "2,906 retired, 463 failed",
+     "words": "Retired: answered another way before they ran. Failed: 0.7%, each tried three times first.",
+     "col": "line",
+     "pad": 0.12
+    },
+    {
+     "cue": 2,
+     "r": [
+      155,
+      186,
+      960,
+      22
+     ],
+     "head": "the newest change",
+     "words": "wing_threat 20: census +0.40 ± 1.01. Inside its error.",
+     "col": "line",
+     "pad": 0.12
+    },
+    {
+     "cue": 3,
+     "r": [
+      155,
+      232,
+      980,
+      36
+     ],
+     "head": "regulate temperature: act",
+     "words": "Room 26.4 °C, target 26.7; 456 W now, 627 W wanted.",
+     "col": "red",
+     "pad": 0.12
+    },
+    {
+     "cue": 4,
+     "r": [
+      155,
+      444,
+      1440,
+      44
+     ],
+     "head": "a machine's row",
+     "words": "boburner: 17.3 of 16 cores, CPU 74 of 85 °C, card 69 of 85; its job; CPUs 1 to 16; Restart, Finish, Pause, Stop, Remove.",
+     "col": "line",
+     "pad": 0.12
+    }
+   ],
+   "lede": ""
+  },
+  {
+   "id": "timeline",
+   "kind": "zoom",
+   "name": "The Timeline",
+   "file": "live/3-timeline.png",
+   "size": [
+    1600,
+    1000
+   ],
+   "head": "QUEUE, PIPELINE, TIMELINE  ·  THE LAST HOURS",
+   "say": "The Timeline is a Gantt chart of the whole fleet. | Every lane is a row; every job a block coloured by its stage: blue a first read, green a read-on, coral a held-out read, pink a proof. | The strip at the foot is the Mac itself, planning.",
+   "stops": [
+    {
+     "cue": 0,
+     "r": [
+      150,
+      110,
+      1440,
+      560
+     ],
+     "head": "every lane a row",
+     "words": "Six zooms, from the hour to three months. A hollow block is a forecast; a red one failed.",
+     "col": "line",
+     "pad": 0.12
+    },
+    {
+     "cue": 1,
+     "r": [
+      150,
+      600,
+      1440,
+      120
+     ],
+     "head": "the orchestrator",
+     "words": "The Mac's own planning: a pass about every ninety seconds.",
+     "col": "line",
+     "pad": 0.12
+    }
+   ],
+   "lede": ""
+  },
+  {
+   "id": "blame",
+   "kind": "zoom",
+   "name": "Blame",
+   "file": "live/3-blame.png",
+   "size": [
+    1600,
+    1000
+   ],
+   "head": "QUEUE, PIPELINE, BLAME",
+   "say": "Blame answers the question every operator asks: why is this waiting? | Its verdict at five o'clock: no machine waits on another. | A trial's step waits one point two minutes for the planner and one point four in the queue, for four point six minutes of work.",
+   "stops": [
+    {
+     "cue": 0,
+     "r": [
+      160,
+      112,
+      1056,
+      850
+     ],
+     "head": "a round table",
+     "words": "Every machine around the queue and its planner. Green: its help. Amber: a wait on another machine. There is none.",
+     "col": "main",
+     "pad": 0.12
+    },
+    {
+     "cue": 1,
+     "r": [
+      160,
+      70,
+      1060,
+      36
+     ],
+     "head": "the medians",
+     "words": "Planner 1.2 + queue 1.4 + work 4.6 minutes.",
+     "col": "line",
+     "pad": 0.12
+    }
+   ],
+   "lede": ""
+  },
+  {
+   "id": "lineup",
+   "kind": "zoom",
+   "name": "The Lineup",
+   "file": "live/3-lineup.png",
+   "size": [
+    1600,
+    1000
+   ],
+   "head": "QUEUE, PIPELINE, LINEUP  ·  NAMED FOR THE LINEUP (1954)",
+   "say": "The Lineup puts every chain of work in its own row, and judges it. | Amber: still going. | Red walls: dead ends, dropped after one read, or four. On this page, one hundred and thirty-one dead ends.",
+   "stops": [
+    {
+     "cue": 0,
+     "r": [
+      150,
+      130,
+      1440,
+      180
+     ],
+     "head": "going",
+     "words": "Candidates in their held-out reads.",
+     "col": "line",
+     "pad": 0.12
+    },
+    {
+     "cue": 1,
+     "r": [
+      150,
+      300,
+      1440,
+      600
+     ],
+     "head": "dead ends",
+     "words": "Each with how long it lived, and how many reads it took to drop it.",
+     "col": "red",
+     "pad": 0.12
+    }
+   ],
+   "lede": ""
+  },
+  {
+   "id": "parade",
+   "kind": "zoom",
+   "name": "The Hit Parade",
+   "file": "live/3-parade.png",
+   "size": [
+    1600,
+    1000
+   ],
+   "head": "QUEUE, PIPELINE, HIT PARADE  ·  TODAY",
+   "say": "The Hit Parade is the scoreboard. | Today, one thousand six hundred and forty-eight jobs done; ninety-eight percent came back done; ninety-eight an hour; fifteen point seven kilowatt-hours. | And a bar a day since the twenty-eighth of October.",
+   "stops": [
+    {
+     "cue": 0,
+     "r": [
+      155,
+      80,
+      800,
+      50
+     ],
+     "head": "today",
+     "words": "1,648 jobs done, 33 not, 98.0% back done, 98 an hour, 15.7 kWh, $2.67 over 17 hours.",
+     "col": "main",
+     "pad": 0.12
+    },
+    {
+     "cue": 1,
+     "r": [
+      155,
+      860,
+      1430,
+      120
+     ],
+     "head": "a bar a day",
+     "words": "Jobs done in green, not done in red, since 28 October.",
+     "col": "main",
+     "pad": 0.12
+    }
+   ],
+   "lede": ""
+  },
+  {
+   "id": "act3",
+   "kind": "act",
+   "name": "Part three: one investigation",
+   "say": "Part three. One investigation: a CPU generation, and a GPU generation, followed to the end.",
+   "part": "PART THREE",
+   "big": "ONE INVESTIGATION",
+   "sub": "w21532 on the CPUs, M0049 on the cards, the same evening",
+   "col": "cpu"
+  },
+  {
+   "id": "idea",
+   "kind": "cards",
+   "name": "w21532: an old idea, a new rule",
+   "head": "15 NOVEMBER, 19:41  ·  TRIAL w21532",
+   "title": "An old idea met a new rule.",
+   "say": "The trial moved one dial: the order in which a tank takes its ladder of jobs, from as built to expand first. | It had been asked thirty-eight times before. Twice it passed, and twice one regression family stopped it, at seventy-nine percent against a floor of eighty. | On the thirteenth, the game gained a rule: a small drop passes and moves its floor. | On the fifteenth the family read seventy-nine point six, and the rule let it through.",
+   "rows": [
+    {
+     "h": 330,
+     "cards": [
+      {
+       "cue": -1,
+       "col": "cpu",
+       "head": "the variable",
+       "big": "ladder 0 → 3",
+       "words": "as built → expand first: a choice in weights.rs, and nothing else"
+      },
+      {
+       "cue": 0,
+       "col": "line",
+       "head": "asked before",
+       "big": "38 times",
+       "words": "1 Nov: 78.9%. 5 Nov: 79.7%. Floor 80.0%."
+      },
+      {
+       "cue": 1,
+       "col": "main",
+       "head": "the new rule, 13 Nov",
+       "big": "a small drop",
+       "words": "passes and moves its floor; a collapse does not"
+      },
+      {
+       "cue": 2,
+       "col": "main",
+       "head": "15 Nov",
+       "big": "79.6%",
+       "words": "the family holds; the floor moves to 0.78"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "seeds",
+   "kind": "table",
+   "name": "The seeds",
+   "head": "THE SEEDS: ONE NUMBERING, SHARED BY EVERY MACHINE",
+   "say": "How are examples kept apart? Each kind of read draws its seeds from its own block of numbers. | The first read from twenty million up. | Read-ons from three hundred million. | Held-out reads from sixty million, a block no trial touches. | The proof from seven hundred million. | Any machine given a block plays the same games.",
+   "cols": [
+    {
+     "x": 60,
+     "head": "read",
+     "w": 420
+    },
+    {
+     "x": 520,
+     "head": "block",
+     "w": 760
+    },
+    {
+     "x": 1320,
+     "head": "w21532",
+     "w": 540
+    }
+   ],
+   "rows": [
+    {
+     "cue": 0,
+     "col": "gpu",
+     "cells": [
+      "first read",
+      "20,000,000 + 10,000 × the trial",
+      "235,320,000: 150 seeds"
+     ]
+    },
+    {
+     "cue": 1,
+     "col": "main",
+     "cells": [
+      "read-ons",
+      "300,000,000 + 1,000 × the read-on",
+      "4 reads, 532 seeds"
+     ]
+    },
+    {
+     "cue": 2,
+     "col": "cpu",
+     "cells": [
+      "held-out reads",
+      "60,000,000 + 200,000 × the read",
+      "3 reads, 1,128 seeds"
+     ]
+    },
+    {
+     "cue": 3,
+     "col": "red",
+     "cells": [
+      "the proof",
+      "700,000,000 + 200,000 × the job",
+      "18 jobs, 7,200 seeds"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "follow",
+   "kind": "zoom",
+   "name": "The Timeline follows w21532",
+   "file": "live/3-timeline-w21532.png",
+   "size": [
+    1600,
+    1000
+   ],
+   "head": "TIMELINE, FOLLOWING w21532  ·  REBUILT FOR 22:50, 15 NOVEMBER",
+   "say": "Orrery draws the chain itself. | Following w21532: twenty jobs on six machines, framed in amber, each arrow the order one followed the last. | The green rules: the promotion, and main.",
+   "stops": [
+    {
+     "cue": 0,
+     "r": [
+      290,
+      140,
+      900,
+      510
+     ],
+     "head": "20 jobs, 6 machines",
+     "words": "First read on boburner; read-ons on whitewolf, boburner, macmini, calber; four held-out pieces at a time.",
+     "col": "line",
+     "pad": 0.12
+    },
+    {
+     "cue": 1,
+     "r": [
+      740,
+      90,
+      120,
+      560
+     ],
+     "head": "promotion and main",
+     "words": "r0337 at 21:07; main at 22:47.",
+     "col": "main",
+     "pad": 0.3
+    }
+   ],
+   "lede": ""
+  },
+  {
+   "id": "chain",
+   "kind": "zoom",
+   "name": "Every job, on one clock",
+   "file": "fig-chain.png",
+   "size": [
+    1600,
+    1000
+   ],
+   "head": "FIG. 5  ·  w21532, FROM ITS FIRST ASK TO MAIN",
+   "say": "Every job on one clock. Thin bars wait for a lane; thick bars run. | The first read and three read-ons: past the bar at five hundred and ten seeds, z two point nine two. One read-on was asked twice, by a race in the planner: ten minutes on the slowest machine. | Three held-out reads on fresh seeds: pooled z three point one three. | Then three rounds of proof against main: plus zero point five nine a seat, z four point two seven. | Fifty minutes running, forty-three waiting for a lane, eighty-one proving.",
+   "stops": [
+    {
+     "cue": 0,
+     "r": [
+      0,
+      130,
+      1600,
+      110
+     ],
+     "head": "sequential reads",
+     "words": "+0.63 ± 0.22 on 510 seeds; e22801 asked twice: 10.3 min, 24 Wh.",
+     "col": "main",
+     "pad": 0.12
+    },
+    {
+     "cue": 1,
+     "r": [
+      0,
+      236,
+      1600,
+      200
+     ],
+     "head": "held-out reads",
+     "words": "Four pieces of 100 on the fast lanes; +0.47 ± 0.15 on 1,128 seeds.",
+     "col": "cpu",
+     "pad": 0.12
+    },
+    {
+     "cue": 2,
+     "r": [
+      0,
+      560,
+      1600,
+      200
+     ],
+     "head": "the proof",
+     "words": "Three rounds of six: +0.59 ± 0.14 over 7,200 seeds, z 4.27. Main at 22:47.",
+     "col": "red",
+     "pad": 0.12
+    },
+    {
+     "cue": 3,
+     "r": [
+      0,
+      880,
+      1600,
+      110
+     ],
+     "head": "where the time went",
+     "words": "Ask to promotion: 43 running, 37 waiting, 6 planning. Promotion to main: 99, of which 81 proof.",
+     "col": "line",
+     "pad": 0.12
+    }
+   ],
+   "lede": ""
+  },
+  {
+   "id": "dead",
+   "kind": "zoom",
+   "name": "The paths not taken",
+   "file": "fig-funnel.png",
+   "size": [
+    1600,
+    760
+   ],
+   "head": "FIG. 6  ·  THE PATHS NOT TAKEN",
+   "say": "What happened to the other hundred and nineteen? | Twenty-one played the very games of the defaults: the change was never reached. Lucky first reads regressed. A map vetoed one. A sequential pass failed on fresh seeds. | On the cards: fourteen segments in the window, four that could not be elected, three that held, one forced in, and none taken by the game.",
+   "stops": [
+    {
+     "cue": 0,
+     "r": [
+      20,
+      120,
+      800,
+      600
+     ],
+     "head": "CPU: 120 to 1",
+     "words": "One in 120 passing is the price of believing only what repeats.",
+     "col": "cpu",
+     "pad": 0.12
+    },
+    {
+     "cue": 1,
+     "r": [
+      820,
+      120,
+      780,
+      620
+     ],
+     "head": "GPU: 14 to 0",
+     "words": "And 316 segments since, none kept.",
+     "col": "gpu",
+     "pad": 0.12
+    }
+   ],
+   "lede": ""
+  },
+  {
+   "id": "gpu",
+   "kind": "zoom",
+   "name": "M0049's evening",
+   "file": "fig-gpu.png",
+   "size": [
+    1600,
+    700
+   ],
+   "head": "FIG. 7  ·  ONE GPU GENERATION: M0049",
+   "say": "The same evening on boburner's card. | Four hours in the queue: each island keeps six segments waiting. | Forty-nine minutes, a hundred generations of two thousand and forty-eight nets. | Every floor held, z plus one point nine nine against a bar of three. Elected because three hours had passed without one. | Forty-nine minutes later the game read it eight point eight four a seat worse than the net it ships, and refused it.",
+   "stops": [
+    {
+     "cue": 0,
+     "r": [
+      100,
+      170,
+      830,
+      80
+     ],
+     "head": "4 h 01 min in the queue",
+     "words": "Six segments ahead per island: a segment trains against a ladder four hours old.",
+     "col": "gpu",
+     "pad": 0.45
+    },
+    {
+     "cue": 1,
+     "r": [
+      850,
+      170,
+      120,
+      80
+     ],
+     "head": "49.5 min on the card",
+     "words": "100 generations in 2,587 s: 20.8 million tank-steps a second.",
+     "col": "gpu",
+     "pad": 0.6
+    },
+    {
+     "cue": 2,
+     "r": [
+      900,
+      250,
+      520,
+      100
+     ],
+     "head": "forced at 3 h",
+     "words": "zg +1.99 under the bar 3.00; T3, take and hold, is almost all of it.",
+     "col": "line",
+     "pad": 0.45
+    },
+    {
+     "cue": 3,
+     "r": [
+      1240,
+      320,
+      360,
+      200
+     ],
+     "head": "refused",
+     "words": "−8.84 ± 1.22 a seat under the shipped M0030.",
+     "col": "red",
+     "pad": 0.45
+    }
+   ],
+   "lede": ""
+  },
+  {
+   "id": "lock",
+   "kind": "cards",
+   "name": "The lock",
+   "head": "WHY NO GPU GENERATION SINCE 15 NOVEMBER",
+   "title": "The floors stayed up.",
+   "say": "The election did one more thing: it raised every floor to M0049's own share. | When the game refused M0049, the top rung went back. The floors did not. | The standing top scores zero point seven eight five on take and hold. The floor is now zero point nine one eight. | Three hundred and sixteen segments, two hundred and six GPU-hours since, and none has met them.",
+   "rows": [
+    {
+     "h": 330,
+     "cards": [
+      {
+       "cue": -1,
+       "col": "line",
+       "head": "the election",
+       "big": "floors ↑",
+       "words": "every file's floor set to M0049's share less 1/16"
+      },
+      {
+       "cue": 0,
+       "col": "red",
+       "head": "the refusal",
+       "big": "top ↓",
+       "words": "the rung went back to M0032; the floors stayed"
+      },
+      {
+       "cue": 1,
+       "col": "cpu",
+       "head": "T3, take and hold",
+       "big": "0.785 < 0.918",
+       "words": "the standing top cannot meet its successor's floor"
+      },
+      {
+       "cue": 2,
+       "col": "gpu",
+       "head": "since",
+       "big": "316 / 0",
+       "words": "segments examined / held. 206 GPU-hours."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "net",
+   "kind": "zoom",
+   "name": "The net, around the tank",
+   "file": "fig-net.png",
+   "size": [
+    1600,
+    1040
+   ],
+   "head": "FIG. 8  ·  M0049'S NET, AROUND THE TANK",
+   "say": "Now the net itself, outside in. | The tank: twelve rays every thirty degrees, each read three ways: the nearest thing, the enemy, a pillbox. | The input sensor matrix: those thirty-six, then the body, the rules' own answer, the gun, the route, the arcs and two cells of memory. Sixty-four numbers. | The transform: two layers of forty-eight. Ninety-six percent of their values sit at plus or minus one. It is a net of switches. | The output matrix: six numbers. | And the gate. One neuron opens it. Open, the tank adds the net's corrections to the rules. Shut, it plays the rules exactly. It is open on less than seven steps in a hundred.",
+   "stops": [
+    {
+     "cue": 0,
+     "r": [
+      20,
+      180,
+      300,
+      300
+     ],
+     "head": "the tank",
+     "words": "Twelve rays. A ray's length: how near things were. Its brightness: how much the net minds it.",
+     "col": "line",
+     "pad": 0.12
+    },
+    {
+     "cue": 1,
+     "r": [
+      270,
+      110,
+      260,
+      800
+     ],
+     "head": "the input sensor matrix",
+     "words": "12 rays × 3 channels, and seven small blocks. 64 inputs.",
+     "col": "line",
+     "pad": 0.12
+    },
+    {
+     "cue": 2,
+     "r": [
+      740,
+      100,
+      400,
+      880
+     ],
+     "head": "the transform",
+     "words": "Two layers of 48, tanh. Hollow: never changes sign. Bright: a live switch.",
+     "col": "gpu",
+     "pad": 0.12
+    },
+    {
+     "cue": 3,
+     "r": [
+      1180,
+      140,
+      160,
+      760
+     ],
+     "head": "the output matrix",
+     "words": "Turn, speed, fire, the gate, and two memory cells written back.",
+     "col": "gpu",
+     "pad": 0.3
+    },
+    {
+     "cue": 4,
+     "r": [
+      1380,
+      520,
+      220,
+      380
+     ],
+     "head": "the gate",
+     "words": "Open on 6.8% of the recorded steps; the fire decision differs from the rules' on 1.1%.",
+     "col": "line",
+     "pad": 0.2
+    }
+   ],
+   "lede": ""
+  },
+  {
+   "id": "listen",
+   "kind": "zoom",
+   "name": "What it listens to",
+   "file": "fig-listen.png",
+   "size": [
+    1600,
+    760
+   ],
+   "head": "FIG. 9  ·  WHAT M0049 LISTENS TO",
+   "say": "What does it use? Hold each group of senses at its average and see how far the outputs move. | The rules' own answer, the near rays and its own body matter most. | The route, the sense added for the mazes, matters least. Its weights are no bigger than mutation alone would make them.",
+   "stops": [
+    {
+     "cue": 0,
+     "r": [
+      40,
+      120,
+      1200,
+      200
+     ],
+     "head": "most",
+     "words": "The rules' answer, the nearest things, its body.",
+     "col": "gpu",
+     "pad": 0.12
+    },
+    {
+     "cue": 1,
+     "r": [
+      40,
+      560,
+      1500,
+      160
+     ],
+     "head": "least: the route",
+     "words": "0.076. Exactly drift-sized: 4.8 predicted, 4.9 measured.",
+     "col": "line",
+     "pad": 0.12
+    }
+   ],
+   "lede": ""
+  },
+  {
+   "id": "better",
+   "kind": "zoom",
+   "name": "Is it getting better?",
+   "file": "fig-increase.png",
+   "size": [
+    1600,
+    760
+   ],
+   "head": "FIG. 10  ·  THE TWO YARDSTICKS",
+   "say": "Is it getting better? Two fixed yardsticks say. | The brain: eight point two two points a seat over main of the twenty-eighth of October, on the same two thousand seeds every day. Four of it in five days. Then flat. | The nets: a gauntlet share from sixty-four to eighty percent in two days. Then flat for eleven. The game has taken nothing since the tenth.",
+   "stops": [
+    {
+     "cue": 0,
+     "r": [
+      60,
+      120,
+      720,
+      600
+     ],
+     "head": "the CPU brain",
+     "words": "+3.87 on 13 Nov, +8.22 on 18 Nov; ±0.27. No generation has reached main since.",
+     "col": "cpu",
+     "pad": 0.12
+    },
+    {
+     "cue": 1,
+     "r": [
+      860,
+      120,
+      740,
+      600
+     ],
+     "head": "the GPU nets",
+     "words": "0.64 → 0.80 by 8 Nov, 0.81 since. M0030, the last the game took.",
+     "col": "gpu",
+     "pad": 0.12
+    }
+   ],
+   "lede": ""
+  },
+  {
+   "id": "act4",
+   "kind": "act",
+   "name": "Part four: the watts and the room",
+   "say": "Part four. The watts, and the room they heat.",
+   "part": "PART FOUR",
+   "big": "THE WATTS AND THE ROOM",
+   "sub": "every computation is also heat",
+   "col": "red"
+  },
+  {
+   "id": "room",
+   "kind": "zoom",
+   "name": "Three days of the room",
+   "file": "fig-room.png",
+   "size": [
+    1600,
+    1000
+   ],
+   "head": "FIG. 11  ·  THE ROOM, THE WEATHER, THE FLEET",
+   "say": "With the flat's own heating off, the fleet is the heating. | The room has stayed within half a degree of eighty Fahrenheit for most of two days. | Full tilt sheds nothing, by design: it took the room to eighty-two. | And since noon today the fleet gives four hundred and fifty watts, and the room slides.",
+   "stops": [
+    {
+     "cue": 0,
+     "r": [
+      100,
+      150,
+      1480,
+      340
+     ],
+     "head": "the room",
+     "words": "26.7 °C ± 0.25, the ceiling 27.2. Two thermometers, one corner.",
+     "col": "line",
+     "pad": 0.12
+    },
+    {
+     "cue": 1,
+     "r": [
+      900,
+      130,
+      260,
+      360
+     ],
+     "head": "full tilt",
+     "words": "18 Nov 16:32 to 19:17: every machine computes, nothing is held.",
+     "col": "line",
+     "pad": 0.25
+    },
+    {
+     "cue": 2,
+     "r": [
+      60,
+      700,
+      1520,
+      240
+     ],
+     "head": "the fleet's watts",
+     "words": "400 to 1,300 W; since noon about 450.",
+     "col": "cpu",
+     "pad": 0.05
+    }
+   ],
+   "lede": ""
+  },
+  {
+   "id": "tau",
+   "kind": "calc",
+   "name": "Time constants",
+   "head": "CALCULATION  ·  τ = R × C",
+   "title": "A part answers in a minute; the room in ten hours.",
+   "say": "Everything here heats like a small room: its time constant is how many degrees a watt, times how many joules a degree. | boburner's card: zero point three five times two hundred and thirteen, seventy-five seconds. | whitewolf's card: six minutes. | The room: four point two megajoules a degree, over a hundred and twenty watts a degree: nine point seven hours. That is why the controller waits forty minutes between changes.",
+   "given": [
+    [
+     "boburner's card",
+     "0.35 °C/W",
+     "gpu"
+    ],
+    [
+     "its heat capacity",
+     "213 J/°C",
+     "gpu"
+    ],
+    [
+     "the room",
+     "4.2 MJ/°C",
+     "red"
+    ],
+    [
+     "the walls (in use)",
+     "120 W/°C",
+     "red"
+    ]
+   ],
+   "lines": [
+    {
+     "cue": 0,
+     "label": "the card",
+     "expr": "0.35 × 213",
+     "result": "75 s",
+     "note": "the page says 74",
+     "col": "gpu"
+    },
+    {
+     "cue": 1,
+     "label": "whitewolf",
+     "expr": "0.48 × 738",
+     "result": "6 min",
+     "note": "",
+     "col": "gpu"
+    },
+    {
+     "cue": 2,
+     "label": "the room",
+     "expr": "4.2 × 10⁶ / 120",
+     "result": "9.7 h",
+     "note": "35,000 s",
+     "col": "red"
+    }
+   ]
+  },
+  {
+   "id": "budget",
+   "kind": "calc",
+   "name": "The budget at 16:31",
+   "head": "CALCULATION  ·  16:31, 19 NOVEMBER",
+   "title": "The watts the room wants.",
+   "say": "The budget at sixteen thirty-one today. The room at twenty-six point three five, the target twenty-six point seven, falling twelve hundredths a degree an hour. | The distance term: forty-two watts. | The falling term: a hundred and forty. | The budget: one hundred and eighty-two watts. Most of it is where the room is heading, not where it is.",
+   "given": [
+    [
+     "the room",
+     "26.35 °C",
+     "cpu"
+    ],
+    [
+     "the target",
+     "26.70 °C",
+     "main"
+    ],
+    [
+     "its slope",
+     "−0.12 °C/h",
+     "cpu"
+    ],
+    [
+     "UA, C",
+     "120 W/°C, 4.2 MJ/°C",
+     "red"
+    ]
+   ],
+   "lines": [
+    {
+     "cue": 0,
+     "label": "distance",
+     "expr": "−120 × (26.35 − 26.70)",
+     "result": "+42 W",
+     "note": "",
+     "col": "cpu"
+    },
+    {
+     "cue": 1,
+     "label": "falling",
+     "expr": "−4.2e6 × (−0.12) / 3600",
+     "result": "+140 W",
+     "note": "",
+     "col": "cpu"
+    },
+    {
+     "cue": 2,
+     "label": "budget",
+     "expr": "+182 W",
+     "big": true,
+     "note": "the log: +186",
+     "col": "line"
+    }
+   ]
+  },
+  {
+   "id": "energy",
+   "kind": "zoom",
+   "name": "Where the joules went",
+   "file": "fig-energy.png",
+   "size": [
+    1600,
+    760
+   ],
+   "head": "FIG. 12  ·  217 MJ IN 74 HOURS",
+   "say": "Two hundred and seventeen megajoules in seventy-four hours: sixty kilowatt-hours, about ten dollars. | And what each joule bought: columbia does a job for four watt-hours; bosporus for forty-eight. That is why the hold sheds the old servers first.",
+   "stops": [
+    {
+     "cue": 0,
+     "r": [
+      40,
+      120,
+      760,
+      560
+     ],
+     "head": "into the room",
+     "words": "calber, boburner and whitewolf, each about 50 MJ; the Supermicros a model.",
+     "col": "cpu",
+     "pad": 0.12
+    },
+    {
+     "cue": 1,
+     "r": [
+      800,
+      120,
+      800,
+      560
+     ],
+     "head": "for each job",
+     "words": "columbia 4.4 Wh, saskatchewan 8.0, boburner 13.2 ... bosporus 47.6.",
+     "col": "gpu",
+     "pad": 0.12
+    }
+   ],
+   "lede": ""
+  },
+  {
+   "id": "fixed",
+   "kind": "cards",
+   "name": "Found, and fixed",
+   "head": "FOUND WHILE THE REPORT WAS WRITTEN",
+   "title": "Two faults, found by looking.",
+   "say": "Two faults were found by looking. | The room controller woke calber every forty minutes; calber never answered, and the three lanes the controller had paused itself waited behind it. Now a machine that does not answer is left for three hours. At twelve minutes past five, whitewolf's card went back to work. | And the telemetry fetched every older day again every five minutes: fourteen point nine gigabytes, of which point one four is real. The fetch is fixed. Removing the copies waits for a person.",
+   "rows": [
+    {
+     "h": 330,
+     "cards": [
+      {
+       "cue": 0,
+       "col": "red",
+       "head": "the hold",
+       "big": "4 packets",
+       "words": "to a machine that did not answer; three lanes held behind it"
+      },
+      {
+       "cue": 1,
+       "col": "main",
+       "head": "fixed, live 17:12",
+       "big": "3 h",
+       "words": "before a deaf machine is asked again; whitewolf's card works"
+      },
+      {
+       "cue": 2,
+       "col": "red",
+       "head": "the telemetry",
+       "big": "14.9 GB",
+       "words": "0.14 GB real; every older day fetched again each pull"
+      },
+      {
+       "cue": 2,
+       "col": "main",
+       "head": "fixed",
+       "big": "named",
+       "words": "every file the Mac has, with its size; proved on a fake machine"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ledger",
+   "kind": "ledger2",
+   "name": "What went well, and where to step in",
+   "title": "What went well, and where to step in",
+   "left": "went well",
+   "right": "step in",
+   "say": "What went well. | Sixty-five thousand jobs, seven in a thousand failed. The brain eight points a seat better on fixed seeds. A proof that refused a generation that did not repeat. A room held by the fleet's own heat. | Where to step in. | First: when the game refuses a net, put the floors back. Second: let the game's verdict weigh in the election. Third: give the brain something new to search; the keeper says it needs a change. Then the race that asked a read twice, a proof sized by each machine's speed, and a GPU queue sized in minutes.",
+   "good": [
+    {
+     "cue": 0,
+     "words": "65,601 jobs done, 0.7% failed; 98% of today's came back done."
+    },
+    {
+     "cue": 0,
+     "words": "The brain +8.22 ± 0.27 a seat over main of 28 Oct, on the same seeds every day."
+    },
+    {
+     "cue": 0,
+     "words": "The proof refused r0338 (+0.07 over 9,600 seeds): it believes only what repeats."
+    },
+    {
+     "cue": 0,
+     "words": "Lanes allowed to work, work: 95 to 99.6% busy, no machine waiting on another."
+    },
+    {
+     "cue": 0,
+     "words": "The room held near 80 °F by the fleet's own heat since 17 November."
+    }
+   ],
+   "step": [
+    {
+     "cue": 2,
+     "words": "1. When the game refuses a milestone, put the floors back to the standing top's."
+    },
+    {
+     "cue": 2,
+     "words": "2. Let the bridge's verdict weigh in the GPU election."
+    },
+    {
+     "cue": 2,
+     "words": "3. Give the brain new dials to search: at its easiest bar it finds nothing."
+    },
+    {
+     "cue": 2,
+     "words": "4. Fix the race that asked a read-on twice; size the proof by each lane's speed."
+    },
+    {
+     "cue": 2,
+     "words": "5. Six GPU segments ahead is four hours: size the queue in minutes."
+    }
+   ]
+  },
+  {
+   "id": "end",
+   "kind": "end",
+   "name": "The close, and the credits",
+   "say": "A change is believed only on seeds it was not chosen on, and kept only if it beats what stands. The centre asks; the planets answer."
+  }
+ ]
+}

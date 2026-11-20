@@ -1,0 +1,2199 @@
+{
+ "example": {
+  "trial": "w21532",
+  "promotion": "r0337",
+  "dial": "ladder",
+  "from_value": 0,
+  "to_value": 3,
+  "from_name": "as_built",
+  "to_name": "expand_first",
+  "line_before": "2a1a1e9 (main f5794cc + r0336)",
+  "line_after": "81e0df3",
+  "main_before": "f5794cc",
+  "main_after": "81e0df3",
+  "dial_doc": "weights.rs: Ladder \"ladder\" 0.0, \"auto: the ladder's order, defend base first in each (choice: as_built | expand_before_hunt | hunt_first | expand_first)\"",
+  "source": "A/B version trial (planner ab_trials): every choice version not the default, asked once alone on each new set of defaults; suggest.py leaves A/B versions out",
+  "asked_on_defaults": "2a1a1e9 (the local line: main f5794cc + r0336), the 39th ladder=3 A/B trial since 29 Oct",
+  "earlier_blocks": [
+   "w5290 1 Nov: held +1.10 +/- 0.33, blocked: a-tank-under-a-ready-gun 78.9% under floor 80.0% (f0127)",
+   "w11272 5 Nov: held +0.47 +/- 0.25, blocked: a-tank-under-a-ready-gun 79.7% under floor 80.0% (f0264)",
+   "w21532 15 Nov: 79.6% = a small drop, passes and moves the floor to 0.78 (f0345); rule from treadcore 6a706cd, 13 Nov 10:24"
+  ],
+  "commit_81e0df3": "promote grove/w21532 as the brain's defaults -- ladder 0 -> 3; 21:07:42; touched weights.rs and scenarios/families/a-tank-under-a-ready-gun.toml"
+ },
+ "trial_chain": [
+  {
+   "id": "w21532",
+   "title": "ab-ladder-expand_first: ladder 3",
+   "stage": "first",
+   "chain": "w21532",
+   "lane": "boburner",
+   "priority": "normal",
+   "queued": "2026-11-15T19:41:26",
+   "started": "2026-11-15T19:52:32",
+   "ended": "2026-11-15T19:57:52",
+   "wait_min": 11.1,
+   "run_min": 5.33,
+   "seconds": 319.9,
+   "requeued": 0,
+   "seeds_asked": 150,
+   "seed0": 235320000,
+   "map": "all",
+   "commit": "2a1a1e9",
+   "watts_model": 118.8,
+   "wh_model": 10.56,
+   "result": {
+    "d": 0.44,
+    "se": 0.37,
+    "seeds": 150,
+    "z": 1.19,
+    "maps_up": [],
+    "maps_down": []
+   },
+   "pooled_after": {
+    "d": 0.44,
+    "se": 0.37,
+    "z": 1.19,
+    "seeds": 150,
+    "maps_up": [],
+    "maps_down": []
+   }
+  },
+  {
+   "id": "e22790",
+   "title": "read on 2 of w21532 (75 seeds more, z +1.19 on 150)",
+   "stage": "read",
+   "chain": "w21532",
+   "lane": "whitewolf",
+   "priority": "high",
+   "queued": "2026-11-15T19:58:17",
+   "started": "2026-11-15T19:59:47",
+   "ended": "2026-11-15T20:06:16",
+   "wait_min": 1.49,
+   "run_min": 6.49,
+   "seconds": 389.1,
+   "requeued": 0,
+   "seeds_asked": 75,
+   "seed0": 322790000,
+   "map": "all",
+   "commit": "2a1a1e9",
+   "watts_model": 131.2,
+   "wh_model": 14.18,
+   "result": {
+    "d": 0.9,
+    "se": 0.57,
+    "seeds": 75,
+    "z": 1.58,
+    "maps_up": [],
+    "maps_down": [
+     "fortressisles2"
+    ]
+   },
+   "pooled_after": {
+    "d": 0.576,
+    "se": 0.31,
+    "z": 1.86,
+    "seeds": 225,
+    "maps_up": [],
+    "maps_down": [
+     "fortressisles2"
+    ]
+   }
+  },
+  {
+   "id": "e22794",
+   "title": "read on 3 of w21532 (113 seeds more, z +1.86 on 225)",
+   "stage": "read",
+   "chain": "w21532",
+   "lane": "boburner",
+   "priority": "high",
+   "queued": "2026-11-15T20:07:27",
+   "started": "2026-11-15T20:09:12",
+   "ended": "2026-11-15T20:13:39",
+   "wait_min": 1.74,
+   "run_min": 4.45,
+   "seconds": 267.1,
+   "requeued": 0,
+   "seeds_asked": 113,
+   "seed0": 322794000,
+   "map": "all",
+   "commit": "2a1a1e9",
+   "watts_model": 118.9,
+   "wh_model": 8.82,
+   "result": {
+    "d": 0.54,
+    "se": 0.46,
+    "seeds": 113,
+    "z": 1.17,
+    "maps_up": [
+     "big-lizard",
+     "industry"
+    ],
+    "maps_down": []
+   },
+   "pooled_after": {
+    "d": 0.565,
+    "se": 0.257,
+    "z": 2.2,
+    "seeds": 338,
+    "maps_up": [
+     "europe"
+    ],
+    "maps_down": [
+     "fortressisles2"
+    ]
+   }
+  },
+  {
+   "id": "e22799",
+   "title": "read on 4 of w21532 (172 seeds more, z +2.20 on 338)",
+   "stage": "read",
+   "chain": "w21532",
+   "lane": "macmini",
+   "priority": "high",
+   "queued": "2026-11-15T20:14:13",
+   "started": "2026-11-15T20:16:56",
+   "ended": "2026-11-15T20:20:27",
+   "wait_min": 2.7,
+   "run_min": 3.52,
+   "seconds": 211.0,
+   "requeued": 0,
+   "seeds_asked": 172,
+   "seed0": 322799000,
+   "map": "all",
+   "commit": "2a1a1e9",
+   "watts_model": 29.5,
+   "wh_model": 1.73,
+   "result": {
+    "d": 0.79,
+    "se": 0.4,
+    "seeds": 172,
+    "z": 1.98,
+    "maps_up": [
+     "atlantic"
+    ],
+    "maps_down": []
+   },
+   "pooled_after": {
+    "d": 0.631,
+    "se": 0.216,
+    "z": 2.92,
+    "seeds": 510,
+    "maps_up": [],
+    "maps_down": []
+   }
+  },
+  {
+   "id": "e22801",
+   "title": "read on 4 of w21532 (172 seeds more, z +2.20 on 338)",
+   "stage": "read",
+   "chain": "w21532",
+   "lane": "calber",
+   "priority": "high",
+   "queued": "2026-11-15T20:20:34",
+   "started": "2026-11-15T20:21:51",
+   "ended": "2026-11-15T20:32:11",
+   "wait_min": 1.27,
+   "run_min": 10.34,
+   "seconds": 620.3,
+   "requeued": 0,
+   "seeds_asked": 172,
+   "seed0": 322801000,
+   "map": "all",
+   "commit": "2a1a1e9",
+   "watts_model": 140.9,
+   "wh_model": 24.27,
+   "result": {
+    "d": 0.49,
+    "se": 0.38,
+    "seeds": 172,
+    "z": 1.29,
+    "maps_up": [],
+    "maps_down": []
+   },
+   "pooled_after": {
+    "d": 0.596,
+    "se": 0.188,
+    "z": 3.17,
+    "seeds": 682,
+    "maps_up": [],
+    "maps_down": []
+   }
+  },
+  {
+   "id": "h1503-p1",
+   "title": "held-out piece 1 of 4 of read 1 of w21532 (100 seeds)",
+   "stage": "held",
+   "chain": "w21532",
+   "lane": "boburner",
+   "priority": "high",
+   "queued": "2026-11-15T20:32:44",
+   "started": "2026-11-15T20:33:57",
+   "ended": "2026-11-15T20:38:03",
+   "wait_min": 1.21,
+   "run_min": 4.1,
+   "seconds": 246.1,
+   "requeued": 0,
+   "seeds_asked": 100,
+   "seed0": 360600000,
+   "map": "all",
+   "commit": "2a1a1e9",
+   "watts_model": 118.8,
+   "wh_model": 8.12,
+   "result": {
+    "d": 1.2,
+    "se": 0.49,
+    "seeds": 100,
+    "z": 2.45,
+    "maps_up": [
+     "fortressisles2"
+    ],
+    "maps_down": []
+   }
+  },
+  {
+   "id": "h1503-p2",
+   "title": "held-out piece 2 of 4 of read 1 of w21532 (100 seeds)",
+   "stage": "held",
+   "chain": "w21532",
+   "lane": "macmini",
+   "priority": "high",
+   "queued": "2026-11-15T20:32:47",
+   "started": "2026-11-15T20:35:41",
+   "ended": "2026-11-15T20:37:47",
+   "wait_min": 2.9,
+   "run_min": 2.11,
+   "seconds": 126.5,
+   "requeued": 0,
+   "seeds_asked": 100,
+   "seed0": 360600100,
+   "map": "all",
+   "commit": "2a1a1e9",
+   "watts_model": 29.5,
+   "wh_model": 1.04,
+   "result": {
+    "d": 0.01,
+    "se": 0.45,
+    "seeds": 100,
+    "z": 0.02,
+    "maps_up": [],
+    "maps_down": [
+     "fortressisles2"
+    ]
+   }
+  },
+  {
+   "id": "h1503-p3",
+   "title": "held-out piece 3 of 4 of read 1 of w21532 (100 seeds)",
+   "stage": "held",
+   "chain": "w21532",
+   "lane": "saskatchewan",
+   "priority": "high",
+   "queued": "2026-11-15T20:32:49",
+   "started": "2026-11-15T20:36:14",
+   "ended": "2026-11-15T20:41:04",
+   "wait_min": 3.41,
+   "run_min": 4.84,
+   "seconds": 290.4,
+   "requeued": 0,
+   "seeds_asked": 100,
+   "seed0": 360600200,
+   "map": "all",
+   "commit": "2a1a1e9",
+   "watts_model": 185.7,
+   "wh_model": 14.98,
+   "result": {
+    "d": 0.67,
+    "se": 0.46,
+    "seeds": 100,
+    "z": 1.46,
+    "maps_up": [
+     "europe"
+    ],
+    "maps_down": []
+   }
+  },
+  {
+   "id": "h1503-p4",
+   "title": "held-out piece 4 of 4 of read 1 of w21532 (100 seeds)",
+   "stage": "held",
+   "chain": "w21532",
+   "lane": "saskatchewan-2",
+   "priority": "high",
+   "queued": "2026-11-15T20:32:52",
+   "started": "2026-11-15T20:36:37",
+   "ended": "2026-11-15T20:41:44",
+   "wait_min": 3.74,
+   "run_min": 5.11,
+   "seconds": 306.6,
+   "requeued": 0,
+   "seeds_asked": 100,
+   "seed0": 360600300,
+   "map": "all",
+   "commit": "2a1a1e9",
+   "watts_model": 0.0,
+   "wh_model": 0.0,
+   "result": {
+    "d": 0.73,
+    "se": 0.59,
+    "seeds": 100,
+    "z": 1.24,
+    "maps_up": [],
+    "maps_down": []
+   }
+  },
+  {
+   "id": "h1503",
+   "title": "held-out read 1 of w21532, merged from its four pieces by the planner (pool.sh)",
+   "stage": "held",
+   "chain": "w21532",
+   "lane": "pieces",
+   "merged_at": "2026-11-15T20:42:07",
+   "result": {
+    "d": 0.56,
+    "se": 0.26,
+    "seeds": 376,
+    "z": 2.15,
+    "maps_up": [],
+    "maps_down": []
+   },
+   "pooled_after": {
+    "d": 0.56,
+    "se": 0.26,
+    "z": 2.15,
+    "seeds": 376,
+    "maps_up": [],
+    "maps_down": []
+   }
+  },
+  {
+   "id": "h1504-p1",
+   "title": "held-out piece 1 of 4 of read 2 of w21532 (100 seeds)",
+   "stage": "held",
+   "chain": "w21532",
+   "lane": "boburner",
+   "priority": "high",
+   "queued": "2026-11-15T20:42:19",
+   "started": "2026-11-15T20:43:44",
+   "ended": "2026-11-15T20:47:47",
+   "wait_min": 1.41,
+   "run_min": 4.04,
+   "seconds": 242.2,
+   "requeued": 0,
+   "seeds_asked": 100,
+   "seed0": 360800000,
+   "map": "all",
+   "commit": "2a1a1e9",
+   "watts_model": 118.8,
+   "wh_model": 7.99,
+   "result": {
+    "d": -0.11,
+    "se": 0.47,
+    "seeds": 100,
+    "z": -0.23,
+    "maps_up": [],
+    "maps_down": []
+   }
+  },
+  {
+   "id": "h1504-p2",
+   "title": "held-out piece 2 of 4 of read 2 of w21532 (100 seeds)",
+   "stage": "held",
+   "chain": "w21532",
+   "lane": "macmini",
+   "priority": "high",
+   "queued": "2026-11-15T20:42:22",
+   "started": "2026-11-15T20:45:13",
+   "ended": "2026-11-15T20:47:16",
+   "wait_min": 2.85,
+   "run_min": 2.05,
+   "seconds": 123.1,
+   "requeued": 0,
+   "seeds_asked": 100,
+   "seed0": 360800100,
+   "map": "all",
+   "commit": "2a1a1e9",
+   "watts_model": 29.5,
+   "wh_model": 1.01,
+   "result": {
+    "d": 0.6,
+    "se": 0.48,
+    "seeds": 100,
+    "z": 1.25,
+    "maps_up": [
+     "proving"
+    ],
+    "maps_down": []
+   }
+  },
+  {
+   "id": "h1504-p3",
+   "title": "held-out piece 3 of 4 of read 2 of w21532 (100 seeds)",
+   "stage": "held",
+   "chain": "w21532",
+   "lane": "macmini",
+   "priority": "high",
+   "queued": "2026-11-15T20:42:24",
+   "started": "2026-11-15T20:47:19",
+   "ended": "2026-11-15T20:49:24",
+   "wait_min": 4.91,
+   "run_min": 2.08,
+   "seconds": 124.5,
+   "requeued": 0,
+   "seeds_asked": 100,
+   "seed0": 360800200,
+   "map": "all",
+   "commit": "2a1a1e9",
+   "watts_model": 29.5,
+   "wh_model": 1.02,
+   "result": {
+    "d": 0.82,
+    "se": 0.39,
+    "seeds": 100,
+    "z": 2.1,
+    "maps_up": [
+     "constanine"
+    ],
+    "maps_down": [
+     "flame-war-modified",
+     "proving"
+    ]
+   }
+  },
+  {
+   "id": "h1504-p4",
+   "title": "held-out piece 4 of 4 of read 2 of w21532 (100 seeds)",
+   "stage": "held",
+   "chain": "w21532",
+   "lane": "boburner",
+   "priority": "high",
+   "queued": "2026-11-15T20:42:27",
+   "started": "2026-11-15T20:47:50",
+   "ended": "2026-11-15T20:51:50",
+   "wait_min": 5.38,
+   "run_min": 4.0,
+   "seconds": 240.1,
+   "requeued": 0,
+   "seeds_asked": 100,
+   "seed0": 360800300,
+   "map": "all",
+   "commit": "2a1a1e9",
+   "watts_model": 118.8,
+   "wh_model": 7.92,
+   "result": {
+    "d": 0.22,
+    "se": 0.55,
+    "seeds": 100,
+    "z": 0.4,
+    "maps_up": [],
+    "maps_down": []
+   }
+  },
+  {
+   "id": "h1504",
+   "title": "held-out read 2 of w21532, merged from its four pieces by the planner (pool.sh)",
+   "stage": "held",
+   "chain": "w21532",
+   "lane": "pieces",
+   "merged_at": "2026-11-15T20:51:56",
+   "result": {
+    "d": 0.28,
+    "se": 0.25,
+    "seeds": 376,
+    "z": 1.12,
+    "maps_up": [
+     "island"
+    ],
+    "maps_down": []
+   },
+   "pooled_after": {
+    "d": 0.415,
+    "se": 0.18,
+    "z": 2.3,
+    "seeds": 752,
+    "maps_up": [
+     "europe"
+    ],
+    "maps_down": []
+   }
+  },
+  {
+   "id": "h1505-p1",
+   "title": "held-out piece 1 of 4 of read 3 of w21532 (100 seeds)",
+   "stage": "held",
+   "chain": "w21532",
+   "lane": "macmini",
+   "priority": "high",
+   "queued": "2026-11-15T20:52:08",
+   "started": "2026-11-15T20:54:15",
+   "ended": "2026-11-15T20:56:16",
+   "wait_min": 2.11,
+   "run_min": 2.02,
+   "seconds": 121.1,
+   "requeued": 0,
+   "seeds_asked": 100,
+   "seed0": 361000000,
+   "map": "all",
+   "commit": "2a1a1e9",
+   "watts_model": 29.5,
+   "wh_model": 0.99,
+   "result": {
+    "d": 0.39,
+    "se": 0.44,
+    "seeds": 100,
+    "z": 0.89,
+    "maps_up": [
+     "constanine"
+    ],
+    "maps_down": []
+   }
+  },
+  {
+   "id": "h1505-p2",
+   "title": "held-out piece 2 of 4 of read 3 of w21532 (100 seeds)",
+   "stage": "held",
+   "chain": "w21532",
+   "lane": "macmini",
+   "priority": "high",
+   "queued": "2026-11-15T20:52:11",
+   "started": "2026-11-15T20:56:28",
+   "ended": "2026-11-15T20:58:29",
+   "wait_min": 4.28,
+   "run_min": 2.02,
+   "seconds": 121.1,
+   "requeued": 0,
+   "seeds_asked": 100,
+   "seed0": 361000100,
+   "map": "all",
+   "commit": "2a1a1e9",
+   "watts_model": 29.5,
+   "wh_model": 0.99,
+   "result": {
+    "d": 0.65,
+    "se": 0.59,
+    "seeds": 100,
+    "z": 1.1,
+    "maps_up": [],
+    "maps_down": []
+   }
+  },
+  {
+   "id": "h1505-p3",
+   "title": "held-out piece 3 of 4 of read 3 of w21532 (100 seeds)",
+   "stage": "held",
+   "chain": "w21532",
+   "lane": "boburner",
+   "priority": "high",
+   "queued": "2026-11-15T20:52:14",
+   "started": "2026-11-15T20:56:30",
+   "ended": "2026-11-15T21:00:30",
+   "wait_min": 4.27,
+   "run_min": 4.0,
+   "seconds": 240.1,
+   "requeued": 0,
+   "seeds_asked": 100,
+   "seed0": 361000200,
+   "map": "all",
+   "commit": "2a1a1e9",
+   "watts_model": 118.8,
+   "wh_model": 7.92,
+   "result": {
+    "d": 1.65,
+    "se": 0.58,
+    "seeds": 100,
+    "z": 2.84,
+    "maps_up": [
+     "europe",
+     "fortressislesx",
+     "generated"
+    ],
+    "maps_down": []
+   }
+  },
+  {
+   "id": "h1505-p4",
+   "title": "held-out piece 4 of 4 of read 3 of w21532 (100 seeds)",
+   "stage": "held",
+   "chain": "w21532",
+   "lane": "macmini",
+   "priority": "high",
+   "queued": "2026-11-15T20:52:17",
+   "started": "2026-11-15T20:58:33",
+   "ended": "2026-11-15T21:00:40",
+   "wait_min": 6.26,
+   "run_min": 2.13,
+   "seconds": 127.6,
+   "requeued": 0,
+   "seeds_asked": 100,
+   "seed0": 361000300,
+   "map": "all",
+   "commit": "2a1a1e9",
+   "watts_model": 29.5,
+   "wh_model": 1.05,
+   "result": {
+    "d": 0.12,
+    "se": 0.52,
+    "seeds": 100,
+    "z": 0.23,
+    "maps_up": [
+     "flame-war-modified"
+    ],
+    "maps_down": [
+     "proving"
+    ]
+   }
+  },
+  {
+   "id": "h1505",
+   "title": "held-out read 3 of w21532, merged from its four pieces by the planner (pool.sh)",
+   "stage": "held",
+   "chain": "w21532",
+   "lane": "pieces",
+   "merged_at": "2026-11-15T21:00:41",
+   "result": {
+    "d": 0.62,
+    "se": 0.28,
+    "seeds": 376,
+    "z": 2.21,
+    "maps_up": [
+     "fortressislesx"
+    ],
+    "maps_down": []
+   },
+   "pooled_after": {
+    "d": 0.475,
+    "se": 0.152,
+    "z": 3.13,
+    "seeds": 1128,
+    "maps_up": [
+     "fortressislesx",
+     "europe"
+    ],
+    "maps_down": []
+   }
+  },
+  {
+   "id": "f0345",
+   "title": "families: grove/w21532",
+   "stage": "families",
+   "chain": "w21532",
+   "lane": "calber",
+   "priority": "high",
+   "queued": "2026-11-15T21:00:56",
+   "started": "2026-11-15T21:01:18",
+   "ended": "2026-11-15T21:02:06",
+   "wait_min": 0.36,
+   "run_min": 0.81,
+   "seconds": 48.4,
+   "requeued": 0,
+   "seeds_asked": null,
+   "seed0": null,
+   "map": null,
+   "commit": "2a1a1e9",
+   "watts_model": 142.5,
+   "wh_model": 1.92
+  },
+  {
+   "id": "gx0084",
+   "title": "the gauntlet's floors: grove/w21532's dials on the rules",
+   "stage": "other",
+   "chain": "w21532",
+   "lane": "macmini",
+   "priority": "high",
+   "queued": "2026-11-15T21:02:32",
+   "started": "2026-11-15T21:03:46",
+   "ended": "2026-11-15T21:03:50",
+   "wait_min": 1.23,
+   "run_min": 0.07,
+   "seconds": 4.1,
+   "requeued": 0,
+   "seeds_asked": null,
+   "seed0": null,
+   "map": null,
+   "commit": "2a1a1e9",
+   "watts_model": 29.9,
+   "wh_model": 0.03
+  },
+  {
+   "id": "r0337-promote",
+   "title": "promote grove/w21532: tests and families on a branch",
+   "stage": "promote",
+   "chain": "w21532",
+   "lane": "macmini",
+   "priority": "high",
+   "queued": "2026-11-15T21:05:15",
+   "started": "2026-11-15T21:06:54",
+   "ended": "2026-11-15T21:07:42",
+   "wait_min": 1.65,
+   "run_min": 0.81,
+   "seconds": 48.6,
+   "requeued": 0,
+   "seeds_asked": null,
+   "seed0": null,
+   "map": null,
+   "commit": null,
+   "watts_model": 30.3,
+   "wh_model": 0.41
+  }
+ ],
+ "builds": [
+  {
+   "id": "prep-columbia-81e0df3",
+   "title": "build 81e0df3 on columbia",
+   "stage": "build",
+   "chain": "build 81e0df3",
+   "lane": "columbia",
+   "started": "2026-11-15T21:10:34",
+   "ended": "2026-11-15T21:11:37",
+   "run_min": 1.06,
+   "seconds": 63.7,
+   "watts_model": 16.6,
+   "wh_model": 0.29
+  },
+  {
+   "id": "prep-calber-81e0df3",
+   "title": "build 81e0df3 on calber",
+   "stage": "build",
+   "chain": "build 81e0df3",
+   "lane": "calber",
+   "started": "2026-11-15T21:12:06",
+   "ended": "2026-11-15T21:12:31",
+   "run_min": 0.41,
+   "seconds": 24.3,
+   "watts_model": 138.5,
+   "wh_model": 0.93
+  },
+  {
+   "id": "prep-macmini-81e0df3",
+   "title": "build 81e0df3 on macmini",
+   "stage": "build",
+   "chain": "build 81e0df3",
+   "lane": "macmini",
+   "started": "2026-11-15T21:12:37",
+   "ended": "2026-11-15T21:12:51",
+   "run_min": 0.24,
+   "seconds": 14.3,
+   "watts_model": 24.4,
+   "wh_model": 0.1
+  },
+  {
+   "id": "prep-boburner-81e0df3",
+   "title": "build 81e0df3 on boburner",
+   "stage": "build",
+   "chain": "build 81e0df3",
+   "lane": "boburner",
+   "started": "2026-11-15T21:12:52",
+   "ended": "2026-11-15T21:13:12",
+   "run_min": 0.32,
+   "seconds": 19.3,
+   "watts_model": 117.0,
+   "wh_model": 0.63
+  },
+  {
+   "id": "prep-saskatchewan-81e0df3",
+   "title": "build 81e0df3 on saskatchewan",
+   "stage": "build",
+   "chain": "build 81e0df3",
+   "lane": "saskatchewan",
+   "started": "2026-11-15T21:13:49",
+   "ended": "2026-11-15T21:14:23",
+   "run_min": 0.57,
+   "seconds": 34.5,
+   "watts_model": 188.7,
+   "wh_model": 1.81
+  },
+  {
+   "id": "prep-whitewolf-81e0df3",
+   "title": "build 81e0df3 on whitewolf",
+   "stage": "build",
+   "chain": "build 81e0df3",
+   "lane": "whitewolf",
+   "started": "2026-11-15T21:16:27",
+   "ended": "2026-11-15T21:16:54",
+   "run_min": 0.46,
+   "seconds": 27.3,
+   "watts_model": 130.0,
+   "wh_model": 0.99
+  }
+ ],
+ "proof": [
+  {
+   "id": "pv0499",
+   "title": "proof 1 of the line 81e0df3 against main (400 seeds)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "saskatchewan",
+   "priority": "high",
+   "queued": "2026-11-15T21:20:15",
+   "started": "2026-11-15T21:21:32",
+   "ended": "2026-11-15T21:40:10",
+   "wait_min": 1.27,
+   "run_min": 18.63,
+   "seconds": 1118.0,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 799800000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 189.4,
+   "wh_model": 58.8,
+   "result": {
+    "d": -0.43,
+    "se": 0.61,
+    "seeds": 400,
+    "z": -0.7,
+    "maps_up": [
+     "constanine"
+    ],
+    "maps_down": [
+     "industry"
+    ]
+   },
+   "result_line_lead": {
+    "lead": 0.43,
+    "se": 0.61,
+    "seeds": 400,
+    "line_ahead_on": [
+     "industry"
+    ],
+    "line_behind_on": [
+     "constanine"
+    ]
+   },
+   "pooled_lead_after": {
+    "lead": 0.43,
+    "se": 0.61,
+    "z": 0.7,
+    "seeds": 400,
+    "line_behind_on": [
+     "constanine"
+    ],
+    "line_ahead_on": [
+     "industry"
+    ]
+   }
+  },
+  {
+   "id": "pv0500",
+   "title": "proof 2 of the line 81e0df3 against main (400 seeds)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "saskatchewan-2",
+   "priority": "high",
+   "queued": "2026-11-15T21:20:18",
+   "started": "2026-11-15T21:22:07",
+   "ended": "2026-11-15T21:40:26",
+   "wait_min": 1.8,
+   "run_min": 18.32,
+   "seconds": 1099.0,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 800000000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 0.0,
+   "wh_model": 0.0,
+   "result": {
+    "d": -0.64,
+    "se": 0.64,
+    "seeds": 400,
+    "z": -1.0,
+    "maps_up": [],
+    "maps_down": []
+   },
+   "result_line_lead": {
+    "lead": 0.64,
+    "se": 0.64,
+    "seeds": 400,
+    "line_ahead_on": [],
+    "line_behind_on": []
+   },
+   "pooled_lead_after": {
+    "lead": 0.53,
+    "se": 0.442,
+    "z": 1.2,
+    "seeds": 800,
+    "line_behind_on": [],
+    "line_ahead_on": []
+   }
+  },
+  {
+   "id": "pv0501",
+   "title": "proof 3 of the line 81e0df3 against main (400 seeds)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "macmini",
+   "priority": "high",
+   "queued": "2026-11-15T21:20:21",
+   "started": "2026-11-15T21:22:16",
+   "ended": "2026-11-15T21:29:32",
+   "wait_min": 1.9,
+   "run_min": 7.27,
+   "seconds": 436.1,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 800200000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 30.1,
+   "wh_model": 3.64,
+   "result": {
+    "d": -1.44,
+    "se": 0.61,
+    "seeds": 400,
+    "z": -2.36,
+    "maps_up": [],
+    "maps_down": [
+     "europe",
+     "fortressislesx",
+     "naval",
+     "proving"
+    ]
+   },
+   "result_line_lead": {
+    "lead": 1.44,
+    "se": 0.61,
+    "seeds": 400,
+    "line_ahead_on": [
+     "europe",
+     "fortressislesx",
+     "naval",
+     "proving"
+    ],
+    "line_behind_on": []
+   },
+   "pooled_lead_after": {
+    "lead": 0.843,
+    "se": 0.358,
+    "z": 2.36,
+    "seeds": 1200,
+    "line_behind_on": [],
+    "line_ahead_on": [
+     "proving",
+     "europe"
+    ]
+   }
+  },
+  {
+   "id": "pv0502",
+   "title": "proof 4 of the line 81e0df3 against main (400 seeds)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "boburner",
+   "priority": "high",
+   "queued": "2026-11-15T21:20:24",
+   "started": "2026-11-15T21:24:05",
+   "ended": "2026-11-15T21:37:06",
+   "wait_min": 3.67,
+   "run_min": 13.0,
+   "seconds": 780.2,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 800400000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 120.4,
+   "wh_model": 26.1,
+   "result": {
+    "d": -0.35,
+    "se": 0.56,
+    "seeds": 400,
+    "z": -0.62,
+    "maps_up": [
+     "fortressisles2"
+    ],
+    "maps_down": [
+     "big-lizard",
+     "fortressislesx"
+    ]
+   },
+   "result_line_lead": {
+    "lead": 0.35,
+    "se": 0.56,
+    "seeds": 400,
+    "line_ahead_on": [
+     "big-lizard",
+     "fortressislesx"
+    ],
+    "line_behind_on": [
+     "fortressisles2"
+    ]
+   },
+   "pooled_lead_after": {
+    "lead": 0.7,
+    "se": 0.301,
+    "z": 2.32,
+    "seeds": 1600,
+    "line_behind_on": [
+     "fortressisles2"
+    ],
+    "line_ahead_on": [
+     "fortressislesx",
+     "proving",
+     "europe"
+    ]
+   }
+  },
+  {
+   "id": "pv0503",
+   "title": "proof 5 of the line 81e0df3 against main (400 seeds)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "macmini",
+   "priority": "high",
+   "queued": "2026-11-15T21:20:27",
+   "started": "2026-11-15T21:29:35",
+   "ended": "2026-11-15T21:36:54",
+   "wait_min": 9.13,
+   "run_min": 7.32,
+   "seconds": 439.2,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 800600000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 30.1,
+   "wh_model": 3.67,
+   "result": {
+    "d": -0.57,
+    "se": 0.59,
+    "seeds": 400,
+    "z": -0.97,
+    "maps_up": [],
+    "maps_down": []
+   },
+   "result_line_lead": {
+    "lead": 0.57,
+    "se": 0.59,
+    "seeds": 400,
+    "line_ahead_on": [],
+    "line_behind_on": []
+   },
+   "pooled_lead_after": {
+    "lead": 0.673,
+    "se": 0.268,
+    "z": 2.51,
+    "seeds": 2000,
+    "line_behind_on": [],
+    "line_ahead_on": [
+     "fortressislesx",
+     "proving"
+    ]
+   }
+  },
+  {
+   "id": "pv0504",
+   "title": "proof 6 of the line 81e0df3 against main (400 seeds)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "macmini",
+   "priority": "high",
+   "queued": "2026-11-15T21:20:30",
+   "started": "2026-11-15T21:36:57",
+   "ended": "2026-11-15T21:44:17",
+   "wait_min": 16.45,
+   "run_min": 7.33,
+   "seconds": 439.7,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 800800000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 30.1,
+   "wh_model": 3.67,
+   "result": {
+    "d": -0.47,
+    "se": 0.56,
+    "seeds": 400,
+    "z": -0.84,
+    "maps_up": [],
+    "maps_down": []
+   },
+   "result_line_lead": {
+    "lead": 0.47,
+    "se": 0.56,
+    "seeds": 400,
+    "line_ahead_on": [],
+    "line_behind_on": []
+   },
+   "pooled_lead_after": {
+    "lead": 0.635,
+    "se": 0.242,
+    "z": 2.62,
+    "seeds": 2400,
+    "line_behind_on": [],
+    "line_ahead_on": [
+     "fortressislesx",
+     "proving"
+    ]
+   }
+  },
+  {
+   "id": "pv0505",
+   "title": "proof 1 of the line 81e0df3 against main (400 seeds, read 4, pooled)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "macmini",
+   "priority": "high",
+   "queued": "2026-11-15T21:45:43",
+   "started": "2026-11-15T21:47:29",
+   "ended": "2026-11-15T21:54:45",
+   "wait_min": 1.76,
+   "run_min": 7.28,
+   "seconds": 436.5,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 801000000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 30.1,
+   "wh_model": 3.65,
+   "result": {
+    "d": -0.07,
+    "se": 0.55,
+    "seeds": 400,
+    "z": -0.13,
+    "maps_up": [],
+    "maps_down": []
+   },
+   "result_line_lead": {
+    "lead": 0.07,
+    "se": 0.55,
+    "seeds": 400,
+    "line_ahead_on": [],
+    "line_behind_on": []
+   },
+   "pooled_lead_after": {
+    "lead": 0.543,
+    "se": 0.222,
+    "z": 2.45,
+    "seeds": 2800,
+    "line_behind_on": [],
+    "line_ahead_on": [
+     "fortressislesx",
+     "proving"
+    ]
+   }
+  },
+  {
+   "id": "pv0506",
+   "title": "proof 2 of the line 81e0df3 against main (400 seeds, read 4, pooled)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "saskatchewan",
+   "priority": "high",
+   "queued": "2026-11-15T21:45:46",
+   "started": "2026-11-15T21:47:29",
+   "ended": "2026-11-15T22:06:05",
+   "wait_min": 1.71,
+   "run_min": 18.61,
+   "seconds": 1116.5,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 801200000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 189.4,
+   "wh_model": 58.73,
+   "result": {
+    "d": -0.24,
+    "se": 0.57,
+    "seeds": 400,
+    "z": -0.42,
+    "maps_up": [
+     "generated"
+    ],
+    "maps_down": [
+     "atlantic",
+     "fortressislesx"
+    ]
+   },
+   "result_line_lead": {
+    "lead": 0.24,
+    "se": 0.57,
+    "seeds": 400,
+    "line_ahead_on": [
+     "atlantic",
+     "fortressislesx"
+    ],
+    "line_behind_on": [
+     "generated"
+    ]
+   },
+   "pooled_lead_after": {
+    "lead": 0.504,
+    "se": 0.207,
+    "z": 2.44,
+    "seeds": 3200,
+    "line_behind_on": [],
+    "line_ahead_on": [
+     "fortressislesx",
+     "proving"
+    ]
+   }
+  },
+  {
+   "id": "pv0507",
+   "title": "proof 3 of the line 81e0df3 against main (400 seeds, read 4, pooled)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "saskatchewan-2",
+   "priority": "high",
+   "queued": "2026-11-15T21:45:49",
+   "started": "2026-11-15T21:47:42",
+   "ended": "2026-11-15T22:06:09",
+   "wait_min": 1.88,
+   "run_min": 18.46,
+   "seconds": 1107.4,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 801400000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 0.0,
+   "wh_model": 0.0,
+   "result": {
+    "d": -0.49,
+    "se": 0.61,
+    "seeds": 400,
+    "z": -0.8,
+    "maps_up": [],
+    "maps_down": [
+     "flame-war-modified",
+     "proving"
+    ]
+   },
+   "result_line_lead": {
+    "lead": 0.49,
+    "se": 0.61,
+    "seeds": 400,
+    "line_ahead_on": [
+     "flame-war-modified",
+     "proving"
+    ],
+    "line_behind_on": []
+   },
+   "pooled_lead_after": {
+    "lead": 0.502,
+    "se": 0.196,
+    "z": 2.57,
+    "seeds": 3600,
+    "line_behind_on": [],
+    "line_ahead_on": [
+     "flame-war-modified",
+     "fortressislesx",
+     "proving"
+    ]
+   }
+  },
+  {
+   "id": "pv0508",
+   "title": "proof 4 of the line 81e0df3 against main (400 seeds, read 4, pooled)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "boburner",
+   "priority": "high",
+   "queued": "2026-11-15T21:45:51",
+   "started": "2026-11-15T21:48:03",
+   "ended": "2026-11-15T22:00:57",
+   "wait_min": 2.19,
+   "run_min": 12.89,
+   "seconds": 773.5,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 801600000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 120.4,
+   "wh_model": 25.87,
+   "result": {
+    "d": -1.17,
+    "se": 0.62,
+    "seeds": 400,
+    "z": -1.89,
+    "maps_up": [
+     "constanine"
+    ],
+    "maps_down": [
+     "flame-war-modified"
+    ]
+   },
+   "result_line_lead": {
+    "lead": 1.17,
+    "se": 0.62,
+    "seeds": 400,
+    "line_ahead_on": [
+     "flame-war-modified"
+    ],
+    "line_behind_on": [
+     "constanine"
+    ]
+   },
+   "pooled_lead_after": {
+    "lead": 0.563,
+    "se": 0.187,
+    "z": 3.02,
+    "seeds": 4000,
+    "line_behind_on": [
+     "constanine"
+    ],
+    "line_ahead_on": [
+     "flame-war-modified",
+     "fortressislesx",
+     "proving"
+    ]
+   }
+  },
+  {
+   "id": "pv0509",
+   "title": "proof 5 of the line 81e0df3 against main (400 seeds, read 4, pooled)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "macmini",
+   "priority": "high",
+   "queued": "2026-11-15T21:45:54",
+   "started": "2026-11-15T21:54:50",
+   "ended": "2026-11-15T22:02:06",
+   "wait_min": 8.93,
+   "run_min": 7.28,
+   "seconds": 436.8,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 801800000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 30.1,
+   "wh_model": 3.65,
+   "result": {
+    "d": -1.44,
+    "se": 0.58,
+    "seeds": 400,
+    "z": -2.48,
+    "maps_up": [],
+    "maps_down": [
+     "europe",
+     "fortressislesx"
+    ]
+   },
+   "result_line_lead": {
+    "lead": 1.44,
+    "se": 0.58,
+    "seeds": 400,
+    "line_ahead_on": [
+     "europe",
+     "fortressislesx"
+    ],
+    "line_behind_on": []
+   },
+   "pooled_lead_after": {
+    "lead": 0.645,
+    "se": 0.178,
+    "z": 3.63,
+    "seeds": 4400,
+    "line_behind_on": [],
+    "line_ahead_on": [
+     "flame-war-modified",
+     "fortressislesx",
+     "proving",
+     "europe"
+    ]
+   }
+  },
+  {
+   "id": "pv0510",
+   "title": "proof 6 of the line 81e0df3 against main (400 seeds, read 4, pooled)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "boburner",
+   "priority": "high",
+   "queued": "2026-11-15T21:45:57",
+   "started": "2026-11-15T22:01:09",
+   "ended": "2026-11-15T22:14:00",
+   "wait_min": 15.19,
+   "run_min": 12.85,
+   "seconds": 771.2,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 802000000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 120.4,
+   "wh_model": 25.8,
+   "result": {
+    "d": -0.59,
+    "se": 0.59,
+    "seeds": 400,
+    "z": -1.0,
+    "maps_up": [],
+    "maps_down": []
+   },
+   "result_line_lead": {
+    "lead": 0.59,
+    "se": 0.59,
+    "seeds": 400,
+    "line_ahead_on": [],
+    "line_behind_on": []
+   },
+   "pooled_lead_after": {
+    "lead": 0.64,
+    "se": 0.17,
+    "z": 3.77,
+    "seeds": 4800,
+    "line_behind_on": [
+     "constanine"
+    ],
+    "line_ahead_on": [
+     "flame-war-modified",
+     "fortressislesx",
+     "proving",
+     "europe"
+    ]
+   }
+  },
+  {
+   "id": "pv0511",
+   "title": "proof 1 of the line 81e0df3 against main (400 seeds, read 7, pooled)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "saskatchewan",
+   "priority": "high",
+   "queued": "2026-11-15T22:16:14",
+   "started": "2026-11-15T22:18:07",
+   "ended": "2026-11-15T22:36:32",
+   "wait_min": 1.88,
+   "run_min": 18.42,
+   "seconds": 1105.0,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 802200000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 189.4,
+   "wh_model": 58.12,
+   "result": {
+    "d": -0.13,
+    "se": 0.57,
+    "seeds": 400,
+    "z": -0.23,
+    "maps_up": [],
+    "maps_down": []
+   },
+   "result_line_lead": {
+    "lead": 0.13,
+    "se": 0.57,
+    "seeds": 400,
+    "line_ahead_on": [],
+    "line_behind_on": []
+   },
+   "pooled_lead_after": {
+    "lead": 0.599,
+    "se": 0.163,
+    "z": 3.67,
+    "seeds": 5200,
+    "line_behind_on": [
+     "constanine"
+    ],
+    "line_ahead_on": [
+     "flame-war-modified",
+     "fortressislesx",
+     "proving",
+     "europe"
+    ]
+   }
+  },
+  {
+   "id": "pv0512",
+   "title": "proof 2 of the line 81e0df3 against main (400 seeds, read 7, pooled)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "macmini",
+   "priority": "high",
+   "queued": "2026-11-15T22:16:16",
+   "started": "2026-11-15T22:19:05",
+   "ended": "2026-11-15T22:26:22",
+   "wait_min": 2.8,
+   "run_min": 7.28,
+   "seconds": 436.8,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 802400000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 30.1,
+   "wh_model": 3.65,
+   "result": {
+    "d": -1.84,
+    "se": 0.63,
+    "seeds": 400,
+    "z": -2.92,
+    "maps_up": [],
+    "maps_down": [
+     "atlantic",
+     "flame-war-modified"
+    ]
+   },
+   "result_line_lead": {
+    "lead": 1.84,
+    "se": 0.63,
+    "seeds": 400,
+    "line_ahead_on": [
+     "atlantic",
+     "flame-war-modified"
+    ],
+    "line_behind_on": []
+   },
+   "pooled_lead_after": {
+    "lead": 0.676,
+    "se": 0.158,
+    "z": 4.29,
+    "seeds": 5600,
+    "line_behind_on": [
+     "constanine"
+    ],
+    "line_ahead_on": [
+     "flame-war-modified",
+     "fortressislesx",
+     "proving"
+    ]
+   }
+  },
+  {
+   "id": "pv0513",
+   "title": "proof 3 of the line 81e0df3 against main (400 seeds, read 7, pooled)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "boburner",
+   "priority": "high",
+   "queued": "2026-11-15T22:16:19",
+   "started": "2026-11-15T22:19:28",
+   "ended": "2026-11-15T22:32:21",
+   "wait_min": 3.14,
+   "run_min": 12.9,
+   "seconds": 773.7,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 802600000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 120.4,
+   "wh_model": 25.88,
+   "result": {
+    "d": -0.2,
+    "se": 0.56,
+    "seeds": 400,
+    "z": -0.36,
+    "maps_up": [
+     "island"
+    ],
+    "maps_down": [
+     "fidos-airstrip"
+    ]
+   },
+   "result_line_lead": {
+    "lead": 0.2,
+    "se": 0.56,
+    "seeds": 400,
+    "line_ahead_on": [
+     "fidos-airstrip"
+    ],
+    "line_behind_on": [
+     "island"
+    ]
+   },
+   "pooled_lead_after": {
+    "lead": 0.641,
+    "se": 0.152,
+    "z": 4.22,
+    "seeds": 6000,
+    "line_behind_on": [
+     "constanine"
+    ],
+    "line_ahead_on": [
+     "fidos-airstrip",
+     "flame-war-modified",
+     "fortressislesx",
+     "proving"
+    ]
+   }
+  },
+  {
+   "id": "pv0514",
+   "title": "proof 4 of the line 81e0df3 against main (400 seeds, read 7, pooled)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "saskatchewan-2",
+   "priority": "high",
+   "queued": "2026-11-15T22:16:22",
+   "started": "2026-11-15T22:20:56",
+   "ended": "2026-11-15T22:38:57",
+   "wait_min": 4.56,
+   "run_min": 18.02,
+   "seconds": 1081.2,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 802800000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 0.0,
+   "wh_model": 0.0,
+   "result": {
+    "d": -0.04,
+    "se": 0.58,
+    "seeds": 400,
+    "z": -0.07,
+    "maps_up": [],
+    "maps_down": [
+     "europe"
+    ]
+   },
+   "result_line_lead": {
+    "lead": 0.04,
+    "se": 0.58,
+    "seeds": 400,
+    "line_ahead_on": [
+     "europe"
+    ],
+    "line_behind_on": []
+   },
+   "pooled_lead_after": {
+    "lead": 0.603,
+    "se": 0.147,
+    "z": 4.1,
+    "seeds": 6400,
+    "line_behind_on": [
+     "constanine"
+    ],
+    "line_ahead_on": [
+     "flame-war-modified",
+     "fortressislesx",
+     "europe"
+    ]
+   }
+  },
+  {
+   "id": "pv0515",
+   "title": "proof 5 of the line 81e0df3 against main (400 seeds, read 7, pooled)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "macmini",
+   "priority": "high",
+   "queued": "2026-11-15T22:16:24",
+   "started": "2026-11-15T22:26:25",
+   "ended": "2026-11-15T22:33:50",
+   "wait_min": 10.0,
+   "run_min": 7.41,
+   "seconds": 444.6,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 803000000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 30.1,
+   "wh_model": 3.71,
+   "result": {
+    "d": 0.26,
+    "se": 0.58,
+    "seeds": 400,
+    "z": 0.45,
+    "maps_up": [
+     "fidos-airstrip",
+     "fortressisles2"
+    ],
+    "maps_down": [
+     "constanine"
+    ]
+   },
+   "result_line_lead": {
+    "lead": -0.26,
+    "se": 0.58,
+    "seeds": 400,
+    "line_ahead_on": [
+     "constanine"
+    ],
+    "line_behind_on": [
+     "fidos-airstrip",
+     "fortressisles2"
+    ]
+   },
+   "pooled_lead_after": {
+    "lead": 0.551,
+    "se": 0.142,
+    "z": 3.87,
+    "seeds": 6800,
+    "line_behind_on": [],
+    "line_ahead_on": [
+     "flame-war-modified",
+     "fortressislesx",
+     "europe"
+    ]
+   }
+  },
+  {
+   "id": "pv0516",
+   "title": "proof 6 of the line 81e0df3 against main (400 seeds, read 7, pooled)",
+   "stage": "proof",
+   "chain": "line 81e0df3",
+   "lane": "boburner",
+   "priority": "high",
+   "queued": "2026-11-15T22:16:27",
+   "started": "2026-11-15T22:32:25",
+   "ended": "2026-11-15T22:45:09",
+   "wait_min": 15.96,
+   "run_min": 12.74,
+   "seconds": 764.3,
+   "requeued": 0,
+   "seeds_asked": 400,
+   "seed0": 803200000,
+   "map": "all",
+   "commit": "81e0df3",
+   "watts_model": 120.4,
+   "wh_model": 25.57,
+   "result": {
+    "d": -1.15,
+    "se": 0.55,
+    "seeds": 400,
+    "z": -2.09,
+    "maps_up": [],
+    "maps_down": [
+     "big-lizard",
+     "fortressislesx"
+    ]
+   },
+   "result_line_lead": {
+    "lead": 1.15,
+    "se": 0.55,
+    "seeds": 400,
+    "line_ahead_on": [
+     "big-lizard",
+     "fortressislesx"
+    ],
+    "line_behind_on": []
+   },
+   "pooled_lead_after": {
+    "lead": 0.589,
+    "se": 0.138,
+    "z": 4.27,
+    "seeds": 7200,
+    "line_behind_on": [],
+    "line_ahead_on": [
+     "flame-war-modified",
+     "fortressislesx",
+     "proving",
+     "europe"
+    ]
+   }
+  }
+ ],
+ "marks": [
+  {
+   "t": "2026-11-15T19:41:26",
+   "kind": "asked",
+   "text": "w21532 asked by the planner as an A/B trial: ladder 3 (expand_first) against 0 (as_built), on the line 2a1a1e9"
+  },
+  {
+   "t": "2026-11-15T21:00:42",
+   "kind": "candidate flag",
+   "text": "candidate w21532 passed both held-out reads (+0.56, +0.28, +0.62): ladder 3"
+  },
+  {
+   "t": "2026-11-15T21:04:39",
+   "kind": "promote flag",
+   "text": "auto: r0337 asked to promote grove/w21532"
+  },
+  {
+   "t": "2026-11-15T21:07:42",
+   "kind": "commit",
+   "text": "81e0df3 committed by the promote job (treadcore git log)"
+  },
+  {
+   "t": "2026-11-15T21:08:27",
+   "kind": "approve flag",
+   "text": "promotion r0337 is prepared on promote/grove-r0337 (state approved 21:08:32; the local line moves to 81e0df3)"
+  },
+  {
+   "t": "2026-11-15T21:10:15",
+   "kind": "line flag",
+   "text": "the line 81e0df3 settles first: its proof has read 0 of 9600 seeds"
+  },
+  {
+   "t": "2026-11-15T22:47:02",
+   "kind": "resolve flag",
+   "text": "the local line is on main (81e0df3): resolved"
+  },
+  {
+   "t": "2026-11-15T22:47:05",
+   "kind": "proved flag",
+   "text": "the line 81e0df3 proved past main: +0.59 +/- 0.14 over 7200 seeds; it is main now"
+  },
+  {
+   "t": "2026-11-16T14:51:34",
+   "kind": "confirmed",
+   "text": "r0337 values confirmed on 5 of 5 machines (run state)"
+  }
+ ],
+ "seed_blocks": {
+  "first_read": "20,000,000 + 10,000 x trial number: w21532 -> 235,320,000..235,320,141 (142 own) + 8 probes = 150",
+  "read_on": "300,000,000 + 1,000 x read-on counter: e22790 322,790,000 (67+8), e22794 322,794,000 (105+8), e22799 322,799,000 (164+8), e22801 322,801,000 (164+8)",
+  "held_out": "60,000,000 + 200,000 x held counter, 4 pieces of 100: h1503 360,600,000 (+100,+200,+300), h1504 360,800,000, h1505 361,000,000; each piece 92 own + the 8 probes; merged 368 own + 8 probes = 376",
+  "proof": "700,000,000 + 200,000 x proof counter: pv0499 799,800,000 .. pv0516 803,200,000, 400 each (392 own + 8 probes)",
+  "probes": "8 fixed seeds (1,000,000,000 + j) x 13 + map index: 13000000002, 017, 027, 039, 064, 067, 082, 092 on naval, constanine, island, industry, generated; the same in every MAP=all census (census.sh LR 155)",
+  "maps": "MAP=all: 13 maps, seed n plays map n mod 13",
+  "others": "rotation 500,000,000+, recordings 9,920,000+ (planner comment)"
+ },
+ "bars_at_the_time": {
+  "ease": 0.5,
+  "ease_note": "inferred from the ratchet rule (r0336 seen ~15:38, base 0.45, dry 240 min -> 0.5 from ~19:38); not logged at the time",
+  "keep_bars_z": {
+   "150": 0.25,
+   "225": 0.55,
+   "338": 0.85,
+   "510": 1.15,
+   "750": 1.45
+  },
+  "pass_bars_z": {
+   "510": 2.1,
+   "750": 2.1,
+   "1140": 1.5
+  },
+  "held_out_bar_z": 2.5,
+  "held_read_on": "pooled z in [1.0, 2.5): another 400-seed read, up to 6",
+  "proof_bar": "z >= 3.0 (HELD_Z, no ease) and no map two errors under; orphan if lead + 2 se < 0.25 at 9,600 seeds",
+  "settle": "9,600 seeds, 6 proof jobs at a time"
+ },
+ "critical_path": {
+  "ask_to_promotion_min": 86.27,
+  "running_min": 43.02,
+  "queue_wait_min": 37.0,
+  "planner_gaps_min": 5.83,
+  "keeper_adding_pieces_min": 0.42,
+  "promotion_to_main_min": 99.38,
+  "segments": [
+   [
+    "promote done -> approved",
+    0.83
+   ],
+   [
+    "approved -> first build start",
+    2.03
+   ],
+   [
+    "builds",
+    6.33
+   ],
+   [
+    "last build -> proof asked",
+    3.35
+   ],
+   [
+    "proof round 1 (2,400 seeds)",
+    24.03
+   ],
+   [
+    "pass",
+    1.43
+   ],
+   [
+    "proof round 2 (4,800)",
+    28.28
+   ],
+   [
+    "pass",
+    2.23
+   ],
+   [
+    "proof round 3 (7,200)",
+    28.92
+   ],
+   [
+    "pass -> proved, main",
+    1.93
+   ]
+  ],
+  "ask_to_main_min": 185.65,
+  "duplicate_read_cost_wall_min": 11.6
+ },
+ "paths_not_taken": [
+  {
+   "trial": "w21529",
+   "source": "A/B",
+   "change": "ladder 0 -> 1 (expand_before_hunt)",
+   "reads": "150 +0.08+/-0.37; 225 +0.01+/-0.31 z 0.02",
+   "stopped": "dropped: z 0.02 under the 225-seed keep bar 0.55"
+  },
+  {
+   "trial": "w21531",
+   "source": "A/B",
+   "change": "ladder 0 -> 2 (hunt_first)",
+   "reads": "150 +0.00+/-0.00",
+   "stopped": "plays the very games of the defaults: nothing to read"
+  },
+  {
+   "trial": "w21541",
+   "source": "far (one dial /1.41)",
+   "change": "castle_road -> 1.41844",
+   "reads": "510 +0.10+/-0.04 z 2.27 (passed the sequential bar 2.1); held h1502 +0.00+/-0.07 over 376",
+   "stopped": "held-out z 0.00 under 1.0: not read on; dropped"
+  },
+  {
+   "trial": "w21511",
+   "source": "A/B",
+   "change": "bio square -> sine (bio 1)",
+   "reads": "1140 +0.39+/-0.22 z 1.77 (over the last bar 1.5)",
+   "stopped": "europe -0.84+/-0.37, a map two errors under, blocks the pass: dropped"
+  },
+  {
+   "trial": "w21456",
+   "source": "carried pass of w21243 (a suggest.py draw)",
+   "change": "bio_amount 0.330678, ore_reach 10, strikes_max 4, w_pos_expand 0.1",
+   "reads": "150 +2.48+/-0.75 z 3.31; held h1491 -0.28+/-0.46",
+   "stopped": "held-out read under 1.0: dropped"
+  },
+  {
+   "trial": "w21508",
+   "source": "read again (w12077, a far trial of 6 Nov)",
+   "change": "w_smooth 0.525",
+   "reads": "150 +1.47+/-0.93; two held reads pooled -0.69+/-0.45 over 752, naval and proving under",
+   "stopped": "held-out under: dropped"
+  },
+  {
+   "trial": "w21473",
+   "source": "suggest.py fit, a draw from its uncertainty",
+   "change": "alpha 0.214489, odds_r 15.1916, ping_defend_hold 0.75, ping_help_reach 51.5291",
+   "reads": "750 +0.36+/-0.40 z 0.89",
+   "stopped": "z 0.89 under the 750-seed keep bar 1.45: dropped"
+  },
+  {
+   "trial": "w21464",
+   "source": "far (one dial x1.41)",
+   "change": "alpha 0.347728",
+   "reads": "150 +2.28+/-1.03 z 2.21; 338 +0.38+/-0.70 z 0.54",
+   "stopped": "a lucky first read regressed: z 0.54 under 0.85, dropped"
+  },
+  {
+   "trial": "w21474",
+   "source": "A/B",
+   "change": "caps -dodge",
+   "reads": "150 -8.11+/-0.99 z -8.19",
+   "stopped": "dropped at the first read"
+  },
+  {
+   "trial": "w21506",
+   "source": "A/B",
+   "change": "advance_plan forward -> as_built",
+   "reads": "150 -3.20+/-0.68",
+   "stopped": "dropped at the first read"
+  }
+ ],
+ "generation_counts": {
+  "defaults": "2a1a1e9, 15:38-21:08",
+  "trials": 120,
+  "by_source": {
+   "A/B": [
+    62,
+    "12 read on, 1 held read, 1 passed, 9 same games"
+   ],
+   "far": [
+    40,
+    "16 read on, 1 held read, 0 passed, 12 same games"
+   ],
+   "suggest.py draws": [
+    12,
+    "8 read on, 0 held"
+   ],
+   "carried": [
+    3,
+    "3 held reads, 0 passed"
+   ],
+   "read again": [
+    3,
+    "3 held, 0 passed"
+   ]
+  },
+  "jobs": 258,
+  "lane_hours": 29.4,
+  "wh_model": 3035,
+  "seeds_read": 30038,
+  "r0336_line_proof": {
+   "jobs": 50,
+   "seeds": 20000,
+   "lead": 0.15,
+   "se": 0.08,
+   "z": 1.85,
+   "lane_hours": 10.6,
+   "wh_model": 921
+  }
+ },
+ "series": {
+  "line_promotions": {
+   "13 Nov": [
+    "r0323",
+    "r0326",
+    "r0332",
+    "r0333"
+   ],
+   "14 Nov": [
+    "r0334"
+   ],
+   "15 Nov": [
+    "r0335",
+    "r0336",
+    "r0337"
+   ],
+   "16 Nov": [],
+   "17 Nov": [],
+   "18 Nov": [
+    "r0338"
+   ],
+   "19 Nov to 17:00": []
+  },
+  "main_moves": [
+   [
+    "2026-11-13T13:44:42",
+    "394c4ac",
+    [
+     "w20026"
+    ]
+   ],
+   [
+    "2026-11-14T16:46:44",
+    "f5794cc",
+    [
+     "w20895"
+    ]
+   ],
+   [
+    "2026-11-15T22:47:00",
+    "81e0df3",
+    [
+     "w21399",
+     "w21532"
+    ]
+   ]
+  ],
+  "orphaned": [
+   [
+    "2026-11-13T09:26",
+    "10 promotions r0220..r0326"
+   ],
+   [
+    "2026-11-13T20:06",
+    "r0333"
+   ],
+   [
+    "2026-11-15T07:33",
+    "r0335"
+   ],
+   [
+    "2026-11-18T23:22",
+    "r0338, +0.07+/-0.04 over 9,600"
+   ]
+  ],
+  "proof_81e0df3": {
+   "lead": 0.589,
+   "se": 0.138,
+   "z": 4.27,
+   "seeds": 7200,
+   "claimed_last_held": 1.93,
+   "claimed_pooled_held": 1.48
+  },
+  "yardstick": {
+   "before f5794cc 15 Nov": {
+    "28 Oct": [
+     7.519,
+     0.274
+    ],
+    "2 Nov": [
+     6.922,
+     0.25
+    ],
+    "6 Nov": [
+     5.27,
+     0.262
+    ]
+   },
+   "after 81e0df3 16 Nov": {
+    "28 Oct": [
+     8.182,
+     0.272
+    ],
+    "2 Nov": [
+     7.444,
+     0.255
+    ],
+    "6 Nov": [
+     5.185,
+     0.26
+    ]
+   },
+   "81e0df3 again 17 Nov": {
+    "28 Oct": [
+     8.128,
+     0.275
+    ],
+    "2 Nov": [
+     7.334,
+     0.253
+    ],
+    "6 Nov": [
+     5.217,
+     0.259
+    ]
+   },
+   "81e0df3 again 18 Nov": {
+    "28 Oct": [
+     8.219,
+     0.274
+    ],
+    "2 Nov": [
+     7.432,
+     0.255
+    ],
+    "6 Nov": [
+     5.244,
+     0.258
+    ]
+   }
+  },
+  "turnaround_first_job_to_main_h": {
+   "r0337": 2.91,
+   "median_9_generations_since_5_Nov": 9.02,
+   "fastest": [
+    "r0334",
+    1.05
+   ]
+  },
+  "note": "13-19 Nov: 9 line generations, 4 reached main in 3 moves, 5 orphaned (r0323, r0326, r0333, r0335, r0338)"
+ },
+ "energy": {
+  "model": "lane busy watts x run time, rates from plan/timeline-bins.json tally of 2026-11-15 (boburner 118.8 W, macmini 29.5, calber 140.9, whitewolf 131.2, saskatchewan 185, columbia 18.3); saskatchewan-2 is 0 W in the model",
+  "trial_chain_to_promotion": {
+   "lane_min": 70.3,
+   "wh": 115.0,
+   "jobs": 20
+  },
+  "duplicate_e22801": {
+   "lane_min": 10.3,
+   "wh": 24.3
+  },
+  "builds": {
+   "lane_min": 3.1,
+   "wh": 4.8
+  },
+  "proof": {
+   "lane_min": 226.0,
+   "wh": 330.5
+  },
+  "ask_to_main_wh": 450.3,
+  "usd_at_0.17": 0.077,
+  "saskatchewan_2_lane_min_uncounted": 59.9,
+  "hearth_energy_json": "covers 17-19 Nov only (Wh a job: boburner 14.89, bosporus 47.91, calber 20.43, columbia 4.74, jaguaribe 36.59, saskatchewan 7.57, whitewolf 28.56; no macmini)"
+ },
+ "render": {
+  "state_file": "/private/tmp/claude-501/-Users-user-code-orrery/89899697-6c64-4d98-9801-4f537869abbe/scratchpad/pipeline-w21532.json",
+  "built_by": "/private/tmp/claude-501/-Users-user-code-orrery/89899697-6c64-4d98-9801-4f537869abbe/scratchpad/frame_state.py",
+  "timeline": "ORRERY_FRAME_OPERATOR=1 ORRERY_FRAME_PAGE=2 ORRERY_FRAME_CHAIN=w21532 ORRERY_FRAME_ZOOM=hours target/release/orrery --operator paul --fleet grove --frame OUT.ppm --frame-view pipeline --frame-state STATE --frame-size 1600x1000",
+  "lineup_trial": "ORRERY_FRAME_OPERATOR=1 ORRERY_FRAME_PAGE=6 ORRERY_FRAME_CHAIN=w21532 ORRERY_FRAME_LINEUP=trials ORRERY_FRAME_LINEUP_END=won (ORRERY_FRAME_ZOOM unset = each its own) ... same flags",
+  "lineup_proof": "ORRERY_FRAME_PAGE=6 ORRERY_FRAME_LINEUP=runs ORRERY_FRAME_LINEUP_END=going (the proof chain \"line 81e0df3\" has good=null, as chain_meta writes it)",
+  "note": "ORRERY_FRAME_LINEUP_END takes a name (every end | going | won | dead ends), not a time (src/main.rs:947, src/pipeline.rs:2367); the live plan/pipeline.json only carries the last 6 hours of jobs (TIMELINE_H = 6), so the chain is not in it"
+ }
+}

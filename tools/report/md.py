@@ -27,8 +27,22 @@ def slug(t):
     return re.sub(r"[^a-z0-9]+", "-", t.lower()).strip("-")[:40]
 
 
+# A picture inside a line (a table's cell, most often), drawn by the Doc being converted; None outside one.
+IMAGE = None
+
+
 def inline(t):
     codes = []
+
+    def pic(m):
+        # Pictures side by side in a table (19 November: the Orrery Q report's pages in pairs) were left as
+        # "!" and a link; a cell's picture is the picture.
+        try:
+            # As wide as its cell: a picture's own width would set the column's, and two side by side overflow the page.
+            codes.append(IMAGE(m.group(1), m.group(2)).replace("<img ", '<img style="width:100%" ', 1))
+        except OSError:
+            return m.group(0)          # a picture that is not there stays a link, as it was
+        return "\x00%d\x00" % (len(codes) - 1)
 
     def keep(m):
         # A pipe escaped so a table cell does not split there is still a pipe in the command shown.
@@ -36,6 +50,8 @@ def inline(t):
         return "\x00%d\x00" % (len(codes) - 1)
 
     t = re.sub(r"`([^`]+)`", keep, t)
+    if IMAGE is not None:
+        t = re.sub(r"!\[([^\]]*)\]\(([^)\s]+)\)", pic, t)
     t = t.replace("\\|", "|")
     t = html.escape(t, quote=False)
     t = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', t)
@@ -49,8 +65,10 @@ class Doc:
     collects (id, text) of each ## heading as blocks() meets it, in order."""
 
     def __init__(self, base):
+        global IMAGE
         self.base = base
         self.toc = []
+        IMAGE = self.image
 
     def image(self, alt, path):
         data = base64.b64encode(open(os.path.join(self.base, path), "rb").read()).decode()

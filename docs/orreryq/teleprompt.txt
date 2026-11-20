@@ -1,0 +1,97 @@
+The Orrery Q Process: the narration, at 150 words a minute (12:54)
+
+[0:00] ONE IDEA IN A HUNDRED AND TWENTY
+On the fifteenth of November a fleet of computers asked one hundred and twenty questions of a game's brain. One passed. It took three hours and six minutes and forty-four jobs to be believed. The same evening, the cards trained a net that passed every test but the last one. They have run two hundred and six hours since, and kept nothing.
+
+[0:27] TITLE
+The Orrery Q process. A fleet, two learners and a warm room, traced from the outside in.
+
+[0:36] PART ONE: THE WHOLE
+Part one. The whole.
+
+[0:41] AN ORRERY
+An orrery is a clockwork model of the solar system: one sun, every planet on its own arm. This fleet is built the same way. One Mac asks every question. Housekeeping turns on the inner orbit, every few minutes. The CPU lanes on the middle one, a job of minutes. The cards on the outer, half an hour or more. Every arrow is one connection from the Mac. No machine speaks to another.
+
+[1:12] TWO LEARNING LOOPS
+What the orrery turns is two learning loops. On the left, the game's hand-written brain: a dial is moved, read on seeds, read again on seeds it was never chosen on, and proved against what stands. On the right, a population of nets evolves on each card, is examined against a ladder of old champions, and elected. Between them, the bridge: a net the game accepts becomes a style the left loop plays.
+
+[1:44] IN A DATASET'S TERMS
+Strip the tanks away and this is anyone's problem. A trial is one setting to try. A seed is one example, a game whose dice are fixed by a number. A held-out read is the validation set. The proof is the final test against what is deployed. An island is one training run, a milestone a checkpoint, the bridge the deployment test.
+
+[2:12] THE APPLICATION
+The application, as components. The window, forty-six thousand lines of Rust with no libraries, only reads. The keeper runs a thread a lane and reaches each machine by ssh. The planner decides what to ask next and what an answer means. Everything is a file in one folder: the queue. And the hearth reads the room and sets the fleet's watts.
+
+[2:39] PART TWO: THE WINDOW
+Part two. The window, page by page.
+
+[2:44] THE FLEET PAGE
+The Queue's Fleet page: the scheduler's live view. Sixty-five thousand six hundred jobs done since the twenty-eighth of October. Four hundred and sixty-three failed: seven in a thousand. The newest read: a guess inside its error, as most are. The room's line: twenty-six point four degrees, a hundred and seventy watts short. And a machine: its load, its temperatures against their limits, and its buttons.
+
+[3:13] THE TIMELINE
+The Timeline is a Gantt chart of the whole fleet. Every lane is a row; every job a block coloured by its stage: blue a first read, green a read-on, coral a held-out read, pink a proof. The strip at the foot is the Mac itself, planning.
+
+[3:34] BLAME
+Blame answers the question every operator asks: why is this waiting? Its verdict at five o'clock: no machine waits on another. A trial's step waits one point two minutes for the planner and one point four in the queue, for four point six minutes of work.
+
+[3:55] THE LINEUP
+The Lineup puts every chain of work in its own row, and judges it. Amber: still going. Red walls: dead ends, dropped after one read, or four. On this page, one hundred and thirty-one dead ends.
+
+[4:12] THE HIT PARADE
+The Hit Parade is the scoreboard. Today, one thousand six hundred and forty-eight jobs done; ninety-eight percent came back done; ninety-eight an hour; fifteen point seven kilowatt-hours. And a bar a day since the twenty-eighth of October.
+
+[4:29] PART THREE: ONE INVESTIGATION
+Part three. One investigation: a CPU generation, and a GPU generation, followed to the end.
+
+[4:38] W21532: AN OLD IDEA, A NEW RULE
+The trial moved one dial: the order in which a tank takes its ladder of jobs, from as built to expand first. It had been asked thirty-eight times before. Twice it passed, and twice one regression family stopped it, at seventy-nine percent against a floor of eighty. On the thirteenth, the game gained a rule: a small drop passes and moves its floor. On the fifteenth the family read seventy-nine point six, and the rule let it through.
+
+[5:12] THE SEEDS
+How are examples kept apart? Each kind of read draws its seeds from its own block of numbers. The first read from twenty million up. Read-ons from three hundred million. Held-out reads from sixty million, a block no trial touches. The proof from seven hundred million. Any machine given a block plays the same games.
+
+[5:36] THE TIMELINE FOLLOWS W21532
+Orrery draws the chain itself. Following w21532: twenty jobs on six machines, framed in amber, each arrow the order one followed the last. The green rules: the promotion, and main.
+
+[5:51] EVERY JOB, ON ONE CLOCK
+Every job on one clock. Thin bars wait for a lane; thick bars run. The first read and three read-ons: past the bar at five hundred and ten seeds, z two point nine two. One read-on was asked twice, by a race in the planner: ten minutes on the slowest machine. Three held-out reads on fresh seeds: pooled z three point one three. Then three rounds of proof against main: plus zero point five nine a seat, z four point two seven. Fifty minutes running, forty-three waiting for a lane, eighty-one proving.
+
+[6:30] THE PATHS NOT TAKEN
+What happened to the other hundred and nineteen? Twenty-one played the very games of the defaults: the change was never reached. Lucky first reads regressed. A map vetoed one. A sequential pass failed on fresh seeds. On the cards: fourteen segments in the window, four that could not be elected, three that held, one forced in, and none taken by the game.
+
+[6:58] M0049'S EVENING
+The same evening on boburner's card. Four hours in the queue: each island keeps six segments waiting. Forty-nine minutes, a hundred generations of two thousand and forty-eight nets. Every floor held, z plus one point nine nine against a bar of three. Elected because three hours had passed without one. Forty-nine minutes later the game read it eight point eight four a seat worse than the net it ships, and refused it.
+
+[7:29] THE LOCK
+The election did one more thing: it raised every floor to M0049's own share. When the game refused M0049, the top rung went back. The floors did not. The standing top scores zero point seven eight five on take and hold. The floor is now zero point nine one eight. Three hundred and sixteen segments, two hundred and six GPU-hours since, and none has met them.
+
+[7:58] THE NET, AROUND THE TANK
+Now the net itself, outside in. The tank: twelve rays every thirty degrees, each read three ways: the nearest thing, the enemy, a pillbox. The input sensor matrix: those thirty-six, then the body, the rules' own answer, the gun, the route, the arcs and two cells of memory. Sixty-four numbers. The transform: two layers of forty-eight. Ninety-six percent of their values sit at plus or minus one. It is a net of switches. The output matrix: six numbers. And the gate. One neuron opens it. Open, the tank adds the net's corrections to the rules. Shut, it plays the rules exactly. It is open on less than seven steps in a hundred.
+
+[8:46] WHAT IT LISTENS TO
+What does it use? Hold each group of senses at its average and see how far the outputs move. The rules' own answer, the near rays and its own body matter most. The route, the sense added for the mazes, matters least. Its weights are no bigger than mutation alone would make them.
+
+[9:09] IS IT GETTING BETTER?
+Is it getting better? Two fixed yardsticks say. The brain: eight point two two points a seat over main of the twenty-eighth of October, on the same two thousand seeds every day. Four of it in five days. Then flat. The nets: a gauntlet share from sixty-four to eighty percent in two days. Then flat for eleven. The game has taken nothing since the tenth.
+
+[9:38] PART FOUR: THE WATTS AND THE ROOM
+Part four. The watts, and the room they heat.
+
+[9:44] THREE DAYS OF THE ROOM
+With the flat's own heating off, the fleet is the heating. The room has stayed within half a degree of eighty Fahrenheit for most of two days. Full tilt sheds nothing, by design: it took the room to eighty-two. And since noon today the fleet gives four hundred and fifty watts, and the room slides.
+
+[10:09] TIME CONSTANTS
+Everything here heats like a small room: its time constant is how many degrees a watt, times how many joules a degree. boburner's card: zero point three five times two hundred and thirteen, seventy-five seconds. whitewolf's card: six minutes. The room: four point two megajoules a degree, over a hundred and twenty watts a degree: nine point seven hours. That is why the controller waits forty minutes between changes.
+
+[10:39] THE BUDGET AT 16:31
+The budget at sixteen thirty-one today. The room at twenty-six point three five, the target twenty-six point seven, falling twelve hundredths a degree an hour. The distance term: forty-two watts. The falling term: a hundred and forty. The budget: one hundred and eighty-two watts. Most of it is where the room is heading, not where it is.
+
+[11:04] WHERE THE JOULES WENT
+Two hundred and seventeen megajoules in seventy-four hours: sixty kilowatt-hours, about ten dollars. And what each joule bought: columbia does a job for four watt-hours; bosporus for forty-eight. That is why the hold sheds the old servers first.
+
+[11:22] FOUND, AND FIXED
+Two faults were found by looking. The room controller woke calber every forty minutes; calber never answered, and the three lanes the controller had paused itself waited behind it. Now a machine that does not answer is left for three hours. At twelve minutes past five, whitewolf's card went back to work. And the telemetry fetched every older day again every five minutes: fourteen point nine gigabytes, of which point one four is real. The fetch is fixed. Removing the copies waits for a person.
+
+[11:59] WHAT WENT WELL, AND WHERE TO STEP IN
+What went well. Sixty-five thousand jobs, seven in a thousand failed. The brain eight points a seat better on fixed seeds. A proof that refused a generation that did not repeat. A room held by the fleet's own heat. Where to step in. First: when the game refuses a net, put the floors back. Second: let the game's verdict weigh in the election. Third: give the brain something new to search; the keeper says it needs a change. Then the race that asked a read twice, a proof sized by each machine's speed, and a GPU queue sized in minutes.
+
+[12:41] THE CLOSE, AND THE CREDITS
+A change is believed only on seeds it was not chosen on, and kept only if it beats what stands. The centre asks; the planets answer.
