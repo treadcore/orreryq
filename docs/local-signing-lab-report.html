@@ -1,0 +1,270 @@
+<meta charset="utf-8">
+<title>The Same Application Tomorrow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a lab report on orrery's paper -- a sticky bar of section
+   numerals, a masthead, then numbered sections at a reading measure, with
+   code and diagrams set dark like a terminal. Palette: orrery's draw.rs
+   LIGHT and DARK, as the user guide. */
+:root {
+  --base: #fce2ab; --panel: #f7d79a; --tile: #fff2d4; --ink: #121212;
+  --dim: #6b5836; --line: #c4a870; --accent: #87704f; --up: #4a7c4e;
+  --term-bg: #1c1a16; --term-ink: #f0e3c4; --term-dim: #8a7d63;
+  --rule: color-mix(in srgb, var(--line) 70%, transparent);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cond: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0: clamp(1rem, .97rem + .16vw, 1.08rem);
+  --step-1: clamp(1.18rem, 1.12rem + .3vw, 1.36rem);
+  --step-2: clamp(1.45rem, 1.32rem + .6vw, 1.9rem);
+  --step-3: clamp(1.9rem, 1.6rem + 1.3vw, 2.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+    --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+    --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+    --rule: color-mix(in srgb, var(--line) 100%, transparent);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #181818; --panel: #121212; --tile: #1f1f1f; --ink: #d0daed;
+  --dim: #a08a66; --line: #3a3a3a; --accent: #fccf8a; --up: #8fbf7a;
+  --term-bg: #0e0e0e; --term-ink: #d0daed; --term-dim: #7c705c;
+  --rule: color-mix(in srgb, var(--line) 100%, transparent);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--base); color: var(--ink);
+  font-family: var(--serif); font-size: var(--step-0); line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--base); }
+.wrap { max-width: 980px; margin: 0 auto; }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--base) 94%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+}
+.bar-in {
+  max-width: 980px; margin: 0 auto; padding-block: 9px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  font-family: var(--cond); font-size: var(--step--1);
+}
+.bar-in strong { letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-right: auto; }
+.bar-in a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
+.bar-in a:hover, .bar-in a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
+
+header.mast { padding-block: clamp(36px, 6vw, 72px) clamp(24px, 4vw, 40px); }
+.eyebrow { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+h1 { font-family: var(--cond); font-weight: 700; font-size: var(--step-3); line-height: 1.05; letter-spacing: -.015em; text-wrap: balance; margin: 0 0 18px; max-width: 22ch; }
+.front p, .front li { font-size: var(--step--1); color: var(--dim); }
+.front p.note { font-family: var(--mono); letter-spacing: .04em; color: var(--accent); }
+.front ul { margin: 0; }
+
+nav.toc { border-top: 1px solid var(--rule); padding-block: 22px 30px; }
+nav.toc h2 { font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-family: var(--mono); font-weight: 500; margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 32px; }
+nav.toc li { break-inside: avoid; padding: 3px 0; font-family: var(--cond); }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); }
+
+section { padding-block: clamp(28px, 4vw, 48px); border-top: 1px solid var(--rule); scroll-margin-top: 48px; }
+h2 { font-family: var(--cond); font-weight: 700; font-size: var(--step-2); line-height: 1.12; text-wrap: balance; margin: 0 0 18px; }
+h3 { font-family: var(--cond); font-weight: 600; font-size: var(--step-1); line-height: 1.25; text-wrap: balance; margin: 30px 0 10px; scroll-margin-top: 48px; }
+p, ul, ol, blockquote { max-width: var(--measure); }
+p { margin: 0 0 1em; }
+ul, ol { margin: 0 0 1em; padding-left: 1.3em; }
+li { margin-bottom: .35em; }
+li > ul, li > ol { margin: .35em 0 .2em; }
+li::marker { color: var(--accent); }
+p.note { font-size: var(--step--1); color: var(--dim); }
+strong { font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--accent); }
+code { font-family: var(--mono); font-size: .86em; }
+p code, li code, td code, th code { color: var(--accent); word-break: break-word; }
+blockquote { margin: 0 0 1.2em; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--tile); font-family: var(--mono); font-size: var(--step--1); line-height: 1.6; }
+blockquote p { margin: 0; }
+
+.code { position: relative; margin: 0 0 1.3em; background: var(--term-bg); border-radius: 4px; overflow-x: auto; max-width: 100%; }
+.code pre { margin: 0; padding: 16px 18px; color: var(--term-ink); font-family: var(--mono); font-size: .8rem; line-height: 1.55; tab-size: 4; }
+.code code { font-size: inherit; color: inherit; }
+.code .lang { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--term-dim); }
+.code.diagram { background: var(--tile); border: 1px solid var(--rule); }
+.code.diagram pre { color: var(--ink); }
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 1.4em; }
+table { border-collapse: collapse; font-size: var(--step--1); line-height: 1.5; min-width: 30rem; }
+th { font-family: var(--cond); font-weight: 600; text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+td { padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td:first-child { font-weight: 600; font-family: var(--cond); }
+
+figure { margin: 0 0 1.4em; }
+figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); }
+figcaption { margin-top: 8px; font-size: var(--step--1); color: var(--dim); max-width: var(--measure); }
+
+footer { border-top: 1px solid var(--rule); padding-block: 24px 48px; font-size: var(--step--1); color: var(--dim); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* READ ALONG (tools/report/page.html's teleprompt): the button in the bar, and the reading line while it plays. */
+.tele { font: inherit; color: var(--dim); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 1px 8px; cursor: pointer; }
+.tele:hover, .tele[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); }
+.tele-line { position: fixed; left: 0; right: 0; height: 0; border-top: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); pointer-events: none; z-index: 15; }
+.tele-line[hidden] { display: none; }
+</style>
+
+<div class="bar"><div class="bar-in"><strong><a href="index.html">Orreryq</a> · lab report</strong><a href="#abstract">Abstract</a><a href="#si">I</a><a href="#sii">II</a><a href="#siii">III</a><a href="#siv">IV</a><a href="#sv">V</a><a href="#svi">VI</a><a href="#svii">VII</a><a href="#sviii">VIII</a><a href="#six">IX</a><a href="#sx">X</a><a href="#references">References</a><button class="tele" id="tele" type="button" aria-pressed="false" title="Scroll at reading speed; each film plays when it reaches you. Esc, the wheel or a touch stops it.">Read along</button></div></div>
+<div class="tele-line" id="tele-line" hidden></div>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">Orreryq · the console on a Mac · a signing identity of its own, and why macOS called every machine unreachable</p>
+    <h1>The Same Application Tomorrow: a Signing Identity of Orrery's Own, the Binary as the Bundle's Executable, and Why macOS Called Every Machine Unreachable</h1>
+    <div class="front"><p class="note">Paul Richeson · Lab Report — IEEE Format · 18 November 2026</p><p>Copyright (c) 2026 Paul Richeson. MIT licensed, as orrery.</p><p>Companions: <code>tools/mac-sign.sh</code> (the identity: made, used, checked, proved, forgotten); <code>tools/mac-app.sh</code> (the install that uses it); <code>src/bundle.rs</code> (the binary doing what the launcher script did); <code>tools/mac-ssh-watch.py</code> (whose ssh this Mac is refusing, in one table); <em>The Orange Queue</em> (<code>docs/orange-queue-lab-report.md</code>), whose section VII left the cause of the dropped connections "not found".</p></div>
+  </header>
+  <nav class="toc" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#abstract">Abstract</a></li><li><a href="#si">I. The question</a></li><li><a href="#sii">II. What the reader needs</a></li><li><a href="#siii">III. Materials</a></li><li><a href="#siv">IV. What was observed</a></li><li><a href="#sv">V. What it means</a></li><li><a href="#svi">VI. What was built</a></li><li><a href="#svii">VII. How to use it</a></li><li><a href="#sviii">VIII. Results</a></li><li><a href="#six">IX. What Paul decides, and what is not done</a></li><li><a href="#sx">X. Addendum, 16:00 to 16:50 the same day: allowed, and kept across an install</a></li><li><a href="#references">References</a></li></ol></nav>
+  <main>
+  <section id="abstract"><h2>Abstract</h2><p>On 18 November 2026 the queue called machines unreachable that answered a terminal at once. The Mac was refusing the connections itself. In the three minutes after the console opened at 13:47, the kernel dropped the first packet of 333 of 349 ssh connections "by policy" and returned <em>No route to host</em>; the 16 that connected came from a terminal. The policy is macOS's local network privacy, and it had lost track of which application Orrery was, for two reasons that this report separates by experiment. First, <code>Orrery.app</code> was signed ad hoc, so the only sentence macOS could keep about it was the hash of one build: 38 past builds were on the Mac's list as 38 applications. Second, the bundle named a shell script as its executable, and macOS files the grant under the Mach-O UUID of that file; a script has none, so the bundle was on record with no code. Both are changed. <code>make install</code> now signs with one self-signed identity kept in a keychain of its own, and the binary is the bundle's executable. After the change macOS for the first time asked the question under the application's own name: "prompting for Orrery (org.copal.orrery)". Paul answered Allow that afternoon, and both remaining measurements were made: the console's connections were allowed, and after the next install, a build with another hash and the same requirement, macOS asked nothing and allowed a fresh connection the new build opened (section X).</p></section><section id="si"><h2>I. The question</h2><p>Paul, 18 November: "the mac keeps rejecting ssh. is there something wrong. Perhaps its after hours of stale connections." Then, after the diagnosis: "Please do the fix of make it stick. Explain the self signed process additions and concept overview with details in a lab report. and impliment."</p><p>Three questions follow from that. What refuses the connections? Why does a reboot, or an install, change whether it does? What must be true of the application for a grant, once given, to be kept?</p></section><section id="sii"><h2>II. What the reader needs</h2><h3 id="a-what-a-code-signature-is">A. What a code signature is</h3><p>A signed program carries four things that matter here.</p><div class="table"><table><thead><tr><th>Part</th><th>What it is</th><th>Changes when</th></tr></thead><tbody><tr><td>The code directory</td><td>a table of hashes, one for each page of the program and each sealed resource</td><td>any byte of the program changes</td></tr><tr><td>The <code>cdhash</code></td><td>the hash of the code directory: one number that stands for this exact build</td><td>every build</td></tr><tr><td>The identifier</td><td>a name inside the signature, by convention the bundle identifier (<code>org.copal.orrery</code>)</td><td>only if the signer changes it</td></tr><tr><td>The signature proper</td><td>the code directory signed with a private key, and the certificate that holds the matching public key</td><td>the signer or the build changes</td></tr></tbody></table></div><p><code>codesign -dvvv APP</code> prints all four. Apple's own account is in its three technical notes on code signing [1]-[3].</p><h3 id="b-ad-hoc-a-signature-with-no-signer">B. Ad hoc: a signature with no signer</h3><p><code>codesign --sign -</code> makes the code directory and stops. There is no key and no certificate: the program is sealed, so the system can tell it has not been altered since, but nobody is named as having sealed it. Apple silicon will not run unsigned code, so the linker signs every program this way by itself, and <code>tools/mac-app.sh</code> did the same for the bundle.</p><h3 id="c-the-designated-requirement">C. The designated requirement</h3><p>When macOS grants an application something (the local network, a keychain item, an exception in the firewall) it must write down which application it meant, in a form that survives an update. That form is the <em>designated requirement</em>: a sentence in a small language that any later program either satisfies or does not [3]. <code>codesign -d -r- APP</code> prints it.</p><p>The requirement is derived from the signature, and this is where the two kinds part:</p><div class="code"><span class="lang">text</span><pre><code>signed by a certificate:  identifier &quot;org.copal.orrery&quot; and certificate root = H&quot;6989d9e4...&quot;
+signed ad hoc:            cdhash H&quot;b6c926740b64d2c082058f1ff93125e53d22c8eb&quot;</code></pre></div><p>The first names a signer. Every build that the same certificate signs under the same identifier satisfies it. The second can name nothing but the build itself, because an ad hoc signature has nothing else in it. <strong>An ad hoc program's next build is, to every part of macOS that keeps a grant, a different application.</strong></p><h3 id="d-local-network-privacy">D. Local network privacy</h3><p>Since macOS 15 a program that opens a connection to an address on the local network is checked against a per-application permission, the one listed under System Settings, Privacy &amp; Security, Local Network [4]. Three properties of it matter here.</p><ol><li><strong>It is enforced in the kernel, before a packet leaves.</strong> A refused <code>connect()</code> returns error 65, <em>No route to host</em>, at once. Nothing reaches the wire and the far machine logs nothing.</li><li><strong>A process is judged as the application that launched it.</strong> <code>ssh</code> started by Python started by Orrery is, for this purpose, Orrery. Programs started from Terminal are judged as Terminal, which has the grant.</li><li><strong>The first refusal is meant to raise a question on screen</strong>, and the answer is kept against the application's identity.</li></ol><p>The fleet's machines are all on 192.168.8.x, so every connection Orrery makes is subject to it.</p></section><section id="siii"><h2>III. Materials</h2><div class="table"><table><tbody><tr><td>The Mac</td><td>macOS 26.7.2 (build 25G332) in the morning, 26.7.3 (25G342) from 14:08</td></tr><tr><td>The application</td><td><code>/Applications/Orrery.app</code>, bundle identifier <code>org.copal.orrery</code>, built by <code>tools/mac-app.sh</code></td></tr><tr><td>The fleet</td><td>boburner, saskatchewan, columbia, whitewolf, macmini, calber on 192.168.8.x, reached by <code>ssh</code></td></tr><tr><td>The kernel's record</td><td><code>/usr/bin/log</code>, lines <code>tcp connect outgoing ... process: ssh:PID ... error: N</code> and <code>tcp drop outgoing ... reason: NECP</code></td></tr><tr><td>The permission daemon's record</td><td><code>nehelper</code>, subsystem <code>com.apple.networkextension</code>, at info level</td></tr><tr><td>A process catcher</td><td><code>tools/mac-ssh-watch.py</code>: a loop over <code>libproc</code> that records each new <code>ssh</code> process, its command and its chain of parents, joined to the kernel's line for its connection</td></tr></tbody></table></div><p>The catcher was needed because a refused <code>ssh</code> lives a few milliseconds. <code>ps</code> in a loop caught none of 76 refused processes in 50 seconds; the <code>libproc</code> loop caught 223 of 223 in 90.</p><p>In <code>zsh</code>, <code>log</code> is a shell builtin: the system's is <code>/usr/bin/log</code>.</p></section><section id="siv"><h2>IV. What was observed</h2><p>Four states of the same application on the same day, each watched for 70 to 180 seconds. "Refused" is a <code>connect()</code> that returned error 65 with the kernel's reason NECP, the policy engine. "Launched by" is the root of the process's chain of parents.</p><div class="table"><table><thead><tr><th></th><th>When</th><th>Signature</th><th>Bundle executable</th><th>ssh launched by Orrery</th><th>What the permission daemon said</th></tr></thead><tbody><tr><td>A</td><td>13:47 to 13:50</td><td>ad hoc</td><td>the script</td><td>refused: 333 of 349 never connected</td><td>(not read at the time)</td></tr><tr><td>B</td><td>14:36 to 14:38, after the system update and a restart</td><td>ad hoc, the same build</td><td>the script</td><td>connected; the only failures were error 64, <em>Host is down</em>, to machines that were off</td><td>nothing</td></tr><tr><td>C</td><td>14:42 to 14:44, after <code>make install</code> with the identity</td><td>the identity</td><td>the script</td><td>refused: 105 of 105</td><td>"Local network allowed by preference for orrery (orrery-5555494461043453...), but received prompt"; "Received UUID 6F9328CD-... does not match cached UUIDs"</td></tr><tr><td>D</td><td>14:48 to 14:51, after <code>make install</code> with the binary as the executable</td><td>the identity</td><td>the binary</td><td>refused: 85 of 85, a question pending</td><td>"UUID cache hit for org.copal.orrery"; "Local network preference not yet set, prompting for Orrery (org.copal.orrery)"</td></tr></tbody></table></div><p>In A the 16 connections that succeeded were opened from a terminal. In C and D the keeper, which the console had started at 14:08 while it was allowed, went on connecting: every machine answered and seven lanes ran throughout.</p><p>Two more facts were read from the Mac's own list of local network rules, <code>/Library/Preferences/com.apple.networkextension.plist</code>:</p><ul><li>It held 69 application rules. <strong>Thirty-eight of them were Orrery</strong>, each named <code>orrery-55554944</code> followed by a different 32 hexadecimal digits, each with the path of the binary inside the bundle.</li><li>It held one rule named <code>org.copal.orrery</code>, for which the daemon reported "0 UUIDs" at every lookup.</li></ul><p>The queue's record of the same morning, before any of this was understood:</p><div class="table"><table><thead><tr><th>Hour</th><th>Jobs sent back as "host unreachable"</th></tr></thead><tbody><tr><td>00</td><td>23</td></tr><tr><td>01</td><td>15</td></tr><tr><td>08</td><td>10</td></tr><tr><td>09</td><td>6</td></tr><tr><td>11</td><td>15</td></tr><tr><td>12</td><td>14</td></tr></tbody></table></div><p>macmini alone had 23 of its 260 jobs sent back.</p></section><section id="sv"><h2>V. What it means</h2><h3 id="a-the-refusal-is-the-mac-s">A. The refusal is the Mac's</h3><p>In A the far machines were up: a terminal reached four of them in the same minute. The kernel's lines show the first packet of each refused connection dropped on the Mac with the reason NECP, and zero bytes sent. Stale connections are not involved: a refused connection never existed.</p><p>That also explains two things that had no explanation. The queue only worked at all, in a bad spell, because its jobs ride a shared connection a machine, and a shared connection opened by a program in a terminal could be used by the keeper through a local socket, which the policy does not see. When that connection ended, the keeper could not open another. On the day, boburner and saskatchewan came "back" ten seconds after their shared connections were opened by hand from a terminal, and macmini stayed unreachable until its one was.</p><h3 id="b-the-first-fault-the-name-was-the-build">B. The first fault: the name was the build</h3><p>The 38 rules are the proof. <code>orrery-55554944...</code> is not a name anybody chose. <code>55554944</code> is the four letters <code>UUID</code> in hexadecimal, and what follows is the build's own Mach-O UUID: it is the identifier the linker gives a bare program when nobody gives it one. Each install put a new program at the same path with a new identifier and a new hash, and macOS made a new rule for it. The grant Paul gave was to one of the 38.</p><p>State C shows what happens next. The daemon found the newest binary by its path, matched it to the rule of the build before, and read that rule as allowed. Then it compared UUIDs, found that the program in front of it was not the one the rule was made for, cleared its cache, looked the old name up again, found no such program anywhere, and stored nothing. It did this about every ten seconds for as long as it was watched. <strong>It neither allowed the connection nor asked the question.</strong> An application in this state cannot be fixed from System Settings, because no question is ever raised to answer.</p><h3 id="c-the-second-fault-the-bundle-had-no-cod">C. The second fault: the bundle had no code</h3><p>Signing with the identity (state C) did not help by itself, and the daemon's lines say why: "0 UUIDs for org.copal.orrery". The bundle's <code>Info.plist</code> named <code>launch</code> as its executable, a four-line shell script that set the PATH, opened the log and ran the binary. macOS reads the UUID of the file the bundle names. A script has no UUID. So the rule for <code>org.copal.orrery</code> described an application with no code in it, and the binary the script ran was looked up as a stray program by its path.</p><p>State D is the same signature with the binary named as the executable. For the first time the daemon found the application by its bundle ("UUID cache hit for org.copal.orrery"), found no preference recorded for it, and did what the design intends: it raised the question, under the name Orrery.</p><h3 id="d-why-both-changes-are-needed">D. Why both changes are needed</h3><div class="table"><table><thead><tr><th></th><th>Bundle names the script</th><th>Bundle names the binary</th></tr></thead><tbody><tr><td><strong>Ad hoc</strong></td><td>a new stray program every build (states A, B: 38 rules)</td><td>found as the bundle, but its requirement is still one build's hash</td></tr><tr><td><strong>The identity</strong></td><td>still a stray program found by path (state C)</td><td>found as the bundle, and the requirement names the signer (state D)</td></tr></tbody></table></div><p>The lower right is the only cell in which macOS can both find the application and recognise the next build as the same one. The upper right was not tried: it would have meant installing a build known to be wrong.</p><h3 id="e-what-is-not-explained">E. What is not explained</h3><p>The same ad hoc build was refused at 13:47 and allowed at 14:36. Between them the system was updated and restarted. The daemon keeps a cache of UUIDs with a generation number, and the likeliest account is that the restart rebuilt it in a state where that one build matched its own rule. That is a guess: the daemon's lines for A were not captured. It matters less than it did, since the fix does not depend on it.</p></section><section id="svi"><h2>VI. What was built</h2><h3 id="a-the-identity-tools-mac-sign-sh">A. The identity: <code>tools/mac-sign.sh</code></h3><div class="code"><span class="lang">text</span><pre><code>mac-sign.sh identity         make the identity if it is absent; print its fingerprint
+mac-sign.sh sign PATH...     sign each path with it
+mac-sign.sh check [APP]      what APP is signed with, its requirement, and whether it is this identity&#x27;s
+mac-sign.sh prove            sign two different programs and show one requirement, two hashes
+mac-sign.sh forget           delete the identity</code></pre></div><p>Making the identity is seven steps, each one command.</p><div class="table"><table><thead><tr><th>Step</th><th>Command</th><th>What it is for</th></tr></thead><tbody><tr><td>1</td><td><code>openssl req -x509 -newkey rsa:2048 -nodes -days 7300</code></td><td>a key pair, and a certificate for the public half that the private half signs itself</td></tr><tr><td>2</td><td>(the request's three extensions)</td><td><code>CA:false</code>: it vouches for nobody else. <code>keyUsage = digitalSignature</code>: the key signs. <code>extendedKeyUsage = codeSigning</code>: what it signs is code. <code>codesign</code> will not use a certificate without the last.</td></tr><tr><td>3</td><td><code>openssl pkcs12 -export</code></td><td>key and certificate in one file, the only form <code>security import</code> takes them together</td></tr><tr><td>4</td><td><code>security create-keychain</code></td><td>a keychain of its own, <code>~/Library/Keychains/orrery-signing.keychain-db</code>, with a random password</td></tr><tr><td>5</td><td><code>security import ... -T /usr/bin/codesign</code></td><td>the pair goes in; <code>codesign</code> is named as a program that may use the key</td></tr><tr><td>6</td><td><code>security set-key-partition-list -S apple-tool:,apple:</code></td><td>without this the first signing opens a dialog asking whether <code>codesign</code> may use the key</td></tr><tr><td>7</td><td><code>security lock-keychain</code></td><td>locked until the next signing</td></tr></tbody></table></div><p>Signing then joins the keychain to the user's search list, unlocks it, runs <code>codesign --force --sign FINGERPRINT --identifier org.copal.orrery</code>, and puts the search list back and locks the keychain whatever happened.</p><h3 id="b-what-self-signed-gives-and-does-not-gi">B. What "self-signed" gives and does not give</h3><p>A certificate is ordinarily signed by an authority, and the authority's by another, up to a root the system trusts. This one is signed by its own key. The chain is one link long and ends at nothing the system trusts: <code>security find-identity</code> lists it as <code>CSSMERR_TP_NOT_TRUSTED</code>, and that is correct.</p><div class="table"><table><thead><tr><th>It gives</th><th>It does not give</th></tr></thead><tbody><tr><td>a requirement that names a signer, the same at every build</td><td>anything from Gatekeeper: a downloaded copy is still an unidentified developer's</td></tr><tr><td>grants that are kept from install to install</td><td>a way to give the application to another Mac; that wants a Developer ID and notarization</td></tr><tr><td>no cost, no account, no network</td><td>any assurance to a third party about who built it</td></tr></tbody></table></div><p>Nothing more is wanted. The requirement does not ask whether the certificate is trusted. It asks whether it is <em>the same certificate</em>, by its hash.</p><h3 id="c-where-the-key-lives-and-what-was-rejec">C. Where the key lives, and what was rejected</h3><p><strong>A keychain of its own, with its password in a file beside the application's options</strong> (<code>~/.config/orrery/signing-keychain-password</code>, mode 600).</p><p>Rejected: the login keychain. <code>codesign</code> may not use a key newly put there until somebody types the login password, into a dialog or into <code>security set-key-partition-list</code>. An install that stops for a password is an install that does not get run, and the ad hoc signature would be back within the week.</p><p>What that costs: whoever can read this account's files can sign as this identity. Whoever can read this account's files can already replace the application. The key signs one identifier on one Mac and nothing trusts it.</p><p>Rejected: leaving the keychain on the search list. <code>codesign --keychain</code> alone answered "no identity found", so the keychain must be on the list while signing. Left there, other programs would meet a locked keychain they never asked for.</p><h3 id="d-the-binary-as-the-bundle-s-executable-">D. The binary as the bundle's executable: <code>src/bundle.rs</code></h3><p>The launcher script did three jobs. The binary now does them itself, and only when it is started with no arguments from inside a bundle, which is how Finder starts an application:</p><div class="table"><table><thead><tr><th>The script's job</th><th>Now</th></tr></thead><tbody><tr><td>put <code>~/.local/bin</code> and Homebrew on the PATH</td><td><code>bundle::path</code>, set before anything is run</td></tr><tr><td>send output to <code>~/Library/Logs/orrery.log</code></td><td>the log opened for append and <code>dup2</code> onto standard output and error</td></tr><tr><td>pass the options the app was installed with</td><td>read from <code>Contents/Resources/arguments</code>, one a line</td></tr></tbody></table></div><p>Started with arguments of its own, from a terminal, it reads no file and redirects nothing. Six tests, named as sentences, cover the path test, the parsing and that last rule.</p><p>Rejected: <code>LSEnvironment</code> in <code>Info.plist</code>, which cannot say <code>$HOME</code> and does nothing for the options or the log. Rejected: a small compiled launcher that runs the binary, because <code>exec</code> replaces the program and the UUID macOS sees would again not be the bundle's.</p><h3 id="e-the-install-tools-mac-app-sh">E. The install: <code>tools/mac-app.sh</code></h3><p>Three changes. The bundle's <code>CFBundleExecutable</code> is <code>orrery</code>. The options are written to <code>Contents/Resources/arguments</code>. The binary and then the bundle are signed by <code>mac-sign.sh sign</code>, and so is the copy in <code>~/.local/bin</code>. The install ends by printing who signed the application and its requirement.</p><p><code>ORRERY_SIGN=adhoc make install</code> is the old signature, for a Mac where no key may be kept. It says what it costs when it is used.</p></section><section id="svii"><h2>VII. How to use it</h2><p>Nothing changes in the ordinary case: <code>make install</code>. The first run makes the identity and says so.</p><div class="code"><span class="lang">text</span><pre><code>$ make sign-check
+signed by the identity:
+  first   hash 1118b52b...   requirement identifier &quot;org.copal.orrery&quot; and certificate root = H&quot;6989d9e4...&quot;
+  second  hash f4a94fb0...   requirement identifier &quot;org.copal.orrery&quot; and certificate root = H&quot;6989d9e4...&quot;
+signed ad hoc:
+  first   requirement cdhash H&quot;8903a336...&quot; or cdhash H&quot;1031d385...&quot;
+  second  requirement cdhash H&quot;ba9aa7a0...&quot; or cdhash H&quot;63b02a3d...&quot;
+PASSED: two builds, two hashes, ONE requirement by the identity; two requirements ad hoc
+application   /Applications/Orrery.app
+signed by     Orrery Local Signing
+requirement   identifier &quot;org.copal.orrery&quot; and certificate root = H&quot;6989d9e4c233c031dcb16b2481ffc9a1eaa13760&quot;
+ok: the requirement names this Mac&#x27;s identity, and the next install will have the same one</code></pre></div><p>The ad hoc lines show two hashes each because <code>/bin/ls</code> and <code>/bin/cat</code>, the two programs the proof signs, hold code for two processors.</p><p>To see whether the Mac is refusing connections now, and whose:</p><div class="code"><span class="lang">text</span><pre><code>$ python3 tools/mac-ssh-watch.py 30
+99 ssh processes started in 30 s; the kernel recorded a connection for 53
+count  result                           launched by  through                      to
+    3  connected                        the keeper   git                          git@ssh.github.com
+    7  refused, error 65, reason NECP   Orrery       tools/orchestrate.py         copal-fleet@saskatchewan
+    7  refused, error 65, reason NECP   Orrery       tools/orchestrate.py         copal-fleet@columbia
+    ...
+REFUSED BY THIS MAC: 39 connections Orrery launched. Its grant: System Settings, Privacy &amp; Security, Local Network.</code></pre></div><p>That is state D, with the question unanswered. It needs no root, and it ends with a line that says "ok" when nothing Orrery launched was refused.</p><p>To see what the permission daemon thinks Orrery is:</p><div class="code"><span class="lang">text</span><pre><code>/usr/bin/log show --last 2m --info --predicate &#x27;process == &quot;nehelper&quot; AND eventMessage CONTAINS[c] &quot;local network&quot;&#x27;</code></pre></div><p>If the identity is ever lost (a new Mac, a deleted keychain), the next install makes another, macOS takes the application for a new one once, and asks once.</p></section><section id="sviii"><h2>VIII. Results</h2><div class="table"><table><thead><tr><th>Claim</th><th>How it was checked</th><th>Result</th></tr></thead><tbody><tr><td>Two different programs signed by the identity have one requirement and two hashes</td><td><code>mac-sign.sh prove</code></td><td>passed</td></tr><tr><td>Two programs signed ad hoc have two requirements</td><td>the same</td><td>passed</td></tr><tr><td>The installed application's requirement names the identity</td><td><code>mac-sign.sh check</code>, and <code>codesign --verify --deep --strict</code></td><td>passed</td></tr><tr><td>Signing leaves the keychain search list as it found it</td><td><code>security list-keychains</code> before and after</td><td>the login keychain alone, both times</td></tr><tr><td>No dialog and no password during an install</td><td>three installs run without a person</td><td>none appeared</td></tr><tr><td>The binary starts from Finder with its options, PATH and log</td><td><code>open /Applications/Orrery.app</code>; the window opened in the operator posture and wrote to the log</td><td>passed</td></tr><tr><td>macOS finds the application by its bundle</td><td>the daemon's "UUID cache hit for org.copal.orrery" and its question by name</td><td>passed</td></tr><tr><td>The bundle's tests</td><td><code>cargo test --release bundle</code></td><td>6 of 6</td></tr><tr><td>Connections are allowed once the question is answered</td><td><code>mac-ssh-watch.py</code> twice after Paul's Allow (section X)</td><td>passed: nothing Orrery launched was refused</td></tr><tr><td>They are still allowed after the next <code>make install</code></td><td>a new build (another hash, the same requirement), reopened; a fresh connection forced from it (section X)</td><td>passed: no question asked, and a connection the new build's own process opened was allowed</td></tr></tbody></table></div></section><section id="six"><h2>IX. What Paul decides, and what is not done</h2><ol><li><strong>Answer the question.</strong> Done that afternoon: Allow (section X).</li><li><strong>The two measurements</strong> are made (section X).</li><li><strong>The keeper now running was started by the console of 14:08</strong>, before the change, and is allowed. It was left alone, since restarting it runs the jobs in hand again. The next keeper will be started by the new application and will need the grant.</li><li><strong>The 38 old rules are still on the Mac's list.</strong> They do not match the new application, which is found by its bundle. Removing them wants root and an edit to a system preference file; the Settings pane can switch a row off and cannot delete one. Not done.</li><li><strong>The film for this report was not attempted in this sitting.</strong> The directive of 13 November asks for one after every report.</li><li>Nothing here is committed.</li></ol></section><section id="sx"><h2>X. Addendum, 16:00 to 16:50 the same day: allowed, and kept across an install</h2><p><strong>Allowed.</strong> Paul answered the question Allow and ran <code>python3 tools/mac-ssh-watch.py</code> himself, twice. The first run: 113 ssh processes in 40 seconds, and the only failures error 64, <em>Host is down</em>, to calber, which was off; "ok: nothing Orrery launched was refused by this Mac's policy". The second, with calber booted: every connection made.</p><p><strong>Kept across an install.</strong> The same evening the console was changed (a full-tilt button on the Heat page, <code>docs/hearth-controller.md</code>) and installed by <code>make install</code>:</p><div class="table"><table><thead><tr><th></th><th>Before</th><th>After</th></tr></thead><tbody><tr><td>CDHash</td><td><code>413189877f4364291a2408c1dee02ca8ec0fe882</code></td><td><code>b0afdf76474542bacab2f993d968cdac1a648d42</code></td></tr><tr><td>Mach-O UUID</td><td><code>DE1ABC73-...</code></td><td><code>89A605B4-...</code></td></tr><tr><td>Designated requirement</td><td><code>identifier &quot;org.copal.orrery&quot; and certificate root = H&quot;6989d9e4...&quot;</code></td><td>the same</td></tr></tbody></table></div><p>Under ad hoc signing this was a new application. The console was quit and opened again on it at 16:39:23, and the permission daemon was watched: it raised no question.</p><p>The first watches after the reopen proved less than they seemed. Every new connection in them was the keeper's, which the console of 14:08 had started, and the new console's own ssh calls all rode shared connections that were already open, which are local sockets and are not checked. A connection the new build itself opens had to be forced. The installed application was started through <code>open</code>, so that macOS counts it as the app that launched what follows, in its one-frame drawing mode on the Machines view. Immediately before, the housekeeping shared connections it reads the machines through were closed. In the minute that followed, <code>tools/disk-report.py</code>, launched by Orrery, opened a fresh connection, and it was allowed. <strong>A grant given to one build was honoured for the next, with no question.</strong></p><p>That is the claim the report was written for, and it rests on one forced connection. Closing the jobs' own shared connections would have forced more, at the price of requeuing every job in hand, and was not done.</p></section><section id="references"><h2>References</h2><p>[1] Apple Inc., "TN3125: Inside Code Signing: Provisioning Profiles," Apple Developer Technical Notes.</p><p>[2] Apple Inc., "TN3126: Inside Code Signing: Hashes," Apple Developer Technical Notes. The code directory and the <code>cdhash</code>.</p><p>[3] Apple Inc., "TN3127: Inside Code Signing: Requirements," Apple Developer Technical Notes. The designated requirement and its language.</p><p>[4] Apple Inc., "TN3179: Understanding local network privacy," Apple Developer Technical Notes.</p><p>[5] <code>codesign(1)</code>, <code>security(1)</code>, <code>csreq(1)</code>, macOS manual pages.</p><p>[6] P. Richeson, "The Orange Queue," orrery <code>docs/orange-queue-lab-report.md</code>, 15 November 2026. Section VII, "Where the drops come from", and its two addenda.</p></section>
+  </main>
+  <footer>
+    <p>Paul Richeson, 28 October 2026. MIT licensed, as orrery. The Markdown original and the example's source are in orrery: <code>docs/appkit-gui-lab-report.md</code> and <code>docs/appkit-example/</code>.</p>
+  </footer>
+</div>
+
+<script>
+/* READ ALONG (Paul, 6 November: "scrolls the webpage with enough reading time, which then it starts the animation
+   when its in view, stops scrolling to view it, then continues scrolling ... like a teleprompt"). One timeline,
+   made from the page itself: each block read at WPM past a reading line a third of the way down, each figure
+   held for a look its caption and size set, each film held and played to its end. The button plays it here;
+   tools/report/teleprompt.py asks the same function in headless Chrome and films it, so the page and its video
+   keep the same pace. window.teleprompt = {timeline, play, stop}. */
+(function () {
+  var WPM = 180, LINE = 0.33, SPEED = 700;
+  function words(el) { return ((el.innerText || el.textContent || "").trim().split(/\s+/).filter(Boolean)).length; }
+  function blocks() {
+    var sel = ".mast h1, .mast .front p, main h2, main h3, main p, main li, main table, main pre, main blockquote, main figure, main video, main svg, main img";
+    var all = Array.prototype.slice.call(document.querySelectorAll(sel)), out = [];
+    all.forEach(function (el) {
+      for (var a = el.parentElement; a; a = a.parentElement) if (all.indexOf(a) >= 0 && a.tagName !== "LI") return;
+      if (el.tagName === "LI" && el.querySelector("li")) { /* a list item with its own list: read its first line only */ }
+      if (el.closest("figure") && el.tagName !== "FIGURE" && el.closest("figure") !== el) return;
+      out.push(el);
+    });
+    return out;
+  }
+  function timeline(opt) {
+    opt = opt || {};
+    var wpm = opt.wpm || WPM, vh = opt.height || window.innerHeight, line = vh * LINE, top0 = opt.top || 0;
+    var segs = [], t = 0, y = 0, films = [];
+    function go(to, dur, kind, extra) {
+      to = Math.max(0, Math.round(to));
+      var dy = Math.abs(to - y);
+      if (dy > 2) { var d = Math.max(0.4, dy / SPEED); segs.push({t0: t, t1: t + d, y0: y, y1: to, kind: "move"}); t += d; y = to; }
+      if (dur > 0) { var s = {t0: t, t1: t + dur, y0: y, y1: y, kind: kind}; for (var k in (extra || {})) s[k] = extra[k]; segs.push(s); t += dur; }
+    }
+    blocks().forEach(function (el) {
+      var r = el.getBoundingClientRect(), top = r.top + window.scrollY - top0, h = r.height;
+      if (h < 2) return;
+      var video = el.tagName === "VIDEO" ? el : (el.querySelector ? el.querySelector("video") : null);
+      var cap = el.tagName === "FIGURE" && el.querySelector("figcaption") ? words(el.querySelector("figcaption")) : 0;
+      var next = el.nextElementSibling;
+      if (!cap && next && next.tagName === "P" && /^<em>Fig\./.test(next.innerHTML.trim())) cap = 0;
+      var visual = video || el.tagName === "FIGURE" || el.tagName === "SVG" || el.tagName === "svg" || el.tagName === "IMG" || (el.querySelector && el.querySelector("svg, img"));
+      if (video) {
+        var dur = isFinite(video.duration) && video.duration > 0 ? video.duration : parseFloat(video.getAttribute("data-duration") || "10");
+        var vr = video.getBoundingClientRect();
+        films.push({src: video.getAttribute("src"), x: vr.left, y: vr.top + window.scrollY - top0, w: vr.width, h: vr.height, dur: dur});
+        go(top + h / 2 - vh / 2, 0.6 + dur + cap * 60 / wpm, "film", {film: films.length - 1});
+      } else if (visual) {
+        var look = Math.min(14, 3 + cap * 60 / wpm + h / 250);
+        if (h > vh * 0.85) { go(top - 40, 0.5, "look"); var d2 = Math.max(look, (h - vh + 80) / 60); segs.push({t0: t, t1: t + d2, y0: y, y1: Math.round(top + h - vh + 40), kind: "look"}); t += d2; y = Math.round(top + h - vh + 40); }
+        else go(top + h / 2 - vh / 2, look, "look");
+      } else {
+        var n = words(el), read = Math.max(el.tagName.charAt(0) === "H" ? 1.2 : 1.0, n * 60 / wpm * (el.tagName === "TABLE" ? 1.25 : el.tagName === "PRE" ? 1.5 : 1));
+        go(top - line, 0, "read");
+        segs.push({t0: t, t1: t + read, y0: y, y1: Math.max(0, Math.round(top + h - line)), kind: "read"});
+        t += read; y = Math.max(0, Math.round(top + h - line));
+      }
+    });
+    return {wpm: wpm, height: vh, width: opt.width || window.innerWidth, line: Math.round(line), duration: t, segments: segs, films: films,
+            page: Math.round(document.documentElement.scrollHeight - top0)};
+  }
+  function yAt(tl, t) {
+    for (var i = 0; i < tl.segments.length; i++) { var s = tl.segments[i]; if (t < s.t1) return s.y0 + (s.y1 - s.y0) * Math.max(0, (t - s.t0) / (s.t1 - s.t0)); }
+    return tl.segments.length ? tl.segments[tl.segments.length - 1].y1 : 0;
+  }
+  var raf = 0, playing = null;
+  function stop() {
+    if (!playing) return;
+    cancelAnimationFrame(raf); playing = null;
+    var b = document.getElementById("tele"); if (b) { b.setAttribute("aria-pressed", "false"); b.textContent = "Read along"; }
+    var l = document.getElementById("tele-line"); if (l) l.hidden = true;
+    removeEventListener("wheel", stop); removeEventListener("touchstart", stop); removeEventListener("keydown", key);
+  }
+  function key(e) { if (e.key === "Escape") stop(); }
+  function play(opt) {
+    stop();
+    var tl = timeline(opt), vids = Array.prototype.slice.call(document.querySelectorAll("main video")), started = performance.now(), held = 0, cur = -1;
+    playing = tl;
+    var b = document.getElementById("tele"); if (b) { b.setAttribute("aria-pressed", "true"); b.textContent = "Stop"; }
+    var l = document.getElementById("tele-line"); if (l) { l.style.top = tl.line + "px"; l.hidden = false; }
+    addEventListener("wheel", stop, {passive: true}); addEventListener("touchstart", stop, {passive: true}); addEventListener("keydown", key);
+    function step(now) {
+      if (!playing) return;
+      var t = (now - started) / 1000 - held, i = 0;
+      while (i < tl.segments.length && t >= tl.segments[i].t1) i++;
+      if (i >= tl.segments.length) { stop(); return; }
+      var s = tl.segments[i];
+      if (i !== cur) {
+        cur = i;
+        if (s.kind === "film") { var f = tl.films[s.film], v = vids.filter(function (x) { return x.getAttribute("src") === f.src; })[0];
+          if (v) { v.muted = true; v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function () {}); s.v = v; } }
+      }
+      /* A film that has not reached its end holds the clock: the page waits for it. */
+      if (s.kind === "film" && s.v && !s.v.ended && t > s.t1 - 0.2) { held += 1 / 60; }
+      window.scrollTo(0, yAt(tl, Math.min(t, s.t1)));
+      raf = requestAnimationFrame(step);
+    }
+    raf = requestAnimationFrame(step);
+    return tl;
+  }
+  window.teleprompt = {timeline: timeline, play: play, stop: stop, yAt: yAt};
+  var b = document.getElementById("tele");
+  if (b) b.addEventListener("click", function () { if (playing) stop(); else play(); });
+})();
+</script>

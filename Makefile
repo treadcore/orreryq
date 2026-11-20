@@ -8,6 +8,9 @@
 #   make install OPTIONS='--operator paul --fleet grove --queue DIR ...'
 #                                the same, with these options from now on
 #   make uninstall               both
+#   make sign-check              is the installed app signed by this Mac's
+#                                identity (tools/mac-sign.sh), so that what
+#                                macOS granted it survives the next install
 #   make build / make test
 
 PREFIX  ?= $(HOME)/.local
@@ -15,12 +18,12 @@ CARGO   ?= cargo
 OPTIONS ?=
 GUARD    = $(shell [ "$$(uname -s)" = Darwin ] && echo "sh tools/mem-guard.sh")
 
-.PHONY: all build test install uninstall help
+.PHONY: all build test install uninstall sign-check help
 
 all: build
 
 help:
-	@sed -n '1,13p' Makefile
+	@sed -n '1,16p' Makefile
 
 build:
 	$(GUARD) $(CARGO) build --release
@@ -43,3 +46,6 @@ uninstall:
 	else \
 		rm -f "$(PREFIX)/bin/orrery" && echo "removed $(PREFIX)/bin/orrery"; \
 	fi
+
+sign-check:
+	@sh tools/mac-sign.sh prove && sh tools/mac-sign.sh check

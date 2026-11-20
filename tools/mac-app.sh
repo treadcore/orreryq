@@ -14,9 +14,9 @@
 #
 # Run it again with options to change them; with none (or `make install`)
 # it keeps the last ones, from ~/.config/orrery/app-options.
-# An app opened from Finder gets a bare PATH and no terminal, so the launcher
-# puts ~/.local/bin and Homebrew back on the PATH and writes what orrery says
-# to ~/Library/Logs/orrery.log. APPDIR=DIR puts it elsewhere.
+# An app opened from Finder gets a bare PATH and no terminal, so orrery, started
+# inside the bundle with no arguments, puts ~/.local/bin and Homebrew back on the
+# PATH and writes what it says to ~/Library/Logs/orrery.log (src/bundle.rs). APPDIR=DIR puts it elsewhere.
 # --uninstall removes both.
 set -eu
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -69,16 +69,13 @@ rm -rf "$NEW"
 mkdir -p "$NEW/Contents/MacOS" "$NEW/Contents/Resources"
 install -m 755 target/release/orrery "$NEW/Contents/MacOS/orrery"
 
-# The launcher is not named Orrery: a Mac's disk ignores case, and it would
-# be the binary.
-cat > "$NEW/Contents/MacOS/launch" <<EOF
-#!/bin/sh
-# Orrery.app's launcher, written by $ROOT/tools/mac-app.sh.
-export PATH="\$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:\$PATH"
-mkdir -p "\$HOME/Library/Logs"
-exec "\$(dirname "\$0")/orrery"$ARGS >>"\$HOME/Library/Logs/orrery.log" 2>&1
-EOF
-chmod 755 "$NEW/Contents/MacOS/launch"
+# The binary is the bundle's executable, and there is no launcher script. There was one until 18
+# November 2026 (PATH, the log, the options, then exec), and macOS files an application's grant
+# to reach the local network under the Mach-O UUID of the file CFBundleExecutable names: a script
+# has none, so the bundle was on record with no code and the binary was a stranger at every build.
+# The binary does the script's three jobs itself when it is started with no arguments inside a
+# bundle (src/bundle.rs); its options are here, one a line.
+( eval "set -- $ARGS"; for a in "$@"; do printf '%s\n' "$a"; done ) > "$NEW/Contents/Resources/arguments"
 
 cat > "$NEW/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -88,7 +85,7 @@ cat > "$NEW/Contents/Info.plist" <<EOF
     <key>CFBundleName</key><string>Orrery</string>
     <key>CFBundleDisplayName</key><string>Orrery</string>
     <key>CFBundleIdentifier</key><string>org.copal.orrery</string>
-    <key>CFBundleExecutable</key><string>launch</string>
+    <key>CFBundleExecutable</key><string>orrery</string>
     <key>CFBundleIconFile</key><string>orrery</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleVersion</key><string>$VERSION</string>
@@ -112,11 +109,21 @@ done
 iconutil -c icns "$SET" -o "$NEW/Contents/Resources/orrery.icns"
 rm -rf "$(dirname "$SET")"
 
-# Signed ad hoc, the binary first and then the bundle around it (codesign
-# will not seal a bundle whose code inside is unsigned), so it opens from
-# Finder without a complaint.
-codesign --force --sign - "$NEW/Contents/MacOS/orrery"
-codesign --force --sign - "$NEW"
+# Signed by this Mac's own identity (tools/mac-sign.sh), the binary first and then the bundle
+# around it (codesign will not seal a bundle whose code inside is unsigned). It was signed ad hoc
+# until 18 November 2026, and an ad hoc signature's requirement is the build's own hash: macOS took
+# every install for a new application and the grant to reach the local network went with the old
+# one. The identity's requirement names the signer, so the grant is asked for once and kept.
+# ORRERY_SIGN=adhoc is the old way, for a Mac where no key may be kept; it says what it costs.
+if [ "${ORRERY_SIGN:-}" = adhoc ]; then
+    codesign --force --sign - "$NEW/Contents/MacOS/orrery"
+    codesign --force --sign - "$NEW"
+    echo "signed ad hoc: macOS will take the next install for a new application and ask again"
+else
+    sh "$ROOT/tools/mac-sign.sh" sign "$NEW/Contents/MacOS/orrery" "$NEW"
+    # The copy in PREFIX/bin is the same program started from a terminal: the same signer.
+    sh "$ROOT/tools/mac-sign.sh" sign "$PREFIX/bin/orrery"
+fi
 
 mkdir -p "$APPDIR"
 rm -rf "$APP"
@@ -126,4 +133,5 @@ touch "$APP"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP" 2>/dev/null || true
 
 echo "installed $PREFIX/bin/orrery and $APP"
+[ "${ORRERY_SIGN:-}" = adhoc ] || sh "$ROOT/tools/mac-sign.sh" check "$APP" | sed -n '2,3p;$p'
 echo "it starts: orrery$ARGS"

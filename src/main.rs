@@ -29,6 +29,7 @@
 //!                          answering 403 -- a route that says "forbidden"
 //!                          tells a scanner it is there.
 
+mod bundle;
 mod commands;
 mod line;
 // The primitives, and the transport built on them. Parts of both are written
@@ -117,7 +118,8 @@ struct Console {
 }
 
 fn main() {
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    // Opened from Finder there are no arguments: the bundle holds the ones it was installed with.
+    let args: Vec<String> = bundle::start(std::env::args().skip(1).collect());
     if args.iter().any(|a| a == "-h" || a == "--help") {
         usage();
         return;
