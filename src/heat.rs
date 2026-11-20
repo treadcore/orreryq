@@ -151,9 +151,10 @@ struct St {
     open: Option<String>,
     pick: Option<String>,
     off: [usize; 6],
-    /// The Hearth: a target being typed, act pressed once, and the last thing its buttons asked.
+    /// The Hearth: a target being typed, act or full tilt pressed once, and the last thing its buttons asked.
     typed: Field,
     arm_act: bool,
+    arm_full: bool,
     /// The machine whose Off was pressed once.
     arm_off: Option<String>,
     asked: Option<String>,
@@ -297,6 +298,7 @@ pub fn draw(ui: &mut Ui, at: Rect, doc: Option<&Value>, operator: bool, said: &s
     let body = rect(at.x, y, at.w, at.bottom() - y);
     if p != HEARTH {
         st.arm_act = false;
+        st.arm_full = false;
         st.arm_off = None;
     }
     match (p, doc) {
@@ -865,6 +867,10 @@ pub fn fleet_line(h: &Hearth) -> String {
         Some(c) => format!("room {:.1} C", c),
         None => "room not read".to_string(),
     };
+    if mode == "full" {
+        let now = plan.and_then(|p| n(p, "now_w")).map(|w| format!("{:.0} W now", w)).unwrap_or("watts not read".to_string());
+        return format!("Regulate temperature FULL TILT: {}, {}; every machine computes and the room is not held.", room, now);
+    }
     let watts = match plan.and_then(|p| Some((n(p, "now_w")?, n(p, "wanted_w")?))) {
         Some((now, wanted)) => format!("{:.0} W now, {:.0} W wanted", now, wanted),
         None => match plan.map(|p| s(p, "stopped")).filter(|w| !w.is_empty()) {
@@ -893,7 +899,7 @@ pub fn answer(asked: &str, said: &str) -> (String, bool) {
     let verb = asked.split_whitespace().nth(1).unwrap_or("");
     let done = match verb {
         "target" => said.starts_with("the target is"),
-        "mode" => ["off:", "advise:", "act:", "still held"].iter().any(|w| said.starts_with(w)),
+        "mode" => ["off:", "advise:", "act:", "full:", "still held"].iter().any(|w| said.starts_with(w)),
         // A pass ends its account with what it did, or that it did nothing, or why nothing is planned.
         _ => !said.contains("stop-now") && !said.starts_with("hearth "),
     };
@@ -930,20 +936,21 @@ pub fn fleet_switch(ui: &mut Ui, at: Rect, operator: bool, ctl: &mut Option<Stri
     let mode = h.mode();
     let bw = if operator { 190 } else { 0 };
     let c = match mode {
-        "act" => t.warn,
+        "act" | "full" => t.warn,
         "off" => t.dim,
         _ => t.up,
     };
     ui.label_in(at.x, at.y + 4, at.w - bw - 10, &fleet_line(&h), &F8X13, c);
     let how = match mode {
         "act" => "Set on Heat, Hearth. Back to advise stops the changes; what is held stays held until act or a person gives it back.",
+        "full" => "Set on Heat, Hearth. Back to advise ends full tilt and holds nothing; holding the room again is act, on Heat, Hearth.",
         "off" => "On is advise: it reads the room, says what it would do, and changes nothing. Act is set on Heat, Hearth, beside what it does.",
         _ => "Off and advise are switched here. Act is set on Heat, Hearth, beside what it does.",
     };
     ui.label_in(at.x, at.y + 6 + F8X13.height as i32, at.w - bw - 10, how, &F8X13, t.dim);
     let (label, verb) = match mode {
         "off" => ("Turn regulation on", "hearth mode advise"),
-        "act" => ("Back to advise", "hearth mode advise"),
+        "act" | "full" => ("Back to advise", "hearth mode advise"),
         _ => ("Turn regulation off", "hearth mode off"),
     };
     if operator && ui.button(rect(at.right() - bw, at.y + 4, bw, 24), label, true) {
@@ -1480,6 +1487,31 @@ fn diagram(ui: &mut Ui, at: Rect, doc: Option<&Value>) {
 
 /// The hold's one line, and whether it is acting: its budget, what it holds paused, and the last
 /// thing it said. Without a budget in the plan the law is the ladder's, and the line says so.
+/// What full tilt does, before the press and while it is in force. The mode it came from is the state's.
+fn full_words(h: &Hearth) -> String {
+    let before = h.state.as_ref().map(|v| s(v, "before_full")).filter(|b| !b.is_empty()).unwrap_or("act");
+    format!(
+        "Full tilt: every machine computes. Lanes paused before it began work again; a machine on the bench that answers is put in the queue; one known to wake by the packet is woken and put to work when it answers. Nothing is shed and nothing is powered off, and the room is not held: the target stands, unused, for when it ends. Left alone: this Mac, a lane or machine a person pauses or removes after it began, a machine restarting. Each machine's own CPU and card limits still stand: one at its limit finishes its job and rests. {}",
+        if h.mode() == "full" { format!("It ends by choosing a mode: {} was in force before it.", before) } else { "Press again to begin it.".to_string() }
+    )
+}
+
+/// The last pass of full tilt, in a line: what it did, what it is waiting for, what it left.
+pub fn full_line(plan: &Value) -> Option<String> {
+    let f = plan.get("full").filter(|f| !matches!(f, Value::Null))?;
+    let words = |k: &str| arr(f, k).iter().filter_map(|w| w.as_str()).collect::<Vec<&str>>();
+    let (did, left, running, waking) = (words("did"), words("left"), words("running"), words("waking"));
+    let mut line = format!("{} working: {}", running.len(), if running.is_empty() { "none".to_string() } else { running.join(", ") });
+    if !waking.is_empty() {
+        line.push_str(&format!("; being woken: {}", waking.join("; ")));
+    }
+    line.push_str(&format!("; the last pass: {}", if did.is_empty() { "nothing to do".to_string() } else { did.join("; ") }));
+    if !left.is_empty() {
+        line.push_str(&format!("; left: {}", left.join("; ")));
+    }
+    Some(line)
+}
+
 fn hold_line(plan: &Value) -> (String, bool) {
     let Some(b) = plan.get("budget").filter(|b| !matches!(b, Value::Null)) else {
         return ("not the law in force: the ladder below is (tools/hearth.py QUEUE set law hold makes the hold the law).".to_string(), false);
@@ -1618,11 +1650,45 @@ fn hearth_panel(ui: &mut Ui, at: Rect, st: &mut St, operator: bool, said: &str, 
                     ask = Some(format!("hearth mode {}", name));
                     st.arm_act = false;
                 }
+                st.arm_full = false;
+            }
+            x = r.right() + 8;
+        }
+    }
+    // FULL TILT (Paul, 18 November: "code a button for the heat that goes full tilt. essentially setting
+    // temp to max. Yes modes"): a fourth mode, apart from the three, in the warning colour and asking twice
+    // as act does, because it wakes machines. Pressed again while in force it does nothing: full tilt ends
+    // by choosing the mode to go back to, and the line under the buttons says which it came from.
+    {
+        let on = mode == "full";
+        let label = if st.arm_full && !on { "Press again: full tilt" } else { "full tilt" };
+        let r = rect(x + 6, y + 1, F8X13.measure(label) as i32 + 22, 22);
+        ui.c.frame(r.x - 2, r.y - 2, r.w + 4, r.h + 4, t.warn);
+        if on {
+            ui.c.frame(r.x - 3, r.y - 3, r.w + 6, r.h + 6, t.warn);
+            ui.c.rect(r.x + 4, r.bottom(), r.w - 8, 2, t.warn);
+        }
+        if operator || on {
+            if ui.button(r, label, operator && !on) {
+                if !st.arm_full {
+                    st.arm_full = true;
+                } else {
+                    ask = Some("hearth mode full".to_string());
+                    st.arm_full = false;
+                }
+                st.arm_act = false;
             }
             x = r.right() + 8;
         }
     }
     x += 10;
+    if mode == "full" {
+        let say = "FULL TILT: EVERY MACHINE COMPUTES";
+        let w = F8X13.measure(say) as i32 + 12;
+        ui.c.rect(x, y + 2, w, 20, t.warn);
+        ui.label(x + 6, y + 5, say, &F8X13, t.base);
+        x += w + 12;
+    }
     if mode == "act" {
         let say = "ACT: THE FLEET IS BEING CHANGED";
         let w = F8X13.measure(say) as i32 + 12;
@@ -1630,7 +1696,10 @@ fn hearth_panel(ui: &mut Ui, at: Rect, st: &mut St, operator: bool, said: &str, 
         ui.label(x + 6, y + 5, say, &F8X13, t.base);
         x += w + 12;
     }
-    ui.label_in(x, y + 5, at.right() - x, &format!("power switch: {}", if power { "ON" } else { "off" }), &F8X13, if power { t.alarm } else { t.dim });
+    // The power switch is act's (full tilt wakes by the press of its own button), so in full tilt it is not shown.
+    if mode != "full" {
+        ui.label_in(x, y + 5, at.right() - x, &format!("power switch: {}", if power { "ON" } else { "off" }), &F8X13, if power { t.alarm } else { t.dim });
+    }
     y += 24 + 8;
 
     // What act does, in words, whatever the mode: read before the press, not after.
@@ -1646,7 +1715,11 @@ fn hearth_panel(ui: &mut Ui, at: Rect, st: &mut St, operator: bool, said: &str, 
     } else {
         "Act changes the fleet, one rung a pass and no two within 15 minutes: a machine's CPU lanes, then its card's lane, take nothing new (the job in hand finishes), and are resumed when the room is cold. It does NOT power a machine off and does NOT wake one: the power switch is off. That switch is set from the command line (tools/hearth.py QUEUE set power on) and has no button here. Off and advise change nothing; what act holds stays held through them."
     };
-    y = para(ui, at.x, y, at.w, does, if mode == "act" { t.warn } else { t.dim }) + 2;
+    if mode == "full" || st.arm_full {
+        y = para(ui, at.x, y, at.w, &full_words(&h), t.warn) + 2;
+    } else {
+        y = para(ui, at.x, y, at.w, does, if mode == "act" { t.warn } else { t.dim }) + 2;
+    }
 
     // What the last button came to. A failure stays on the panel until the next press.
     if let Some(asked) = &st.asked {
@@ -1672,8 +1745,9 @@ fn hearth_panel(ui: &mut Ui, at: Rect, st: &mut St, operator: bool, said: &str, 
     };
 
     // The hold: the law that acts when the controller's law is `hold` (tools/hearth_regulator.py).
-    // It runs with the pass, so it has no button of its own: act above is its switch.
-    {
+    // It runs with the pass, so it has no button of its own: act above is its switch. In full tilt no law
+    // runs, and the full tilt line below stands in its place.
+    if mode != "full" {
         let (line, running) = hold_line(plan);
         let mut x = ui.label(at.x, y + 5, "hold", &F8X13, t.dim) + 18;
         if running {
@@ -1681,6 +1755,12 @@ fn hearth_panel(ui: &mut Ui, at: Rect, st: &mut St, operator: bool, said: &str, 
             x += 14;
         }
         y = para(ui, x, y + 5, at.right() - x, &line, if running { t.ink } else { t.dim }).max(y + 22) + 2;
+    }
+    if mode == "full" {
+        if let Some(line) = full_line(plan) {
+            let x = ui.label(at.x, y + 5, "full tilt", &F8X13, t.warn) + 18;
+            y = para(ui, x, y + 5, at.right() - x, &line, t.ink).max(y + 22) + 2;
+        }
     }
 
     // The machines a person can switch, a cell each, flowed across (17 November, the day bosporus
@@ -2125,9 +2205,23 @@ mod tests {
     }
 
     #[test]
+    fn full_tilt_is_a_line_of_its_own_on_the_fleet_page_and_says_what_its_last_pass_did() {
+        let h = hearth_of(Some(r#"{"mode": "full", "target_c": 26.7, "temp_c": 25.7, "now_w": 1180, "wanted_w": null, "stopped": ""}"#),
+                          Some(r#"{"mode": "full", "target_c": 26.7, "before_full": "act"}"#));
+        assert_eq!(fleet_line(&h), "Regulate temperature FULL TILT: room 25.7 C, 1180 W now; every machine computes and the room is not held.");
+        assert!(full_words(&h).ends_with("act was in force before it."));
+        let plan = json::parse(r#"{"full": {"did": ["bosporus is woken"], "left": [], "running": ["calber", "columbia"], "waking": ["bosporus"]}}"#).unwrap();
+        assert_eq!(full_line(&plan).unwrap(), "2 working: calber, columbia; being woken: bosporus; the last pass: bosporus is woken");
+        let quiet = json::parse(r#"{"full": {"did": [], "left": ["boburner was paused by a person after full tilt began: left paused"], "running": ["calber"], "waking": []}}"#).unwrap();
+        assert!(full_line(&quiet).unwrap().contains("the last pass: nothing to do; left: boburner was paused"));
+        assert!(full_line(&json::parse(r#"{"full": null}"#).unwrap()).is_none());
+    }
+
+    #[test]
     fn a_button_that_failed_says_so_in_the_answer_it_got() {
         assert_eq!(answer("hearth target 21.5", "the target is 21.5 C (70.7 F)"), ("hearth target 21.5: the target is 21.5 C (70.7 F)".to_string(), true));
         assert!(answer("hearth mode advise", "advise: step computes and says, and changes nothing").1);
+        assert!(answer("hearth mode full", "full: full tilt. Every machine computes").1);
         assert!(answer("hearth mode off", "still held from before, and given back only by act or by hand: calber (cpu)").1);
         assert!(answer("hearth step", "advise: nothing was done").1);
         // While it runs, main puts the verb and three dots where the answer will be.

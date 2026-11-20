@@ -73,6 +73,12 @@ CEILING_NEAR_C = 0.05
 AHEAD_SLOPE, AHEAD_H = 0.15, 0.75     # act on where the room will be in three quarters of an hour, if it is moving this fast
 HASTE_W, HASTE_S = 400.0, 900.0       # a budget this large does not wait forty minutes for its next step: fifteen
 UA_W_C, C_MJ_C, BUDGET_MAX_W = 120.0, 4.2, 600.0
+OTHER_HEAT_W = 1000.0                 # the most heat this law allows for that nothing here reads: people, the kitchen, the sun, zone 2
+# A MACHINE THAT DID NOT ANSWER ITS PACKET IS NOT ASKED AGAIN FOR THREE HOURS. From 14:42 to 16:51 on 19
+# November calber, switched off by this law at noon, answered none of four packets; it stood first in the
+# order of preference each time, so each forty minutes the law sent it another and the room, wanting 200 W,
+# stayed under its band while three lanes this law had paused itself waited behind it.
+WAKE_FAILED_S = 3 * 3600.0
 
 
 def slope_of(xs, ys):
@@ -290,6 +296,19 @@ def look(H, q, st, t, cfg, ms, ps, plan, said, act):
     hs["rows"] = [r for r in hs["rows"] if t - r[0] < 3 * 3600]
     hour = [r for r in hs["rows"] if t - r[0] <= 3900]
     slope = slope_of([r[0] / 3600 for r in hour], [r[1] for r in hour]) if len(hour) >= 4 and hour[-1][0] - hour[0][0] >= 1200 else 0.0
+    # THE ROOM'S AIR CANNOT RISE FASTER THAN ITS HEAT CAN WARM IT. With nothing at all leaving through the
+    # walls, the room rises (P + P0) / C: the fleet's watts read, and the most other heat there could be,
+    # into 4.2 MJ for each degree. A rise faster than that is the probes, not the room. On 18 November
+    # saskatchewan restarted at 14:35 and the two counters on it, which are the room's probes, came back
+    # reading 23.4 C and climbing ten degrees an hour as they warmed; the law read the climb as the room,
+    # projected it over the band and, with the room a degree and more under its target, switched calber
+    # off and paused boburner and its card. Only the rise is bounded: a fall faster than the walls allow is
+    # a window or a door, and is the room.
+    rise_max = (plan["now_w"] + OTHER_HEAT_W) / (C_MJ_C * 1e6) * 3600
+    if slope > rise_max:
+        note("the probes rise %.2f C an hour, faster than %.0f W and %.0f W of other heat could warm the room (%.2f at most): taken as the probes warming, and %.2f is used" % (
+            slope, plan["now_w"], OTHER_HEAT_W, rise_max, rise_max))
+        slope = rise_max
     # UA: what a person set; else the line through the steady stretches, once there are four of them standing
     # 3 C apart and it is a house's figure; else the figure in use.
     fit = steady_fit(steady_rows(H, q))
@@ -336,7 +355,11 @@ def look(H, q, st, t, cfg, ms, ps, plan, said, act):
             return (b.get("gpu_limit_w", 0) * 0.6) / b.get("eff", 0.88)
         return (b.get("cpu_full_w", 0) - b.get("cpu_idle_w", 0)) * 0.9 / max(1, len(m["cpu"])) / b.get("eff", 0.88)
 
-    shed, add = [], []
+    def unanswered(n):
+        o = orders.get(n) or {}
+        return o.get("what") == "on" and o.get("ok") is False and t - (o.get("done") or o.get("t", 0)) < WAKE_FAILED_S
+
+    shed, add, deaf = [], [], []
     for name, m in ms.items():
         lanes = m["cpu"] + m["card"]
         if name in NEVER or m["target"] == "-" or m["special"] or name in flying:
@@ -371,10 +394,14 @@ def look(H, q, st, t, cfg, ms, ps, plan, said, act):
                 if whole:
                     shed.append({"do": "off", "name": name, "w": m["wall_w"] or 100.0, "key": (False, False, -1e9), "idle": True,
                                  "what": "%s is on and idle: it is switched off (it wakes by the packet)" % name})
+            elif wakes(name) and power and mine.get(name, {}).get("mac") and unanswered(name):
+                deaf.append(name)
             elif wakes(name) and power and mine.get(name, {}).get("mac"):
                 add.append({"do": "wake", "name": name, "w": full(name), "key": (not has_card(name), False, spend(name)),
                             "what": "%s is woken, and computes as soon as it is up%s" % (name, " (it took %s last time)" % H.ago(mine[name]["boot_s"]) if mine.get(name, {}).get("boot_s") else "")})
     hs["held"] = [l for l in hs["held"] if any(h["name"] == l and h.get("paused") for m in ms.values() for h in m["cpu"] + m["card"])]
+    if deaf and need > 0:
+        note("not woken again yet: %s did not answer the last packet (asked again %s after it)" % (", ".join(deaf), H.ago(WAKE_FAILED_S)))
 
     def pick(opts, want, biggest=False):
         """The step for a budget: the first in the order of preference that is no more than twice it (or

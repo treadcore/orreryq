@@ -12,7 +12,8 @@ temperature'."
     hearth.py QUEUE probe KEY place "the office"   name where a probe is
     hearth.py QUEUE probe KEY role room|outside|intake|exhaust|other
     hearth.py QUEUE target 21.0                    the temperature to hold, degrees C
-    hearth.py QUEUE mode off|advise|act            advise (the default) computes and says; act does
+    hearth.py QUEUE mode off|advise|act|full       advise (the default) computes and says; act does;
+                                                   full is full tilt: every machine computes and the room is not held
     hearth.py QUEUE set KEY VALUE                  a gain or a rule (`set` alone lists them, with units)
     hearth.py QUEUE station KSEA                   which weather station's observation is the outside
     hearth.py QUEUE machine NAME keep on|off | mac AA:BB:.. | broadcast ADDR | port N
@@ -89,6 +90,8 @@ done), record.tsv (each pass: time, room, outside, watts, watts wanted), outside
 outside it is written. HEARTH_QUEUE and HEARTH_SSH name stand-in commands, HEARTH_OUTSIDE_URL a
 stand-in observation and HEARTH_NOW a clock, for tools/hearth-check.sh.
 """
+import contextlib
+import io
 import json
 import math
 import os
@@ -104,7 +107,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "ControlMaster=no", "-o", "ControlPath=none"]
 ROLES = ("room", "outside", "intake", "exhaust", "other")
 NO_READING_C = 85.0  # a GMC-320 before its thermometer has a reading (hearth report, 16 November)
-MODES = ("off", "advise", "act")
+MODES = ("off", "advise", "act", "full")
+FULL_WAKE_AGAIN_S = 3600.0   # full tilt sends a machine that did not answer its packet another, no sooner than this
 
 # name: (default, unit, what it is)
 SETTINGS = {
@@ -707,8 +711,12 @@ POWER_OFF_WAIT_S = 3 * 3600      # how long a machine's jobs in hand are waited 
 
 
 def power_note(q, name, **kv):
+    """A machine's power order, as it goes. A NEW ORDER (one that names what it is) STARTS A NEW RECORD: it
+    was merged into the last one until 18 November, and the `done` of an order of the day before stood on
+    the new one, which every reader then took as finished: full tilt sent jaguaribe a packet a pass, and
+    the hold's "an order is in flight" never saw one."""
     doc = load(hp(q, "power.json"), {}) or {}
-    doc[name] = dict(doc.get(name, {}), **kv)
+    doc[name] = dict({} if "what" in kv else doc.get(name, {}), **kv)
     save(q, "power.json", doc)
 
 
@@ -810,6 +818,121 @@ def power_list(q, ms, ps):
     return out
 
 
+def lane_since(q, name):
+    """When a lane last changed state, as the keeper wrote it (QUEUE/lanes/NAME.json), and the state."""
+    d = load(os.path.join(q, "lanes", name + ".json"), {}) or {}
+    return d.get("since") or 0.0, d.get("state") or ""
+
+
+def full_tilt(q, st, t, ms, plan, said, dry):
+    """FULL TILT. Paul, 18 November: "can we have each computer go full tilt, in fact code a button for the
+    heat that goes full tilt. essentially setting temp to max. Yes modes."
+
+    Not a law: a standing order, carried out again at every pass for as long as the mode is `full`. Every
+    machine computes. A lane paused before full tilt began works again, whoever paused it; a machine on
+    the bench that answers is put in the queue; one that does not, and is known to wake by the packet, is
+    woken and put in the queue when it answers. Nothing is shed and nothing is powered off: the room is
+    read for the panel and not held, and the target stands untouched for when full tilt ends.
+
+    WHAT IT LEAVES ALONE. This Mac, which runs the keeper. A lane a person paused AFTER full tilt began,
+    and a machine a person removed after it began: the button is a person's order and a later one wins
+    (QUEUE/lanes/NAME.json says when each lane changed). A machine restarting, which is mid-way through
+    something of its own. A machine not known to wake: a person is asked to switch it on.
+
+    WHAT STILL STANDS. The keeper's own guard on each machine's CPU and card temperature (hot_c,
+    gpu_hot_c): a machine at its limit finishes its job and rests until it is eight degrees under. Full
+    tilt is the most the fleet will do, not more than a machine will bear.
+
+    The power switch (`set power`) is act's and is not asked: a wake under full tilt is the press of the
+    Full tilt button, a person's order as the panel's On is."""
+    since = st.get("full_from") or t
+    mine = load(hp(q, "machines.json"), {}) or {}
+    orders = load(hp(q, "power.json"), {}) or {}
+    done, left, running, waking = [], [], [], []
+
+    def act(what, fn):
+        if dry:
+            done.append("would: " + what)
+            return
+        ok, heard = fn()
+        done.append(what if ok else "%s: IT FAILED: %s" % (what, heard[-160:]))
+
+    for name in sorted(ms):
+        m = ms[name]
+        if name == "mac" or m["target"] == "-":
+            continue
+        lanes = m["cpu"] + m["card"]
+        if not m["bench"]:
+            if m["special"] == "restarting":
+                left.append("%s is restarting: left to finish that" % name)
+                continue
+            paused = [h for h in lanes if h.get("paused") or h.get("leaving")]
+            later = {h["name"] for h in paused if lane_since(q, h["name"])[0] >= since}
+            back = [h["name"] for h in paused if h["name"] not in later]
+            for lane in sorted(later):
+                left.append("%s was paused by a person after full tilt began: left paused" % lane)
+            if not back:
+                running.append(name)
+                continue
+            # The queue's resume of a machine's first lane resumes all its lanes (and takes back a Finish
+            # that would have powered it off): a lane paused after full tilt began is paused again after it.
+            first = next((h["name"] for h in lanes if not h.get("lane_of")), None)
+            if first in back:
+                act("%s works again (%s)" % (name, ", ".join(back)), lambda: run_queue(q, "machine", first, "resume"))
+                for lane in sorted(later):
+                    act("%s paused again, as a person left it" % lane, lambda lane=lane: run_queue(q, "machine", lane, "pause"))
+            else:
+                for lane in back:
+                    act("%s works again" % lane, lambda lane=lane: run_queue(q, "machine", lane, "resume"))
+            running.append(name)
+            continue
+        # On the bench, or read and not in the queue.
+        since_l, state_l = lane_since(q, name)
+        if state_l == "removed" and since_l >= since:
+            left.append("%s was removed by a person after full tilt began: left out" % name)
+            continue
+        if not where(q, name)[0]:
+            continue                      # read by the telemetry, and no machine of this queue
+        if m["fresh"]:
+            act("%s is on and was not in the queue: it is put in it" % name, lambda: run_queue(q, "machine", name, "add"))
+            running.append(name)
+            continue
+        rec, o = mine.get(name) or {}, orders.get(name) or {}
+        if o.get("what") == "on" and not o.get("done") and t - o.get("t", 0) < setting(st, "wake_wait"):
+            waking.append("%s: its packet went %s ago; it is put to work when it answers" % (name, ago(t - o["t"])))
+        elif o.get("what") == "on" and o.get("ok") is False and o.get("t", 0) >= since and t - o.get("t", 0) < FULL_WAKE_AGAIN_S:
+            left.append("%s did not answer its packet: %s; another is sent %s from the first" % (name, o.get("state", ""), ago(FULL_WAKE_AGAIN_S)))
+        elif rec.get("wol") is True and rec.get("mac"):
+            def wake(name=name):
+                buf = io.StringIO()
+                try:
+                    with contextlib.redirect_stdout(buf):
+                        rc = power_order(q, name, "on")
+                    return rc == 0, buf.getvalue().strip()
+                except SystemExit as e:
+                    return False, str(e)
+            act("%s is woken, and computes when it answers%s" % (name, " (it took %s last time)" % ago(rec["boot_s"]) if rec.get("boot_s") else ""), wake)
+            waking.append(name)
+        else:
+            left.append("%s is off and not known to wake by the packet: SWITCH IT ON, and full tilt puts it to work" % name)
+
+    plan["full"] = {"from": since, "did": done, "left": left, "running": running, "waking": waking, "before": st.get("before_full")}
+    plan["why_not"] = ""
+    head = "FULL TILT since %s: every machine computes and the room is not held (it reads %s); %d machine(s) in the queue and working%s" % (
+        time.strftime("%H:%M", time.localtime(since)),
+        "%.1f C, %.1f F" % (plan["temp_c"], f_of(plan["temp_c"])) if plan.get("temp_c") is not None else "nothing fresh",
+        len(running), ", %d being woken" % len(waking) if waking else "")
+    said.append(head)
+    said.extend("    " + w for w in done + left)
+    if not done:
+        said.append("    nothing to do this pass: everything that can compute is computing")
+    if not dry:
+        stamp = time.strftime("%H:%M:%S", time.localtime(t))
+        with open(hp(q, "hold.log"), "a") as f:
+            for w in [head] + done + (left if done else []):
+                f.write("%s  full tilt: %s\n" % (stamp, w) if w is not head else "%s  %s\n" % (stamp, w))
+
+
 def step(q, dry=False):
     """One pass. Returns the plan; unless dry, writes plan.json and state.json, and in act does
     at most one rung."""
@@ -892,6 +1015,15 @@ def step(q, dry=False):
         with open(hp(q, "record.tsv"), "a") as f:
             f.write("%d\t%s\t%s\t%s\n" % (t, "%.2f" % temp if temp is not None else "", "%.1f" % out_c if out_c is not None else "",
                                            "%d" % now_w if now_w is not None else ""))
+
+    if st["mode"] == "full":
+        # FULL TILT DOES NOT NEED THE ROOM: it reads it for the panel and acts without it, so a probe gone
+        # stale or watts not read stop nothing here.
+        full_tilt(q, st, t, ms, plan, said, dry)
+        if not dry:
+            save(q, "plan.json", plan)
+            save(q, "state.json", st)
+        return plan
 
     stop = ("no target is set (`target 21.0`)" if st["target_c"] is None else
             "no fresh room probe: %s" % ("; ".join("%s %s" % (p["key"], p["why"]) for p in ps if p["role"] == "room") or "none is known") if temp is None else
@@ -1156,11 +1288,27 @@ def main(argv):
         if a[0] != st["mode"]:
             # A change of mode begins the law again where the fleet is: no integral carried from a
             # time nothing was done on it.
+            if a[0] == "full":
+                # Full tilt remembers the mode it was entered from, so the panel can say what ending it
+                # goes back to, and the moment it began: a lane paused before it is full tilt's to give
+                # back, one a person pauses after it is not (`full_tilt`).
+                st.update(before_full=st["mode"], full_from=now())
+            else:
+                st.pop("full_from", None)
             st.update(mode=a[0], integral_w=0.0, bias_w=None)
             st.pop("last_step_t", None)
             save(q, "state.json", st)
+        if a[0] == "full":
+            # The button acts at once, not at the next telemetry pull five minutes on; and at once is also
+            # when "paused before full tilt began" is plain (a lane's `since` is the keeper's to rewrite).
+            # Its account first: the console keeps a verb's last line, and that is the mode's.
+            for w in step(q)["said"]:
+                print(w)
         print({"off": "off: step reads nothing and does nothing",
                "advise": "advise: step computes and says, and changes nothing",
+               "full": "full: full tilt. Every machine computes: lanes paused before now work again, machines on the bench that answer "
+                       "are put in the queue, and the ones known to wake by the packet are woken. Nothing is shed and the room is not "
+                       "held; each machine's own CPU and card limits still stand. Leave it with the mode it came from: %s" % st.get("before_full", "act"),
                "act": "act: step does at most one rung a pass, through the queue's own commands%s" % (
                    "" if setting(st, "power") == "on" else "; power-off and wake stay off until `set power on`")}[a[0]])
         if st.get("held"):

@@ -52,10 +52,12 @@ def fleet(paused=(), off=(), bench=()):
     return ms
 
 
-def scratch(target=26.7, held=(), offed=(), spare=("bosporus", "jaguaribe"), since=10000.0, slope=0.0, room=26.7, wol=WOL):
+def scratch(target=26.7, held=(), offed=(), spare=("bosporus", "jaguaribe"), since=10000.0, slope=0.0, room=26.7, wol=WOL, orders=None):
     q = tempfile.mkdtemp(prefix="hold-check-")
     os.makedirs(os.path.join(q, "hearth"))
     t = time.time()
+    if orders:
+        json.dump({n: dict(o, t=t - o["ago"], done=t - o["ago"] + 1200) for n, o in orders.items()}, open(H.hp(q, "power.json"), "w"))
     json.dump({n: {"mac": "02:00:00:00:00:%02x" % i, "wol": wol.get(n)} for i, n in enumerate(WATTS)}, open(H.hp(q, "machines.json"), "w"))
     json.dump({"wh_a_job": {"columbia": 3.3, "saskatchewan": 8.7, "boburner": 11.3, "calber": 18.7, "whitewolf": 22.3, "jaguaribe": 37.6, "bosporus": 46.4}},
               open(H.hp(q, "energy.json"), "w"))
@@ -113,6 +115,16 @@ told, plan, said = look(26.5, 25.9, fleet(off=("calber", "bosporus")), offed=("c
 claim(told == [("power", "calber", "on")], "too cold with calber and bosporus off: calber, which has a card, is woken first", told)
 told, plan, said = look(26.5, 25.9, fleet(off=("jaguaribe",)))
 claim(told == [] and any("SWITCH ON JAGUARIBE" in s for s in said), "too cold, every lane working, and the one machine off is not known to wake: a person is asked, and no packet is sent", (told, said[:3]))
+
+# ---- a machine that did not answer its packet is not asked again for three hours (19 November)
+deaf = {"calber": {"what": "on", "ok": False, "ago": 1500, "state": "it did not answer in 20 min"}}
+told, plan, said = look(26.5, 25.9, fleet(off=("calber",), paused=("whitewolf-cuda", "whitewolf")), held=("whitewolf-cuda", "whitewolf"), offed=("calber",), orders=deaf)
+claim(told == [("queue", "machine", "whitewolf-cuda", "resume")], "too cold, calber off and deaf to its last packet 25 min ago: a lane this law held works again, and calber is not sent another", told)
+claim(any("calber did not answer" in s for s in said), "and the log says why calber was passed over", said[:4])
+told, plan, said = look(26.5, 25.9, fleet(off=("calber",)), offed=("calber",), orders={"calber": dict(deaf["calber"], ago=4 * 3600)})
+claim(told == [("power", "calber", "on")], "four hours after its last packet failed, calber is tried again", told)
+told, plan, said = look(26.5, 25.9, fleet(off=("calber",)), offed=("calber",), orders={"calber": {"what": "on", "ok": True, "ago": 1500}})
+claim(told == [("power", "calber", "on")], "a packet that was answered last time is no reason to wait", told)
 
 # ---- a lane a person paused is not the law's to resume
 told, plan, said = look(26.5, 25.9, fleet(paused=("boburner",)))
@@ -189,6 +201,74 @@ looks = [(i * 600.0, 4.0 if i < 60 else 10.0) for i in range(120)]       # ten h
 claim(4.0 < R.lagged(looks, 60 * 600.0 + 3600) < 5.0 and 7.5 < R.lagged(looks, 119 * 600.0) < 9.0,
       "the weather the room has felt lags the weather: an hour after it turned from 4 to 10 C it is still under 5; ten hours after, between 7.5 and 9",
       (R.lagged(looks, 60 * 600.0 + 3600), R.lagged(looks, 119 * 600.0)))
+
+# ---- the probes warming are not the room (18 November, 15:07: saskatchewan restarted, its counters came back
+# cold and climbed; read as the room rising four degrees an hour, it switched calber off with the room under target)
+told, plan, said = look(25.1, 24.5, fleet(), slope=4.14)
+claim(told == [] and any("taken as the probes warming" in s for s in said),
+      "a room under its target whose probes climb 4.1 C an hour, faster than the fleet's watts could warm it, sheds nothing", (told, said[:3]))
+told, plan, said = look(26.9, 26.3, fleet(), slope=0.5)
+claim(len(told) == 1 and not any("probes warming" in s for s in said), "a rise of half a degree an hour, which the heat can make, is still believed and acted on", (told, said[:2]))
+
+
+# ---- full tilt (18 November: "code a button for the heat that goes full tilt. essentially setting temp to max")
+def full(ms, lanes, orders=None, dry=False, wol=WOL):
+    """One full-tilt pass on a scratch queue; `lanes` is {lane: seconds before full tilt began that it changed}
+    (negative: after)."""
+    del TOLD[:]
+    q, st, t = scratch(wol=wol)
+    st.update(mode="full", full_from=t - 600, before_full="act")
+    os.makedirs(os.path.join(q, "lanes"))
+    json.dump({"hosts": [{"name": n, "target": "user@" + n} for n in WATTS]}, open(os.path.join(q, "config.json"), "w"))
+    for lane, before in lanes.items():
+        json.dump({"host": lane, "state": "paused", "since": t - 600 - before}, open(os.path.join(q, "lanes", lane + ".json"), "w"))
+    if orders:
+        json.dump({n: dict(o, t=t - o.pop("ago")) for n, o in orders.items()}, open(H.hp(q, "power.json"), "w"))
+    plan, said = {"temp_c": 25.5}, []
+    H.full_tilt(q, st, t, ms, plan, said, dry)
+    told = list(TOLD)
+    shutil.rmtree(q)
+    return told, plan, said
+
+
+ms = fleet(paused=("columbia", "whitewolf-cuda", "boburner"), bench=("calber",), off=("bosporus", "jaguaribe"))
+ms["mac"] = {"name": "mac", "cpu": [{"name": "mac", "caps": ["own"], "paused": True}], "card": [], "bench": False, "target": "-", "special": "",
+             "fresh": True, "wall_w": 24, "in_hand": []}
+told, plan, said = full(ms, {"columbia": 3600, "whitewolf-cuda": 3600, "boburner": -300, "mac": 3600})
+claim(sorted(told) == sorted([("queue", "machine", "columbia", "resume"), ("queue", "machine", "whitewolf-cuda", "resume"),
+                              ("queue", "machine", "calber", "add"), ("power", "bosporus", "on")]),
+      "full tilt: lanes paused before it work again, a machine on the bench that answers is put in the queue, one known to wake is woken", told)
+claim(not any("boburner" in str(x) for x in told), "a lane a person paused after full tilt began is left paused", told)
+claim(not any("mac" == x[2] for x in told if len(x) > 2), "this Mac's own lane is never touched", told)
+claim(not any("jaguaribe" in str(x) for x in told) and any("JAGUARIBE" in w.upper() and "SWITCH IT ON" in w for w in said),
+      "a machine off and not known to wake is not sent a packet: a person is asked to switch it on", said)
+claim(not any(x[0] == "power" and x[2] == "off" for x in told) and not any(len(x) > 3 and x[3] in ("pause", "finish", "remove") for x in told),
+      "full tilt sheds nothing and powers nothing off", told)
+
+told, plan, said = full(fleet(paused=("whitewolf", "whitewolf-cuda")), {"whitewolf": 3600, "whitewolf-cuda": -60})
+claim(told == [("queue", "machine", "whitewolf", "resume"), ("queue", "machine", "whitewolf-cuda", "pause")],
+      "the queue's resume of a machine resumes its card too: a card lane a person paused after full tilt began is paused again", told)
+
+told, plan, said = full(fleet(), {})
+claim(told == [] and any("everything that can compute is computing" in w for w in said), "with everything working, a pass does nothing", (told, said))
+
+told, plan, said = full(fleet(off=("bosporus",), bench=()), {}, orders={"bosporus": {"what": "on", "ago": 120}})
+claim(told == [], "a machine whose packet went two minutes ago is not sent another", told)
+told, plan, said = full(fleet(off=("bosporus",)), {}, orders={"bosporus": {"what": "on", "ago": 300, "done": 1, "ok": False, "state": "it did not answer"}})
+claim(told == [], "one that did not answer a packet sent since full tilt began is not sent another within the hour", told)
+
+# A new power order over an old finished one is in flight (18 November: the old order's `done` stood on the
+# new one, and full tilt sent jaguaribe a packet every pass).
+_q = tempfile.mkdtemp(prefix="hold-check-")
+os.makedirs(os.path.join(_q, "hearth"))
+H.power_note(_q, "jaguaribe", what="on", t=100.0, state="it answered", ok=True, done=200.0)
+H.power_note(_q, "jaguaribe", what="on", t=1000.0, state="the wake packet was sent", ok=None)
+_o = json.load(open(H.hp(_q, "power.json")))["jaguaribe"]
+shutil.rmtree(_q)
+claim("done" not in _o and _o["t"] == 1000.0, "a new power order starts a new record: an earlier order's finish does not stand on it", _o)
+
+told, plan, said = full(fleet(paused=("columbia",), off=("bosporus",)), {"columbia": 3600}, dry=True)
+claim(told == [] and any(w.startswith("would:") for w in plan["full"]["did"]), "a dry pass says what it would do and does nothing", (told, plan["full"]))
 
 print("\n%s" % ("PASSED" if not FAILED else "FAILED: %d claim(s)" % len(FAILED)))
 sys.exit(1 if FAILED else 0)

@@ -179,7 +179,8 @@ def boots(q, argv):
 def hearth(q, argv):
     # Regulate temperature (tools/hearth.py; Paul, 16 November: "the auto method on the fleet screen with a
     # regulate temperature, configurable on the heat screen, for target temp"). The Heat page's Hearth panel and
-    # the Fleet page's switch run these and no other: target C, mode off|advise|act, step, status.
+    # the Fleet page's switch run these and no other: target C, mode off|advise|act|full, step, status. Full is
+    # full tilt (18 November: "code a button for the heat that goes full tilt"): every machine computes.
     # NOT `set`: the switch that lets act power a machine off and wake it is hearth.py's own, from the command
     # line, and so are the gains, the probes and the machines' addresses. A target or a mode that was taken is
     # an event of the queue's, so that who set act, and when, is in the record the keeper's own doings are in.
@@ -187,10 +188,10 @@ def hearth(q, argv):
     # power-on NAME and power-off NAME (17 November: "Add the buttons to turn on and off") are a person's order
     # for one machine, as the queue's own Pause is: wake it and put it in the queue; or let it finish, leave
     # the queue and power off. hearth.py refuses the machine that carries the room's probes, and this Mac.
-    ok = a in (["step"], ["status"]) or (len(a) == 2 and (a[0] == "target" or (a[0] == "mode" and a[1] in ("off", "advise", "act"))
+    ok = a in (["step"], ["status"]) or (len(a) == 2 and (a[0] == "target" or (a[0] == "mode" and a[1] in ("off", "advise", "act", "full"))
                                                          or (a[0] in ("power-on", "power-off") and a[1].replace("-", "").isalnum())))
     if not ok:
-        print("hearth target C | mode off|advise|act | power-on NAME | power-off NAME | step | status: the Heat page's buttons, and no other")
+        print("hearth target C | mode off|advise|act|full | power-on NAME | power-off NAME | step | status: the Heat page's buttons, and no other")
         sys.exit(2)
     r = subprocess.run([sys.executable, "-I", os.path.join(HERE, "hearth.py"), q.d] + a, capture_output=True, text=True)
     if r.returncode == 0 and a[0] in ("target", "mode", "power-on", "power-off"):

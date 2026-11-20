@@ -110,6 +110,7 @@ A lane a person resumes is dropped from what is held here and not shed again ins
     hearth.py QUEUE mode advise      the default: step computes, writes the plan, changes nothing
     hearth.py QUEUE mode act         step does at most one rung a pass
     hearth.py QUEUE mode off         step reads nothing and writes nothing
+    hearth.py QUEUE mode full        full tilt: every machine computes, the room is not held (below)
     hearth.py QUEUE set power on     act may also power off and wake
     hearth.py QUEUE step             one pass
     hearth.py QUEUE status           one screen; changes nothing in any mode
@@ -249,3 +250,36 @@ Queue, Heat, **Diagram** draws the balance as one picture (`ORRERY_HEAT=diagram`
 What is read, and what is not: the fleet's watts, the room, the weather and the slope are read; C was measured by the step of 17 November; **UA is a figure in use and not a measurement, and the picture says so; the other heat is implied by it and is as wrong as it is; zone 2 has no thermometer.** The numbers are the plan's, so they move at each pass, every five minutes; the marks along the flows move with the clock.
 
 ![The Diagram panel: the weather, the apartment's two zones, the machines on one bus, the tank, the walls and the thermometers](hearth/heat-diagram.png)
+
+## Full tilt (18 November)
+
+Paul, 18 November: "can we have each computer go full tilt, in fact code a button for the heat that goes full tilt. essentially setting temp to max. Yes modes."
+
+**Full tilt is a fourth mode, `full`, and not a target.** A target of 35 C would still be a law: it would add one machine a pass, forty minutes apart, and stop at the first rule that said wait. Full tilt is a standing order, carried out again at every pass (after each telemetry pull, and at once when it is set):
+
+- a lane paused **before** full tilt began works again, whoever paused it (`fleet-queue.py QUEUE machine NAME resume`; the queue's resume also takes back a Finish that would have powered the machine off);
+- a machine on the bench that answers is put in the queue (`machine NAME add`);
+- a machine on the bench that does not answer, and is known to wake by the packet, is woken (`power-on NAME`), and put in the queue when it answers; one that did not answer is sent another packet an hour later, no sooner;
+- a machine that is off and not known to wake is named, so a person can press its button.
+
+**Nothing is shed and nothing is powered off.** The room is read for the panel and not held; the target stands, unused, for when full tilt ends.
+
+**Left alone:** this Mac (it runs the keeper); a lane a person pauses, or a machine a person removes, **after** full tilt began (`QUEUE/lanes/NAME.json` says when each changed: the button is a person's order and a later one wins); a machine restarting.
+
+**What still stands:** the keeper's own guard on each machine's CPU and card temperature. A machine at its limit finishes its job and takes nothing new until it reads eight degrees under. Full tilt is the most the fleet will do, not more than a machine will bear. On the first evening calber reached its CPU limit (86 C) under full load and rested between jobs.
+
+**The power switch is act's**, and full tilt does not ask it: a wake under full tilt is the press of its own button, as the power row's On is a person's order whatever the mode.
+
+    python3 tools/hearth.py QUEUE mode full      begin it (it remembers the mode it came from)
+    python3 tools/hearth.py QUEUE mode act       end it, back to holding the room (or advise, or off)
+
+On the Heat page's Hearth panel it is the button **full tilt**, beside the three modes, in the warning colour and asking twice, as act does. While it is in force the panel says FULL TILT: EVERY MACHINE COMPUTES, says in words what it does and which mode it came from, and has a line of what its last pass did, what it is waiting for and what it left. The Queue's Fleet page says "Regulate temperature FULL TILT" with a button back to advise. What it did is in `QUEUE/hearth/hold.log`, lines beginning "full tilt:".
+
+![The Hearth panel in full tilt, 18 November 16:33: bosporus and jaguaribe being woken](hearth/hearth-full-tilt.png)
+
+Proof: `tools/hearth-hold-check.py`, eleven claims of its own (what is resumed, added and woken; a later pause left; the Mac untouched; nothing shed; one packet at a time; a dry pass).
+
+**Two faults found the same day, and corrected.**
+
+- *The probes warming are not the room.* At 14:34 the keeper restarted saskatchewan for a new kernel. The room's two probes are the counters on it; they came back reading 23.4 C and climbing ten degrees an hour. The hold read the climb as the room, projected it over the band, and with the room more than a degree under its target switched calber off (15:07), paused boburner (15:25) and its card (15:42). The hold now believes no rise faster than the fleet's watts and a kilowatt of other heat could warm 4.2 MJ for each degree, (P + 1000 W) / C, about 1.5 C an hour; a faster rise is said in its log as the probes warming. A fall is not bounded: a window is the room.
+- *A power order wore the last one's finish.* `power_note` merged a new order into the record of the one before, so the `done` of an order of the day before stood on a packet sent now, and every reader took it as finished: full tilt sent jaguaribe a packet every pass, and the hold's "an order is in flight" never saw one. A new order now starts a new record.

@@ -95,16 +95,24 @@ def parse(line):
 def pull_one(q, name, target, said):
     d = os.path.join(q, "telemetry", name)
     os.makedirs(d, exist_ok=True)
-    # A line cut short by a pull that died is cut back to its last whole line first.
+    # A line cut short by a pull that died is cut back to its last whole line first (the newest three
+    # files: only they are still written to).
+    # EVERY FILE THIS MAC HAS IS NAMED, WITH ITS SIZE. Until 19 November only the newest three were, and
+    # the machine sends any file not named from its first byte: from the fourth day on, every pull sent each
+    # older day whole again and it was appended again, every five minutes. saskatchewan's 16 November came
+    # to 1.8 GB, 262 copies of 6.9 MB; the telemetry folder to 14 GB, growing about a gigabyte an hour.
     have = []
-    for f in sorted(os.listdir(d))[-3:]:
-        if f.endswith(".log"):
-            p = os.path.join(d, f)
-            data = open(p, "rb").read()
-            if data and not data.endswith(b"\n"):
-                data = data[:data.rfind(b"\n") + 1]
-                open(p, "wb").write(data)
-            have.append("%s:%d" % (f, len(data)))
+    logs = sorted(f for f in os.listdir(d) if f.endswith(".log"))
+    for i, f in enumerate(logs):
+        p = os.path.join(d, f)
+        if i < len(logs) - 3:
+            have.append("%s:%d" % (f, os.path.getsize(p)))
+            continue
+        data = open(p, "rb").read()
+        if data and not data.endswith(b"\n"):
+            data = data[:data.rfind(b"\n") + 1]
+            open(p, "wb").write(data)
+        have.append("%s:%d" % (f, len(data)))
     script = REMOTE % {"script": open(COLLECTOR).read().rstrip("\n"), "every": EVERY, "have": " ".join(have)}
     try:
         r = subprocess.run(SSH + [target, "bash -s"], input=script.encode(), capture_output=True, timeout=120)
@@ -212,11 +220,11 @@ def main(argv):
         # most every twenty minutes, reads the room and writes the plan Orrery's Hearth panel draws.
         # In advise it changes no machine. In act it does, one step a pass: that is what act is, and
         # since 17 November ("stop using the script. switch to orrery controlling") this pass is what
-        # holds the room. Off is passed over.
+        # holds the room. In full (full tilt) it puts back to work whatever is not working. Off is passed over.
         try:
             import json
             import subprocess
-            if json.load(open(os.path.join(q, "hearth", "state.json"))).get("mode") in ("advise", "act"):
+            if json.load(open(os.path.join(q, "hearth", "state.json"))).get("mode") in ("advise", "act", "full"):
                 subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "hearth.py"), q, "step"],
                                capture_output=True, timeout=90)
         except (OSError, ValueError, subprocess.SubprocessError):
