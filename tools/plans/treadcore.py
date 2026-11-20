@@ -4888,6 +4888,7 @@ class Plan:
         home = self.crucible_home()
         if self.gpu_home(home):
             lad = self.ladder_state(home)
+            self.gpu_floors_unrefused(lad, home)
             top = self.ladder_top(lad)
             if top and self.gpu_force(lad, home, top):
                 self.ladder_write(home)
@@ -4909,6 +4910,8 @@ class Plan:
 
     def crucible_ladder_home(self, fresh, home):
         lad = self.ladder_state(home)
+        if self.gpu_home(home):
+            self.gpu_floors_unrefused(lad, home)
         rows = [r for r in (self.crucible_exam(n, j, home=home) for n, j in fresh) if r]
         top = self.ladder_top(lad)
         # Strongest first: the margin over the newest milestone; with no
@@ -4963,7 +4966,7 @@ class Plan:
                 r["result"] = "milestone %s: %s" % (mid, why)
                 top = mid
                 if self.gpu_home(home):
-                    self.gpu_elected(lad, r)
+                    self.gpu_elected(lad, r, mid)
                 self.flag("crucible", "crucible: %s is milestone %s (%s)" % (r["job"], mid, why), key="milestone:%s" % mid, progress=True)
             else:
                 r["result"] = "kept: %s" % why
@@ -5165,6 +5168,7 @@ class Plan:
         lad["floors"] = {}
         if made:
             j = made[-1]["job"]
+            lad["floors_from"] = made[-1]["id"]
             g = self.gauntlet_read(os.path.join(self.q, "results", j, self.home, "out", j, "gauntlet.tsv"))
             for k, v in ((g or {}).get("share") or {}).get("champion", {}).items():
                 lad["floors"][k] = self.gpu_floor(v, (g.get("runs") or {}).get(k, 256))
@@ -5223,9 +5227,10 @@ class Plan:
         allow = min(3.0, (st["zg"] - bar) / self.GPU_TRADE_OVER) if st["zg"] > bar else 0.0
         return allow >= 1.0 and all(v <= allow + 1e-9 for v in st["short"].values()) and st["total"] > 0
 
-    def gpu_elected(self, lad, r):
+    def gpu_elected(self, lad, r, mid=None):
         """After a GPU generation, the projection's step: the bar a notch harder, every floor raised to the
-        new generation's own success less two errors, and the window's best begun again."""
+        new generation's own success less two errors, and the window's best begun again. The floors are
+        written down as `mid`'s: if the game refuses it, they come down again (gpu_floors_unrefused)."""
         bar, _ = self.gpu_bar(lad)
         lad["bar"] = round(min(self.GPU_BAR_MAX, bar + self.GPU_TIGHTEN), 2)
         g = r.get("gauntlet") or {}
@@ -5236,7 +5241,160 @@ class Plan:
         # floor rises with it.
         for k, v in me.items():
             fl[k] = self.gpu_floor(v, runs.get(k, 256))
+        if mid:
+            lad["floors_from"] = mid
         lad["best"] = None
+
+    # A REFUSED MILESTONE'S FLOORS COME DOWN (Paul, 19 November: "do the first suggestion. impliment.", the first
+    # of The Orrery Q Process's eleven). An election sets every floor to the new milestone's own share less
+    # 1/sqrt(n); the game's refusal took the milestone off the ladder and left its floors standing. On 15
+    # November M0049 was forced in on the weighed gauntlet (T3, take and hold, 251 runs of 256), its floors
+    # became C7 0.18 and T3 0.918, and the game refused it at -8.84 a seat; the top went back to M0032, which
+    # itself scores T3 0.785. For four days 316 segments, 206 GPU-hours, met none of those floors, and nothing
+    # could lower them. Now, at every pass, the floors in force are the standing top's: when the milestone
+    # whose election set them is refused, they are set again from what the standing top does, measured as
+    # the reference of the last GPU_FLOOR_READS segments examined against it (the gauntlet reads it beside
+    # each champion on the same runs), less 1/sqrt(n) as at an election; if no segment has met it yet, from
+    # its own share when it was elected. Only a refusal lowers them: a standing generation's floors stand.
+    GPU_FLOOR_READS = 6
+
+    def gpu_floors_source(self, lad):
+        """The milestone whose election set the floors in force: written down since 19 November; before
+        that, the newest milestone made in this home, since every election set them."""
+        if lad.get("floors_from"):
+            return lad["floors_from"]
+        made = [m for m in lad.get("milestones", []) if m.get("made") and not m.get("carried")]
+        return made[-1]["id"] if made else None
+
+    def gpu_floors_of(self, lad, home, top):
+        """({file: floor}, how they were measured) for the standing top, or (None, "") with nothing on disk."""
+        shares, runs, jobs = {}, {}, []
+        try:
+            rows = [l.split("\t") for l in open(self.crucible_dir("lineage.tsv", home=home)).read().splitlines()[1:]]
+            jobs = [r[1] for r in rows if len(r) > 5 and r[5] == top][-self.GPU_FLOOR_READS:]
+        except OSError:
+            pass
+        read = 0
+        for j in jobs:
+            g = self.gauntlet_read(os.path.join(self.q, "results", j, self.home, "out", j, "gauntlet.tsv"))
+            ref = ((g or {}).get("share") or {}).get(top) or {}
+            read += bool(ref)
+            for k, v in ref.items():
+                shares.setdefault(k, []).append(v)
+                runs[k] = (g.get("runs") or {}).get(k, 256)
+        how = "its share beside the champions of the last %d segment(s) examined against it" % read
+        if not shares:
+            m = next((m for m in lad.get("milestones", []) if m["id"] == top), None)
+            j = (m or {}).get("job")
+            g = self.gauntlet_read(os.path.join(self.q, "results", j, self.home, "out", j, "gauntlet.tsv")) if j else None
+            for k, v in ((g or {}).get("share") or {}).get("champion", {}).items():
+                shares[k] = [v]
+                runs[k] = (g.get("runs") or {}).get(k, 256)
+            how = "its own share when it was elected"
+        if not shares:
+            return None, ""
+        return {k: self.gpu_floor(sum(v) / len(v), runs.get(k, 256)) for k, v in shares.items()}, how
+
+    def gpu_floors_unrefused(self, lad, home):
+        """True when the floors in force were set by a milestone the game refused, and are now the standing
+        top's instead (a flag says what moved)."""
+        top, src = self.ladder_top(lad), self.gpu_floors_source(lad)
+        m = next((m for m in lad.get("milestones", []) if m["id"] == src), None)
+        if not top or not m or src == top or not (m.get("game") or {}).get("refused"):
+            return False
+        floors, how = self.gpu_floors_of(lad, home, top)
+        if not floors:
+            return False
+        old = lad.get("floors") or {}
+        moved = ["%s %.3f to %.3f" % (k.split(" ")[0], old[k], v) for k, v in sorted(floors.items()) if k in old and abs(old[k] - v) >= 0.0005]
+        lad["floors"], lad["floors_from"] = floors, top
+        lad.setdefault("floors_history", []).append({"at": time.strftime("%Y-%m-%dT%H:%M:%S"), "from": src, "to": top, "how": how, "moved": moved})
+        self.flag("crucible", "%s was refused by the game, so the floors its election set come down to %s's (%s): %s" % (
+            src, top, how, "; ".join(moved) or "none moved"), key="floors-down:%s" % src, progress=True)
+        return True
+
+    # TRAINING LEANS ON WHAT AN ISLAND LOST (Paul, 19 November: "do 1 and 2", the first two of the report's
+    # remedies for the second lock). With the floors back at M0032's, every segment since 15 November ties or
+    # beats M0032 on 23 of the 24 files and fails one: C7, a pillbox shot from outside its ring, which M0032
+    # passes 0.277 of the time and the champions of all three islands 0.000 (calber's and whitewolf's since at
+    # least 12 November, boburner's since 16 November). A training task is drawn evenly from the files in the
+    # island's task folder, a draw a warp a generation, so C7 was one draw in 24 and paid nothing a net would
+    # keep. Now the planner writes each island a list of the gauntlet's files, each with a number of copies:
+    # a file whose floor the island's last TASK_READS champions miss on average is lost, and the lost files
+    # together are TASK_LEAN of the draws (plan.json crucible.task_lean); every other file is one copy. The
+    # list is written every pass and sent when the keeper starts the segment, so a segment trains on what is
+    # lost when it begins, and an island that has its file back trains evenly again.
+    TASK_LEAN = 0.5
+    TASK_READS = 6
+
+    def task_files(self):
+        """{gauntlet name: file name} of the CUDA gauntlet's files, from their `name =` lines."""
+        out = {}
+        for p in sorted(glob.glob(os.path.join(self.crucible_src(), "gauntlet", "*.toml"))):
+            try:
+                m = re.search(r'^name\s*=\s*"([^"]+)"', open(p).read(), re.M)
+            except OSError:
+                m = None
+            if m:
+                out[m.group(1)] = os.path.basename(p)
+        return out
+
+    def task_lean(self, lad, home, island, files):
+        """({file name: copies}, [(gauntlet name, island's mean share, floor)] lost) for one island."""
+        floors = lad.get("floors") or {}
+        try:
+            rows = [l.split("\t") for l in open(self.crucible_dir("lineage.tsv", home=home)).read().splitlines()[1:]]
+        except OSError:
+            rows = []
+        shares = {}
+        read = 0
+        for j in [r[1] for r in rows if len(r) > 2 and r[2] == island][::-1]:
+            if read >= self.TASK_READS:
+                break
+            g = self.gauntlet_read(os.path.join(self.q, "results", j, self.home, "out", j, "gauntlet.tsv"))
+            champ = ((g or {}).get("share") or {}).get("champion") or {}
+            if not champ:
+                continue
+            read += 1
+            for k, v in champ.items():
+                shares.setdefault(k, []).append(v)
+        lost = [(k, sum(v) / len(v), floors[k]) for k, v in sorted(shares.items())
+                if k in files and floors.get(k, 0) > 0 and sum(v) / len(v) < floors[k]]
+        copies = {f: 1 for f in files.values()}
+        lean = float((self.cfg.get("crucible") or {}).get("task_lean", self.TASK_LEAN))
+        if lost and len(lost) < len(files) and 0 < lean < 1:
+            k = max(1, math.ceil(lean * (len(files) - len(lost)) / ((1 - lean) * len(lost))))
+            for name, _, _ in lost:
+                copies[files[name]] = k
+        return copies, lost
+
+    def task_leans(self, home):
+        """Each island's task list written for its next segment (crucible_dir tasks/ISLAND.txt: file, copies),
+        and a flag when what an island leans on changes."""
+        lad = self.ladder_state(home)
+        files = self.task_files()
+        d = self.crucible_dir("tasks", home=home)
+        os.makedirs(d, exist_ok=True)
+        was = lad.setdefault("lean", {})
+        for h in self.cuda:
+            name = h["name"]
+            copies, lost = self.task_lean(lad, home, name, files) if files else ({}, [])
+            p = os.path.join(d, name + ".txt")
+            with open(p + ".part", "w") as f:
+                f.write("".join("%s\t%d\n" % (k, copies[k]) for k in sorted(copies)))
+            os.replace(p + ".part", p)
+            now = [k for k, _, _ in lost]
+            if now == was.get(name, []):
+                continue
+            was[name] = now
+            if now:
+                total = sum(copies.values())
+                self.flag("crucible", "%s's training leans on what its last %d champions lost: %s; %s of every %d task draws" % (
+                    name, self.TASK_READS, "; ".join("%s %.3f under its floor %.3f" % (k.split(" ")[0], s, fl) for k, s, fl in lost),
+                    "+".join(str(copies[files[k]]) for k in now), total), key="task-lean:%s:%s:%s" % (name, ",".join(now), time.strftime("%Y-%m-%d")), progress=True)
+            else:
+                self.flag("crucible", "%s's champions hold every floor again: its training draws every file evenly" % name,
+                          key="task-even:%s:%s" % (name, time.strftime("%Y-%m-%dT%H")), progress=True)
 
     def gpu_force(self, lad, home, top):
         """THE FORCED ELECTION: GPU_FORCE_H hours with no generation, or a person's `crucible elect`
@@ -5261,7 +5419,7 @@ class Plan:
             "asked" if asked else "%.1f h without a generation" % dry, b["zg"], b["zy"])
         lad["milestones"].append({"id": mid, "job": b["job"], "island": b["island"], "gen": b["gen"], "after": top, "margin_se": b.get("margin_se"),
                                   "made": time.strftime("%Y-%m-%dT%H:%M:%S"), "elected": True, "zg": b["zg"], "zy": b["zy"]})
-        self.gpu_elected(lad, {"gauntlet": {"share": {"champion": b.get("share") or {}}, "runs": {}}})
+        self.gpu_elected(lad, {"gauntlet": {"share": {"champion": b.get("share") or {}}, "runs": {}}}, mid)
         if asked:
             os.remove(ask)
         self.flag("crucible", "crucible: %s is milestone %s, %s" % (b["job"], mid, why), key="milestone:%s" % mid, progress=True)
@@ -5786,6 +5944,20 @@ class Plan:
         self._world_flags = self.state["crucible_rules"]["flags"]
         return self._world_flags
 
+    # THE STANDING TOP IS A MIGRANT TOO (Paul, 19 November: "do 1 and 2"). An island was sent the other
+    # islands' newest champions and the net the game ships (M0030) as migrants; the standing top, the
+    # milestone every champion is examined against (M0032, the one with C7 at 0.277), it met only as an
+    # opponent on the ladder. Now the newest rung, as the ladder stands when the segment starts, joins the
+    # migrants, unless it is the shipped net already among them.
+    TOP_SH = "TOP=${R##*,}; case \"$TOP\" in ''|*/SHIPPED_NOW.bin) ;; *) I=\"$I${I:+,}$TOP\";; esac\n"
+    # The island's task folder from the list the planner sent (in/tasks.txt: file, copies): each of the
+    # gauntlet's files as many times as the list says; every file once if the list names none of them.
+    TASKS_SH = (
+        "rm -rf $H/tasks; mkdir -p $H/tasks; N=0\n"
+        "if [ -s $H/in/tasks.txt ]; then while IFS=\"$(printf '\\t')\" read -r f k; do [ -f \"$H/gauntlet/$f\" ] || continue; i=0; "
+        "while [ $i -lt \"${k:-1}\" ]; do cp \"$H/gauntlet/$f\" \"$H/tasks/${f%.toml}-$i.toml\"; i=$((i+1)); N=$((N+1)); done; done < $H/in/tasks.txt; fi\n"
+        "[ $N -gt 0 ] || cp $H/gauntlet/*.toml $H/tasks/ 2>/dev/null || true\n")
+
     def crucible_jobs(self):
         src = self.crucible_src()
         if not self.cuda or not os.path.exists(os.path.join(src, "src", "crucible.cu")):
@@ -5824,6 +5996,9 @@ class Plan:
             if isl["failures"] >= 3:
                 self.flag("crucible", "crucible on %s failed three segments in a row: it rests half an hour; see its logs" % h["name"], key="crucible:%s:%d" % (h["name"], isl["seg"]))
         self.crucible_ladder(fresh)
+        c = self.cfg.get("crucible") or {}
+        if c.get("world") and c.get("forest"):
+            self.task_leans(self.crucible_home())
         jobs = []
         for h in self.cuda:
             name, isl = h["name"], cr[h["name"]]
@@ -5859,15 +6034,21 @@ class Plan:
                 # What the game ships, to every island: the one net the game has credited.
                 shipped = (self.state.get("bridge") or {}).get("shipped") or ""
                 game = self.crucible_dir("milestones", shipped + ".bin", home=kind)
+                sent_game = "-"
                 if shipped and os.path.exists(game):
                     send.append({"src": game, "dst": "~/%s/in/game.bin" % home})
                     imports.append("$H/in/game.bin")
+                    sent_game = shipped
                 send += [{"src": self.crucible_dir("ladder", f), "dst": "~/%s/ladder/%s" % (home, f)}
                          for f in ["slot-%d.bin" % i for i in range(self.LADDER_SLOTS)] + ["ladder.txt"]]
                 forest = bool(c.get("world") and c.get("forest"))
                 if forest:
                     # The CUDA gauntlet's files: the test each segment's champion sits, and its training's tasks.
                     send += [{"src": f, "dst": "~/%s/gauntlet/%s" % (home, os.path.basename(f))} for f in sorted(glob.glob(os.path.join(src, "gauntlet", "*.toml")))]
+                    # How many times each is drawn in training, as the planner wrote it at the keeper's start (task_leans).
+                    tasks = self.crucible_dir("tasks", name + ".txt", home=kind)
+                    if os.path.exists(tasks):
+                        send.append({"src": tasks, "dst": "~/%s/in/tasks.txt" % home})
                 seed = 1000 + 97 * (sum(map(ord, name)) % 1000)
                 cmd = (
                     "set -e; H=~/%s; O=~/%s/out/%s; mkdir -p $O $H/in\n"
@@ -5888,6 +6069,8 @@ class Plan:
                     # The milestones by name, oldest first, from their slots.
                     "rm -rf $H/rungs; mkdir -p $H/rungs; R=''\n"
                     "while IFS=\"$(printf '\\t')\" read -r s m; do if [ -n \"$m\" ]; then cp $H/ladder/$s $H/rungs/$m.bin; R=\"$R${R:+,}$H/rungs/$m.bin\"; fi; done < $H/ladder/ladder.txt\n"
+                    "TOP_NOW"
+                    "TASKS_NOW"
                     # THE CARDS GROW ONE NET (Paul, 13 November: "all the cuda need to work together ... they grow the net").
                     # What an island is sent was an opponent only (the hall of fame); now it is a migrant too, in
                     # the population, a parent if it ranks there. The list is the same: the net the game ships
@@ -5897,8 +6080,9 @@ class Plan:
                 ) % (home, self.home, jid, ",".join(imports), opt["pop"], opt["eps"], opt["gens"], opt["yard"], seed, opt["lad"], opt["draw"])
                 # The newest rung is the gauntlet's reference: the champion and it, on the same runs.
                 cmd = cmd.replace("GAUNTLET_NOW", (
-                    "--tasks $H/gauntlet --task-p %s --gauntlet $H/gauntlet --gauntlet-runs %d --gauntlet-out $O/gauntlet.tsv ${R:+--gauntlet-ref ${R##*,}} " % (
+                    "--tasks $H/tasks --task-p %s --gauntlet $H/gauntlet --gauntlet-runs %d --gauntlet-out $O/gauntlet.tsv ${R:+--gauntlet-ref ${R##*,}} " % (
                         opt.get("task_p", 0.25), int(opt.get("gauntlet_runs", 256)))) if forest else "")
+                cmd = cmd.replace("TOP_NOW", self.TOP_SH.replace("SHIPPED_NOW", sent_game)).replace("TASKS_NOW", self.TASKS_SH if forest else "")
                 cmd = cmd.replace("FLAGS_NOW ", flag).replace("'FLAGS_NOW'", "'%s'" % flag.strip())
                 cmd = cmd.replace("PARENT_NOW", "%s/%s" % (self.home, parent) if parent else "")
                 job = {"id": jid, "kind": "crucible", "title": "crucible island %s, segment %d" % (name, isl["next"] - 1),

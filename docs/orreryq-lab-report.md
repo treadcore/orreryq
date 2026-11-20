@@ -577,7 +577,7 @@ The log says +186 W (its slope unrounded). Note which term is larger: **140 of t
 
 | # | Where | What is wrong | What to do | What it would buy |
 |---|---|---|---|---|
-| 1 | GPU election (`gpu_elected`, the bridge's refusal) | floors raised by M0049 stayed after the game refused it; nothing can meet them | when the game refuses a milestone, put the floors back to the standing top's | the 206 GPU-hours since 15 Nov would have been read against M0032's floors |
+| 1 | GPU election (`gpu_elected`, the bridge's refusal) | floors raised by M0049 stayed after the game refused it; nothing can meet them | when the game refuses a milestone, put the floors back to the standing top's | **built the same evening (§XXIV)**: it lifts the T3 lock, and shows a second one, C7 |
 | 2 | GPU election | forced elections every 3 h favour boburner's lineage, which the game refused 17 times | let the bridge's verdict weigh in the election, or stop forcing an island the game has refused three times running | elections that agree with the game |
 | 3 | GPU gauntlet | T3, C7 and F3 decide elections; they are not what the game rewards | weigh gauntlet files by how well they predict the bridge's read (32 bridge reads exist) | a gauntlet that is a better proxy |
 | 4 | CPU search | dry for 72 h at the easiest bar; the Keeper says "the brain itself needs a change" | new dials and switches from what the game does wrong (the Algorhythm and Terrain tabs), not more trials of the same 940 numbers | a search with somewhere to go |
@@ -604,6 +604,49 @@ The pictures of Orrery are `--frame` renders of the live queue, 1600 × 1000, by
 - **Energy** is a model for the two Supermicros and for saskatchewan-2's lane.
 - **UA** is a figure in use; calculation 5 shows how much rests on it.
 - **The film** (12:54, 32 scenes, `docs/orreryq/film.mp4`, 720p, 12.1 MB) was rendered in full; every scene was checked as a still before the render and six frames were cut from the encoded file and looked at. Nobody has watched it play. It has no sound. The 1080p master and the YouTube kit are in `output/youtube/orreryq/`, outside the repository.
+
+## XXIV. Added the same evening: the first suggestion, built
+
+Paul, 19 November: "do the first suggestion. impliment. please."
+
+**What was built** (`tools/plans/treadcore.py`). An election now writes down whose floors it set (`floors_from`). At every pass the planner asks whether the game has refused that milestone; if it has, and another stands at the top, **the floors are set again from what the standing top does**: its share on each file beside the champions of the last six segments examined against it (the gauntlet reads the top on the same runs as every champion), less 1/√n as at an election; or, if no segment has met it yet, its own share when it was elected. Only a refusal lowers floors; a standing generation's floors stand. A flag says which milestone was refused and every floor that moved. `tools/plans/gpu-floors-check.py` proves it in seven claims through a real planner pass on a scratch queue (the floors come down to the standing top's measured share; a standing milestone keeps its floors; the fallback to the election share; an election writes its floors down as its own); on the planner before the change the floors stay where the refused milestone left them and the claims fail.
+
+**Live at 19:17:49.** The planner's first pass with it found M0049 refused and M0032 standing, and set the floors from M0032's share beside the last six champions:
+
+| File | M0049's floor | M0032's floor | |
+|---|---|---|---|
+| T3 build a base: take and hold | 0.918 | **0.723** | the lock of §XIV, lifted: the islands score 0.81 to 0.83 |
+| T1 take a pillbox | 0.938 | 0.879 | |
+| C8 out of a pillbox's ring | 0.801 | 0.828 | |
+| F3 the lurker in the trees | 0.285 | 0.262 | |
+| **C7 a pillbox from outside its ring** | 0.180 | **0.215** | up: M0032 passes it 28% of the time |
+
+**What it does not unlock.** Replayed over the 319 segments examined against M0032 since 15 November, **none would have held under M0032's floors either**. Every one is under C7, and the reason is not a floor. The islands have lost C7 ("a pillbox from outside its ring"):
+
+| Half-day | boburner | calber | whitewolf | M0032, on the same runs |
+|---|---|---|---|---|
+| 12 Nov am | 0.112 | 0.023 | 0.003 | 0.28 |
+| 14 Nov am | 0.181 | 0.002 | 0.002 | 0.28 |
+| 15 Nov pm | 0.222 | 0.002 | 0.000 | 0.28 |
+| 16 Nov am | 0.068 | 0.001 | 0.002 | 0.28 |
+| 16 Nov pm to 19 Nov | 0.002 to 0.004 | 0.000 to 0.004 | 0.000 to 0.010 | 0.28 |
+
+calber's and whitewolf's champions have not passed C7 since at least 12 November; calber's own milestone M0032 (10 November) passes it 28% of the time, so calber's lineage lost it after M0032. boburner kept it, 0.11 to 0.22, until the night M0049 was refused, and lost it within a day. What changed for boburner that night is not established: the game's refusal stopped its champions being sent to the other islands, but it still takes theirs in as migrants, and theirs have no C7; that is a suspicion, not a finding. The floors are doing what they were made to do: no net that has lost a skill the standing generation has is elected.
+
+**So the second lock is in the training, not the election.** Three ways to step in, for Paul to choose:
+
+1. **Weigh the tasks toward what is lost.** Half of each net's runs play one gauntlet file as a task, every file alike (`task_p 0.5`). Drawing the files in proportion to how far the islands are under the standing top would put C7 in front of every population.
+2. **Bring the skill back in.** M0032 has C7 and is a rung (an opponent a fifth of the time), but is not sent as a migrant; `game.bin` is M0030. Sending M0032 as a migrant to every island would put the skill back in the gene pool.
+3. **Find out what boburner lost on 16 November**: its segments of that day are on disk, and the island's console says what it imported.
+
+**Remedies 1 and 2, built at 20:46** (Paul: "do 1 and 2. commit. push."). Before building, the newest segment of each island was read file by file beside M0032. On 23 of the 24 files the champions tie M0032 or beat it (T1 1.000 against 0.941; T3 0.79 to 0.86 against 0.785). They fail one, C7, at 0.000 against 0.277. C7 is the whole of the second lock. Neither change needed crucible edited: crucible draws a training task evenly from the files in the folder it is given, and takes a migrant once a segment, in its population's last places.
+
+1. **Training leans on what an island lost** (`task_leans`, `TASKS_SH`). Each pass, the planner reads each island's last six champions on the gauntlet. A file whose floor they miss on average is lost, and the lost files together are half of the task draws (`TASK_LEAN 0.5`, or `crucible.task_lean` in plan.json). Every other file is drawn once. The list goes to `crucible-…/tasks/ISLAND.txt`, is sent when the keeper starts the segment, and the segment copies the gauntlet's files into `$H/tasks` that many times; the exam still sits `$H/gauntlet` unchanged. With `task_p 0.5` and 256 duels, each net plays four warps of tasks a generation. C7 was 1 draw in 24; now it is 23 of 46. When an island's champions hold every floor again it draws evenly, and a flag says so.
+2. **The standing top is a migrant** (`TOP_SH`). The ladder's newest rung, M0032 today, as the ladder stands when the segment starts, joins the migrants beside the other islands' champions and the shipped net. It is left out when it is the shipped net, already there as `game.bin`.
+
+`tools/plans/crucible-lean-check.py` proves both in twelve claims. It runs a real planner pass on a scratch queue, then runs the segment's own commands in bash on a made-up island. On the planner before the change, ten of the claims fail. The planner's first pass with it (20:46:59) flagged all three islands: "C7 0.000 under its floor 0.215; 23 of every 46 task draws" (boburner 0.002).
+
+**When it begins, and what to expect.** A segment's commands are written when it is queued. The 15 segments already waiting at 20:46 (one of them queued at 20:45:38, mid-edit) train the old way, so the first segments with the lean begin about 2½ hours later, unless the waiting ones are taken out of the queue and the planner writes them again. The shipped net M0030 passes C7 0.22 of the time, and it has been a migrant on every island every segment since 13 November without bringing C7 back. A migrant whose duels rank under the island's own is gone after a generation, so remedy 2 alone is not expected to do it. Remedy 1 makes C7 pay in the fitness that decides rank, which gives the migrant's C7 something to be kept for. What to watch: C7 in the lineage's "under its floors" notes, and the flag "champions hold every floor again". Remedy 3 is not done.
 
 ## References
 
