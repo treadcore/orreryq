@@ -20,6 +20,9 @@ that make it a node. orrery's Machines view reads and drives it.
                             nodes list (orrery's Sessions)
     pull NAME|all           every git checkout in the machine's home pulled,
                             fast-forward only, as the user (fleet-pull.sh)
+    php-lane NAME           its CPU lane takes Parliament Chess jobs: the
+                            queue's "php" capability, once a probe has read
+                            PHP 8.2+ with SQLite there (the php-node recipe)
 
 THE RECIPES ARE ORRERY'S OWN SCRIPTS (tools/), and nothing else: each needs
 root, and root is never run from here. `stage` copies; the command is typed
@@ -58,6 +61,15 @@ SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ControlMaster=auto", "-o", "ControlP
 
 # Each recipe: what it is, on which systems, what it needs, its files (from
 # tools/), the command run on the machine as root, and what it does.
+def php_ok(f):
+    """PHP 8.2 or later with PDO's SQLite driver, as the probe read it."""
+    try:
+        major, minor = (int(x) for x in (f.get("php") or "0.0").split(".")[:2])
+    except ValueError:
+        return False
+    return (major, minor) >= (8, 2) and f.get("php_sqlite") == "yes"
+
+
 RECIPES = [
     {"id": "fleet-node", "title": "Make it a fleet node",
      "os": ["ubuntu 24.04"],
@@ -90,6 +102,13 @@ RECIPES = [
               "~/code/treadcore over HTTPS, and ~/fleet, as the user",
               "the power-off and restart rules (doas: poweroff and reboot, nothing else)",
               "nothing else: Copal's lockdown, services and SSH are left as they are"]},
+    {"id": "php-node", "title": "PHP with SQLite (Parliament Chess lanes)",
+     "os": ["ubuntu 24.04", "alpine"],
+     "files": ["php-node.sh"], "run": "sh php-node.sh",
+     "does": ["Ubuntu 24.04: php8.3-cli, php8.3-sqlite3 and php8.3-opcache from Ubuntu's own archive (8.3 is enough; no outside repository)",
+              "Alpine: the PHP there (php85, else the newest of 85, 84, 83) with pdo, pdo_sqlite, sqlite3 and ctype",
+              "the check, as the user: PHP 8.2 or later and a SQLite database written and read back",
+              "then, here: `machines.py QUEUE php-lane NAME` gives its CPU lane the queue's php capability (never macmini)"]},
     # Not a state but an errand: never "applied", always there to run.
     {"id": "update", "title": "Update the system's packages",
      "os": ["ubuntu", "alpine"], "errand": True,
@@ -155,6 +174,8 @@ k nvidia_driver "$(sed -n 's/.*Kernel Module *\([0-9.]*\).*/\1/p' /proc/driver/n
 k nvidia_smi "$(command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -n1)"
 k cuda "$(ls -d /usr/local/cuda-*/bin/nvcc 2>/dev/null | sed 's|/usr/local/cuda-\([^/]*\)/.*|\1|' | awk '{print length($0), $0}' | sort -n | tail -n1 | cut -d' ' -f2)"
 k cargo "$( ( [ -x ~/.cargo/bin/cargo ] && ~/.cargo/bin/cargo --version ) || ( command -v cargo >/dev/null && cargo --version ) )"
+k php "$(php -r 'echo PHP_VERSION;' 2>/dev/null)"
+k php_sqlite "$(php -r 'echo class_exists("PDO") && in_array("sqlite", PDO::getAvailableDrivers(), true) ? "yes" : "";' 2>/dev/null)"
 k treadcore "$(git -C ~/code/treadcore log --oneline -1 2>/dev/null | cut -c1-7)"
 k tmux "$(command -v tmux)"
 k screen "$(command -v screen)"
@@ -614,6 +635,7 @@ class Machines:
             "microcode": bool(f.get("ucode_boot")) or ("microcode" in f.get("ucode_pkg", "") and f.get("os_id") != "alpine"),
             "copal-node": bool(f.get("cargo") and f.get("treadcore") and f.get("tmux") and f.get("poweroff")),
             "cuda-node": bool(f.get("nvidia_smi") and f.get("cuda") and f.get("tmux") and f.get("copal_tm")),
+            "php-node": php_ok(f),
         }
         have["fleet-node"] = bool(f.get("cargo") and f.get("treadcore") and f.get("tmux") and f.get("copal_tm")
                                   and have["fleet-login"] and have["poweroff"] and (not nv or have["cuda-node"]))
@@ -756,6 +778,29 @@ class Machines:
         self.keep()
         return host
 
+    def php_lane(self, name):
+        """Give the machine's CPU lane (not its card lanes) the queue's "php" capability, so the
+        Parliament Chess planner sets it up and sends it work. Paul, 20 November: never macmini."""
+        if name == "macmini":
+            raise SystemExit("macmini takes no PHP (Paul, 20 November)")
+        f = (self.reg.get(name) or {}).get("facts") or {}
+        if not php_ok(f):
+            raise SystemExit("%s: a probe has not read PHP 8.2+ with SQLite there (php %s, sqlite %s): apply php-node, then probe"
+                             % (name, f.get("php") or "none", f.get("php_sqlite") or "no"))
+        path = os.path.join(self.q, "config.json")
+        cfg = load(path, {})
+        lanes = [h for h in cfg.get("hosts", []) + cfg.get("bench", []) if h["name"] == name]
+        if not lanes:
+            raise SystemExit("%s is in neither the queue nor its bench: join it first" % name)
+        for h in lanes:
+            caps = h.setdefault("caps", ["cpu"])
+            if "cuda" in caps:
+                raise SystemExit("%s is a card lane" % name)
+            if "php" not in caps:
+                caps.append("php")
+        save(path, cfg)
+        return {"name": name, "caps": lanes[0]["caps"], "php": f.get("php")}
+
     def pull(self, name):
         """(answered, a line a checkout): fleet-pull.sh run over ssh as the
         user, fed on its stdin, so nothing is left on the machine."""
@@ -867,6 +912,8 @@ def main(argv):
         print(json.dumps(ms.stage(argv[3], argv[4])))
     elif cmd == "join":
         print(json.dumps(ms.join(argv[3])))
+    elif cmd == "php-lane":
+        print(json.dumps(ms.php_lane(argv[3])))
     elif cmd == "pull":
         names = [h["name"] for h in ms.cfg.get("hosts", []) if not h.get("lane_of")] if len(argv) < 4 or argv[3] == "all" else [argv[3]]
         bad = 0
